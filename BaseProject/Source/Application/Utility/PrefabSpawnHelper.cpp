@@ -9,7 +9,10 @@
 #include "Application/Components/Transform/LocalTransformComponent.h"
 #include "Application/Components/Core/SpawnerComponent.h"
 #include "Application/Components/Camera/FollowTargetComponent.h"
+#include "Application/Components/Transform/HierarchyComponent.h"
+#include "Application/Components/Attachment/AttachmentSlotsComponent.h"
 #include "Engine/ECS/Component/TransientTag.h"
+#include "Engine/ECS/Component/GUIDComponent.h"
 
 namespace App::Utility
 {
@@ -39,6 +42,79 @@ namespace App::Utility
 
 			auto& _buf = a_data[a_typeID];
 			return _buf.empty() ? nullptr : _buf.data();
+		}
+
+		//----------------------------------------------------------------------
+		// 親子をエンティティIDで付ける(a_index の材料を生成する前に書く)
+		//
+		// 親が GUIDComponent を持たないなら parentGUID は空にする。
+		// プレハブが振った GUID が残っていると、HierarchyLinkSystem が
+		// 誰も持っていない GUID から引き直して、付けた親を外してしまう。
+		//----------------------------------------------------------------------
+		void LinkParentByIndex(
+			Engine::ECS::World& a_world,
+			std::vector<Engine::Resource::PrefabInstanceData>& a_instanceVec,
+			const std::vector<Engine::ECS::Entity>& a_entityVec,
+			size_t a_index)
+		{
+			Engine::Resource::PrefabInstanceData& _data = a_instanceVec[a_index];
+
+			// 親は必ず先に並んでいる(作り終えている)
+			if (_data.parentIndex < 0 || static_cast<size_t>(_data.parentIndex) >= a_index) return;
+
+			const Engine::ECS::Entity _parent = a_entityVec[_data.parentIndex];
+			if (_parent == Engine::ECS::Limits::INVALID_ENTITY) return;
+
+			auto _it = _data.dataMap.find(a_world.GetCompTypeID<Component::HierarchyComponent>());
+			if (_it == _data.dataMap.end() || _it->second.size() < sizeof(Component::HierarchyComponent)) return;
+
+			const Engine::Resource::PrefabInstanceData& _parentData = a_instanceVec[_data.parentIndex];
+			const bool _isParentHasGUID = _parentData.sig.test(a_world.GetCompTypeID<Engine::ECS::GUIDComponent>());
+
+			Component::HierarchyComponent _hierarchy = {};
+			std::memcpy(&_hierarchy, _it->second.data(), sizeof(_hierarchy));
+			_hierarchy.parentID   = _parent;
+			_hierarchy.parentGUID = _isParentHasGUID ? _parentData.guid : Core::DEFAULT_GUID;
+			std::memcpy(_it->second.data(), &_hierarchy, sizeof(_hierarchy));
+		}
+
+		//----------------------------------------------------------------------
+		// アタッチメントのスロットをエンティティIDで付ける(全員を作り終えてから)
+		//
+		// スロットの GUID はプレハブが振った GUID へ張り替わっているので、
+		// それを鍵に同じインスタンスの中から相手を引く。
+		// 相手が GUIDComponent を持たないなら GUID は空にする(上の親子と同じ理由で、
+		// AttachmentSlotLinkSystem に引き直させない)。
+		//----------------------------------------------------------------------
+		void LinkAttachmentSlots(
+			Engine::ECS::World& a_world,
+			const std::vector<Engine::Resource::PrefabInstanceData>& a_instanceVec,
+			const std::vector<Engine::ECS::Entity>& a_entityVec)
+		{
+			std::unordered_map<Core::GUID, size_t> _indexMap = {};
+			for (size_t _i = 0; _i < a_instanceVec.size(); ++_i)
+			{
+				if (a_instanceVec[_i].guid.IsValid()) _indexMap[a_instanceVec[_i].guid] = _i;
+			}
+
+			const Engine::ECS::ComponentTypeID _guidTypeID = a_world.GetCompTypeID<Engine::ECS::GUIDComponent>();
+
+			for (const Engine::ECS::Entity _entity : a_entityVec)
+			{
+				if (_entity == Engine::ECS::Limits::INVALID_ENTITY) continue;
+				if (!a_world.HasComponent<Component::AttachmentSlotsComponent>(_entity)) continue;
+
+				Component::ForEachAttachmentSlot(*a_world.RefData<Component::AttachmentSlotsComponent>(_entity),
+					[&](Component::AttachmentSlot& a_slot)
+					{
+						auto _it = _indexMap.find(a_slot.guid);
+						if (_it == _indexMap.end()) return;
+
+						a_slot.id = a_entityVec[_it->second];
+						if (!a_instanceVec[_it->second].sig.test(_guidTypeID)) a_slot.guid = Core::DEFAULT_GUID;
+					}
+				);
+			}
 		}
 	}
 
@@ -145,7 +221,7 @@ namespace App::Utility
 			}
 		}
 
-		// 追従先。FollowTargetLinkSystem(Awake)が GUID から引き直すので GUID も同じ相手に揃える
+		// 追従先(エンティティIDだけで持つ)
 		if (a_params.followTarget != Engine::ECS::Limits::INVALID_ENTITY)
 		{
 			if (uint8_t* _pBuf = EnsureInstanceComponent(
@@ -153,8 +229,7 @@ namespace App::Utility
 			{
 				Component::FollowTargetComponent _follow = {};
 				std::memcpy(&_follow, _pBuf, sizeof(_follow));
-				_follow.target     = a_params.followTarget;
-				_follow.targetGUID = a_params.followTargetGUID;
+				_follow.target = a_params.followTarget;
 				std::memcpy(_pBuf, &_follow, sizeof(_follow));
 			}
 		}
@@ -174,20 +249,23 @@ namespace App::Utility
 		Engine::ECS::World& a_world,
 		std::vector<Engine::Resource::PrefabInstanceData>& a_instanceVec)
 	{
-		Engine::ECS::Entity _rootEntity = Engine::ECS::Limits::INVALID_ENTITY;
+		// 作ったエンティティ(材料と同じ並び)。親子とスロットをIDで付けるのに使う
+		std::vector<Engine::ECS::Entity> _entityVec(a_instanceVec.size(), Engine::ECS::Limits::INVALID_ENTITY);
 
 		for (size_t _i = 0; _i < a_instanceVec.size(); ++_i)
 		{
 			Engine::Resource::PrefabInstanceData& _data = a_instanceVec[_i];
 
+			// 親は先に作り終えているので、ここでIDを入れておく
+			LinkParentByIndex(a_world, a_instanceVec, _entityVec, _i);
+
 			// シグネチャで実体を生成(各コンポーネントは既定構築される)
 			const Engine::ECS::Entity _entity = a_world.CreateEntity(_data.sig);
 			if (_entity == Engine::ECS::Limits::INVALID_ENTITY) continue;
 
-			if (_i == 0) _rootEntity = _entity;
+			_entityVec[_i] = _entity;
 
 			// 既定構築済みのところへ、材料の初期値を上書きする
-			// (親子リンクは parentGUID を張り替えてあるので HierarchyLinkSystem が繋ぎ直す)
 			for (const auto& [_typeID, _buffer] : _data.dataMap)
 			{
 				if (_buffer.empty()) continue;
@@ -201,6 +279,9 @@ namespace App::Utility
 			}
 		}
 
-		return _rootEntity;
+		// スロットの相手は自分より後ろに並ぶ(子)ことがあるので、全員を作ってから付ける
+		LinkAttachmentSlots(a_world, a_instanceVec, _entityVec);
+
+		return _entityVec.empty() ? Engine::ECS::Limits::INVALID_ENTITY : _entityVec[0];
 	}
 }

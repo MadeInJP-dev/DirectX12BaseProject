@@ -48,6 +48,14 @@ namespace Engine::Resource
 	{
 		ECS::Signature sig;
 		std::unordered_map<ECS::ComponentTypeID, std::vector<uint8_t>> dataMap = {};
+
+		// 親の位置(この材料の並びの添え字)。-1 ならルート
+		int parentIndex = -1;
+
+		// このノードに振った GUID。
+		// GUIDComponent を持たないノードにも振る。プレハブ内の参照(アタッチメントなど)は
+		// この GUID へ張り替わるので、即時生成の側がここから相手を引いてエンティティIDで付け直せる
+		Core::GUID guid = {};
 	};
 
 	class Prefab

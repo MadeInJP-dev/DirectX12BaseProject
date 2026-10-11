@@ -158,13 +158,6 @@ namespace App::Object
 			a_cmd.dataMap[_id] = std::vector<uint8_t>(_pBytes, _pBytes + sizeof(T));
 		}
 
-		// エンティティのGUID(持っていなければ無効)
-		Core::GUID GetEntityGUID(Engine::ECS::World& a_world, Engine::ECS::Entity a_entity)
-		{
-			if (!a_world.HasComponent<Engine::ECS::GUIDComponent>(a_entity)) return Core::DEFAULT_GUID;
-			return a_world.RefData<Engine::ECS::GUIDComponent>(a_entity)->guid;
-		}
-
 		//----------------------------------------------------------------------
 		// プレハブを読み込んで実体を返す。GUIDが未設定なら nullptr
 		//
@@ -557,10 +550,6 @@ namespace App::Object
 		//----------------------------------------------------------------------
 		// 残った小隊長へ頭から均等に配る(走査が終わってから書く)
 		//----------------------------------------------------------------------
-		std::vector<Core::GUID> _platoonGUIDs = {};
-		_platoonGUIDs.reserve(_platoons.size());
-		for (const Engine::ECS::Entity _platoon : _platoons) _platoonGUIDs.push_back(GetEntityGUID(_world, _platoon));
-
 		for (size_t _i = 0; _i < _boids.size(); ++_i)
 		{
 			const size_t _index = _i * _platoons.size() / _boids.size();
@@ -571,8 +560,7 @@ namespace App::Object
 			if (_world.HasComponent<Component::FollowTargetComponent>(_boid))
 			{
 				auto* _pFollow = _world.RefData<Component::FollowTargetComponent>(_boid);
-				_pFollow->target     = _platoons[_index];
-				_pFollow->targetGUID = _platoonGUIDs[_index];
+				_pFollow->target = _platoons[_index];
 			}
 			if (_world.HasComponent<Component::SpawnerComponent>(_boid))
 			{
@@ -1098,7 +1086,6 @@ namespace App::Object
 		//   印     : このオブジェクトのGUID + 小隊番号(生存数を数える)
 		App::Utility::SpawnParams _params = {};
 		_params.followTarget     = a_platoonLeader;
-		_params.followTargetGUID = GetEntityGUID(_world, a_platoonLeader);
 		_params.spawnerGUID      = m_guid;
 		_params.waveIndex        = a_platoonIndex;
 

@@ -15,6 +15,10 @@
 //   握りたいときは即時生成の経路(BuildSpawnInstanceData → CreateInstanceNow)を使う。
 //   群れのボス(SwarmBossController)が「一つ前の小隊長」を覚えさせるのに使っている。
 //
+// ・即時生成は、親子(HierarchyComponent)とアタッチメントのスロットをエンティティIDで付ける。
+//   GUIDComponent を持たないプレハブ(プレイヤー)でもつながる。
+//   遅延生成はIDが返らないので GUID でしかつながらない。GUID を持たない子のあるプレハブは即時生成で出すこと。
+//
 // ・出したものには子も含めて TransientTag を付ける(シーンの保存に入れない)。
 //   プレイヤーのスポナー(PlayerSpawner)が出したプレイヤーを保存すると、
 //   次に開いたときに二重になるため。
@@ -48,9 +52,8 @@ namespace App::Utility
 		int          waveIndex   = -1;
 
 		// 追従先(FollowTargetComponent)。ボイドのリーダーなど、出した側を追わせるときに使う。
-		// followTarget が無効なら触らない(プレハブの保存値のまま)
-		Engine::ECS::Entity followTarget     = Engine::ECS::Limits::INVALID_ENTITY;
-		Core::GUID        followTargetGUID = Core::DEFAULT_GUID;	// Awake の張り直しで上書きされないよう合わせて入れる
+		// followTarget が無効なら触らない
+		Engine::ECS::Entity followTarget = Engine::ECS::Limits::INVALID_ENTITY;
 	};
 
 	/// <summary>
@@ -112,7 +115,8 @@ namespace App::Utility
 		Engine::ECS::ComponentTypeID a_typeID);
 
 	/// <summary>
-	/// 材料からエンティティをその場で生成する(子も一緒に作る)
+	/// 材料からエンティティをその場で生成する(子も一緒に作る)。
+	/// 親子とアタッチメントのスロットはエンティティIDで付ける
 	/// </summary>
 	/// <returns>ルートのエンティティ。作れなければ INVALID_ENTITY</returns>
 	Engine::ECS::Entity CreateInstanceNow(

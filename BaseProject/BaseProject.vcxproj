@@ -652,11 +652,6 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Application\Systems\Camera\FollowTargetLinkSystem.cpp">
-      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
-      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
-    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Transform\HierarchyLinkSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1822,7 +1817,6 @@
     <ClInclude Include="Source\Application\Systems\Render\PointLightSystem.h" />
     <ClInclude Include="Source\Application\Systems\Render\ApplyEmissiveOverrideSystem.h" />
     <ClInclude Include="Source\Application\Components\Render\PointLightComponent.h" />
-    <ClInclude Include="Source\Application\Systems\Camera\FollowTargetLinkSystem.h" />
     <ClInclude Include="Source\Application\Systems\Transform\HierarchyLinkSystem.h" />
     <ClInclude Include="Source\Application\Systems\Core\GUIDFixupSystem.h" />
     <ClInclude Include="Source\Application\Systems\Attachment\AttachmentSlotLinkSystem.h" />

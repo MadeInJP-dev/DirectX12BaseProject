@@ -96,7 +96,6 @@
 #include "Application/Systems/Core/GUIDFixupSystem.h"
 #include "Application/Systems/Render/ModelReadyGateSystem.h"
 #include "Application/Systems/Attachment/AttachmentReadyGateSystem.h"
-#include "Application/Systems/Camera/FollowTargetLinkSystem.h"
 #include "Application/Systems/Transform/HierarchyLinkSystem.h"
 #include "Application/Systems/Camera/CameraStartSystem.h"
 #include "Application/Systems/Animation/AnimationModelStartSystem.h"
@@ -396,7 +395,6 @@ namespace App::ECS
 		// AwakeTag -> StartTag の遷移より前に走らせる必要があるため、
 		// Awake フェーズの先頭付近に置くこと
 		a_world.RegisterSystem<System::ModelReadyGateSystem>();
-		a_world.RegisterSystem<System::FollowTargetLinkSystem>();
 		a_world.RegisterSystem<System::AttachmentSlotLinkSystem>();
 		a_world.RegisterSystem<System::HierarchyLinkSystem>();
 		// 親モデルの到着待ちゲート。

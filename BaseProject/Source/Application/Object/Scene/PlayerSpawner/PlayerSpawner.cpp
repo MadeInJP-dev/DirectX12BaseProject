@@ -116,10 +116,7 @@ namespace App::Object
 	}
 
 	//======================================================================================
-	// カメラの追従先を張り直す
-	//--------------------------------------------------------------------------------------
-	// GUID も一緒に入れる。カメラがまだ Awake を通っていなければ、
-	// FollowTargetLinkSystem が GUID から引き直すので、そちらでも同じ相手になる。
+	// カメラの追従先を出したプレイヤーへ付ける(エンティティIDで持つ)
 	//======================================================================================
 	void PlayerSpawner::LinkCamera(Engine::GameObject::ObjectContext& a_context)
 	{
@@ -139,13 +136,7 @@ namespace App::Object
 			ENGINE_WARNING("PlayerSpawner : カメラが FollowTargetComponent を持っていません");
 			return;
 		}
-		if (!_world.HasComponent<Engine::ECS::GUIDComponent>(m_playerEntity)) return;
-
-		const Core::GUID _playerGUID = _world.RefData<Engine::ECS::GUIDComponent>(m_playerEntity)->guid;
-
-		auto* _pFollow = _world.RefData<Component::FollowTargetComponent>(_camera);
-		_pFollow->target     = m_playerEntity;
-		_pFollow->targetGUID = _playerGUID;
+		_world.RefData<Component::FollowTargetComponent>(_camera)->target = m_playerEntity;
 	}
 
 	//======================================================================================

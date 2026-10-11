@@ -1,12 +1,17 @@
 ﻿#pragma once
 #include "Engine/ECS/World/World.h"
-#include "Engine/ECS/Component/GUIDComponent.h"
 
 namespace App::Component
 {
+	//==========================================================================================
+	// 追従先(カメラのプレイヤー、ボイドの小隊長など)
+	//
+	// エンティティIDだけで持ち、保存しない。追従先は出した側が出したときに入れる
+	// (プレイヤーは PlayerSpawner、ボイドは SwarmBossController)。
+	// プレイヤーは GUID を持たないので、GUID で保存して引き直す形にはできない。
+	//==========================================================================================
 	struct FollowTargetComponent
 	{
-		Core::GUID targetGUID = {};
 		Engine::ECS::Entity target = Engine::ECS::Limits::INVALID_ENTITY;
 	};
 }
@@ -14,30 +19,13 @@ namespace App::Component
 template<>
 struct Engine::ECS::ComponentTraits<App::Component::FollowTargetComponent>
 {
-	static void Archive(Engine::Persistence::Archive& a_ar, void* a_pData) {
-		auto* _comp = static_cast<App::Component::FollowTargetComponent*>(a_pData);
-		a_ar.Field("targetGUID", _comp->targetGUID);
-	}
+	// 追従先は実行中に入れるものなので保存しない
+	static void Archive(Engine::Persistence::Archive& /*a_ar*/, void* /*a_pData*/) {}
 
 	static void Edit(CompEditContext& a_context) {
-		using namespace Engine;
 		App::Component::FollowTargetComponent& _comp = Engine::EditorField::RefValue<App::Component::FollowTargetComponent>(a_context.pData);
 
-		ECS::Entity _entity = _comp.target;
-
-		Engine::EditorField::Field("TargetEntity", _entity);
-		Engine::EditorField::Text("%s", _comp.targetGUID.String().c_str());
-
-		// エンティティの変更がされたらGUIDを変更
-		if (_entity != _comp.target)
-		{
-			auto* _pWorld = a_context.pWorld;
-			if (!_pWorld) return;
-			auto _typeID = _pWorld->GetCompTypeID<Engine::ECS::GUIDComponent>();
-			uint8_t* _data = _pWorld->NRefData(_entity, _typeID);
-			Engine::ECS::GUIDComponent& _targetGUIDComp = *reinterpret_cast<Engine::ECS::GUIDComponent*>(_data);
-			_comp.targetGUID = _targetGUIDComp.guid;
-			_comp.target = _pWorld->GetEntity(_comp.targetGUID);
-		}
+		Engine::EditorField::Field("TargetEntity", _comp.target);
+		Engine::EditorField::Tooltip("実行中に出した側が入れる(保存しない)");
 	}
 };

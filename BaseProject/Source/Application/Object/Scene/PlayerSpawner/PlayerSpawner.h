@@ -13,12 +13,14 @@ namespace App::Object
 	//
 	// ・出すのはシーンの始まりに1回だけ(Start)。
 	//   Start の時点でプレハブが未設定なら、設定されたところで出す(エディターで置いた直後)。
-	// ・即時生成で出す。カメラの追従先へ入れるのにエンティティIDが要るため。
+	// ・プレイヤーは GUID を持たない。親子・アタッチメント・カメラの追従先は
+	//   すべてエンティティIDで、出したときに付ける。
+	// ・そのため即時生成で出す(遅延生成ではIDが返らない)。
+	//   親子とアタッチメントは CreateInstanceNow が付け、カメラはここで付ける。
 	//   Start / Update は ECS の反復の外なので、その場で CreateEntity してよい。
 	// ・出したプレイヤーには TransientTag が付く(BuildSpawnInstanceData)ので、
 	//   シーンを保存しても書き込まれない。シーンに残るのはこのスポナーだけ。
-	// ・カメラはシーンの持ち物のまま。プレイヤーの GUID は出すたびに変わるので、
-	//   出した後にカメラの FollowTargetComponent をこちらから張り直す。
+	// ・カメラはシーンの持ち物のまま(GUID で指定する)。
 	//======================================================================================
 	class PlayerSpawner : public Engine::GameObject::BaseObject
 	{
@@ -53,7 +55,7 @@ namespace App::Object
 		// プレハブからプレイヤーを出す。出せたら true
 		bool SpawnPlayer(Engine::GameObject::ObjectContext& a_context);
 
-		// カメラの追従先を出したプレイヤーへ張り直す
+		// カメラの追従先を出したプレイヤーへ付ける
 		void LinkCamera(Engine::GameObject::ObjectContext& a_context);
 
 		// 出現位置と向きの目印を描く

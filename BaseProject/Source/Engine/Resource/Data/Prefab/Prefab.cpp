@@ -164,11 +164,13 @@ namespace Engine::Resource
 		_instanceVec.push_back(std::move(_root));
 
 		// ---- 子 ----
+		// 親の位置はプレハブ内の添え字(-1 = ルート)から、この並びの添え字へ直す
 		for (const PrefabChild& _child : m_children)
 		{
 			PrefabInstanceData _data = {};
-			_data.sig     = _child.sig;
-			_data.dataMap = _child.dataMap;
+			_data.sig         = _child.sig;
+			_data.dataMap     = _child.dataMap;
+			_data.parentIndex = _child.parentIndex + 1;
 			_instanceVec.push_back(std::move(_data));
 		}
 
@@ -178,7 +180,11 @@ namespace Engine::Resource
 		std::unordered_map<Core::GUID, Core::GUID> _guidMap = {};
 
 		std::vector<Core::GUID> _newGUIDVec(_instanceVec.size());
-		for (auto& _newGUID : _newGUIDVec) _newGUID.Create();
+		for (size_t _i = 0; _i < _newGUIDVec.size(); ++_i)
+		{
+			_newGUIDVec[_i].Create();
+			_instanceVec[_i].guid = _newGUIDVec[_i];
+		}
 
 		if (m_savedGUID.IsValid()) _guidMap[m_savedGUID] = _newGUIDVec[0];
 

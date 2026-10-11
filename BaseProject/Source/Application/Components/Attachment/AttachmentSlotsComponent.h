@@ -8,7 +8,9 @@
 namespace App::Component
 {
 	// アタッチメント1スロット分。
-	// GUID を保存し、PostDeserialize で AttachmentSlotLinkSystem が id を解決する。
+	// GUID を保存し、Awake で AttachmentSlotLinkSystem が id を解決する。
+	// GUID が空で id だけ入っているものは、プレハブの即時生成が付けたもの
+	// (相手が GUIDComponent を持たない。プレイヤーの武器など)。
 	struct AttachmentSlot
 	{
 		Core::GUID		 guid = {};												// シリアライズ用
@@ -35,6 +37,22 @@ namespace App::Component
 		// MissileSalvoSystem がこのスロットのポッドを直接撃たせる
 		AttachmentSlot missile;
 	};
+
+	//==========================================================================================
+	// 全スロットを順に渡す
+	// スロットを足したときに、解決する側(リンク・即時生成)の書き漏れが出ないようにまとめてある
+	//==========================================================================================
+	template<typename Func>
+	inline void ForEachAttachmentSlot(AttachmentSlotsComponent& a_slots, Func&& a_func)
+	{
+		a_func(a_slots.rightShoulderBoost);
+		a_func(a_slots.leftShoulderBoost);
+		a_func(a_slots.rightLegBoost);
+		a_func(a_slots.leftLegBoost);
+		a_func(a_slots.leftWeapon);
+		a_func(a_slots.rightWeapon);
+		a_func(a_slots.missile);
+	}
 }
 
 template<>
@@ -115,9 +133,10 @@ struct Engine::ECS::ComponentTraits<App::Component::AttachmentSlotsComponent>
 		// 1スロット分の選択コンボを描画
 		auto _drawSlot = [&](const char* a_label, App::Component::AttachmentSlot& a_slot)
 		{
-			// 現在の選択表示。同名の候補があるならGUIDの頭まで出す
+			// 現在の選択表示。同名の候補があるならGUIDの頭まで出す。
+			// GUID を持たない相手(スポナーが出したプレイヤーの武器など)は id だけ入っている
 			std::string _current = "None";
-			if (a_slot.guid != Core::DEFAULT_GUID)
+			if (a_slot.guid != Core::DEFAULT_GUID || a_slot.id != Engine::ECS::Limits::INVALID_ENTITY)
 			{
 				_current = Engine::EditorField::MakeUniqueLabel(
 					_duplicatedSet, _entityLabel(a_slot.id, a_slot.guid), _guidHint(a_slot.guid));

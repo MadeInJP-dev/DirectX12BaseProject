@@ -1596,9 +1596,6 @@
     <ClCompile Include="Source\Application\Systems\Attachment\AttachmentReadyGateSystem.cpp">
       <Filter>Source\Application\Systems\Attachment</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Systems\Camera\FollowTargetLinkSystem.cpp">
-      <Filter>Source\Application\Systems\Camera</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Transform\HierarchyLinkSystem.cpp">
       <Filter>Source\Application\Systems\Transform</Filter>
     </ClCompile>
@@ -3142,9 +3139,6 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Attachment\AttachmentReadyGateSystem.h">
       <Filter>Source\Application\Systems\Attachment</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Application\Systems\Camera\FollowTargetLinkSystem.h">
-      <Filter>Source\Application\Systems\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Transform\HierarchyLinkSystem.h">
       <Filter>Source\Application\Systems\Transform</Filter>

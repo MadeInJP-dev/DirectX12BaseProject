@@ -11,6 +11,7 @@
 #include "Application/Components/Transform/LocalTransformComponent.h"
 #include "Application/Components/Core/NameComponent.h"
 #include "Application/Components/Transform/HierarchyComponent.h"
+#include "Application/Components/Attachment/AttachmentSlotsComponent.h"
 #include "Engine/ECS/Component/GUIDComponent.h"
 #include "Engine/ECS/Component/TransientTag.h"
 
@@ -185,6 +186,42 @@ namespace Editor::Inspector
 		return _pGUIDComp ? _pGUIDComp->guid : Core::GUID{};
 	}
 
+	// プレハブの中で各ノードを見分ける鍵(保存時GUID)を作る。
+	// GUID を持つならそれを使い、持たないもの(スポナーが出したプレイヤーなど)には新しく振る。
+	// 鍵が無いと、スロットがどの子を指していたかをプレハブに残せない
+	Core::GUID MakePrefabKey(ECS::World* a_pWorld, const ECS::Entity& a_entity)
+	{
+		Core::GUID _key = GetEntityGUID(a_pWorld, a_entity);
+		if (!_key.IsValid()) _key.Create();
+		return _key;
+	}
+
+	// アタッチメントのスロットを、指している相手の鍵へ書き換える。
+	// GUID を持たない相手はスロットに id しか入っていないので、ここで鍵を入れておく
+	// (実体化のときに、この鍵から同じインスタンスの中の相手を引き直す)
+	void RekeyAttachmentSlots(
+		uint8_t* a_pSlotsData,
+		const std::unordered_map<ECS::Entity, Core::GUID>& a_keyMap)
+	{
+		if (!a_pSlotsData) return;
+
+		App::Component::AttachmentSlotsComponent _slots = {};
+		std::memcpy(&_slots, a_pSlotsData, sizeof(_slots));
+
+		App::Component::ForEachAttachmentSlot(_slots,
+			[&](App::Component::AttachmentSlot& a_slot)
+			{
+				auto _it = a_keyMap.find(a_slot.id);
+				if (_it != a_keyMap.end()) a_slot.guid = _it->second;
+
+				// id はシーン上の実体を指しているので持ち込まない
+				a_slot.id = ECS::Limits::INVALID_ENTITY;
+			}
+		);
+
+		std::memcpy(a_pSlotsData, &_slots, sizeof(_slots));
+	}
+
 	// 指定エンティティのコンポーネントをプレハブ用のバイト列へ写す
 	void CopyComponents(
 		ECS::World* a_pWorld,
@@ -269,8 +306,11 @@ namespace Editor::Inspector
 
 		// ---- 実体固有の値はテンプレートに持ち込まない ----
 		// GUIDは実体化時に振り直すので空にしておく。
-		// ただし子から親を指す鍵として必要なので、元のGUIDはプレハブ側に覚えさせる
-		_prefab.SetSavedGUID(GetEntityGUID(a_pWorld, a_entity));
+		// ただし子から親・スロットから相手を指す鍵として必要なので、鍵をプレハブ側に覚えさせる
+		// エンティティ → 鍵(スロットの書き換えに使う)
+		std::unordered_map<ECS::Entity, Core::GUID> _keyMap = {};
+		_keyMap[a_entity] = MakePrefabKey(a_pWorld, a_entity);
+		_prefab.SetSavedGUID(_keyMap[a_entity]);
 
 		if (uint8_t* _pGUIDData = _prefab.RefData(a_pWorld->GetCompTypeID<Engine::ECS::GUIDComponent>()))
 		{
@@ -309,6 +349,9 @@ namespace Editor::Inspector
 		std::unordered_map<ECS::Entity, int> _indexMap = { { a_entity, -1 } };
 
 		std::vector<ECS::Entity> _queue = { a_entity };
+
+		// 子の材料。スロットを鍵で指し直してからプレハブへ積むので、いったんここに貯める
+		std::vector<Resource::PrefabChild> _childVec = {};
 		for (size_t _head = 0; _head < _queue.size(); ++_head)
 		{
 			const ECS::Entity _parent = _queue[_head];
@@ -324,7 +367,8 @@ namespace Editor::Inspector
 				Resource::PrefabChild _prefabChild = {};
 				CopyComponents(a_pWorld, _child, _prefabChild.sig, _prefabChild.dataMap);
 
-				_prefabChild.savedGUID   = GetEntityGUID(a_pWorld, _child);
+				_keyMap[_child] = MakePrefabKey(a_pWorld, _child);
+				_prefabChild.savedGUID   = _keyMap[_child];
 				_prefabChild.parentIndex = _indexMap[_parent];
 
 				//------------------------------------------------------
@@ -349,11 +393,27 @@ namespace Editor::Inspector
 					std::memcpy(_hierarchyIt->second.data(), &_hierarchyComp, sizeof(_hierarchyComp));
 				}
 
-				_indexMap[_child] = static_cast<int>(_prefab.GetChildren().size());
-				_prefab.AddChild(std::move(_prefabChild));
+				_indexMap[_child] = static_cast<int>(_childVec.size());
+				_childVec.push_back(std::move(_prefabChild));
 
 				_queue.push_back(_child);
 			}
+		}
+
+		// ---- スロットを鍵で指し直す(全員の鍵が揃ってから) ----
+		const ECS::ComponentTypeID _slotsTypeID = a_pWorld->GetCompTypeID<App::Component::AttachmentSlotsComponent>();
+		RekeyAttachmentSlots(_prefab.RefData(_slotsTypeID), _keyMap);
+		for (Resource::PrefabChild& _prefabChild : _childVec)
+		{
+			auto _slotsIt = _prefabChild.dataMap.find(_slotsTypeID);
+			if (_slotsIt == _prefabChild.dataMap.end() || _slotsIt->second.size() < sizeof(App::Component::AttachmentSlotsComponent)) continue;
+
+			RekeyAttachmentSlots(_slotsIt->second.data(), _keyMap);
+		}
+
+		for (Resource::PrefabChild& _prefabChild : _childVec)
+		{
+			_prefab.AddChild(std::move(_prefabChild));
 		}
 
 		// ---- アセットとして登録して保存する ----

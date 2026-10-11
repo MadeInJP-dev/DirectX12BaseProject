@@ -15,6 +15,7 @@
 #include "Application/Components/Core/NameComponent.h"
 #include "Application/Components/Transform/HierarchyComponent.h"
 #include "Engine/ECS/Component/GUIDComponent.h"
+#include "Application/Utility/PrefabSpawnHelper.h"
 
 #include "../../EditorCamera/EditorCamera.h"
 #include "../../Helper/EditorHelper.h"
@@ -130,11 +131,13 @@ namespace Editor
 				}
 
 				// 親を持っていないものをルートとして抽出
-				// ヒエラルキーコンポーネントを持っているものは親がいるかチェック
+				// ヒエラルキーコンポーネントを持っているものは親がいるかチェック。
+				// GUID を持たないもの(スポナーが出したプレイヤーの武器など)は親をIDだけで持つので、両方を見る
 				if (_pWorld->HasComponent<App::Component::HierarchyComponent>(_entity))
 				{
 					auto* _pHieComp = _pWorld->RefData<App::Component::HierarchyComponent>(_entity);
-					if (_pHieComp->parentGUID != Core::DEFAULT_GUID)
+					if (_pHieComp->parentGUID != Core::DEFAULT_GUID ||
+						_pHieComp->parentID != ECS::Limits::INVALID_ENTITY)
 					{
 						continue;
 					}
@@ -232,11 +235,11 @@ namespace Editor
 			std::memcpy(_buf.data(), &_ltComp, sizeof(_ltComp));
 		}
 
-		// シーンに追加(ルート → 子の順。親が先に居ないと親子リンクが解決できない)
-		for (Resource::PrefabInstanceData& _instance : _instanceVec)
-		{
-			a_pWorld->ReserveCreateEntityWithData(_instance.sig, std::move(_instance.dataMap));
-		}
+		// シーンに追加(その場で作る)。
+		// GUID を持たない子のあるプレハブ(プレイヤーなど)は、親子とアタッチメントを
+		// エンティティIDで付けるしかないので、IDが返らない遅延生成は使わない。
+		// ここはシステムの反復の外(エディターの更新)なので即時生成してよい
+		App::Utility::CreateInstanceNow(*a_pWorld, _instanceVec);
 	}
 
 	void Editor::HierarchyPanel::DrawEntityNode(EditorContext& a_editContext, Engine::ECS::World* a_pWorld, const Engine::ECS::Entity& a_entity, bool a_isDrawChildren)
@@ -387,17 +390,28 @@ namespace Editor
 	std::vector<Engine::ECS::Entity> Editor::HierarchyPanel::GetChildEntities(Engine::ECS::World* a_pWorld, ECS::Entity a_parent) const
 	{
 		std::vector<ECS::Entity> _children;
-		if (!a_pWorld->HasComponent<Engine::ECS::GUIDComponent>(a_parent)) return _children;
 
-		// 親のGUIDを取得
-		Core::GUID _parentGUID = a_pWorld->RefData<Engine::ECS::GUIDComponent>(a_parent)->guid;
+		// 親のGUID(持っていなければ無効)
+		Core::GUID _parentGUID = Core::DEFAULT_GUID;
+		if (a_pWorld->HasComponent<Engine::ECS::GUIDComponent>(a_parent))
+		{
+			_parentGUID = a_pWorld->RefData<Engine::ECS::GUIDComponent>(a_parent)->guid;
+		}
 
+		// 親IDが付いていればそれで見る。付く前(読み込み直後の Awake 前)は GUID で見る。
+		// GUID を持たない親(スポナーが出したプレイヤー)の子は ID でしか引けない
 		a_pWorld->ForEach<App::Component::HierarchyComponent>(
 			[&](ECS::Chunk* a_pChunk, UINT a_count, App::Component::HierarchyComponent* a_hieArray)
 			{
 				for (UINT _i = 0; _i < a_count; ++_i)
 				{
-					if (a_hieArray[_i].parentGUID == _parentGUID)
+					const App::Component::HierarchyComponent& _hierarchy = a_hieArray[_i];
+
+					const bool _isChild = (_hierarchy.parentID != ECS::Limits::INVALID_ENTITY)
+						? (_hierarchy.parentID == a_parent)
+						: (_parentGUID.IsValid() && _hierarchy.parentGUID == _parentGUID);
+
+					if (_isChild)
 					{
 						_children.push_back(a_pChunk->entityData[_i]);
 					}
