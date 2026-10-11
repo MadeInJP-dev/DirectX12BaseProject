@@ -155,6 +155,9 @@ namespace Engine::Graphics
 			_executeLists.push_back(_pList);
 		}
 
+		// 流す前に積むもの(実メモリの割り当てなど)を先にキューへ乗せる
+		if (m_beforeExecuteHook) m_beforeExecuteHook(m_cpCmdQueue.Get());
+
 		// 一括実行
 		m_cpCmdQueue->ExecuteCommandLists(static_cast<UINT>(_executeLists.size()), _executeLists.data());
 
@@ -179,6 +182,12 @@ namespace Engine::Graphics
 		return m_fenceValue;
 	}
 
+	void CommandPool::SetBeforeExecuteHook(std::function<void(D3D12::CommandQueue*)> a_hook)
+	{
+		std::lock_guard<std::mutex> _lock(m_mutex);
+		m_beforeExecuteHook = std::move(a_hook);
+	}
+
 	void CommandPool::ExecuteImmediate(D3D12::GraphicsCommandList* a_pList)
 	{
 		// コマンドリストを閉じる
@@ -196,6 +205,9 @@ namespace Engine::Graphics
 		UINT64 _waitValue = 0;
 		{
 			std::lock_guard<std::mutex> _lock(m_mutex);
+
+			// 流す前に積むもの(実メモリの割り当てなど)を先にキューへ乗せる
+			if (m_beforeExecuteHook) m_beforeExecuteHook(m_cpCmdQueue.Get());
 
 			ID3D12CommandList* _lists[] = { a_pList };
 			m_cpCmdQueue->ExecuteCommandLists(1, _lists);

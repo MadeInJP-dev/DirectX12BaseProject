@@ -63,6 +63,13 @@ namespace Engine::Graphics
 		/// </summary>
 		void ExecuteImmediate(D3D12::GraphicsCommandList* a_pList);
 
+		/// <summary>
+		/// リストをキューへ流す直前に呼ぶ処理を登録する(nullptr で外す)。
+		/// 予約リソースへの実メモリの割り当てのように、流すリストより先にキューへ乗せたい操作に使う。
+		/// 流すのと同じロックの中で呼ぶので、割り当てと実行の間に他のスレッドのリストは割り込まない
+		/// </summary>
+		void SetBeforeExecuteHook(std::function<void(D3D12::CommandQueue*)> a_hook);
+
 		// ---- アクセサ ----
 		D3D12::CommandQueue* RefCommandQueue() { return m_cpCmdQueue.Get(); }
 		D3D12_COMMAND_LIST_TYPE GetQueueType() const { return m_type; }
@@ -89,5 +96,8 @@ namespace Engine::Graphics
 
 		// 実行待ちのコマンドリスト生ポインタ配列
 		std::vector<D3D12::GraphicsCommandList*> m_pendingLists;
+
+		// リストを流す直前に呼ぶ処理(m_mutex で守る)
+		std::function<void(D3D12::CommandQueue*)> m_beforeExecuteHook = nullptr;
 	};
 }

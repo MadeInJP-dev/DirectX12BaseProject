@@ -54,6 +54,12 @@ namespace Engine::Graphics
 		/// <param name="currentFenceValue">フェンス値</param>
 		void UpdateFrame(D3D12::GraphicsCommandList* a_pCmdList,uint64_t a_completedFenceValue);
 
+		/// <summary>
+		/// 確保で足した実メモリの割り当てをキューへ流す。
+		/// コマンドプールがリストを流す直前に呼ぶ(そのキューで割り当てるバッファのぶんだけ流れる)
+		/// </summary>
+		void FlushTileMappings(D3D12_COMMAND_LIST_TYPE a_queueType, D3D12::CommandQueue* a_pQueue);
+
 		//--------------------------------------------------------------------------------------------
 		// バッファにアロケート
 		//

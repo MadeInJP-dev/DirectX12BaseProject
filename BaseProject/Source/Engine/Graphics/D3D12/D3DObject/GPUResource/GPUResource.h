@@ -38,6 +38,11 @@ namespace Engine::Graphics::D3D12
 		// 作成
 		bool Create(Graphics::D3D12::Device* a_pDevice ,const GPUResourceDesc& a_desc);
 
+		// 仮想アドレスだけを取る(予約リソース)。
+		// 実メモリは持たないので、使う範囲はヒープを用意して UpdateTileMappings で割り当てること。
+		// heapType は使わない(割り当てるヒープ側が持つ)
+		bool CreateReservedResource(Graphics::D3D12::Device* a_pDevice, const GPUResourceDesc& a_desc);
+
 		// 指定のヒープ上に作成する(placed)
 		//
 		// a_resDesc は、その席を確保したときに GetResourceAllocationInfo へ渡したものと

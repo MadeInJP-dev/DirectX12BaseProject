@@ -278,6 +278,18 @@ namespace Engine::Graphics
 			_bufferSizeDesc
 		);
 
+		// メガバッファは使う範囲にだけ実メモリを足していく(予約リソース)。
+		// 足した割り当ては、その範囲を使うリストより先にキューへ乗せる必要があるので、
+		// どのキューでもリストを流す直前に流してもらう
+		{
+			MeshBufferAllocator* _pMeshBufferAllocator = m_upMeshBufferAllocator.get();
+			m_upRenderDevice->SetBeforeExecuteHook(
+				[_pMeshBufferAllocator](D3D12_COMMAND_LIST_TYPE a_type, D3D12::CommandQueue* a_pQueue)
+				{
+					_pMeshBufferAllocator->FlushTileMappings(a_type, a_pQueue);
+				});
+		}
+
 		//------------------------------------------------------------------------------------
 		// 生成できるパスの一覧を作る。
 		// パイプラインアセットのロードで型IDからパスを作り直すのに使うので、
@@ -361,6 +373,9 @@ namespace Engine::Graphics
 		// この後に解放されるもの(パーティクル/レイトレ/バックバッファ/遅延解放キュー)が
 		// まだビューを返してくるので、ReleaseDescriptorHeap() を最後に呼ぶこと
 
+
+		// キューを流すたびにメガバッファを触る口を先に外す
+		if (m_upRenderDevice) m_upRenderDevice->SetBeforeExecuteHook(nullptr);
 
 		m_upMeshBufferAllocator->Release();
 

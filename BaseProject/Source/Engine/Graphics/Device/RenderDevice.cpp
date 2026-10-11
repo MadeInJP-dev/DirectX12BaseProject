@@ -106,6 +106,31 @@ namespace Engine::Graphics
 		return m_upCommandContext ? m_upCommandContext->RefDirectPool()->RefCommandQueue() : nullptr;
 	}
 
+	void RenderDevice::SetBeforeExecuteHook(std::function<void(D3D12_COMMAND_LIST_TYPE, D3D12::CommandQueue*)> a_hook)
+	{
+		if (!m_upCommandContext) return;
+
+		CommandPool* _pPools[] = {
+			m_upCommandContext->RefDirectPool(),
+			m_upCommandContext->RefCopyPool(),
+			m_upCommandContext->RefComputePool(),
+		};
+		for (CommandPool* _pPool : _pPools)
+		{
+			if (!_pPool) continue;
+
+			if (!a_hook)
+			{
+				_pPool->SetBeforeExecuteHook(nullptr);
+				continue;
+			}
+
+			// プールは自分のキューしか知らないので、種類はここで添えて渡す
+			const D3D12_COMMAND_LIST_TYPE _type = _pPool->GetQueueType();
+			_pPool->SetBeforeExecuteHook([a_hook, _type](D3D12::CommandQueue* a_pQueue) { a_hook(_type, a_pQueue); });
+		}
+	}
+
 	UINT RenderDevice::GetCurrentFrameIndex() const
 	{
 		return m_upFrameManager ? m_upFrameManager->GetCPUFrameIndex() : 0;

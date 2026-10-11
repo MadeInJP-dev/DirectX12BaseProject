@@ -20,11 +20,13 @@ namespace Engine::Graphics::D3D12
 		/// </summary>
 		/// <param name="a_pDevice">デバイス</param>
 		/// <param name="a_elemetNum">要素数</param>
+		/// <param name="a_mappingQueueType">実メモリの割り当てを流すキュー(最初に中身を書くキュー)</param>
 		/// <returns></returns>
 		bool Create(
 			Graphics::D3D12::Device* a_pDevice,
 			DescriptorHeapManager* a_pHeapManager,
-			UINT a_elemetNum
+			UINT a_elemetNum,
+			D3D12_COMMAND_LIST_TYPE a_mappingQueueType = D3D12_COMMAND_LIST_TYPE_DIRECT
 		);
 
 		/// <summary>
@@ -55,19 +57,13 @@ namespace Engine::Graphics::D3D12
 	};
 
 	template<typename T>
-	inline bool MegaRWStructuredBuffer<T>::Create(Graphics::D3D12::Device* a_pDevice, DescriptorHeapManager* a_pHeapManager, UINT a_elemetNum)
+	inline bool MegaRWStructuredBuffer<T>::Create(Graphics::D3D12::Device* a_pDevice, DescriptorHeapManager* a_pHeapManager, UINT a_elemetNum, D3D12_COMMAND_LIST_TYPE a_mappingQueueType)
 	{
 		// アロケーターの作成
 		m_rangeAllocator.Init(static_cast<uint32_t>(a_elemetNum));
 
-		// バッファ作成
-		GPUBufferDesc _desc = {};
-		_desc.elementNum = static_cast<size_t>(a_elemetNum);
-		_desc.strideSize = sizeof(T);
-		_desc.flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		_desc.heapType = D3D12_HEAP_TYPE_DEFAULT;
-		_desc.memoryCategory = EVideoMemoryCategory::MeshBuffer;
-		if (!GPUBuffer::Create(a_pDevice, _desc))
+		// バッファ作成 : 予約リソースにできればそうする
+		if (!CreateBufferResource(a_pDevice, static_cast<size_t>(a_elemetNum), sizeof(T), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, a_mappingQueueType))
 		{
 			ENGINE_ERRLOG(false, "RWStructredBufferの作成に失敗");
 			return false;
@@ -107,6 +103,13 @@ namespace Engine::Graphics::D3D12
 		// アロケーターから領域を確保
 		auto _handle = m_rangeAllocator.AllocateRange(a_count);
 		if (!_handle.IsValid()) return _handle;		// 容量不足
+
+		// 配った範囲に実メモリを用意する(予約リソースのとき)。用意できなければ配ったぶんを返す
+		if (!EnsureMapped(_handle.startIndex + _handle.count))
+		{
+			m_rangeAllocator.ReserveFreeRange(_handle, 0);
+			return {};
+		}
 
 		// 中身のどこを使うかを割り当てて返す
 		return _handle;

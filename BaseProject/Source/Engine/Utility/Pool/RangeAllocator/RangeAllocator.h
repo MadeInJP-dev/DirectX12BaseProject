@@ -147,6 +147,9 @@ namespace Engine
 	{
 		if (!a_handle.IsValid()) return;
 
+		// 確保(ロードのワーカースレッド)と同時に来ることがあるので、同じロックで守る
+		std::lock_guard<std::mutex> _lock(m_mutex);
+
 		m_pendingFrees.push({
 			{ a_handle.startIndex, a_handle.count },
 			a_releaseFenceValue
@@ -156,6 +159,9 @@ namespace Engine
 	template<typename T>
 	inline void RangeAllocator<T>::ApplyReservedFrees(uint64_t a_completedFenceValue)
 	{
+		// 空きリストは確保(ロードのワーカースレッド)も触るので、同じロックで守る
+		std::lock_guard<std::mutex> _lock(m_mutex);
+
 		bool _needsMerge = false;
 
 		while (!m_pendingFrees.empty())

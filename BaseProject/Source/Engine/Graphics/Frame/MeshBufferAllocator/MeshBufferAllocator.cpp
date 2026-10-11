@@ -21,7 +21,9 @@ namespace Engine::Graphics
 		m_staticVerticesBuffer.Create(a_pDevice,a_pHeapManager,a_pCmdList,a_bufferSizes.staticVertexBufferSize);
 		m_indexBuffer.Create(a_pDevice,a_pHeapManager,a_pCmdList,a_bufferSizes.indexBufferSize);
 		m_animatedVertexBuffer.Create(a_pDevice,a_pHeapManager,a_bufferSizes.animatedVertexBufferSize);
-		// 前フレームの位置も同じ要素数で作成(同じオフセットで参照するため)
+		// 前フレームの位置も同じ要素数で作成(同じオフセットで参照するため)。
+		// アニメ後の2本は描画キューで書くので、実メモリの割り当ても描画キューで流す(Create の既定)。
+		// ほかはロードのコピーで書くので、コピーキューで流す
 		m_prevAnimatedPositionBuffer.Create(a_pDevice,a_pHeapManager,a_bufferSizes.animatedVertexBufferSize);
 
 		// メッシュレット数の上限。
@@ -48,6 +50,19 @@ namespace Engine::Graphics
 		m_uniqueVertexIndicesBuffer.Release();
 		m_meshTriangleBuffer.Release();
 		m_meshletCullDataBuffer.Release();
+	}
+
+	void MeshBufferAllocator::FlushTileMappings(D3D12_COMMAND_LIST_TYPE a_queueType, D3D12::CommandQueue* a_pQueue)
+	{
+		m_staticVerticesBuffer.FlushTileMappings(a_queueType, a_pQueue);
+		m_indexBuffer.FlushTileMappings(a_queueType, a_pQueue);
+		m_animatedVertexBuffer.FlushTileMappings(a_queueType, a_pQueue);
+		m_prevAnimatedPositionBuffer.FlushTileMappings(a_queueType, a_pQueue);
+
+		m_meshletBuffer.FlushTileMappings(a_queueType, a_pQueue);
+		m_uniqueVertexIndicesBuffer.FlushTileMappings(a_queueType, a_pQueue);
+		m_meshTriangleBuffer.FlushTileMappings(a_queueType, a_pQueue);
+		m_meshletCullDataBuffer.FlushTileMappings(a_queueType, a_pQueue);
 	}
 
 	void MeshBufferAllocator::UpdateFrame(D3D12::GraphicsCommandList* /*a_pCmdList*/,uint64_t a_completedFenceValue)
@@ -106,7 +121,17 @@ namespace Engine::Graphics
 	}
 	RangeHandle<Resource::MeshVertexFloat> MeshBufferAllocator::AllocateAnimatedVertex(UINT a_size)
 	{
-		return m_animatedVertexBuffer.Allocate(a_size);
+		auto _handle = m_animatedVertexBuffer.Allocate(a_size);
+		if (!_handle.IsValid()) return _handle;
+
+		// 前フレームの位置は自分では配らず、アニメ後の頂点と同じオフセットで使う。
+		// 実メモリだけは同じ範囲まで用意しておく(無いとスキニングの書き込みが落ちる)
+		if (!m_prevAnimatedPositionBuffer.EnsureMapped(_handle.startIndex + _handle.count))
+		{
+			m_animatedVertexBuffer.ReserveFree(_handle, 0);
+			return {};
+		}
+		return _handle;
 	}
 	void MeshBufferAllocator::ReserveFreeStaticVertex(const RangeHandle<Resource::MeshVertexFloat>& a_handle)
 	{
