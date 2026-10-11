@@ -63,6 +63,12 @@ bool Engine::Resource::Mesh::CreateFloat(
 	// レイトレデータ : メガバッファへの転送コマンドを積む
 	m_opRtData.emplace();
 	m_opRtData->vertexHandle = _pMeshBufferAllocator->AllocateVertex(a_ctx, m_vertices);
+
+	// ボーン割り当てはスキンメッシュだけが持つ(スキニングのときだけ読む)
+	if (m_isSkinMesh)
+	{
+		m_opRtData->skinVertexHandle = _pMeshBufferAllocator->AllocateSkinVertex(a_ctx, m_vertices);
+	}
 	m_opRtData->indexHandle = _pMeshBufferAllocator->AllocateIndex(a_ctx, _indices);
 
 	// メッシュシェーダー用データ : メッシュレット生成と転送コマンドの記録
@@ -273,6 +279,7 @@ void Engine::Resource::Mesh::Release()
 	if (m_opRtData.has_value())
 	{
 		_pMeshBufferAllocator->ReserveFreeStaticVertex(m_opRtData->vertexHandle);
+		_pMeshBufferAllocator->ReserveFreeSkinVertex(m_opRtData->skinVertexHandle);
 		_pMeshBufferAllocator->ReserveFreeIndex(m_opRtData->indexHandle);
 	}
 

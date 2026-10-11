@@ -9,6 +9,10 @@ struct SkinningInfo
 	uint animatedVertStart;		// 変形後頂点の書き込み開始インデックス
 	uint vertexCount;
 	uint boneOffset;			// このキャラのボーン開始位置
+	uint skinVertexStart;		// ボーン割り当ての開始インデックス(NO_SKIN_VERTEX なら持っていない)
 };
+
+// ボーン割り当てを持たない(スキンメッシュでない)ことを表す値
+#define NO_SKIN_VERTEX 0xFFFFFFFF
 
 #endif

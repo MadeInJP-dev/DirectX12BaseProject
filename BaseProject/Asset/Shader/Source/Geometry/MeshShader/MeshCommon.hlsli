@@ -68,8 +68,8 @@ StructuredBuffer<Meshlet>			g_meshletData			: register(t2);
 StructuredBuffer<uint>				g_uniqueVertexIndices	: register(t3);	// 各メッシュレットが使う頂点番号
 StructuredBuffer<uint>				g_primitiveIndices		: register(t4);
 
-StructuredBuffer<Vertex>			g_vertices				: register(t5);
-StructuredBuffer<Vertex>			g_animatedVertices		: register(t6);
+StructuredBuffer<MeshVertex>		g_vertices				: register(t5);	// 静的な頂点(詰めた形)
+StructuredBuffer<AnimatedVertex>	g_animatedVertices		: register(t6);	// スキニング後の座標・法線・接線
 StructuredBuffer<MeshletCullData>	g_cullData				: register(t7);
 StructuredBuffer<float3>			g_prevAnimatedPositions	: register(t8);	// 前フレームのスキニング済みの位置
 StructuredBuffer<uint>				g_drawInstanceIndices	: register(t9);	// 描く順 → インスタンスデータの番号

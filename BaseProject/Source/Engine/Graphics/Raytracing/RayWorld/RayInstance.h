@@ -80,7 +80,7 @@ namespace Engine::Graphics::Raytracing
 
 		// --- ジオメトリ参照情報 ---
 		// HLSLのBindless配列に渡すためのハンドル
-		RangeHandle<Resource::MeshVertexFloat> megaVertexHandle = {};	// 静的: StaticMegaBuffer, 動的: AnimatedBuffer
+		RangeHandle<Resource::MeshVertexPacked> megaVertexHandle = {};	// 静的: StaticMegaBuffer, 動的: AnimatedBuffer
 		RangeHandle<uint32_t> megaIndexHandle = {};						 // IndexBuffer (基本的に静的と共通)
 
 		// バッファ内の論理的なオフセット

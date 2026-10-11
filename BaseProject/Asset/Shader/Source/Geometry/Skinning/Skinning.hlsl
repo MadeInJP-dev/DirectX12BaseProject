@@ -11,33 +11,38 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
 	// メガバッファ上の絶対インデックス
 	uint _globalVertIdx = g_info.vertexStart + DTid.x;
 
-	// 頂点データの取得
-	Vertex _vert = g_vertexfloatData[_globalVertIdx];
-
-	uint _skinIndex[4];
-	_skinIndex[0] = _vert.skinIndex.x & 0xFFFF;
-	_skinIndex[1] = (_vert.skinIndex.x >> 16) & 0xFFFF;
-	_skinIndex[2] = _vert.skinIndex.y & 0xFFFF;
-	_skinIndex[3] = (_vert.skinIndex.y >> 16) & 0xFFFF;
+	// 頂点データの取得(詰めた形から戻す)
+	Vertex _vert = DecodeMeshVertex(g_vertexfloatData[_globalVertIdx]);
 
 	// ---- スキニング計算 ----
-	row_major float4x4 _mBones = 0;
-	[unroll]
-	for (int _i = 0; _i < 4; ++_i)
+	// ボーン割り当てを持たない(スキンメッシュでない)ものは変形させず、元の形のまま書き出す
+	row_major float4x4 _mBones = float4x4(
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1);
+	if (g_info.skinVertexStart != NO_SKIN_VERTEX)
 	{
-		_mBones += g_bonePalletData[g_info.boneOffset + _skinIndex[_i]].mat * _vert.skinWeight[_i];
+		SkinVertex _skin = g_skinVertexData[g_info.skinVertexStart + DTid.x];
+
+		_mBones = 0;
+		[unroll]
+		for (uint _i = 0; _i < 4; ++_i)
+		{
+			_mBones += g_bonePalletData[g_info.boneOffset + DecodeBoneIndex(_skin, _i)].mat * DecodeBoneWeight(_skin, _i);
+		}
 	}
+
 	// 座標と法線
 	float4 _skinnedPos = mul(float4(_vert.pos, 1), _mBones);
 	float3 _skinnedNormal = mul(_vert.normal, (float3x3) _mBones);
 	float3 _skinnedTangent = mul(_vert.tangent, (float3x3) _mBones);
 	
-	// 新たな頂点を入れる
-	Vertex _outVert;
-	_outVert = _vert;
+	// 新たな頂点を入れる : 変わるのは座標・法線・接線だけ(uv は静的な頂点から読む)
+	AnimatedVertex _outVert;
 	_outVert.pos = _skinnedPos.xyz;
-	_outVert.normal = _skinnedNormal;
-	_outVert.tangent = normalize(_skinnedTangent);
+	_outVert.normal = EncodeOctNormal(_skinnedNormal);
+	_outVert.tangent = EncodeOctNormal(_skinnedTangent);
 	
 	// 上書きする前の位置(=前フレームの結果)をモーションベクター用に残す。
 	// 同じ頂点を触るのはこのスレッドだけなので、読んでから書くまでに他から壊されない

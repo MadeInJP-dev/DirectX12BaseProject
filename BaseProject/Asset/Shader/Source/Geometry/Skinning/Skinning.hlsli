@@ -12,6 +12,7 @@
 //   3 : SRVの番号(t2) インデックスメガバッファ
 //   4 : UAVの番号(u0) 変形後頂点の書き込み先
 //   5 : UAVの番号(u1) 前フレームの位置の書き込み先(モーションベクター用)
+//   6 : SRVの番号(t3) ボーン割り当てメガバッファ
 //==========================================================================================
 #define SKINNING_ROOT_SIG \
 "RootFlags(CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED)," \
@@ -20,7 +21,8 @@
 "RootConstants(num32BitConstants=1, b101), " \
 "RootConstants(num32BitConstants=1, b102), " \
 "RootConstants(num32BitConstants=1, b103), " \
-"RootConstants(num32BitConstants=1, b104)"
+"RootConstants(num32BitConstants=1, b104), " \
+"RootConstants(num32BitConstants=1, b105)"
 
 cbuffer CBSkinningInfo : register(b0)
 {
@@ -41,7 +43,7 @@ cbuffer PassDescriptorIndex1 : register(b101)
 	uint g_vertexfloatDataIndex;
 }
 
-StructuredBuffer<Vertex> Get_vertexfloatData() { StructuredBuffer<Vertex> _r = ResourceDescriptorHeap[g_vertexfloatDataIndex]; return _r; }
+StructuredBuffer<MeshVertex> Get_vertexfloatData() { StructuredBuffer<MeshVertex> _r = ResourceDescriptorHeap[g_vertexfloatDataIndex]; return _r; }
 #define g_vertexfloatData Get_vertexfloatData()
 // SRVの番号(ResourceDescriptorHeap の添字)。ルート定数で届く
 cbuffer PassDescriptorIndex2 : register(b102)
@@ -58,7 +60,7 @@ cbuffer PassDescriptorIndex3 : register(b103)
 	uint g_outputVertexIndex;
 }
 
-RWStructuredBuffer<Vertex> Get_outputVertex() { RWStructuredBuffer<Vertex> _r = ResourceDescriptorHeap[g_outputVertexIndex]; return _r; }
+RWStructuredBuffer<AnimatedVertex> Get_outputVertex() { RWStructuredBuffer<AnimatedVertex> _r = ResourceDescriptorHeap[g_outputVertexIndex]; return _r; }
 #define g_outputVertex Get_outputVertex()
 
 // UAVの番号(ResourceDescriptorHeap の添字)。ルート定数で届く
@@ -69,3 +71,12 @@ cbuffer PassDescriptorIndex4 : register(b104)
 
 RWStructuredBuffer<float3> Get_outputPrevPosition() { RWStructuredBuffer<float3> _r = ResourceDescriptorHeap[g_outputPrevPositionIndex]; return _r; }
 #define g_outputPrevPosition Get_outputPrevPosition()
+
+// SRVの番号(ResourceDescriptorHeap の添字)。ルート定数で届く
+cbuffer PassDescriptorIndex5 : register(b105)
+{
+	uint g_skinVertexDataIndex;
+}
+
+StructuredBuffer<SkinVertex> Get_skinVertexData() { StructuredBuffer<SkinVertex> _r = ResourceDescriptorHeap[g_skinVertexDataIndex]; return _r; }
+#define g_skinVertexData Get_skinVertexData()

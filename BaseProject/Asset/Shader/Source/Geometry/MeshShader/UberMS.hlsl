@@ -51,23 +51,18 @@ void MSMain(
 		uint _globalUVI = _inst.uviOffset + _m.vertexOffset + a_gtid;
 		uint _localVertexIndex = g_uniqueVertexIndices[_globalUVI];
 
+		// 静的な頂点。アニメメッシュでも uv はここから読む(スキニングで変わらないため)
+		MeshVertex _static = g_vertices[_inst.vertexOffset + _localVertexIndex];
+
 		Vertex _v;
-		
 		if(_inst.isAnimated == 0)
 		{
-			// メガバッファ内の絶対インデックスを計算
-			uint _globalVertexIndex = _inst.vertexOffset + _localVertexIndex;
-
-			// 頂点データの取得
-			_v = g_vertices[_globalVertexIndex];
+			_v = DecodeMeshVertex(_static);
 		}
 		else
 		{
-			// メガバッファ内の絶対インデックスを計算
-			uint _globalVertexIndex = _inst.animatedVertexStart + _localVertexIndex;
-
-			// 頂点データの取得
-			_v = g_animatedVertices[_globalVertexIndex];
+			// 座標・法線・接線はスキニング後のものを使う
+			_v = DecodeAnimatedVertex(g_animatedVertices[_inst.animatedVertexStart + _localVertexIndex], _static);
 		}
 
 		// ---------------------------------------------------------

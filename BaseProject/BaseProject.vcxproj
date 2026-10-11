@@ -1438,6 +1438,7 @@
     <ClCompile Include="Source\Engine\Resource\Data\Mesh\MeshMetaData\MeshMetaData.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\Mesh\RasterizationMesh\RasterizationMesh.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\Mesh\RaytracingMesh\RaytracingMesh.cpp" />
+    <ClCompile Include="Source\Engine\Resource\Data\Vertex\Vertex.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\Model\IO\ModelConverter\ModelConverter.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\Model\IO\ModelIO.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\Model\IO\Parser\tinyGLTF\tinyGLTF.cpp" />

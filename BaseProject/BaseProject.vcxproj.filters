@@ -2238,6 +2238,9 @@
     <ClCompile Include="Source\Engine\Resource\Data\Mesh\RaytracingMesh\RaytracingMesh.cpp">
       <Filter>Source\Engine\Resource\Data\Mesh\RaytracingMesh</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Resource\Data\Vertex\Vertex.cpp">
+      <Filter>Source\Engine\Resource\Data\Vertex</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Resource\Data\Model\Model.cpp">
       <Filter>Source\Engine\Resource\Data\Model</Filter>
     </ClCompile>

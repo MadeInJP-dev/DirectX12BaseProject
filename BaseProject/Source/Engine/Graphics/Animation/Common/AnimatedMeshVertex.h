@@ -4,7 +4,7 @@ namespace Engine::Graphics::Animation
 	struct SkinningMeshData
 	{
 		// コンピュートシェーダーで書き込む変形後のバッファ
-		RangeHandle<Resource::MeshVertexFloat> animatedVertexHandle = {};
+		RangeHandle<Resource::AnimatedVertex> animatedVertexHandle = {};
 
 		// どのメッシュの参照先か
 		Handle<Resource::Mesh> meshHandle;

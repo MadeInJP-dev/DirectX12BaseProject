@@ -269,6 +269,7 @@ namespace Engine::Graphics
 		_bufferSizeDesc.staticVertexBufferSize = 20000000;
 		_bufferSizeDesc.indexBufferSize = 20000000;
 		_bufferSizeDesc.animatedVertexBufferSize = 5000000;
+		_bufferSizeDesc.skinVertexBufferSize = 5000000;
 		m_upMeshBufferAllocator = std::make_unique<MeshBufferAllocator>();
 		m_upMeshBufferAllocator->Init(
 			_pDevice,

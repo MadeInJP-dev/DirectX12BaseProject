@@ -14,7 +14,7 @@ namespace Engine::Graphics::Raytracing
 	struct SkinningMeshData
 	{
 		// コンピュートシェーダーで書き込む変形後のバッファ
-		RangeHandle<Resource::MeshVertexFloat> animatedVertexHandle = {};
+		RangeHandle<Resource::AnimatedVertex> animatedVertexHandle = {};
 
 		// インスタンス専用のBLAS
 		Graphics::Raytracing::BLAS instanceBLAS;

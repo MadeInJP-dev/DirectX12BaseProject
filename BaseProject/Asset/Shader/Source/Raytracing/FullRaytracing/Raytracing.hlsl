@@ -37,9 +37,9 @@ cbuffer CBAmbient : register(b10)
 RaytracingAccelerationStructure	g_raytracingWorld	: register(t0);
 StructuredBuffer<RayInstanceData>	g_instanceData		: register(t1);
 StructuredBuffer<RayMaterial>		g_materialData		: register(t2);
-StructuredBuffer<Vertex>			g_vertexfloatData	: register(t3);
+StructuredBuffer<MeshVertex>			g_vertexfloatData	: register(t3);
 StructuredBuffer<uint>				g_indexData			: register(t4);
-StructuredBuffer<Vertex>			g_animatedVertexData: register(t5);
+StructuredBuffer<AnimatedVertex>			g_animatedVertexData: register(t5);
 
 RWTexture2D<float4>	gOutPut	: register(u0);
 sampler				gSamp	: register(s0);
@@ -58,9 +58,9 @@ float2 GetUV(BuiltInTriangleIntersectionAttributes a_attribs, RayInstanceData in
 	uint _v2 = g_indexData[_baseIndexLocation + 2];
 
 	// オフセットを足してメガバッファからUV取得
-	float2 _uv0 = g_vertexfloatData[instance.vertexStart + _v0].uv;
-	float2 _uv1 = g_vertexfloatData[instance.vertexStart + _v1].uv;
-	float2 _uv2 = g_vertexfloatData[instance.vertexStart + _v2].uv;
+	float2 _uv0 = DecodeMeshVertex(g_vertexfloatData[instance.vertexStart + _v0]).uv;
+	float2 _uv1 = DecodeMeshVertex(g_vertexfloatData[instance.vertexStart + _v1]).uv;
+	float2 _uv2 = DecodeMeshVertex(g_vertexfloatData[instance.vertexStart + _v2]).uv;
 
 	float2 _uv = _barycentrics.x * _uv0 + _barycentrics.y * _uv1 + _barycentrics.z * _uv2;
 	return _uv;
@@ -78,15 +78,15 @@ float3 GetNormal(BuiltInTriangleIntersectionAttributes a_attribs, float2 a_uv, R
 	uint _v2 = g_indexData[_baseIndexLocation + 2];
 	
 	// 法線取得 (vertexStartを足す)
-	float3 _n0 = g_vertexfloatData[instance.vertexStart + _v0].normal;
-	float3 _n1 = g_vertexfloatData[instance.vertexStart + _v1].normal;
-	float3 _n2 = g_vertexfloatData[instance.vertexStart + _v2].normal;
+	float3 _n0 = DecodeMeshVertex(g_vertexfloatData[instance.vertexStart + _v0]).normal;
+	float3 _n1 = DecodeMeshVertex(g_vertexfloatData[instance.vertexStart + _v1]).normal;
+	float3 _n2 = DecodeMeshVertex(g_vertexfloatData[instance.vertexStart + _v2]).normal;
 	float3 _normal = normalize(_barycentrics.x * _n0 + _barycentrics.y * _n1 + _barycentrics.z * _n2);
 
 	// タンジェント
-	float3 _t0 = g_vertexfloatData[instance.vertexStart + _v0].tangent;
-	float3 _t1 = g_vertexfloatData[instance.vertexStart + _v1].tangent;
-	float3 _t2 = g_vertexfloatData[instance.vertexStart + _v2].tangent;
+	float3 _t0 = DecodeMeshVertex(g_vertexfloatData[instance.vertexStart + _v0]).tangent;
+	float3 _t1 = DecodeMeshVertex(g_vertexfloatData[instance.vertexStart + _v1]).tangent;
+	float3 _t2 = DecodeMeshVertex(g_vertexfloatData[instance.vertexStart + _v2]).tangent;
 	float3 _tangent = normalize(_barycentrics.x * _t0 + _barycentrics.y * _t1 + _barycentrics.z * _t2);
 
 	// ビノーマルを計算

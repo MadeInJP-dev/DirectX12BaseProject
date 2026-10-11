@@ -7,11 +7,13 @@
 //------------------------------------------------------------------------------------------
 Vertex FetchVertex(RayInstanceData a_inst, uint a_localIndex)
 {
+	// uv はスキニングで変わらないので、アニメメッシュでも静的な頂点から読む
+	MeshVertex _static = g_vertexfloatData[a_inst.vertexStart + a_localIndex];
 	if (a_inst.isAnimated == 0)
 	{
-		return g_vertexfloatData[a_inst.vertexStart + a_localIndex];
+		return DecodeMeshVertex(_static);
 	}
-	return g_animatedVertexData[a_inst.animatedVertexStart + a_localIndex];
+	return DecodeAnimatedVertex(g_animatedVertexData[a_inst.animatedVertexStart + a_localIndex], _static);
 }
 
 // UV座標を取得

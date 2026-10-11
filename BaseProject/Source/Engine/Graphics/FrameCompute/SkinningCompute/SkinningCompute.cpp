@@ -75,22 +75,32 @@ void Engine::Graphics::SkinningCompute::Execute(GraphicsEngine* a_pGE, RenderCon
 			const UINT _indexIndex    = _pMA->GetIndexBuffer().GetSRV().GetIndex();
 			const UINT _animatedIndex = _animatedBuf.GetUAV().GetIndex();
 			const UINT _prevIndex     = _prevBuf.GetUAV().GetIndex();
+			const UINT _skinIndex     = _pMA->GetSkinVertexBuffer().GetSRV().GetIndex();
 			a_pCtx->ComputeBindDescriptorIndices(2, std::span<const UINT>(&_vertexIndex, 1));
 			a_pCtx->ComputeBindDescriptorIndices(3, std::span<const UINT>(&_indexIndex, 1));
 			a_pCtx->ComputeBindDescriptorIndices(4, std::span<const UINT>(&_animatedIndex, 1));
 			a_pCtx->ComputeBindDescriptorIndices(5, std::span<const UINT>(&_prevIndex, 1));
+			a_pCtx->ComputeBindDescriptorIndices(6, std::span<const UINT>(&_skinIndex, 1));
 
 			for (auto& _item : _skinningItems)
 			{
 
+				// SkinningInfo.hlsli と同じ並び
 				struct Info
 				{
 					UINT vertexStart;			// 頂点のスタートインデックス
 					UINT animatedVertStart;
 					UINT vertexCount;			// キャラの頂点数
 					UINT boneOffset;			// このキャラのボーンの開始場所
+					UINT skinVertexStart;		// ボーン割り当ての開始位置(無ければ NO_SKIN_VERTEX)
 				} _info;
+
+				// ボーン割り当てを持たないメッシュ(スキンメッシュでないもの)は、
+				// 変形させずに元の形のまま書き出させる
+				constexpr UINT NO_SKIN_VERTEX = 0xFFFFFFFF;
+
 				_info.vertexStart = _item.staticVertexHandle.startIndex;
+				_info.skinVertexStart = _item.skinVertexHandle.IsValid() ? _item.skinVertexHandle.startIndex : NO_SKIN_VERTEX;
 				_info.animatedVertStart = _item.animatedHandle.startIndex;
 				_info.vertexCount = _item.staticVertexHandle.count;
 				// プールの添字ではなくボーンパレット(GPU)上の位置。

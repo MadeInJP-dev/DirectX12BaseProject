@@ -37,8 +37,8 @@ namespace Engine::Resource
 			// 頂点バッファ
 			_desc.Triangles.VertexBuffer.StartAddress = 
 				_pMA->RefStaticVertexBuffer().GetGPUVirtualAddress() + 
-				(vertexHandle.startIndex) * sizeof(MeshVertexFloat);
-			_desc.Triangles.VertexBuffer.StrideInBytes = sizeof(MeshVertexFloat);
+				(vertexHandle.startIndex) * sizeof(MeshVertexPacked);
+			_desc.Triangles.VertexBuffer.StrideInBytes = sizeof(MeshVertexPacked);	// 先頭の座標だけをこの間隔で読む
 			_desc.Triangles.VertexCount = vertexHandle.count;
 			_desc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
 

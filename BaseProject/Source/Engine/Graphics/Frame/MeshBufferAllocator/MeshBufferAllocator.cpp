@@ -19,6 +19,7 @@ namespace Engine::Graphics
 
 		// メッシュ用バッファ作成 : サイズはもらい受ける
 		m_staticVerticesBuffer.Create(a_pDevice,a_pHeapManager,a_pCmdList,a_bufferSizes.staticVertexBufferSize);
+		m_skinVertexBuffer.Create(a_pDevice,a_pHeapManager,a_pCmdList,a_bufferSizes.skinVertexBufferSize);
 		m_indexBuffer.Create(a_pDevice,a_pHeapManager,a_pCmdList,a_bufferSizes.indexBufferSize);
 		m_animatedVertexBuffer.Create(a_pDevice,a_pHeapManager,a_bufferSizes.animatedVertexBufferSize);
 		// 前フレームの位置も同じ要素数で作成(同じオフセットで参照するため)。
@@ -42,6 +43,7 @@ namespace Engine::Graphics
 	void MeshBufferAllocator::Release()
 	{
 		m_staticVerticesBuffer.Release();
+		m_skinVertexBuffer.Release();
 		m_indexBuffer.Release();
 		m_animatedVertexBuffer.Release();
 		m_prevAnimatedPositionBuffer.Release();
@@ -56,6 +58,7 @@ namespace Engine::Graphics
 	{
 		D3D12::MegaBuffer* _pBuffers[] = {
 			&m_staticVerticesBuffer,
+			&m_skinVertexBuffer,
 			&m_indexBuffer,
 			&m_animatedVertexBuffer,
 			&m_prevAnimatedPositionBuffer,
@@ -77,6 +80,7 @@ namespace Engine::Graphics
 	{
 		// メッシュ用のバッファ更新
 		m_staticVerticesBuffer.Update(a_completedFenceValue);
+		m_skinVertexBuffer.Update(a_completedFenceValue);
 		m_indexBuffer.Update(a_completedFenceValue);
 		m_animatedVertexBuffer.Update(a_completedFenceValue);
 
@@ -88,11 +92,34 @@ namespace Engine::Graphics
 		m_meshTriangleBuffer.Update(a_completedFenceValue);
 		m_meshletCullDataBuffer.Update(a_completedFenceValue);
 	}
-	RangeHandle<Resource::MeshVertexFloat> MeshBufferAllocator::AllocateVertex(const Resource::ResourceBuildContext& a_ctx, const std::vector<Resource::MeshVertexFloat>& a_vertex)
+	RangeHandle<Resource::MeshVertexPacked> MeshBufferAllocator::AllocateVertex(const Resource::ResourceBuildContext& a_ctx, const std::vector<Resource::MeshVertexFloat>& a_vertex)
 	{
+		// GPU 用の形に詰め直してから積む : 84 バイト → 32 バイト
+		std::vector<Resource::MeshVertexPacked> _packed = {};
+		_packed.reserve(a_vertex.size());
+		for (const auto& _vertex : a_vertex)
+		{
+			_packed.push_back(Resource::MeshVertexPacked::From(_vertex));
+		}
+
 		return m_staticVerticesBuffer.AllocateAndRecordUpload(
 			a_ctx.pCopyCmdList, *a_ctx.pKeepAliveUploads,
-			a_vertex.data(), static_cast<UINT>(a_vertex.size())
+			_packed.data(), static_cast<UINT>(_packed.size())
+		);
+	}
+	RangeHandle<Resource::MeshSkinVertex> MeshBufferAllocator::AllocateSkinVertex(const Resource::ResourceBuildContext& a_ctx, const std::vector<Resource::MeshVertexFloat>& a_vertex)
+	{
+		// ボーン割り当てだけを抜き出して積む : 頂点と同じ並び・同じ数
+		std::vector<Resource::MeshSkinVertex> _skin = {};
+		_skin.reserve(a_vertex.size());
+		for (const auto& _vertex : a_vertex)
+		{
+			_skin.push_back(Resource::MeshSkinVertex::From(_vertex));
+		}
+
+		return m_skinVertexBuffer.AllocateAndRecordUpload(
+			a_ctx.pCopyCmdList, *a_ctx.pKeepAliveUploads,
+			_skin.data(), static_cast<UINT>(_skin.size())
 		);
 	}
 	RangeHandle<uint32_t> MeshBufferAllocator::AllocateIndex(const Resource::ResourceBuildContext& a_ctx, const std::vector<uint32_t>& a_indices)
@@ -130,7 +157,7 @@ namespace Engine::Graphics
 			a_cullData.data(), static_cast<UINT>(a_cullData.size())
 		);
 	}
-	RangeHandle<Resource::MeshVertexFloat> MeshBufferAllocator::AllocateAnimatedVertex(UINT a_size)
+	RangeHandle<Resource::AnimatedVertex> MeshBufferAllocator::AllocateAnimatedVertex(UINT a_size)
 	{
 		auto _handle = m_animatedVertexBuffer.Allocate(a_size);
 		if (!_handle.IsValid()) return _handle;
@@ -144,17 +171,25 @@ namespace Engine::Graphics
 		}
 		return _handle;
 	}
-	void MeshBufferAllocator::ReserveFreeStaticVertex(const RangeHandle<Resource::MeshVertexFloat>& a_handle)
+	void MeshBufferAllocator::ReserveFreeStaticVertex(const RangeHandle<Resource::MeshVertexPacked>& a_handle)
 	{
 		ENGINE_LOG("静的頂点データバッファ : Free");
 		m_staticVerticesBuffer.ReserveFree(a_handle, GetReleaseFenceValue());
+	}
+	void MeshBufferAllocator::ReserveFreeSkinVertex(const RangeHandle<Resource::MeshSkinVertex>& a_handle)
+	{
+		// スキンメッシュでなければ持っていない
+		if (!a_handle.IsValid()) return;
+
+		ENGINE_LOG("ボーン割り当てバッファ : Free");
+		m_skinVertexBuffer.ReserveFree(a_handle, GetReleaseFenceValue());
 	}
 	void MeshBufferAllocator::ReserveFreeIndex(const RangeHandle<uint32_t>&a_handle)
 	{
 		ENGINE_LOG("インデックスデータバッファ : Free");
 		m_indexBuffer.ReserveFree(a_handle, GetReleaseFenceValue());
 	}
-	void MeshBufferAllocator::ReserveFreeAnimatedVertex(const RangeHandle<Resource::MeshVertexFloat>&a_handle)
+	void MeshBufferAllocator::ReserveFreeAnimatedVertex(const RangeHandle<Resource::AnimatedVertex>&a_handle)
 	{
 		ENGINE_LOG("アニメーション後頂点データバッファ : Free");
 		m_animatedVertexBuffer.ReserveFree(a_handle, GetReleaseFenceValue());

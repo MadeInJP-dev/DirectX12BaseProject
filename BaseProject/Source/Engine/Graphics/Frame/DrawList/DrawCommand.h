@@ -96,10 +96,11 @@ namespace Engine::Graphics
 	/// </summary>
 	struct SkinningDispatchItem
 	{
-		RangeHandle<Resource::MeshVertexFloat> staticVertexHandle;		// アセット側の頂点データ
+		RangeHandle<Resource::MeshVertexPacked> staticVertexHandle;		// アセット側の頂点データ
+		RangeHandle<Resource::MeshSkinVertex> skinVertexHandle;			// アセット側のボーン割り当て(スキンメッシュでなければ無効)
 		RangeHandle<uint32_t> staticIndexHandle;						// アセット側のインデックスデータ
 		RangeHandle<Resource::NodePoseMatrix> nodePoseMat;				// CPUで更新されたボーンノード行列
-		RangeHandle<Resource::MeshVertexFloat> animatedHandle;
+		RangeHandle<Resource::AnimatedVertex> animatedHandle;
 		RangeHandle<Resource::BoneMatrix> boneHandle;					// ボーン行列(ワールド内のプール添字)
 
 		// ボーンパレット(GPU)での開始位置。

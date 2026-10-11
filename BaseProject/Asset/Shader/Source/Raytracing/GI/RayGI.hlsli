@@ -42,9 +42,9 @@ cbuffer CBSunLight : register(b10)
 RaytracingAccelerationStructure	g_raytracingWorld	: register(t0);
 StructuredBuffer<RayInstanceData>	g_instanceData		: register(t1);
 StructuredBuffer<RayMaterial>		g_materialData		: register(t2);
-StructuredBuffer<Vertex>			g_vertexfloatData	: register(t3);
+StructuredBuffer<MeshVertex>		g_vertexfloatData	: register(t3);	// 静的な頂点(詰めた形)
 StructuredBuffer<uint>				g_indexData			: register(t4);
-StructuredBuffer<Vertex>			g_animatedVertexData: register(t5);
+StructuredBuffer<AnimatedVertex>	g_animatedVertexData: register(t5);	// スキニング後の座標・法線・接線
 
 RWTexture2D<float4>	gOutPut	: register(u0);
 sampler				gSamp	: register(s0);

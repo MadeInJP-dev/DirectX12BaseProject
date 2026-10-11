@@ -20,7 +20,8 @@ namespace Engine::Resource
 		void Release();
 
 		Engine::Graphics::Raytracing::BLAS blas;
-		RangeHandle<MeshVertexFloat> vertexHandle = {};
+		RangeHandle<MeshVertexPacked> vertexHandle = {};
+		RangeHandle<MeshSkinVertex> skinVertexHandle = {};		// ボーン割り当て(スキンメッシュだけ。それ以外は無効)
 		RangeHandle<uint32_t> indexHandle = {};
 	};
 }

@@ -199,9 +199,10 @@ namespace Engine::Graphics
 				_out.push_back(std::move(_row));
 			};
 
-		_push("Static Vertex", sizeof(Resource::MeshVertexFloat), _pMesh->GetStaticVertexBuffer().GetRangeStats(), _pMesh->GetStaticVertexBuffer());
+		_push("Static Vertex", sizeof(Resource::MeshVertexPacked), _pMesh->GetStaticVertexBuffer().GetRangeStats(), _pMesh->GetStaticVertexBuffer());
+		_push("Skin Vertex", sizeof(Resource::MeshSkinVertex), _pMesh->GetSkinVertexBuffer().GetRangeStats(), _pMesh->GetSkinVertexBuffer());
 		_push("Index", sizeof(uint32_t), _pMesh->GetIndexBuffer().GetRangeStats(), _pMesh->GetIndexBuffer());
-		_push("Animated Vertex", sizeof(Resource::MeshVertexFloat), _pMesh->GetAnimatedVertexBuffer().GetRangeStats(), _pMesh->GetAnimatedVertexBuffer());
+		_push("Animated Vertex", sizeof(Resource::AnimatedVertex), _pMesh->GetAnimatedVertexBuffer().GetRangeStats(), _pMesh->GetAnimatedVertexBuffer());
 
 		// 前フレームの位置は自分では配らず、アニメ後の頂点と同じオフセットで使う。
 		// 使われ方はアニメ後の頂点のものを出し、実メモリだけ自分のものを出す

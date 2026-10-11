@@ -157,9 +157,9 @@ StructuredBuffer<RayMaterial> Get_materialBuffer()
 }
 #define g_materialBuffer Get_materialBuffer()
 
-StructuredBuffer<Vertex> Get_vertexBuffer()
+StructuredBuffer<MeshVertex> Get_vertexBuffer()
 {
-	StructuredBuffer<Vertex> _r = ResourceDescriptorHeap[g_vertexBufferIndex];
+	StructuredBuffer<MeshVertex> _r = ResourceDescriptorHeap[g_vertexBufferIndex];
 	return _r;
 }
 #define g_vertexBuffer Get_vertexBuffer()
@@ -171,9 +171,9 @@ StructuredBuffer<uint> Get_indexBuffer()
 }
 #define g_indexBuffer Get_indexBuffer()
 
-StructuredBuffer<Vertex> Get_animatedVertexBuffer()
+StructuredBuffer<AnimatedVertex> Get_animatedVertexBuffer()
 {
-	StructuredBuffer<Vertex> _r = ResourceDescriptorHeap[g_animatedVertexBufferIndex];
+	StructuredBuffer<AnimatedVertex> _r = ResourceDescriptorHeap[g_animatedVertexBufferIndex];
 	return _r;
 }
 #define g_animatedVertexBuffer Get_animatedVertexBuffer()
@@ -299,11 +299,13 @@ struct HitSurface
 // バインドポーズの頂点と食い違って反射がずれる
 Vertex FetchVertex(RayInstanceData a_inst, uint a_localIndex)
 {
+	// uv はスキニングで変わらないので、アニメメッシュでも静的な頂点から読む
+	MeshVertex _static = g_vertexBuffer[a_inst.vertexStart + a_localIndex];
 	if (a_inst.isAnimated == 0)
 	{
-		return g_vertexBuffer[a_inst.vertexStart + a_localIndex];
+		return DecodeMeshVertex(_static);
 	}
-	return g_animatedVertexBuffer[a_inst.animatedVertexStart + a_localIndex];
+	return DecodeAnimatedVertex(g_animatedVertexBuffer[a_inst.animatedVertexStart + a_localIndex], _static);
 }
 
 // 当たった三角形の頂点を重心座標で補間して、ワールド空間の面を作る

@@ -55,6 +55,7 @@ namespace Engine::Graphics
 			SkinningDispatchItem _item = {};
 			_item.pWorld = &a_world;
 			_item.staticVertexHandle = _pMesh->GetRtData().vertexHandle;
+			_item.skinVertexHandle = _pMesh->GetRtData().skinVertexHandle;
 			_item.staticIndexHandle = _pMesh->GetRtData().indexHandle;
 			_item.nodePoseMat = nodePoseHandle;
 			_item.animHandle = dynamicHandle;
@@ -398,8 +399,8 @@ namespace Engine::Graphics
 					// 頂点バッファ
 					_desc.Triangles.VertexBuffer.StartAddress =
 						m_pMeshBufferAllocator->GetAnimatedVertexBuffer().GetGPUVirtualAddress() +
-						(_targetMeshData.animatedVertexHandle.startIndex * sizeof(Resource::MeshVertexFloat));
-					_desc.Triangles.VertexBuffer.StrideInBytes = sizeof(Resource::MeshVertexFloat);
+						(_targetMeshData.animatedVertexHandle.startIndex * sizeof(Resource::AnimatedVertex));
+					_desc.Triangles.VertexBuffer.StrideInBytes = sizeof(Resource::AnimatedVertex);	// 先頭の座標だけをこの間隔で読む
 					_desc.Triangles.VertexCount = _vertexCount;
 					_desc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
 

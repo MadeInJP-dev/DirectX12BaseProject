@@ -16,6 +16,7 @@ namespace Engine::Graphics
 		size_t staticVertexBufferSize = 0;
 		size_t indexBufferSize = 0;
 		UINT animatedVertexBufferSize = 0;
+		size_t skinVertexBufferSize = 0;		// スキンメッシュのボーン割り当て(スキンメッシュの頂点ぶんだけ使う)
 	};
 
 	/// <summary>
@@ -69,7 +70,8 @@ namespace Engine::Graphics
 		// 転送を伴うものはビルドコンテキストを受け取り、そのコピーコマンドリストへ積むだけにする。
 		// キューへの実行はバッチを開いた側(モデルのインポート処理など)がまとめて行う。
 		//--------------------------------------------------------------------------------------------
-		RangeHandle<Resource::MeshVertexFloat> AllocateVertex(const Resource::ResourceBuildContext& a_ctx, const std::vector<Resource::MeshVertexFloat>& a_vertex);		// 静的頂点
+		RangeHandle<Resource::MeshVertexPacked> AllocateVertex(const Resource::ResourceBuildContext& a_ctx, const std::vector<Resource::MeshVertexFloat>& a_vertex);		// 静的頂点(GPU 用の形に詰めて積む)
+		RangeHandle<Resource::MeshSkinVertex> AllocateSkinVertex(const Resource::ResourceBuildContext& a_ctx, const std::vector<Resource::MeshVertexFloat>& a_vertex);	// ボーン割り当て(スキンメッシュだけ)
 		RangeHandle<uint32_t> AllocateIndex(const Resource::ResourceBuildContext& a_ctx, const std::vector<uint32_t>& a_indices);										// インデックス
 
 		RangeHandle<Resource::Meshlet> AllocateMeshlet(const Resource::ResourceBuildContext& a_ctx, const std::vector<Resource::Meshlet>& a_meshlets);					// メッシュレット
@@ -78,13 +80,14 @@ namespace Engine::Graphics
 		RangeHandle<DirectX::CullData> AllocateCullData(const Resource::ResourceBuildContext& a_ctx, const std::vector<DirectX::CullData>& a_cullData);					// カリングデータ
 
 		// 転送を伴わないもの : GPU側で書き込むだけの領域確保
-		RangeHandle<Resource::MeshVertexFloat> AllocateAnimatedVertex(UINT a_size);											// 動的頂点
+		RangeHandle<Resource::AnimatedVertex> AllocateAnimatedVertex(UINT a_size);											// 動的頂点
 		//--------------------------------------------------------------------------------------------
 		// ハンドルの返却
 		//--------------------------------------------------------------------------------------------
-		void ReserveFreeStaticVertex(const RangeHandle<Resource::MeshVertexFloat>& a_handle);
+		void ReserveFreeStaticVertex(const RangeHandle<Resource::MeshVertexPacked>& a_handle);
+		void ReserveFreeSkinVertex(const RangeHandle<Resource::MeshSkinVertex>& a_handle);
 		void ReserveFreeIndex(const RangeHandle<uint32_t>& a_handle);
-		void ReserveFreeAnimatedVertex(const RangeHandle<Resource::MeshVertexFloat>& a_handle);
+		void ReserveFreeAnimatedVertex(const RangeHandle<Resource::AnimatedVertex>& a_handle);
 
 		void ReserveFreeMeshlet(const RangeHandle<Resource::Meshlet>& a_handle);					// メッシュレット
 		void ReserveFreeUniqueVertIndices(const RangeHandle<uint32_t>& a_handle);					// 頂点インデックス
@@ -93,15 +96,17 @@ namespace Engine::Graphics
 		//--------------------------------------------------------------------------------------------
 		// バッファアクセス
 		//--------------------------------------------------------------------------------------------
-		const D3D12::MegaStructuredBuffer<Resource::MeshVertexFloat>& GetStaticVertexBuffer() const { return m_staticVerticesBuffer; }
+		const D3D12::MegaStructuredBuffer<Resource::MeshVertexPacked>& GetStaticVertexBuffer() const { return m_staticVerticesBuffer; }
+		const D3D12::MegaStructuredBuffer<Resource::MeshSkinVertex>& GetSkinVertexBuffer() const { return m_skinVertexBuffer; }
 		const D3D12::MegaStructuredBuffer<uint32_t>& GetIndexBuffer() const { return m_indexBuffer; }
-		const D3D12::MegaRWStructuredBuffer<Resource::MeshVertexFloat>& GetAnimatedVertexBuffer() const { return m_animatedVertexBuffer; }
+		const D3D12::MegaRWStructuredBuffer<Resource::AnimatedVertex>& GetAnimatedVertexBuffer() const { return m_animatedVertexBuffer; }
 		// モーションベクター用 : 前フレームのスキニング済み頂点(今フレームの値をスキニング前にコピーして保持)
 		const D3D12::MegaRWStructuredBuffer<Math::Vector3>& GetPrevAnimatedPositionBuffer() const { return m_prevAnimatedPositionBuffer; }
 
-		D3D12::MegaStructuredBuffer<Resource::MeshVertexFloat>& RefStaticVertexBuffer() { return m_staticVerticesBuffer; }
+		D3D12::MegaStructuredBuffer<Resource::MeshVertexPacked>& RefStaticVertexBuffer() { return m_staticVerticesBuffer; }
+		D3D12::MegaStructuredBuffer<Resource::MeshSkinVertex>& RefSkinVertexBuffer() { return m_skinVertexBuffer; }
 		D3D12::MegaStructuredBuffer<uint32_t>& RefIndexBuffer() { return m_indexBuffer; }
-		D3D12::MegaRWStructuredBuffer<Resource::MeshVertexFloat>& RefAnimatedVertexBuffer() { return m_animatedVertexBuffer; }
+		D3D12::MegaRWStructuredBuffer<Resource::AnimatedVertex>& RefAnimatedVertexBuffer() { return m_animatedVertexBuffer; }
 		D3D12::MegaRWStructuredBuffer<Math::Vector3>& RefPrevAnimatedPositionBuffer() { return m_prevAnimatedPositionBuffer; }
 
 		const D3D12::MegaStructuredBuffer<Resource::Meshlet>& GetMeshletBuffer() const { return m_meshletBuffer; }
@@ -125,9 +130,10 @@ namespace Engine::Graphics
 		//--------------------------------------------------------------------------------------------
 		// メッシュデータ
 		//--------------------------------------------------------------------------------------------
-		D3D12::MegaStructuredBuffer<Resource::MeshVertexFloat>		m_staticVerticesBuffer;		// 静的な頂点データ
+		D3D12::MegaStructuredBuffer<Resource::MeshVertexPacked>		m_staticVerticesBuffer;		// 静的な頂点データ(GPU 用に詰めた形)
+		D3D12::MegaStructuredBuffer<Resource::MeshSkinVertex>		m_skinVertexBuffer;			// スキンメッシュのボーン割り当て(静的な頂点とは別に確保する)
 		D3D12::MegaStructuredBuffer<uint32_t>						m_indexBuffer;				// インデックスバッファ
-		D3D12::MegaRWStructuredBuffer<Resource::MeshVertexFloat>	m_animatedVertexBuffer;		// スキニング後の頂点バッファ(今フレーム)
+		D3D12::MegaRWStructuredBuffer<Resource::AnimatedVertex>		m_animatedVertexBuffer;		// スキニング後の頂点バッファ(今フレーム)。座標・法線・接線だけ
 		// 前フレームのスキニング後の位置。m_animatedVertexBuffer と同じ要素数・同じオフセットで運用する。
 		// モーションベクターが読むのは位置だけなので、頂点まるごとではなく位置(12バイト)だけを持つ。
 		// スキニングのコンピュートが、上書きする前の位置(=前フレームの結果)をここへ書き写す

@@ -6,7 +6,7 @@ namespace Engine::Graphics
 	/// </summary>
 	struct MeshAllocationHandle
 	{
-		RangeHandle<Resource::MeshVertexFloat>	vertexHandle;				// 頂点開始位置
+		RangeHandle<Resource::MeshVertexPacked>	vertexHandle;				// 頂点開始位置
 		RangeHandle<Resource::Meshlet>			meshletHandle;				// メッシュレット開始位置
 		RangeHandle<uint32_t>					primitiveHandle;			// プリミティブ開始位置
 		RangeHandle<uint32_t>					uniqueVertexHandle;		// 頂点インデックス開始位置
