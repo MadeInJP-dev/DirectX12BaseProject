@@ -1870,6 +1870,7 @@
     <ClInclude Include="Source\Application\InstanceResource\WaveAnnounceResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\DeathEventResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\GameDataResource.h" />
+    <ClInclude Include="Source\Application\InstanceResource\UserDataResource.h" />
     <ClInclude Include="Source\Application\Components\Core\LifeTimeComponent.h" />
     <ClInclude Include="Source\Application\Components\Effect\EffectComponent.h" />
     <ClInclude Include="Source\Application\Components\Effect\GroundImpulseEmitterComponent.h" />

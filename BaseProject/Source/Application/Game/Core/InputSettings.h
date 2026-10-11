@@ -57,7 +57,10 @@ namespace App::Game
 		std::unordered_map<Game::EGameAction, InputBindingData> keyboard;
 		std::unordered_map<Game::EGameAction, InputBindingData> mouse;
 
-		float mouseSensitivity = 1.0f;		// マウス感度
+		float mouseSensitivity = 1.0f;		// マウス感度 : 作り手の感度(エンジンの InputOption)へ掛ける倍率
+
+		// 視点の上下反転。未選択(nullopt)なら作り手の値(エンジンの InputOption)のまま
+		std::optional<bool> opIsInvertLookY = std::nullopt;
 	};
 
 	//------------------------------------------------------------------------------

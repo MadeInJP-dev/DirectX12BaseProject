@@ -1,5 +1,11 @@
 ﻿#include "UserData.h"
 
+#include "Engine/Audio/AudioManager.h"
+#include "Engine/MainEngine.h"
+#include "Engine/Graphics/GraphicsEngine.h"
+#include "Engine/Window/NativeWindow.h"
+#include "Engine/Input/InputManager/InputManager.h"
+
 namespace App::Game
 {
 	//==========================================================================================
@@ -152,6 +158,104 @@ namespace App::Game
 		GameDataArchive(a_ar);
 		SoundArchive(a_ar);
 		InputArchive(a_ar);
+
+		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
+		GraphicsArchive(a_ar);
+		GameSettingsArchive(a_ar);
+	}
+
+	namespace
+	{
+		//--------------------------------------------------------------------------------------
+		// 選ばれていないことがある値(未選択なら作り手の値を使うもの)を読み書きする
+		//
+		// 「選んだか」と値を別々に書く。値だけだと、作り手の値と同じものを選んだのか
+		// まだ選んでいないのかが区別できず、作り手が値を変えたときに追従できない
+		//--------------------------------------------------------------------------------------
+		template<typename T>
+		void OptionalField(Engine::Persistence::Archive& a_ar, const std::string& a_name, std::optional<T>& a_opValue, const T& a_default)
+		{
+			bool _hasValue = a_opValue.has_value();
+			T _value = a_opValue.value_or(a_default);
+
+			a_ar.Field("Has" + a_name, _hasValue);
+			a_ar.Field(a_name, _value);
+
+			if (!a_ar.IsLoading()) return;
+			a_opValue = _hasValue ? std::optional<T>(_value) : std::nullopt;
+		}
+	}
+
+	//==========================================================================================
+	// 画面設定
+	//==========================================================================================
+	void UserData::GraphicsArchive(Engine::Persistence::Archive& a_ar)
+	{
+		if (!a_ar.BeginGroup("Graphics")) return;
+
+		a_ar.Field("Brightness", m_graphicsSettings.brightness);
+		a_ar.Field("IsBloomEnable", m_graphicsSettings.isBloomEnable);
+		a_ar.Field("ScreenShake", m_graphicsSettings.screenShake);
+		a_ar.Field("IsHUDVisible", m_graphicsSettings.isHUDVisible);
+		OptionalField(a_ar, "WindowMode", m_graphicsSettings.opWindowMode, Engine::EWindowMode::Windowed);
+
+		a_ar.EndGroup();
+	}
+
+	void UserData::ApplyGraphicsSettings(Engine::MainEngine& a_engine) const
+	{
+		if (auto* _pGraphicsEngine = a_engine.RefGraphicsEngine())
+		{
+			const uint32_t _brightness = std::clamp(m_graphicsSettings.brightness, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
+			_pGraphicsEngine->SetUserExposureScale(static_cast<float>(_brightness) / 100.0f);
+			_pGraphicsEngine->SetUserBloomEnable(m_graphicsSettings.isBloomEnable);
+		}
+
+		// ウィンドウモードは選ばれているときだけ切り替える(未選択なら作り手の値で開いたまま)
+		if (m_graphicsSettings.opWindowMode)
+		{
+			if (auto* _pWindow = a_engine.RefNativeWindow())
+			{
+				_pWindow->ChangeWindowMode(m_graphicsSettings.opWindowMode.value());
+			}
+		}
+	}
+
+	//==========================================================================================
+	// ゲーム設定
+	//==========================================================================================
+	void UserData::GameSettingsArchive(Engine::Persistence::Archive& a_ar)
+	{
+		if (!a_ar.BeginGroup("Game")) return;
+
+		OptionalField(a_ar, "FPSRate", m_gameSettings.opFPSRate, Engine::EFPSRate::FPS_60);
+
+		a_ar.EndGroup();
+	}
+
+	void UserData::ApplyGameSettings(Engine::MainEngine& a_engine) const
+	{
+		a_engine.SetUserFPSRate(m_gameSettings.opFPSRate);
+	}
+
+	//==========================================================================================
+	// 視点の設定
+	//==========================================================================================
+	void UserData::ApplyLookSettings(Engine::MainEngine& a_engine) const
+	{
+		auto* _pInputManager = a_engine.RefInputManager();
+		if (!_pInputManager) return;
+
+		_pInputManager->SetUserLookSensitivity(m_inputSettings.mouseSensitivity);
+		_pInputManager->SetUserInvertLookY(m_inputSettings.opIsInvertLookY);
+	}
+
+	void UserData::ApplyAll(Engine::MainEngine& a_engine) const
+	{
+		if (auto* _pAudioManager = a_engine.RefAudioManager()) ApplySoundSettings(*_pAudioManager);
+		ApplyGraphicsSettings(a_engine);
+		ApplyGameSettings(a_engine);
+		ApplyLookSettings(a_engine);
 	}
 
 	void UserData::GameDataArchive(Engine::Persistence::Archive& /*a_ar*/)
@@ -172,6 +276,20 @@ namespace App::Game
 		a_ar.EndGroup();
 	}
 
+	void UserData::ApplySoundSettings(Engine::Audio::AudioManager& a_audioManager) const
+	{
+		const auto _toRate = [](uint32_t a_volume)
+			{
+				return static_cast<float>(std::min(a_volume, SOUND_VOLUME_MAX)) / static_cast<float>(SOUND_VOLUME_MAX);
+			};
+
+		a_audioManager.SetUserMasterVolume(_toRate(m_soundSettings.mainVol));
+		a_audioManager.SetUserGroupVolume(Engine::Audio::ESoundGroup::Bgm, _toRate(m_soundSettings.bgmVol));
+		a_audioManager.SetUserGroupVolume(Engine::Audio::ESoundGroup::Se, _toRate(m_soundSettings.seVol));
+		a_audioManager.SetUserGroupVolume(Engine::Audio::ESoundGroup::Ui, _toRate(m_soundSettings.uiVol));
+		// 声(Voice)はプレイヤーの設定を持たないので素通しのまま
+	}
+
 	//==========================================================================================
 	// 入力設定
 	//------------------------------------------------------------------------------------------
@@ -184,6 +302,9 @@ namespace App::Game
 
 		ActionMapArchive(a_ar, "Keyboard", m_inputSettings.keyboard);
 		ActionMapArchive(a_ar, "Mouse", m_inputSettings.mouse);
+
+		// 後から足したもの : 追加は必ず末尾へ
+		OptionalField(a_ar, "IsInvertLookY", m_inputSettings.opIsInvertLookY, false);
 
 		a_ar.EndGroup();
 	}

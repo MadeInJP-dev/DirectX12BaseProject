@@ -12,6 +12,7 @@
 // ECS関係(ゲーム用のワールド)
 #include "../../ECS/World/APPWorld.h"
 #include "../../InstanceResource/GameDataResource.h"
+#include "../../InstanceResource/UserDataResource.h"
 
 // ECS外オブジェクト(クラスメタマネージャー / 登録するクラス)
 #include "../../../Engine/GameObject/ObjectMetaRegistry/ObjectMetaRegistry.h"
@@ -71,6 +72,10 @@ namespace App::Game
 		{
 			m_upUserData = std::make_unique<UserData>();
 			m_upUserData->Load();
+
+			// プレイヤーの設定(音量・画面・FPS・視点)をエンジンへ入れる。
+			// エンジン設定は書き換えず、作り手の値の上へ重ねる
+			m_upUserData->ApplyAll(*m_pEngine);
 		}
 
 		// 入力設定の復元
@@ -130,14 +135,22 @@ namespace App::Game
 		// (中身は Application/ECS/World/WorldTypeRegister.cpp)。
 		//
 		// シーンをまたぐ記録(m_gameData)の入口もここで各ワールドへ置く。
-		// 使う側(システム・オブジェクト)はワールドから GameDataResource で引く
+		// 使う側(システム・オブジェクト)はワールドから GameDataResource で引く。
+		// ユーザーデータ(設定画面が書き換えるもの)も同じく UserDataResource で引かせる
 		// ------------------------------------------------------------------
 		m_pEngine->RefSceneManager()->SetWorldFactory(
-			[pGameData = &m_gameData]() -> std::unique_ptr<Engine::ECS::World>
+			[pGameData = &m_gameData,
+			 pUserData = m_upUserData.get(),
+			 pInputActionManager = m_upInputActionManager.get()]() -> std::unique_ptr<Engine::ECS::World>
 			{
 				auto _upWorld = std::make_unique<App::ECS::APPWorld>();
 				_upWorld->AddResource<App::InstanceResource::GameDataResource>();
 				_upWorld->RefResource<App::InstanceResource::GameDataResource>().pGameData = pGameData;
+
+				_upWorld->AddResource<App::InstanceResource::UserDataResource>();
+				auto& _userDataResource = _upWorld->RefResource<App::InstanceResource::UserDataResource>();
+				_userDataResource.pUserData = pUserData;
+				_userDataResource.pInputActionManager = pInputActionManager;
 				return _upWorld;
 			}
 		);
