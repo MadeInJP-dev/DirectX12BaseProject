@@ -8,6 +8,9 @@
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 #include "Engine/GameObject/GameObjectManager/GameObjectManager.h"	// 親(パネル)を GUID で引く
 
+#include "Application/InstanceResource/UserDataResource.h"	// HUD を出すか(プレイヤーの設定)
+#include "Application/Game/UserData/UserData.h"
+
 namespace App::Object
 {
 	UIBase::UIBase() : UIBase(true)
@@ -399,6 +402,7 @@ namespace App::Object
 		// 継承先が Draw を自前で持っていても、切れば(パネルごと隠せば)必ず消えるようにするため
 		if (m_decorationVec.empty()) return;
 		if (!IsVisibleInHierarchy(a_context)) return;
+		if (IsHiddenAsHUD(a_context)) return;
 		if (!a_context.pServices || !a_context.pServices->pMainEngine) return;
 		if (!a_context.pServices->pResourceManager) return;
 
@@ -428,6 +432,7 @@ namespace App::Object
 	{
 		if (a_index >= m_decorationVec.size()) return;
 		if (!IsVisibleInHierarchy(a_context)) return;
+		if (IsHiddenAsHUD(a_context)) return;
 		if (!a_context.pServices || !a_context.pServices->pMainEngine) return;
 		if (!a_context.pServices->pResourceManager) return;
 
@@ -441,6 +446,22 @@ namespace App::Object
 			m_anchor.MakeParentTransform(),
 			MakeParentOption(),
 			a_override);
+	}
+
+	//======================================================================================
+	// HUD として隠れているか
+	//--------------------------------------------------------------------------------------
+	// プレイヤーの設定はユーザーデータ(ワールドの UserDataResource から引く)。
+	// 引けないワールド(エディターの確認用など)では隠さない
+	//======================================================================================
+	bool UIBase::IsHiddenAsHUD(const Engine::GameObject::ObjectContext& a_context) const
+	{
+		if (!m_isHUD) return false;
+
+		const auto* _pUserDataResource = InstanceResource::UserDataResource::Find(a_context.pWorld);
+		if (!_pUserDataResource || !_pUserDataResource->pUserData) return false;
+
+		return !_pUserDataResource->pUserData->GetGraphicsSettings().isHUDVisible;
 	}
 
 	Decoration::ParentOption UIBase::MakeParentOption() const
@@ -536,6 +557,9 @@ namespace App::Object
 
 		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
 		a_ar.Field("HitFollowAnim", _interaction.isHitFollowAnim);
+
+		// 区切りを持たない古い .ob* には無いので読まない(読まなければクラスの既定値のまま)
+		if (!a_ar.IsLegacyLayout()) a_ar.Field("IsHUD", m_isHUD);
 
 		m_anchor.editSize = m_anchor.pixelSize;
 

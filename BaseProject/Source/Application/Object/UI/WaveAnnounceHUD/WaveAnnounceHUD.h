@@ -25,7 +25,7 @@ namespace App::Object
 	public:
 
 		// 押されることのない HUD なので、カーソルへの反応を持たない
-		WaveAnnounceHUD() : UIBase(false) {}
+		WaveAnnounceHUD() : UIBase(false) { m_isHUD = true; }	// ゲーム中の HUD : プレイヤーが HUD を消すと一緒に消える
 
 		// 初期化処理 : 飾りの絵と音を用意する
 		void PostDeserialize(Engine::GameObject::ObjectContext& a_context) override;

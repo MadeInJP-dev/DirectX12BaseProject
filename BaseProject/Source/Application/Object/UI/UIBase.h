@@ -106,6 +106,16 @@ namespace App::Object
 		/// </remarks>
 		bool IsVisibleInHierarchy(const Engine::GameObject::ObjectContext& a_context) const;
 
+		/// <summary>
+		/// HUD か : プレイヤーが設定画面で HUD を消したとき、一緒に描かれなくなる
+		/// </summary>
+		/// <remarks>
+		/// ゲーム中の照準・ゲージなどに付ける(保存される)。HUD 用のクラスは既定で立っている。
+		/// メニューやリザルトのように、HUD を消しても残すべき UI には付けないこと
+		/// </remarks>
+		bool IsHUD() const { return m_isHUD; }
+		void SetHUD(bool a_isHUD) { m_isHUD = a_isHUD; }
+
 		//-----------------------------------------------------------------------
 		// カーソルへの反応(押せない UI では常に「何もされていない」)
 		//-----------------------------------------------------------------------
@@ -294,6 +304,9 @@ namespace App::Object
 		// 表示するか(保存される)。切ると描画も入力も止まる
 		bool m_isVisible = true;
 
+		// HUD か(保存される)。プレイヤーが HUD を消している間は描かない
+		bool m_isHUD = false;
+
 		// 飾り(保存される) : 配列の順に描くので、後ろにあるものほど手前に出る
 		std::vector<Decoration::Decoration> m_decorationVec = {};
 
@@ -316,6 +329,9 @@ namespace App::Object
 
 		// 飾りへ渡す親の設定 : アンカーの設定に、実行中だけの切り抜きを足したもの
 		Decoration::ParentOption MakeParentOption() const;
+
+		// HUD として隠れているか : HUD で、プレイヤーが HUD を消しているとき true
+		bool IsHiddenAsHUD(const Engine::GameObject::ObjectContext& a_context) const;
 
 		// ギズモ : 当たり判定の範囲を枠で囲って出す(押せる UI だけ)
 		void DrawHitRectGizmo(const Engine::GameObject::ObjectGizmoContext& a_ctx, float a_screenW, float a_screenH) const;

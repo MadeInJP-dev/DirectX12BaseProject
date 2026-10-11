@@ -23,7 +23,7 @@ namespace App::Object
 	public:
 
 		// 押されることのない HUD なので、カーソルへの反応を持たない
-		CombatReticleHUD() : UIBase(false) {}
+		CombatReticleHUD() : UIBase(false) { m_isHUD = true; }	// ゲーム中の HUD : プレイヤーが HUD を消すと一緒に消える
 
 		// 初期化処理 : レティクルテクスチャの読み込み
 		void PostDeserialize(Engine::GameObject::ObjectContext& a_context) override;

@@ -38,6 +38,10 @@ namespace App::Object
 			Engine::EditorField::WarningText("上にある UIPanel が隠れているため出ていません");
 		}
 
+		// HUD か : プレイヤーが設定画面で HUD を消すと一緒に消える
+		Engine::EditorField::Field("IsHUD", m_isHUD);
+		Engine::EditorField::Tooltip("プレイヤーが設定画面で HUD を消したとき、一緒に描かれなくなる(照準・ゲージなど)");
+
 		// 置き場所
 		m_anchor.DrawInspector(_w, _h);
 
