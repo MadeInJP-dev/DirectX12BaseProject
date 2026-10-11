@@ -68,6 +68,9 @@ namespace App::Object
 		// ポーズを閉じてから、ゲームのシーンを行き先へ差し替える
 		void ReserveExitScene(Engine::Scene::SceneManager& a_sceneManager);
 
+		// 設定画面のシーンを上へ重ねる(ポーズは閉じない。設定画面を閉じればここへ戻る)
+		void ReserveOpenOption(Engine::Scene::SceneManager& a_sceneManager);
+
 	private:
 
 		//-------------------------------------------------------------------
@@ -81,6 +84,10 @@ namespace App::Object
 
 		// やめたときの行き先(ホームやタイトル)。未設定ならボタンを押しても移らない
 		Core::GUID m_exitSceneGUID = {};
+
+		// 押したら設定画面を重ねるボタン(任意)と、設定画面のシーン
+		Core::GUID m_optionButtonGUID = {};
+		Core::GUID m_optionSceneGUID = {};
 
 		// 閉じるのにも使う入力アクション名。開くのと同じキーにしておく
 		Game::EGameAction m_pauseAction = Game::EGameAction::Pose;

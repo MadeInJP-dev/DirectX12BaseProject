@@ -91,14 +91,18 @@ namespace App::Object
 			m_resumeButtonGUID.IsValid() ? a_context.pObjectManager->FindByGUID(m_resumeButtonGUID) : nullptr);
 		auto* _pExit = Core::TypeInfo::Cast<UIButton>(
 			m_exitButtonGUID.IsValid() ? a_context.pObjectManager->FindByGUID(m_exitButtonGUID) : nullptr);
+		auto* _pOption = Core::TypeInfo::Cast<UIButton>(
+			m_optionButtonGUID.IsValid() ? a_context.pObjectManager->FindByGUID(m_optionButtonGUID) : nullptr);
 
 		// 設定されているのに見つからないものがあれば、まだ読み込みの途中とみなして次のフレームへ回す
 		if (m_resumeButtonGUID.IsValid() && !_pResume) return;
 		if (m_exitButtonGUID.IsValid() && !_pExit) return;
+		if (m_optionButtonGUID.IsValid() && !_pOption) return;
 
 		// ボタンは同じシーンに居るので、this を掴んでも寿命は一緒に尽きる
 		if (_pResume) _pResume->SetOnClick([this, _pSceneManager]() { ReserveResume(*_pSceneManager); });
 		if (_pExit)   _pExit->SetOnClick([this, _pSceneManager]() { ReserveExitScene(*_pSceneManager); });
+		if (_pOption) _pOption->SetOnClick([this, _pSceneManager]() { ReserveOpenOption(*_pSceneManager); });
 
 		m_isBound = true;
 	}
@@ -143,6 +147,27 @@ namespace App::Object
 	}
 
 	//======================================================================================
+	// 設定画面を重ねる
+	//--------------------------------------------------------------------------------------
+	// ポーズは閉じずに、その上へ重ねる。更新されるのは一番上のシーンだけなので、
+	// 開いている間はここも止まり、設定画面が自分を外せばポーズの続きへ戻る。
+	// カーソルの固定はポーズが切ったままなので、設定画面でもそのまま狙える
+	//======================================================================================
+	void PauseSequence::ReserveOpenOption(Engine::Scene::SceneManager& a_sceneManager)
+	{
+		// 閉じる途中に重ねると、外す順番が崩れる
+		if (m_isClosing) return;
+
+		if (!m_optionSceneGUID.IsValid())
+		{
+			ENGINE_WARNING("[PauseSequence] 設定画面のシーンが設定されていません");
+			return;
+		}
+
+		a_sceneManager.ReserveChangeScene(m_optionSceneGUID, Engine::Scene::ESceneChangeType::Push);
+	}
+
+	//======================================================================================
 	// 解放 : カーソルの固定を設定値へ戻す
 	//======================================================================================
 	void PauseSequence::Release(Engine::GameObject::ObjectContext& a_context)
@@ -178,6 +203,14 @@ namespace App::Object
 		a_ar.Field("GameBgmDuck", m_gameBgmDuck);
 
 		m_bgm.Archive(a_ar);
+
+		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
+		// 区切りを持たない古い .ob* には無いので読まない
+		if (!a_ar.IsLegacyLayout())
+		{
+			a_ar.GUIDField("OptionButtonGUID", m_optionButtonGUID);
+			a_ar.GUIDField("OptionSceneGUID", m_optionSceneGUID);
+		}
 	}
 
 	//======================================================================================
@@ -227,6 +260,16 @@ namespace App::Object
 
 		_drawButtonCombo("Resume", m_resumeButtonGUID);
 		_drawButtonCombo("Exit", m_exitButtonGUID);
+		_drawButtonCombo("Option", m_optionButtonGUID);
+
+		Engine::EditorField::Header("Option Scene");
+
+		Engine::EditorField::AssetField(*a_context.pServices, "Scene", "OptionScene", m_optionSceneGUID);
+		Engine::EditorField::Tooltip("Option を押したときに重ねる設定画面のシーン");
+		if (!m_optionSceneGUID.IsValid())
+		{
+			Engine::EditorField::HelpText("(未設定 : Option を押しても開きません)");
+		}
 
 		Engine::EditorField::Header("Exit Scene");
 
