@@ -26,6 +26,7 @@ namespace Engine::Graphics
 	class PipelineStateManager;
 	class MeshBufferAllocator;
 	class CameraPipelineManager;
+	struct UIClipRect;
 
 	//==========================================================================================
 	// 描画要求の受け口
@@ -193,6 +194,10 @@ namespace Engine::Graphics
 		/// 1つのUIが枠・中身・文字と複数のクアッドに分かれても、
 		/// これを正しく渡せば全部が同じ1本の弧に乗る
 		/// </param>
+		/// <param name="a_pClipRect">
+		/// 切り抜く矩形(px)。この外へ出たぶんは描かない。nullptr なら切らない。
+		/// スクロールする一覧のように、範囲の外へはみ出した項目を切るときに渡す
+		/// </param>
 		void SubmitUI(
 			const Handle<Resource::Texture>& a_texHandle,
 			const Math::Vector2& a_pixelPos,
@@ -204,7 +209,8 @@ namespace Engine::Graphics
 			const Math::Vector2& a_pivot = { 0.5f, 0.5f },
 			const Math::Vector2& a_uvScale = { 1.0f, 1.0f },
 			float a_curveK = 0.0f,
-			float a_curveOffsetX = 0.0f
+			float a_curveOffsetX = 0.0f,
+			const UIClipRect* a_pClipRect = nullptr
 		);
 
 		/// <summary>
@@ -304,7 +310,8 @@ namespace Engine::Graphics
 			const Math::Vector2& a_pivot,
 			const Math::Vector2& a_uvScale = { 1.0f, 1.0f },
 			float a_curveK = 0.0f,
-			float a_curveOffsetX = 0.0f
+			float a_curveOffsetX = 0.0f,
+			const UIClipRect* a_pClipRect = nullptr
 		);
 
 	private:

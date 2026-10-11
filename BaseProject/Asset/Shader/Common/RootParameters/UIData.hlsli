@@ -6,7 +6,8 @@
 // ※ CPU 側 Engine::Graphics::UIData と並びを合わせること。
 //    float2 が16バイト境界をまたぐ位置に来ると次の境界へ押し出されるので、
 //    各行がちょうど float4 に収まる順序を崩さないこと
-//    (row0: pos+axisX / row1: axisY+uvOffset / row2: color / row3: layer+texIndex+uvScale)
+//    (row0: pos+axisX / row1: axisY+uvOffset / row2: color / row3: layer+texIndex+uvScale
+//     / row4: 湾曲 / row5: clipRect)
 #ifndef ROOTPARAM_UI_DATA_HLSLI
 #define ROOTPARAM_UI_DATA_HLSLI
 
@@ -37,6 +38,10 @@ struct UIData
 	float curveOffsetX;			// 弧の中心からこのクアッドの中心までの横ずれ(px)
 	float curveHalfWidth;		// このクアッドの半幅(px)
 	float curveInvHalfHeight;	// このクアッドの半分の高さの逆数(1/px)
+
+	// 切り抜き(NDC)。(minX, minY, maxX, maxY) の外のピクセルは PS で捨てる。
+	// 切らないものには十分に広い矩形が入っている
+	float4 clipRect;
 };
 
 #endif

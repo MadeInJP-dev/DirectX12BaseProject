@@ -54,5 +54,9 @@ VSOutput VSMain(VSInput a_input)
 	_out.uv = a_input.uv * _uiData.uvScale + _uiData.uvOffset;
 	_out.color = _uiData.color;
 	_out.texIndex = _uiData.texIndex;	// 実際のSRV番号をPSへ渡す
+
+	// 切り抜きはピクセルごとに見るので、位置と矩形をそのままPSへ渡す
+	_out.ndc = _ndc;
+	_out.clipRect = _uiData.clipRect;
 	return _out;
 }

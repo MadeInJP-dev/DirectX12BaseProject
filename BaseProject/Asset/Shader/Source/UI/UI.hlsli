@@ -39,4 +39,9 @@ struct VSOutput
 	// テクスチャのSRVインデックス(ディスクリプタヒープ番号)。
 	// インスタンスごとに一定なので nointerpolation で渡す。
 	nointerpolation uint texIndex : TEXCOORD2;
+
+	// 切り抜き : このピクセルのNDC座標と、切り抜く矩形(NDC)。
+	// 矩形はインスタンスごとに一定なので nointerpolation で渡す
+	float2 ndc : TEXCOORD3;
+	nointerpolation float4 clipRect : TEXCOORD4;
 };

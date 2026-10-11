@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Application/AppCommon.h"
+#include "Engine/Graphics/Frame/DrawList/UIData.h"	// 切り抜き矩形(UIClipRect)
 
 #include <variant>
 
@@ -385,6 +386,11 @@ namespace App::Object::Decoration
 
 		float curveRadius = 1.0f;			// 反りの深さの倍率(1で素直な円弧。0も1として扱う)
 		float curveAngle = 0.0f;			// 開き角(ラジアン)。0で曲げない。正で山なり、負で谷
+
+		// 切り抜き(px)。持っていれば、この矩形の外へ出たぶんは描かない。
+		// アンカーの設定ではなく、持ち主の UI が実行中だけ持つもの
+		// (スクロールする一覧の項目など。UIBase::SetClipRect)
+		std::optional<Engine::Graphics::UIClipRect> opClipRect = std::nullopt;
 	};
 
 	//======================================================================================

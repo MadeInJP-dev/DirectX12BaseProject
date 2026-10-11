@@ -136,6 +136,21 @@ namespace App::Object
 		UIAnchor& RefAnchor() { return m_anchor; }
 
 		//-----------------------------------------------------------------------
+		// 切り抜き(保存しない)
+		//-----------------------------------------------------------------------
+
+		/// <summary>
+		/// 切り抜く矩形を設定する(px)
+		/// </summary>
+		/// <remarks>
+		/// 矩形の外へ出たぶんは描かれず、押せもしない。
+		/// スクロールする一覧(設定画面のパネル)が、範囲の外へはみ出した項目を切るために使う。
+		/// 持ち主が毎フレーム入れ直す前提で、保存はしない
+		/// </remarks>
+		void SetClipRect(const Engine::Graphics::UIClipRect& a_clipRect) { m_opClipRect = a_clipRect; }
+		void ClearClipRect() { m_opClipRect = std::nullopt; }
+
+		//-----------------------------------------------------------------------
 		// 飾り
 		//-----------------------------------------------------------------------
 
@@ -299,6 +314,9 @@ namespace App::Object
 		// まだ使われていない番号
 		uint32_t MakeNewDecorationId() const;
 
+		// 飾りへ渡す親の設定 : アンカーの設定に、実行中だけの切り抜きを足したもの
+		Decoration::ParentOption MakeParentOption() const;
+
 		// ギズモ : 当たり判定の範囲を枠で囲って出す(押せる UI だけ)
 		void DrawHitRectGizmo(const Engine::GameObject::ObjectGizmoContext& a_ctx, float a_screenW, float a_screenH) const;
 
@@ -322,5 +340,8 @@ namespace App::Object
 
 		// エディターで開いている飾りの番号(-1 で未選択)。保存しない
 		int m_editDecorationIndex = -1;
+
+		// 切り抜き(px)。持ち主(スクロールする一覧など)が毎フレーム入れる。保存しない
+		std::optional<Engine::Graphics::UIClipRect> m_opClipRect = std::nullopt;
 	};
 }

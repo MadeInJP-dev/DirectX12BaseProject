@@ -173,6 +173,15 @@ namespace App::Object
 
 	bool UIBase::IsPointInsideSelf(const Math::Vector2& a_uiPos) const
 	{
+		// 切り抜かれて見えていないところは押せない。
+		// スクロールで範囲の外へ出た項目が、範囲の外(見出しや別のボタンの上)で押されないようにする
+		if (m_opClipRect)
+		{
+			const Engine::Graphics::UIClipRect& _clip = m_opClipRect.value();
+			if (a_uiPos.x < _clip.min.x || a_uiPos.y < _clip.min.y) return false;
+			if (a_uiPos.x > _clip.max.x || a_uiPos.y > _clip.max.y) return false;
+		}
+
 		HitRect _rect = {};
 		if (!CalcHitRect(_rect)) return false;
 
@@ -397,7 +406,7 @@ namespace App::Object
 		if (!_pGE) return;
 
 		const Decoration::ParentTransform _parentTr = m_anchor.MakeParentTransform();
-		const Decoration::ParentOption _parentOp = m_anchor.MakeParentOption();
+		const Decoration::ParentOption _parentOp = MakeParentOption();
 
 		// 配列の順に積む : 後ろにあるものほど手前に出る
 		for (const Decoration::Decoration& _decoration : m_decorationVec)
@@ -430,8 +439,15 @@ namespace App::Object
 			a_context.pServices->pResourceManager,
 			m_decorationVec[a_index],
 			m_anchor.MakeParentTransform(),
-			m_anchor.MakeParentOption(),
+			MakeParentOption(),
 			a_override);
+	}
+
+	Decoration::ParentOption UIBase::MakeParentOption() const
+	{
+		Decoration::ParentOption _parentOp = m_anchor.MakeParentOption();
+		_parentOp.opClipRect = m_opClipRect;
+		return _parentOp;
 	}
 
 	int UIBase::FindDecorationIndex(const std::string& a_name) const

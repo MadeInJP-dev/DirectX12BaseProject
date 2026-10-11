@@ -5,7 +5,8 @@ namespace Engine::Graphics
 	// StructuredBuffer<UIData> と1バイトもズレないよう、16バイト(float4)境界を意識して並べる。
 	// HLSLの構造化バッファは float2 が16バイト境界をまたぐ位置に来ると次の境界へ押し出される。
 	// 各行がちょうど float4 に収まる順序にしておけばパディングのズレが起きない。
-	// (row0: pos+axisX / row1: axisY+uvOffset / row2: color / row3: layer+texIndex+uvScale)
+	// (row0: pos+axisX / row1: axisY+uvOffset / row2: color / row3: layer+texIndex+uvScale
+	//  / row4: 湾曲 / row5: clipRect)
 	//
 	// 回転・アスペクト補正・ピボットはCPU(SubmitUI)側でピクセル空間で計算し、
 	// クアッド頂点(-1..1)を線形変換する基底(axisX/axisY)とNDC中心座標(pos)として渡す。
@@ -45,6 +46,11 @@ namespace Engine::Graphics
 		float curveHalfWidth = 0.0f;		// このクアッドの半幅(px)
 		float curveInvHalfHeight = 0.0f;	// このクアッドの半分の高さの逆数(1/px)
 
+		// 切り抜き(NDC)。(minX, minY, maxX, maxY) の外へ出たピクセルは UIPS が捨てる。
+		// スクロールする一覧のように、決まった範囲の外へはみ出した項目を切るために使う。
+		// 既定は何も切らないよう十分に広くしてある。row5 にまるごと入れているので境界はずれない
+		Math::Vector4 clipRect = { -1.0e30f, -1.0e30f, 1.0e30f, 1.0e30f };
+
 		// 曲げるかどうか。
 		// 曲げるものは横に分割した板ポリで描く必要があるので、
 		// 描く側(RenderContext::DrawUI)がこれを見て使う板ポリを選ぶ。
@@ -53,5 +59,13 @@ namespace Engine::Graphics
 		// こちらが取りこぼすと、曲げるつもりのUIが4頂点の板で来て曲がらない
 		// (逆に多めに拾うぶんには、分割板でまっすぐ描かれるだけで害はない)
 		bool IsCurved() const { return curveK != 0.0f; }
+	};
+
+	// UIの切り抜き矩形 : 座標はピクセル(左上原点/Y下向き)。
+	// SubmitUI へ渡すと、この外へ出たぶんを描かない(UIData::clipRect へ直して積まれる)
+	struct UIClipRect
+	{
+		Math::Vector2 min = {};		// 左上(px)
+		Math::Vector2 max = {};		// 右下(px)
 	};
 }

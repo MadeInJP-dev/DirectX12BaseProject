@@ -57,6 +57,9 @@ namespace App::Object::Decoration
 			// 親の回転を掛ける前の、この飾りのずれ(px)。
 			// 弧の中心からの横ずれを測るのに使う(回した後の座標では測れない)
 			Math::Vector2 localOffset = {};
+
+			// 切り抜き(親の持ち物を指すだけ)。nullptr なら切らない
+			const Engine::Graphics::UIClipRect* pClipRect = nullptr;
 		};
 
 		Resolved Resolve(
@@ -118,6 +121,9 @@ namespace App::Object::Decoration
 			_out.curveShiftY = a_parentOp.curveCenter.y * _halfSpanY;
 			_out.localOffset = _offset;
 
+			// 切り抜きは親(UI)が実行中だけ持つもの。描き終わるまで親の側に残っているので指すだけでよい
+			_out.pClipRect = a_parentOp.opClipRect ? &a_parentOp.opClipRect.value() : nullptr;
+
 			return _out;
 		}
 
@@ -168,7 +174,8 @@ namespace App::Object::Decoration
 				{ 0.0f, 0.0f },		// ずれで位置を決めているのでピボットは左上固定
 				a_uvScale,
 				a_resolved.curveK,
-				_curveOffsetX
+				_curveOffsetX,
+				a_resolved.pClipRect
 			);
 		}
 
