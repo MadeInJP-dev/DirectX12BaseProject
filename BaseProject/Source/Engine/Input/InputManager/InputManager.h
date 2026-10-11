@@ -72,6 +72,20 @@ namespace Engine::Input
 		void SetCursorCentered(bool a_enable);		// 毎フレーム中央にマウスを固定
 		void SetCursorLock();						// 一度だけマウスを中央に戻す
 
+		/// <summary>
+		/// プレイヤーの視点の設定(保存はアプリ側のユーザーデータ)
+		/// </summary>
+		/// <remarks>
+		/// 感度は作り手の感度(InputOption::lookSensitivityX/Y)へさらに掛ける倍率。
+		/// 上下反転は選ばれていればそちらを使う(nullopt で作り手の InputOption::isInvertLookY のまま)。
+		/// エンジン設定は書き換えないので、EngineData を保存してもプレイヤーの値は混ざらない
+		/// </remarks>
+		void SetUserLookSensitivity(float a_scale) { m_userLookSensitivity = a_scale; }
+		void SetUserInvertLookY(std::optional<bool> a_opIsInvert) { m_opUserInvertLookY = a_opIsInvert; }
+
+		// 実際に使う上下反転 : プレイヤーの値があればそちら
+		bool IsInvertLookY() const;
+
 		// このフレームでカーソル固定が実際に働いているか
 		bool IsCursorLockActive() const { return m_isCursorLockActive; }
 
@@ -177,6 +191,10 @@ namespace Engine::Input
 
 		// このフレームのホイールの回転量(ノッチ数, 奥が正)
 		float m_wheelDelta = 0.0f;
+
+		// プレイヤーの視点の設定(作り手の設定に重ねる)
+		float m_userLookSensitivity = 1.0f;					// 感度へ掛ける倍率
+		std::optional<bool> m_opUserInvertLookY = std::nullopt;	// 上下反転(未選択なら作り手の値)
 
 		// 入力設定(感度・カーソル固定)。毎フレーム読むので借りたまま持つ
 		const Option::ProjectOptions::InputOption* m_pInputOption = nullptr;

@@ -36,9 +36,39 @@ namespace Engine::Audio
 		return m_groupVolumeArray[_index];
 	}
 
+	void AudioManager::SetUserMasterVolume(float a_volume)
+	{
+		const float _volume = std::clamp(a_volume, 0.0f, 1.0f);
+		if (m_userMasterVolume == _volume) return;
+
+		m_userMasterVolume = _volume;
+		RefreshAllVolume();
+	}
+
+	void AudioManager::SetUserGroupVolume(ESoundGroup a_group, float a_volume)
+	{
+		const size_t _index = static_cast<size_t>(a_group);
+		if (_index >= m_userGroupVolumeArray.size()) return;
+
+		const float _volume = std::clamp(a_volume, 0.0f, 1.0f);
+		if (m_userGroupVolumeArray[_index] == _volume) return;
+
+		m_userGroupVolumeArray[_index] = _volume;
+		RefreshAllVolume();
+	}
+
+	float AudioManager::GetUserGroupVolume(ESoundGroup a_group) const
+	{
+		const size_t _index = static_cast<size_t>(a_group);
+		if (_index >= m_userGroupVolumeArray.size()) return 1.0f;
+
+		return m_userGroupVolumeArray[_index];
+	}
+
 	float AudioManager::CalcVolumeScale(ESoundGroup a_group) const
 	{
-		return m_masterVolume * GetGroupVolume(a_group);
+		// 作り手のつり合い × プレイヤーの音量
+		return m_masterVolume * GetGroupVolume(a_group) * m_userMasterVolume * GetUserGroupVolume(a_group);
 	}
 
 	//======================================================================================
@@ -245,6 +275,9 @@ namespace Engine::Audio
 		// グループ音量は既定で素通し。
 		// 実際の値は起動時にオプション(AudioOption)から流し込まれる
 		m_groupVolumeArray.fill(1.0f);
+
+		// プレイヤーの音量も既定は素通し。実際の値は起動時にアプリのユーザーデータから流し込まれる
+		m_userGroupVolumeArray.fill(1.0f);
 	}
 	AudioManager::~AudioManager()
 	{

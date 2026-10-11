@@ -1,6 +1,7 @@
 ﻿#include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Bloom/BloomCompositePass/BloomCompositePass.h"
 
 #include "Engine/Graphics/Frame/RenderContext/RenderContext.h"
+#include "Engine/Graphics/GraphicsEngine.h"	// プレイヤーの画面設定
 
 namespace Engine::Graphics::Pipeline
 {
@@ -23,7 +24,11 @@ namespace Engine::Graphics::Pipeline
 	{
 		if (!a_context.pRenderContext || !a_context.pCmdList) return;
 
-		a_context.pRenderContext->BindCB()->BindAndAttachDataComputeRootCBV(a_context.pCmdList, 0, m_cb);
+		// プレイヤーが切っていれば掛けない。持ち物(m_cb)は作り手の値のまま残す
+		BloomOptionCB _cb = m_cb;
+		if (a_context.pGraphicsEngine && !a_context.pGraphicsEngine->IsUserBloomEnable()) _cb.enable = 0;
+
+		a_context.pRenderContext->BindCB()->BindAndAttachDataComputeRootCBV(a_context.pCmdList, 0, _cb);
 		DispatchFullScreen(a_context);
 	}
 

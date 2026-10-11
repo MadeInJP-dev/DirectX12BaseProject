@@ -32,6 +32,9 @@ namespace Engine::Window
 		// ウィンドウモードの変更
 		void ChangeWindowMode(EWindowMode a_nextWindowMode);
 
+		// 今のウィンドウモード
+		EWindowMode GetWindowMode() const { return m_windowMode; }
+
 		/// <summary>
 		/// HWNDから実際のクライアント領域サイズを取り直す
 		/// ウィンドウプロシージャ(WM_SIZE)からも呼ばれる

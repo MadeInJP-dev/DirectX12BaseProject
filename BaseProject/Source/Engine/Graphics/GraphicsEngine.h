@@ -166,6 +166,17 @@ namespace Engine::Graphics
 		const CameraPipelineManager* GetCameraPipelines() const { return m_upCameraPipelines.get(); }
 
 		//--------------------------------------------------------------------------------------------
+		// プレイヤーの画面設定
+		//
+		// 作り手の値(パイプラインの各パスの設定)へ重ねるもの。保存はアプリ側(ユーザーデータ)で、
+		// 起動時と設定画面から流し込まれる。パスは定数を送るときにこれを掛ける
+		//--------------------------------------------------------------------------------------------
+		void SetUserExposureScale(float a_scale) { m_userExposureScale = a_scale; }	// 明るさ : 露出へ掛ける倍率
+		float GetUserExposureScale() const { return m_userExposureScale; }
+		void SetUserBloomEnable(bool a_isEnable) { m_isUserBloomEnable = a_isEnable; }	// ブルーム : 切ると作り手が入れていても掛けない
+		bool IsUserBloomEnable() const { return m_isUserBloomEnable; }
+
+		//--------------------------------------------------------------------------------------------
 		// 描画に使う共有物
 		//--------------------------------------------------------------------------------------------
 		// 今フレームのレンダーコンテキスト
@@ -383,5 +394,9 @@ namespace Engine::Graphics
 		// GPUへ上げたコピーはレンダーコンテキストがフレームぶん持っている
 		//--------------------------------------------------------------------------------------------
 		DrawLists m_drawLists = {};
+
+		// プレイヤーの画面設定(作り手の値へ重ねる)
+		float m_userExposureScale = 1.0f;
+		bool m_isUserBloomEnable = true;
 	};
 }

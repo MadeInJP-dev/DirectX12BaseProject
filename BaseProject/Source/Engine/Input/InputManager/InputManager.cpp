@@ -234,13 +234,14 @@ namespace Engine::Input
 			// 感度はここでしか掛からない(Windows側の設定を通っていないため)
 			const auto& _inputOption = *m_pInputOption;
 
-			m_deltaX = static_cast<float>(_rawX) * _inputOption.lookSensitivityX;
-			m_deltaY = static_cast<float>(_rawY) * _inputOption.lookSensitivityY;
+			// 作り手の感度 × プレイヤーの感度
+			m_deltaX = static_cast<float>(_rawX) * _inputOption.lookSensitivityX * m_userLookSensitivity;
+			m_deltaY = static_cast<float>(_rawY) * _inputOption.lookSensitivityY * m_userLookSensitivity;
 
 			// 上下の反転はここで掛ける。
 			// 後段(InputAxisForWindowsMouse)は「下が正」で届いた値を軸の向きへ
 			// 直すために必ず符号を反転するので、あちらでやると設定と実際が食い違う
-			if (_inputOption.isInvertLookY) m_deltaY = -m_deltaY;
+			if (IsInvertLookY()) m_deltaY = -m_deltaY;
 
 			_hasRawDelta = true;
 		}
@@ -428,6 +429,12 @@ namespace Engine::Input
 	bool InputManager::IsSystemHold(ActionKey a_action) const
 	{
 		return Core::HasFlag(GetSystemButtonState(a_action), InputButtonBase::EState::Hold);
+	}
+
+	bool InputManager::IsInvertLookY() const
+	{
+		if (m_opUserInvertLookY) return m_opUserInvertLookY.value();
+		return m_pInputOption && m_pInputOption->isInvertLookY;
 	}
 
 	// ホイールの回転量 : ボタンと同じく、ゲーム入力を受け付けない間は 0

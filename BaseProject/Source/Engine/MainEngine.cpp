@@ -386,11 +386,16 @@ namespace Engine
 		return true;
 	}
 
+	EFPSRate MainEngine::GetFPSRate() const
+	{
+		if (m_opUserFPSRate) return m_opUserFPSRate.value();
+		return m_upOptionManager->GetWindowOption().fpsRate;
+	}
+
 	void MainEngine::EndFrame()
 	{
 		// フレーム終了
-		const auto& _winOp = m_upOptionManager->GetWindowOption();
-		m_upTimeManager->EndFrame(_winOp.fpsRate);
+		m_upTimeManager->EndFrame(GetFPSRate());
 
 		// スレッドごとの稼働時間を1フレームぶん締める。
 		// FPS制限の待ちまで含めた位置で区切るので、フレーム時間とずれない
@@ -437,8 +442,6 @@ namespace Engine
 
 	void MainEngine::EndDraw()
 	{
-		const auto& _winOp = m_upOptionManager->GetWindowOption();
-
 		{
 			ENGINE_PROFILE_SCOPE("EditorPhase");
 
@@ -485,7 +488,7 @@ namespace Engine
 			ENGINE_PROFILE_SCOPE("EndFramePhase");
 
 			// 描画終了 : バックバッファを表示できる状態へ落として画面を切り替える
-			m_upGraphicsEngine->Present(_winOp.fpsRate == EFPSRate::VSync);
+			m_upGraphicsEngine->Present(GetFPSRate() == EFPSRate::VSync);
 		}
 	}
 

@@ -114,7 +114,21 @@ namespace Engine::Audio
 		float GetGroupVolume(ESoundGroup a_group) const;
 
 		/// <summary>
-		/// そのグループの音へ掛ける倍率(マスター込み)
+		/// プレイヤーの音量(マスター・グループ) : 上の音量へさらに掛かる
+		/// </summary>
+		/// <remarks>
+		/// 上の2つは作り手が決める音量のつり合い(プロジェクトの設定 AudioOption)で、
+		/// こちらはプレイヤーが設定画面で上下するもの(アプリのユーザーデータ)。
+		/// 分けて持つので、プレイヤーが下げても作り手のつり合いは崩れない。
+		/// 変えた瞬間に鳴っているもの全部へ送り直す
+		/// </remarks>
+		void SetUserMasterVolume(float a_volume);
+		float GetUserMasterVolume() const { return m_userMasterVolume; }
+		void SetUserGroupVolume(ESoundGroup a_group, float a_volume);
+		float GetUserGroupVolume(ESoundGroup a_group) const;
+
+		/// <summary>
+		/// そのグループの音へ掛ける倍率(マスター・プレイヤーの音量込み)
 		/// </summary>
 		/// <remarks>SoundInstance が実際に送る音量を出すのに使う</remarks>
 		float CalcVolumeScale(ESoundGroup a_group) const;
@@ -171,6 +185,10 @@ namespace Engine::Audio
 		//----------------------------------------------------------------------------------
 		float m_masterVolume = 1.0f;
 		std::array<float, SOUND_GROUP_COUNT> m_groupVolumeArray = {};
+
+		// プレイヤーの音量。保存はアプリ側(ユーザーデータ)で、起動時と設定画面から流し込まれる
+		float m_userMasterVolume = 1.0f;
+		std::array<float, SOUND_GROUP_COUNT> m_userGroupVolumeArray = {};
 
 		// サウンドの実体を引く先(借り物) : 持ち主は MainEngine
 		Resource::ResourceManager* m_pResourceManager = nullptr;

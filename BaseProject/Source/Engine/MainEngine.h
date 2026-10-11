@@ -123,6 +123,18 @@ namespace Engine
 		const Option::OptionManager* GetOptionManager() const { return m_upOptionManager.get(); }
 		Option::OptionManager* RefOptionManager() { return m_upOptionManager.get(); }
 
+		/// <summary>
+		/// プレイヤーが選んだ FPS の上限(nullopt で作り手の値 WindowOption::fpsRate のまま)
+		/// </summary>
+		/// <remarks>
+		/// 保存はアプリ側(ユーザーデータ)。エンジン設定は書き換えないので、
+		/// エディターで EngineData を保存してもプレイヤーの値は混ざらない
+		/// </remarks>
+		void SetUserFPSRate(std::optional<EFPSRate> a_opFPSRate) { m_opUserFPSRate = a_opFPSRate; }
+
+		// 実際に使う FPS の上限 : プレイヤーの値があればそちら
+		EFPSRate GetFPSRate() const;
+
 		// 入力
 		Input::InputManager* RefInputManager() { return m_upInputManager.get(); }
 
@@ -203,6 +215,9 @@ namespace Engine
 		// エンジン設定
 		DevTool::IDevTool* m_pDevTool = nullptr;								// 開発ツール(借り物。無くてもよい)
 		EAppMode m_appMode = EAppMode::Editor;								// アプリケーションのモード
+
+		// プレイヤーが選んだ FPS の上限(未選択なら作り手の値)
+		std::optional<EFPSRate> m_opUserFPSRate = std::nullopt;
 		EBuildConfiguration m_buildMode = EBuildConfiguration::Debug;		// ビルドモード
 
 		// フレーム分のごみ箱を用意する。
