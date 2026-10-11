@@ -124,6 +124,17 @@ namespace Engine::Input
 		// すべての有効な入力装置からの軸入力状態を取得
 		Math::Vector2 GetAxisState(ActionKey a_action) const;
 
+		/// <summary>
+		/// このフレームのホイールの回転量を取得する
+		/// </summary>
+		/// <returns>ノッチ数。奥へ回すと正(高精度のホイールでは端数が出る)</returns>
+		/// <remarks>
+		/// アクションの割り当てを通さない生の値。スクロールする一覧のように
+		/// 「どこで回されたか」で受け取り手が決まるものはこちらを見る。
+		/// ボタンと同じく、プレイモード以外やテキスト入力中は 0 を返す
+		/// </remarks>
+		float GetWheelDelta() const;
+
 		// 入力装置の登録
 		void AddDevice(std::string_view a_name,InputCollector* a_pInputDevice);
 		void AddDevice(std::string_view a_name,std::unique_ptr<InputCollector> a_upInputDevice);
@@ -163,6 +174,9 @@ namespace Engine::Input
 		// 感度を下げたときに端数を捨てないよう float で持つ
 		float m_deltaX = 0.0f;					// 移動量X
 		float m_deltaY = 0.0f;					// 移動量Y
+
+		// このフレームのホイールの回転量(ノッチ数, 奥が正)
+		float m_wheelDelta = 0.0f;
 
 		// 入力設定(感度・カーソル固定)。毎フレーム読むので借りたまま持つ
 		const Option::ProjectOptions::InputOption* m_pInputOption = nullptr;

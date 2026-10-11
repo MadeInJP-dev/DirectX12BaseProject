@@ -126,6 +126,12 @@ namespace Engine::Window
 					_pWindow->OnRawInput(a_lParam);
 				}
 				break;
+			case WM_MOUSEWHEEL:				// ホイールが回された
+				if (_pWindow)
+				{
+					_pWindow->OnMouseWheel(GET_WHEEL_DELTA_WPARAM(a_wParam));
+				}
+				break;
 			case WM_DESTROY:				// OSに対して終了を伝える
 				PostQuitMessage(0);
 				break;
@@ -360,6 +366,24 @@ namespace Engine::Window
 
 		m_rawMouseDeltaX = 0;
 		m_rawMouseDeltaY = 0;
+	}
+
+	//==================================================================================
+	// ホイール(WM_MOUSEWHEEL)
+	//----------------------------------------------------------------------------------
+	// 移動量と同じく1フレームに複数回届くので、読み出すまで足し込んでおく。
+	// 高精度のホイールは WHEEL_DELTA(120) より細かい値で何度も届くため、
+	// 1件ずつノッチへ丸めず生の値のまま足す
+	//==================================================================================
+	void NativeWindow::OnMouseWheel(int a_delta)
+	{
+		m_wheelDelta += a_delta;
+	}
+
+	void NativeWindow::ConsumeWheelDelta(int& a_outDelta)
+	{
+		a_outDelta = m_wheelDelta;
+		m_wheelDelta = 0;
 	}
 
 	void NativeWindow::Release()

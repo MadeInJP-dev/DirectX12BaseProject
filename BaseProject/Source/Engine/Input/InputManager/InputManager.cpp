@@ -57,6 +57,19 @@ namespace Engine::Input
 			int _rawY = 0;
 			_pWind->ConsumeRawMouseDelta(_rawX, _rawY);
 		}
+
+		// 溜まっているホイールの回転量を捨てる
+		//
+		// 移動量と同じく読み出すまで足し込まれ続けるので、
+		// 切り替えの前に回したぶんを向こう側へ持ち越さないようにする
+		void DiscardWheelDelta()
+		{
+			auto* _pWind = MainEngine::Instance().RefNativeWindow();
+			if (!_pWind) return;
+
+			int _wheel = 0;
+			_pWind->ConsumeWheelDelta(_wheel);
+		}
 	}
 
 	void InputManager::Init(const Option::ProjectOptions::InputOption* a_pInputOption)
@@ -128,6 +141,15 @@ namespace Engine::Input
 			DiscardRawMouseDelta();
 		}
 
+		// ホイール : 届いたぶんをこのフレームの回転量にする(読まないと溜まり続ける)
+		m_wheelDelta = 0.0f;
+		if (auto* _pWind = MainEngine::Instance().RefNativeWindow())
+		{
+			int _rawWheel = 0;
+			_pWind->ConsumeWheelDelta(_rawWheel);
+			m_wheelDelta = static_cast<float>(_rawWheel) / static_cast<float>(WHEEL_DELTA);
+		}
+
 		// 登録された入力でバスの更新を行う
 		// (UIキャプチャ中でもデバイス自体は更新し、状態遷移の整合を保つ。
 		//  実際に「入力なし」として扱うのは取得側で判定する)
@@ -158,6 +180,10 @@ namespace Engine::Input
 
 		// 切り替え前に溜まっていた生の移動量も捨てる
 		DiscardRawMouseDelta();
+
+		// ホイールも同じ
+		m_wheelDelta = 0.0f;
+		DiscardWheelDelta();
 
 		for (auto& _device : m_upInputDeviceMap)
 		{
@@ -402,6 +428,13 @@ namespace Engine::Input
 	bool InputManager::IsSystemHold(ActionKey a_action) const
 	{
 		return Core::HasFlag(GetSystemButtonState(a_action), InputButtonBase::EState::Hold);
+	}
+
+	// ホイールの回転量 : ボタンと同じく、ゲーム入力を受け付けない間は 0
+	float InputManager::GetWheelDelta() const
+	{
+		if (!IsGameInputEnable()) return 0.0f;
+		return m_wheelDelta;
 	}
 
 	// 任意の軸の入力状態を取得

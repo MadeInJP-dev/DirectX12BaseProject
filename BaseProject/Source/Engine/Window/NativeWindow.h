@@ -59,6 +59,18 @@ namespace Engine::Window
 		/// </summary>
 		void OnRawInput(LPARAM a_lParam);
 
+		/// <summary>
+		/// 溜まっているホイールの回転量を取り出す(取り出したら0に戻る)
+		/// </summary>
+		/// <param name="a_outDelta">回転量(WM_MOUSEWHEEL の値。奥へ回すと正、1ノッチが WHEEL_DELTA)</param>
+		/// <remarks>読み捨てないと溜まり続けるため、毎フレーム必ず呼ぶこと</remarks>
+		void ConsumeWheelDelta(int& a_outDelta);
+
+		/// <summary>
+		/// WM_MOUSEWHEEL を処理して回転量を足し込む(ウィンドウプロシージャから呼ばれる)
+		/// </summary>
+		void OnMouseWheel(int a_delta);
+
 		// アクセサ
 		const HWND& GetWindowHandle() const { return m_hWnd; }
 		const UINT& GetClientWidth() const { return m_clientWidth; }
@@ -171,5 +183,11 @@ namespace Engine::Window
 		bool m_hasPrevRawAbsolutePos = false;
 		LONG m_prevRawAbsoluteX = 0;
 		LONG m_prevRawAbsoluteY = 0;
+
+		//-------------------------------------------------------------------
+		// ホイール(WM_MOUSEWHEEL)
+		//-------------------------------------------------------------------
+		// 移動量と同じく、読み出されるまで足し込み続ける
+		int  m_wheelDelta = 0;
 	};
 }
