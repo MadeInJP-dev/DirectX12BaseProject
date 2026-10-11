@@ -1,5 +1,19 @@
 {
+    "Game": {
+        "FPSRate": 60,
+        "HasFPSRate": true
+    },
+    "Graphics": {
+        "Brightness": 100,
+        "HasWindowMode": false,
+        "IsBloomEnable": true,
+        "IsHUDVisible": true,
+        "ScreenShake": 100,
+        "WindowMode": 0
+    },
     "Input": {
+        "HasIsInvertLookY": false,
+        "IsInvertLookY": false,
         "Keyboard": [
             {
                 "Action": "Look",
@@ -19,7 +33,7 @@
             },
             {
                 "Action": "Down",
-                "Key": 162,
+                "Key": 87,
                 "Type": "Button"
             },
             {
