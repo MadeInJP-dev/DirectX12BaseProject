@@ -631,6 +631,21 @@
     <Filter Include="Source\Application\Object\UI\UIGauge">
       <UniqueIdentifier>{1b890504-cbda-42a6-9729-0f9364a04ec5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Object\UI\OptionHUDs\SoundOptionPanel">
+      <UniqueIdentifier>{bc3e867d-9efd-48c1-be4a-ad9e7d479126}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Object\UI\OptionHUDs">
+      <UniqueIdentifier>{37386e08-14d8-42c4-adb5-d0f3f2dfebf9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Object\UI\OptionHUDs\GameOptionPanel">
+      <UniqueIdentifier>{47bf508a-76d7-4a92-93e5-7257783fd2f0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Object\UI\OptionHUDs\GraphicsOptionPanel">
+      <UniqueIdentifier>{64790f19-55cb-4895-ac22-fcae4dcb3de3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Object\UI\OptionHUDs\InputOptionPanel">
+      <UniqueIdentifier>{387e3264-5402-40c5-9273-8285295c8dc3}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Application\Object\UI\UIImage">
       <UniqueIdentifier>{c8d2e3f4-9a51-4b62-8d73-1e84f5a6b703}</UniqueIdentifier>
     </Filter>
@@ -1550,6 +1565,27 @@
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\UIGauge\UIGauge.cpp">
       <Filter>Source\Application\Object\UI\UIGauge</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\SoundOptionPanel\SoundOptionPanel.cpp">
+      <Filter>Source\Application\Object\UI\OptionHUDs\SoundOptionPanel</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\OptionHUD.cpp">
+      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\ScrollPanelBase.cpp">
+      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\OptionDropdown.cpp">
+      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\GameOptionPanel\GameOptionPanel.cpp">
+      <Filter>Source\Application\Object\UI\OptionHUDs\GameOptionPanel</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\GraphicsOptionPanel\GraphicsOptionPanel.cpp">
+      <Filter>Source\Application\Object\UI\OptionHUDs\GraphicsOptionPanel</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\InputOptionPanel\InputOptionPanel.cpp">
+      <Filter>Source\Application\Object\UI\OptionHUDs\InputOptionPanel</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\WaveAnnounceHUD\WaveAnnounceHUD.cpp">
       <Filter>Source\Application\Object\UI\WaveAnnounceHUD</Filter>
@@ -3094,6 +3130,30 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\UIGauge\UIGauge.h">
       <Filter>Source\Application\Object\UI\UIGauge</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\SoundOptionPanel\SoundOptionPanel.h">
+      <Filter>Source\Application\Object\UI\OptionHUDs\SoundOptionPanel</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\OptionHUD.h">
+      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\ScrollPanelBase.h">
+      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\OptionEnumSelector.h">
+      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\OptionDropdown.h">
+      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\GameOptionPanel\GameOptionPanel.h">
+      <Filter>Source\Application\Object\UI\OptionHUDs\GameOptionPanel</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\GraphicsOptionPanel\GraphicsOptionPanel.h">
+      <Filter>Source\Application\Object\UI\OptionHUDs\GraphicsOptionPanel</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\InputOptionPanel\InputOptionPanel.h">
+      <Filter>Source\Application\Object\UI\OptionHUDs\InputOptionPanel</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\UIImage\UIImage.h">
       <Filter>Source\Application\Object\UI\UIImage</Filter>
