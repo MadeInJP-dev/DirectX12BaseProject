@@ -20,11 +20,8 @@ namespace Engine::Option::GraphicsOptions
 		// ウィンドウモード
 		EWindowMode windowMode = EWindowMode::Windowed;
 		
-		// 垂直同期
-		bool isVsync = false;
-
-		// 最大フレームレート
-		int targetFrameRate = 0;
+		// FPSレート(制限なし / 垂直同期 / 上限FPS)
+		EFPSRate fpsRate = EFPSRate::FPS_60;
 
 		const std::string& GetName() const override
 		{

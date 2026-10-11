@@ -66,9 +66,8 @@
     },
     "WindowOption": {
         "WindowTitle": "VECTOR REIGN",
+        "fpsRate": 120,
         "isTitleFPS": true,
-        "isVsync": false,
-        "targetFrameRate": 120,
         "windowHeight": 1080,
         "windowMode": 2,
         "windowWidth": 1920

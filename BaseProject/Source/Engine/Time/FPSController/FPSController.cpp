@@ -4,29 +4,25 @@
 
 namespace Engine::Time
 {
-	void FPSController::SetMaxFPS(UINT a_fps)
-	{
-		m_maxFPS = a_fps;
-		m_target = std::chrono::duration<double>(1.0f / a_fps);
-	}
-
 	void FPSController::BeginFrame()
 	{
 		m_frameStart = std::chrono::steady_clock::now();
 	}
 
-	void FPSController::EndFrame(bool a_isVsync)
+	void FPSController::EndFrame(EFPSRate a_fpsRate)
 	{
-		// 垂直同期がない場合のみFPSを制御する
-		if (!a_isVsync)
+		// 制限なし・垂直同期(待つのは Present)以外のときだけFPSを制御する
+		if (a_fpsRate != EFPSRate::Unlimited && a_fpsRate != EFPSRate::VSync)
 		{
+			const auto _target = std::chrono::duration<double>(1.0 / static_cast<double>(static_cast<UINT>(a_fpsRate)));
+
 			// ターゲット時間までスリープ : 止まっている時間として数える
 			Thread::ThreadStateScope _idleScope(Thread::EThreadState::Idle);
 			while (true)
 			{
 				auto _elapsed = std::chrono::steady_clock::now() - m_frameStart;
-				if (_elapsed >= m_target) break;
-				if (m_target - _elapsed > std::chrono::milliseconds(2))
+				if (_elapsed >= _target) break;
+				if (_target - _elapsed > std::chrono::milliseconds(2))
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				}

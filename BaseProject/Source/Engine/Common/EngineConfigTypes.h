@@ -9,6 +9,19 @@ namespace Engine
 		Borederless,	// ボーダレスモード
 	};
 
+	// FPSレート設定
+	// FPS_xx は値がそのままフレームレートの上限になる
+	enum class EFPSRate : UINT
+	{
+		Unlimited	= 0,		// 制限なし
+		VSync		= 1,		// 垂直同期
+		FPS_30		= 30,
+		FPS_60		= 60,
+		FPS_120		= 120,
+		FPS_144		= 144,
+		FPS_240		= 240,
+	};
+
 	// フレームバッファ数
 	inline constexpr UINT BACKBUFFER_COUNT = 3;	// バックバッファ数
 	inline constexpr UINT CPU_FRAME_COUNT = 3;	// CPUカウント数
@@ -40,3 +53,11 @@ namespace Engine
 		DebugPlay,
 	};
 }
+
+// magic_enum の既定の範囲は 127 までなので、FPS_144 / FPS_240 が名前を引けるように広げる
+template<>
+struct magic_enum::customize::enum_range<Engine::EFPSRate>
+{
+	static constexpr int min = 0;
+	static constexpr int max = 240;
+};

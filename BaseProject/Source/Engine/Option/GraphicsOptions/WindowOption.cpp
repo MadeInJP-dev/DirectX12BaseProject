@@ -46,8 +46,7 @@ void Engine::Option::GraphicsOptions::WindowOption::DrawEdit(const ECS::EngineSe
 			_pWindow->ChangeWindowMode(windowMode);
 		}
 	}
-	Engine::EditorField::Field("Vsync", isVsync);
-	Engine::EditorField::Field("TargetFrameRate", targetFrameRate, 1, 0, 1000);
+	Engine::EditorField::Field("FPSRate", fpsRate);
 
 	Engine::EditorField::Line();
 }
@@ -66,6 +65,5 @@ void Engine::Option::GraphicsOptions::WindowOption::Archive(Persistence::Archive
 	a_archive.Field("windowMode", _winMode);
 	windowMode = static_cast<EWindowMode>(_winMode);
 
-	a_archive.Field("isVsync", isVsync);
-	a_archive.Field("targetFrameRate", targetFrameRate);
+	a_archive.Field("fpsRate", fpsRate);
 }

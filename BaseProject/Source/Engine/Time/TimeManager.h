@@ -15,8 +15,7 @@ namespace Engine::Time
 		/// <summary>
 		/// 初期化
 		/// </summary>
-		/// <param name="a_targetFPS">FPS制限</param>
-		void Init(float a_targetFPS);
+		void Init();
 
 		/// <summary>
 		/// 解放
@@ -31,8 +30,8 @@ namespace Engine::Time
 		/// <summary>
 		/// フレーム終わりに測定と、必要であればスリープ処理
 		/// </summary>
-		/// <param name="a_isVsync">垂直同期が有効かどうか</param>
-		void EndFrame(bool a_isVsync);
+		/// <param name="a_fpsRate">FPSレート設定</param>
+		void EndFrame(EFPSRate a_fpsRate);
 
 		/// <summary>
 		/// デルタタイム取得
@@ -48,6 +47,5 @@ namespace Engine::Time
 
 		std::unique_ptr<FPSController> m_upFPSController = nullptr;
 		std::unique_ptr<DeltaTime> m_upDeltaTime = nullptr;
-
 	};
 }

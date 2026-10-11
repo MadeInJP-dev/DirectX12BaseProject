@@ -126,7 +126,7 @@ namespace Engine
 
 		// タイムマネージャークラスの生成
 		m_upTimeManager = std::make_unique<Time::TimeManager>();
-		m_upTimeManager->Init(static_cast<float>(_winOp.targetFrameRate));
+		m_upTimeManager->Init();
 
 		// 描画周りの器を先に作る。
 		// デバイス・コマンドキュー・ディスクリプタヒープ・バックバッファはどれもグラフィックスエンジンの持ち物で、
@@ -390,7 +390,7 @@ namespace Engine
 	{
 		// フレーム終了
 		const auto& _winOp = m_upOptionManager->GetWindowOption();
-		m_upTimeManager->EndFrame(_winOp.isVsync);
+		m_upTimeManager->EndFrame(_winOp.fpsRate);
 
 		// スレッドごとの稼働時間を1フレームぶん締める。
 		// FPS制限の待ちまで含めた位置で区切るので、フレーム時間とずれない
@@ -485,7 +485,7 @@ namespace Engine
 			ENGINE_PROFILE_SCOPE("EndFramePhase");
 
 			// 描画終了 : バックバッファを表示できる状態へ落として画面を切り替える
-			m_upGraphicsEngine->Present(_winOp.isVsync);
+			m_upGraphicsEngine->Present(_winOp.fpsRate == EFPSRate::VSync);
 		}
 	}
 
