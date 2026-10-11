@@ -66,9 +66,17 @@ namespace Engine::Graphics
 		/// <summary>
 		/// リストをキューへ流す直前に呼ぶ処理を登録する(nullptr で外す)。
 		/// 予約リソースへの実メモリの割り当てのように、流すリストより先にキューへ乗せたい操作に使う。
-		/// 流すのと同じロックの中で呼ぶので、割り当てと実行の間に他のスレッドのリストは割り込まない
+		/// 流すのと同じロックの中で呼ぶので、割り当てと実行の間に他のスレッドのリストは割り込まない。
+		/// 引数はキュー・フェンス・流した直後にシグナルする値。戻り値は何か積んだか
 		/// </summary>
-		void SetBeforeExecuteHook(std::function<void(D3D12::CommandQueue*)> a_hook);
+		using BeforeExecuteHook = std::function<bool(D3D12::CommandQueue*, D3D12::Fence*, UINT64)>;
+		void SetBeforeExecuteHook(BeforeExecuteHook a_hook);
+
+		/// <summary>
+		/// 流すリストが無くても、登録した処理だけを呼んでキューへ乗せる。
+		/// 何か積まれたらシグナルも打つ(積んだものが終わったかをフェンスで見られるように)
+		/// </summary>
+		void FlushBeforeExecuteHook();
 
 		// ---- アクセサ ----
 		D3D12::CommandQueue* RefCommandQueue() { return m_cpCmdQueue.Get(); }
@@ -98,6 +106,6 @@ namespace Engine::Graphics
 		std::vector<D3D12::GraphicsCommandList*> m_pendingLists;
 
 		// リストを流す直前に呼ぶ処理(m_mutex で守る)
-		std::function<void(D3D12::CommandQueue*)> m_beforeExecuteHook = nullptr;
+		BeforeExecuteHook m_beforeExecuteHook = nullptr;
 	};
 }

@@ -10,6 +10,7 @@ namespace Engine
 		uint32_t peakAllocated = 0;		// Init してから一番多く配っていたときの数
 		uint32_t freeBlockCount = 0;	// 空き領域の塊の数(多いほど断片化している)
 		uint32_t largestFreeBlock = 0;	// 一番大きい空き領域 : 一度に確保できる上限
+		uint32_t usedEnd = 0;			// 使っている範囲の終わり(これより後ろはすべて空き)
 	};
 
 	/// <summary>
@@ -56,6 +57,12 @@ namespace Engine
 
 		uint32_t GetMaxCount() const { return m_maxCount; }
 
+		/// <summary>
+		/// 使っている範囲の終わり : [これ, 最大) はすべて空いている。
+		/// 返却待ち(GPU がまだ読んでいるかもしれない範囲)は使っている側に数える
+		/// </summary>
+		uint32_t GetUsedEnd() const;
+
 		// 使われ方の計測(ワーカーが確保中でも読めるようロックを取る)
 		RangeAllocatorStats GetStats() const;
 	private:
@@ -64,6 +71,9 @@ namespace Engine
 		/// 空いている領域を集めて塊にする
 		/// </summary>
 		void Merge();
+
+		// GetUsedEnd の中身。m_mutex を取ってから呼ぶ
+		uint32_t CalcUsedEnd() const;
 
 	private:
 		struct FreeBlock
@@ -202,7 +212,25 @@ namespace Engine
 		{
 			_stats.largestFreeBlock = (std::max)(_stats.largestFreeBlock, _block.count);
 		}
+		_stats.usedEnd = CalcUsedEnd();
 		return _stats;
+	}
+	template<typename T>
+	inline uint32_t RangeAllocator<T>::GetUsedEnd() const
+	{
+		std::lock_guard<std::mutex> _lock(m_mutex);
+		return CalcUsedEnd();
+	}
+	template<typename T>
+	inline uint32_t RangeAllocator<T>::CalcUsedEnd() const
+	{
+		// 空きリストは先頭から順に並んでいる(Merge で並べ直し、確保は塊を前から削るだけ)。
+		// 最後の塊が末尾まで届いていれば、その手前までが使っている範囲
+		if (m_freeBlocks.empty()) return m_maxCount;
+
+		const FreeBlock& _last = m_freeBlocks.back();
+		if (_last.startIndex + _last.count == m_maxCount) return _last.startIndex;
+		return m_maxCount;
 	}
 	template<typename T>
 	inline void RangeAllocator<T>::Merge()

@@ -106,7 +106,7 @@ namespace Engine::Graphics
 		return m_upCommandContext ? m_upCommandContext->RefDirectPool()->RefCommandQueue() : nullptr;
 	}
 
-	void RenderDevice::SetBeforeExecuteHook(std::function<void(D3D12_COMMAND_LIST_TYPE, D3D12::CommandQueue*)> a_hook)
+	void RenderDevice::SetBeforeExecuteHook(BeforeExecuteHook a_hook)
 	{
 		if (!m_upCommandContext) return;
 
@@ -127,7 +127,25 @@ namespace Engine::Graphics
 
 			// プールは自分のキューしか知らないので、種類はここで添えて渡す
 			const D3D12_COMMAND_LIST_TYPE _type = _pPool->GetQueueType();
-			_pPool->SetBeforeExecuteHook([a_hook, _type](D3D12::CommandQueue* a_pQueue) { a_hook(_type, a_pQueue); });
+			_pPool->SetBeforeExecuteHook([a_hook, _type](D3D12::CommandQueue* a_pQueue, D3D12::Fence* a_pFence, UINT64 a_signalValue)
+				{
+					return a_hook(_type, a_pQueue, a_pFence, a_signalValue);
+				});
+		}
+	}
+
+	void RenderDevice::FlushBeforeExecuteHooks()
+	{
+		if (!m_upCommandContext) return;
+
+		CommandPool* _pPools[] = {
+			m_upCommandContext->RefDirectPool(),
+			m_upCommandContext->RefCopyPool(),
+			m_upCommandContext->RefComputePool(),
+		};
+		for (CommandPool* _pPool : _pPools)
+		{
+			if (_pPool) _pPool->FlushBeforeExecuteHook();
 		}
 	}
 

@@ -155,8 +155,9 @@ namespace Engine::Graphics
 			_executeLists.push_back(_pList);
 		}
 
-		// 流す前に積むもの(実メモリの割り当てなど)を先にキューへ乗せる
-		if (m_beforeExecuteHook) m_beforeExecuteHook(m_cpCmdQueue.Get());
+		// 流す前に積むもの(実メモリの割り当てなど)を先にキューへ乗せる。
+		// この後に打つシグナルの値を渡す : 積んだものはそれを越えたら終わっている
+		if (m_beforeExecuteHook) m_beforeExecuteHook(m_cpCmdQueue.Get(), m_cpFence.Get(), m_fenceValue + 1);
 
 		// 一括実行
 		m_cpCmdQueue->ExecuteCommandLists(static_cast<UINT>(_executeLists.size()), _executeLists.data());
@@ -182,10 +183,23 @@ namespace Engine::Graphics
 		return m_fenceValue;
 	}
 
-	void CommandPool::SetBeforeExecuteHook(std::function<void(D3D12::CommandQueue*)> a_hook)
+	void CommandPool::SetBeforeExecuteHook(BeforeExecuteHook a_hook)
 	{
 		std::lock_guard<std::mutex> _lock(m_mutex);
 		m_beforeExecuteHook = std::move(a_hook);
+	}
+
+	void CommandPool::FlushBeforeExecuteHook()
+	{
+		std::lock_guard<std::mutex> _lock(m_mutex);
+		if (!m_beforeExecuteHook) return;
+
+		// 何も積まれなければシグナルも打たない
+		if (!m_beforeExecuteHook(m_cpCmdQueue.Get(), m_cpFence.Get(), m_fenceValue + 1)) return;
+
+		// フェンス値の数え上げは ExecutePendingLists と同じロックの中で行う
+		++m_fenceValue;
+		m_cpCmdQueue->Signal(m_cpFence.Get(), m_fenceValue);
 	}
 
 	void CommandPool::ExecuteImmediate(D3D12::GraphicsCommandList* a_pList)
@@ -207,7 +221,7 @@ namespace Engine::Graphics
 			std::lock_guard<std::mutex> _lock(m_mutex);
 
 			// 流す前に積むもの(実メモリの割り当てなど)を先にキューへ乗せる
-			if (m_beforeExecuteHook) m_beforeExecuteHook(m_cpCmdQueue.Get());
+			if (m_beforeExecuteHook) m_beforeExecuteHook(m_cpCmdQueue.Get(), m_cpFence.Get(), m_fenceValue + 1);
 
 			ID3D12CommandList* _lists[] = { a_pList };
 			m_cpCmdQueue->ExecuteCommandLists(1, _lists);

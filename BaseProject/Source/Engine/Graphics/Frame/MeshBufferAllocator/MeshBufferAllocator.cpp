@@ -52,17 +52,25 @@ namespace Engine::Graphics
 		m_meshletCullDataBuffer.Release();
 	}
 
-	void MeshBufferAllocator::FlushTileMappings(D3D12_COMMAND_LIST_TYPE a_queueType, D3D12::CommandQueue* a_pQueue)
+	bool MeshBufferAllocator::FlushTileMappings(D3D12_COMMAND_LIST_TYPE a_queueType, D3D12::CommandQueue* a_pQueue, D3D12::Fence* a_pFence, UINT64 a_signalValue)
 	{
-		m_staticVerticesBuffer.FlushTileMappings(a_queueType, a_pQueue);
-		m_indexBuffer.FlushTileMappings(a_queueType, a_pQueue);
-		m_animatedVertexBuffer.FlushTileMappings(a_queueType, a_pQueue);
-		m_prevAnimatedPositionBuffer.FlushTileMappings(a_queueType, a_pQueue);
+		D3D12::MegaBuffer* _pBuffers[] = {
+			&m_staticVerticesBuffer,
+			&m_indexBuffer,
+			&m_animatedVertexBuffer,
+			&m_prevAnimatedPositionBuffer,
+			&m_meshletBuffer,
+			&m_uniqueVertexIndicesBuffer,
+			&m_meshTriangleBuffer,
+			&m_meshletCullDataBuffer,
+		};
 
-		m_meshletBuffer.FlushTileMappings(a_queueType, a_pQueue);
-		m_uniqueVertexIndicesBuffer.FlushTileMappings(a_queueType, a_pQueue);
-		m_meshTriangleBuffer.FlushTileMappings(a_queueType, a_pQueue);
-		m_meshletCullDataBuffer.FlushTileMappings(a_queueType, a_pQueue);
+		bool _isAnyFlushed = false;
+		for (D3D12::MegaBuffer* _pBuffer : _pBuffers)
+		{
+			if (_pBuffer->FlushTileMappings(a_queueType, a_pQueue, a_pFence, a_signalValue)) _isAnyFlushed = true;
+		}
+		return _isAnyFlushed;
 	}
 
 	void MeshBufferAllocator::UpdateFrame(D3D12::GraphicsCommandList* /*a_pCmdList*/,uint64_t a_completedFenceValue)
@@ -71,6 +79,9 @@ namespace Engine::Graphics
 		m_staticVerticesBuffer.Update(a_completedFenceValue);
 		m_indexBuffer.Update(a_completedFenceValue);
 		m_animatedVertexBuffer.Update(a_completedFenceValue);
+
+		// 前フレームの位置は自分では配らないので、アニメ後の頂点が使っている範囲に合わせて返す
+		m_prevAnimatedPositionBuffer.TrimMapped([this]() { return m_animatedVertexBuffer.GetUsedEnd(); });
 
 		m_meshletBuffer.Update(a_completedFenceValue);
 		m_uniqueVertexIndicesBuffer.Update(a_completedFenceValue);

@@ -116,8 +116,10 @@ namespace Engine::Graphics::D3D12
 			m_isReserved = false;
 			m_reservedTileCount = 0;
 			m_mappedTileCount = 0;
-			m_heapVec.clear();
-			m_pendingMappingVec.clear();
+			m_chunkVec.clear();
+			m_pendingOpVec.clear();
+			m_retiredHeapVec.clear();
+			m_trimWaitFrames = 0;
 		}
 
 		//------------------------------------------------------------------------------------------
@@ -178,8 +180,10 @@ namespace Engine::Graphics::D3D12
 		m_isReserved = false;
 		m_reservedTileCount = 0;
 		m_mappedTileCount = 0;
-		m_pendingMappingVec.clear();
-		m_heapVec.clear();
+		m_pendingOpVec.clear();
+		m_retiredHeapVec.clear();
+		m_chunkVec.clear();
+		m_trimWaitFrames = 0;
 	}
 
 	//======================================================================================
@@ -225,55 +229,136 @@ namespace Engine::Graphics::D3D12
 			_cpHeap->SetName(L"MegaBuffer_TileHeap");	// リーク調査用
 			VideoMemoryTracker::TrackHeap(_cpHeap.Get(), EVideoMemoryCategory::MeshBuffer);
 
-			PendingMapping _mapping = {};
-			_mapping.startTile = m_mappedTileCount;
-			_mapping.tileCount = _tileCount;
-			_mapping.pHeap = _cpHeap.Get();
-			m_pendingMappingVec.push_back(_mapping);
+			PendingTileOp _op = {};
+			_op.startTile = m_mappedTileCount;
+			_op.tileCount = _tileCount;
+			_op.pHeap = _cpHeap.Get();
+			m_pendingOpVec.push_back(std::move(_op));
 
-			m_heapVec.push_back(std::move(_cpHeap));
+			MappedChunk _chunk = {};
+			_chunk.cpHeap = std::move(_cpHeap);
+			_chunk.startTile = m_mappedTileCount;
+			_chunk.tileCount = _tileCount;
+			m_chunkVec.push_back(std::move(_chunk));
+
 			m_mappedTileCount += _tileCount;
 		}
+
+		// 足したばかりなので、返す話は数え直す
+		m_trimWaitFrames = 0;
 		return true;
 	}
 
 	//======================================================================================
-	// 積んである割り当てをキューへ流す
+	// 使っていない後ろの実メモリを返す
+	//
+	// 使っている範囲の終わりは、割り当ての状態を止めたまま読む。
+	// 確保は「範囲をもらう → EnsureMapped」の順なので、
+	//   ・読む前に範囲が配られていれば、その範囲は使っている側に数えられて返さない
+	//   ・読んだ後に配られたなら、EnsureMapped はここが終わるのを待ち、外した後に足し直す
+	// どちらでも、配った範囲に実メモリが無い瞬間はキューの上に生まれない
+	// (外しと足し直しは同じキューに、この順で積まれる)
+	//======================================================================================
+	void MegaBuffer::TrimMapped(const std::function<uint32_t()>& a_getUsedEnd)
+	{
+		if (!m_isReserved) return;
+
+		std::lock_guard<std::mutex> _lock(m_mappingMutex);
+
+		// 外し終えたヒープを手放す : 外しを流したキューがその先のシグナルを越えていれば済んでいる
+		std::erase_if(m_retiredHeapVec, [](const RetiredHeap& a_retired)
+			{
+				return a_retired.pFence && a_retired.pFence->GetCompletedValue() >= a_retired.fenceValue;
+			});
+
+		// 残す大きさ : 使っている範囲を単位に切り上げ、余裕のぶんを足す
+		const UINT64 _tileSize = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+		const UINT64 _usedBytes = static_cast<UINT64>(a_getUsedEnd()) * m_strideSize;
+		const uint32_t _usedTileCount = static_cast<uint32_t>((_usedBytes + _tileSize - 1) / _tileSize);
+		const uint32_t _usedChunkCount = (_usedTileCount + CHUNK_TILE_COUNT - 1) / CHUNK_TILE_COUNT;
+		const uint32_t _keepTileCount = (std::min)((_usedChunkCount + SPARE_CHUNK_COUNT) * CHUNK_TILE_COUNT, m_reservedTileCount);
+
+		// 返せるものが無い、または続いた長さが足りないなら今回は返さない
+		if (m_mappedTileCount <= _keepTileCount)
+		{
+			m_trimWaitFrames = 0;
+			return;
+		}
+		if (++m_trimWaitFrames < TRIM_DELAY_FRAMES) return;
+		m_trimWaitFrames = 0;
+
+		// 後ろの単位から外す。外しは割り当てと同じキューに積み、ヒープは外し終えてから手放す
+		const uint32_t _beforeTileCount = m_mappedTileCount;
+		while (!m_chunkVec.empty() && m_chunkVec.back().startTile >= _keepTileCount)
+		{
+			MappedChunk& _chunk = m_chunkVec.back();
+
+			PendingTileOp _op = {};
+			_op.startTile = _chunk.startTile;
+			_op.tileCount = _chunk.tileCount;
+			_op.pHeap = nullptr;
+			_op.cpRetiredHeap = std::move(_chunk.cpHeap);
+			m_pendingOpVec.push_back(std::move(_op));
+
+			m_mappedTileCount = _chunk.startTile;
+			m_chunkVec.pop_back();
+		}
+
+		ENGINE_LOG("[MegaBuffer] 使っていない実メモリを返します : %.2f MB -> %.2f MB (stride=%zu)",
+			static_cast<double>(static_cast<UINT64>(_beforeTileCount) * _tileSize) / (1024.0 * 1024.0),
+			static_cast<double>(static_cast<UINT64>(m_mappedTileCount) * _tileSize) / (1024.0 * 1024.0),
+			m_strideSize);
+	}
+
+	//======================================================================================
+	// 積んである割り当て・外しをキューへ流す
 	//
 	// ロックを握ったまま流す。別のスレッドが「積まれていないので何もしない」で抜けて
 	// 自分のリストを先に流してしまうことがないよう、流し終えるまで次の人を待たせる
 	//======================================================================================
-	void MegaBuffer::FlushTileMappings(D3D12_COMMAND_LIST_TYPE a_queueType, D3D12::CommandQueue* a_pQueue)
+	bool MegaBuffer::FlushTileMappings(D3D12_COMMAND_LIST_TYPE a_queueType, D3D12::CommandQueue* a_pQueue, D3D12::Fence* a_pFence, UINT64 a_signalValue)
 	{
-		if (!m_isReserved || !a_pQueue) return;
-		if (a_queueType != m_mappingQueueType) return;
+		if (!m_isReserved || !a_pQueue) return false;
+		if (a_queueType != m_mappingQueueType) return false;
 
 		std::lock_guard<std::mutex> _lock(m_mappingMutex);
+		if (m_pendingOpVec.empty()) return false;
 
-		for (const PendingMapping& _mapping : m_pendingMappingVec)
+		for (PendingTileOp& _op : m_pendingOpVec)
 		{
 			// リソース側 : 先頭タイルから並びで tileCount 枚
 			D3D12_TILED_RESOURCE_COORDINATE _coordinate = {};
-			_coordinate.X = _mapping.startTile;
+			_coordinate.X = _op.startTile;
 
 			D3D12_TILE_REGION_SIZE _regionSize = {};
-			_regionSize.NumTiles = _mapping.tileCount;
+			_regionSize.NumTiles = _op.tileCount;
 			_regionSize.UseBox = FALSE;
 
-			// ヒープ側 : 先頭から同じ枚数
-			const D3D12_TILE_RANGE_FLAGS _rangeFlags = D3D12_TILE_RANGE_FLAG_NONE;
+			// ヒープ側 : 割り当てならヒープの先頭から同じ枚数、外すなら NULL
+			const D3D12_TILE_RANGE_FLAGS _rangeFlags = _op.pHeap ? D3D12_TILE_RANGE_FLAG_NONE : D3D12_TILE_RANGE_FLAG_NULL;
 			const UINT _heapStartTile = 0;
-			const UINT _rangeTileCount = _mapping.tileCount;
+			const UINT _rangeTileCount = _op.tileCount;
 
 			a_pQueue->UpdateTileMappings(
 				m_cpResource.Get(),
 				1, &_coordinate, &_regionSize,
-				_mapping.pHeap,
+				_op.pHeap,
 				1, &_rangeFlags, &_heapStartTile, &_rangeTileCount,
 				D3D12_TILE_MAPPING_FLAG_NONE
 			);
+
+			// 外したヒープは、このキューが外し終えてから手放す
+			if (_op.cpRetiredHeap)
+			{
+				RetiredHeap _retired = {};
+				_retired.cpHeap = std::move(_op.cpRetiredHeap);
+				_retired.pFence = a_pFence;
+				_retired.fenceValue = a_signalValue;
+				m_retiredHeapVec.push_back(std::move(_retired));
+			}
 		}
-		m_pendingMappingVec.clear();
+		m_pendingOpVec.clear();
+		return true;
 	}
 
 	uint64_t MegaBuffer::GetMappedBytes() const
@@ -281,6 +366,13 @@ namespace Engine::Graphics::D3D12
 		std::lock_guard<std::mutex> _lock(m_mappingMutex);
 		if (!m_isReserved) return m_cpResource ? static_cast<uint64_t>(m_bufferSize) : 0;
 		return static_cast<uint64_t>(m_mappedTileCount) * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+	}
+
+	uint64_t MegaBuffer::GetReservedBytes() const
+	{
+		std::lock_guard<std::mutex> _lock(m_mappingMutex);
+		if (!m_isReserved) return m_cpResource ? static_cast<uint64_t>(m_bufferSize) : 0;
+		return static_cast<uint64_t>(m_reservedTileCount) * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
 	}
 
 	bool MegaBuffer::IsReservedResourceSupported(Graphics::D3D12::Device* a_pDevice)

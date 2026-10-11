@@ -85,8 +85,14 @@ namespace Engine::Graphics
 		D3D12::CommandQueue* RefDirectCommandQueue();
 
 		// どのキューでも、リストを流す直前に呼ぶ処理を登録する(nullptr で外す)。
-		// 引数はキューの種類とキュー。予約リソースへの実メモリの割り当てを、使うリストより先に流すのに使う
-		void SetBeforeExecuteHook(std::function<void(D3D12_COMMAND_LIST_TYPE, D3D12::CommandQueue*)> a_hook);
+		// 予約リソースへの実メモリの割り当てを、使うリストより先に流すのに使う。
+		// 引数はキューの種類・キュー・フェンス・流した直後にシグナルする値。戻り値は何か積んだか
+		using BeforeExecuteHook = std::function<bool(D3D12_COMMAND_LIST_TYPE, D3D12::CommandQueue*, D3D12::Fence*, UINT64)>;
+		void SetBeforeExecuteHook(BeforeExecuteHook a_hook);
+
+		// 流すリストが無くても、登録した処理だけを各キューへ流す。
+		// リストを流さないキュー(ロードの無いときのコピーキューなど)に溜まったものを片付けるのに使う
+		void FlushBeforeExecuteHooks();
 
 		//--------------------------------------------------------------------------------------------
 		// 非同期転送(バックグラウンドロードなど)

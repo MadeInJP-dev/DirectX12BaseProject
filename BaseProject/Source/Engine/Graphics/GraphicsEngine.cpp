@@ -284,9 +284,9 @@ namespace Engine::Graphics
 		{
 			MeshBufferAllocator* _pMeshBufferAllocator = m_upMeshBufferAllocator.get();
 			m_upRenderDevice->SetBeforeExecuteHook(
-				[_pMeshBufferAllocator](D3D12_COMMAND_LIST_TYPE a_type, D3D12::CommandQueue* a_pQueue)
+				[_pMeshBufferAllocator](D3D12_COMMAND_LIST_TYPE a_type, D3D12::CommandQueue* a_pQueue, D3D12::Fence* a_pFence, UINT64 a_signalValue)
 				{
-					_pMeshBufferAllocator->FlushTileMappings(a_type, a_pQueue);
+					return _pMeshBufferAllocator->FlushTileMappings(a_type, a_pQueue, a_pFence, a_signalValue);
 				});
 		}
 
@@ -449,6 +449,10 @@ namespace Engine::Graphics
 
 		// メッシュバッファの更新
 		m_upMeshBufferAllocator->UpdateFrame(_pCmdList, _completedFence);
+
+		// 返すことにした実メモリの外しを、ロードの無いキュー(コピー)にも流しておく。
+		// 流さないとヒープを手放せず、返したことにならない
+		m_upRenderDevice->FlushBeforeExecuteHooks();
 
 		// パーティクルのバッファ更新
 		m_upParticleManager->UploadEmitData(_pCmdList, m_currentFrameIndex);

@@ -181,7 +181,7 @@ namespace Engine::Graphics
 		const MeshBufferAllocator* _pMesh = m_pOwner->GetMeshBufferAllocator();
 		if (!_pMesh) return;
 
-		auto _push = [&_out](const char* a_name, size_t a_strideBytes, const RangeAllocatorStats& a_stats)
+		auto _push = [&_out](const char* a_name, size_t a_strideBytes, const RangeAllocatorStats& a_stats, const D3D12::MegaBuffer& a_buffer)
 			{
 				MegaBufferProfile _row = {};
 				_row.name = a_name;
@@ -192,19 +192,26 @@ namespace Engine::Graphics
 				_row.peakAllocated = a_stats.peakAllocated;
 				_row.freeBlockCount = a_stats.freeBlockCount;
 				_row.largestFreeBlock = a_stats.largestFreeBlock;
+				_row.usedEnd = a_stats.usedEnd;
+				_row.isReserved = a_buffer.IsReserved();
+				_row.reservedBytes = a_buffer.GetReservedBytes();
+				_row.mappedBytes = a_buffer.GetMappedBytes();
 				_out.push_back(std::move(_row));
 			};
 
-		_push("Static Vertex", sizeof(Resource::MeshVertexFloat), _pMesh->GetStaticVertexBuffer().GetRangeStats());
-		_push("Index", sizeof(uint32_t), _pMesh->GetIndexBuffer().GetRangeStats());
+		_push("Static Vertex", sizeof(Resource::MeshVertexFloat), _pMesh->GetStaticVertexBuffer().GetRangeStats(), _pMesh->GetStaticVertexBuffer());
+		_push("Index", sizeof(uint32_t), _pMesh->GetIndexBuffer().GetRangeStats(), _pMesh->GetIndexBuffer());
+		_push("Animated Vertex", sizeof(Resource::MeshVertexFloat), _pMesh->GetAnimatedVertexBuffer().GetRangeStats(), _pMesh->GetAnimatedVertexBuffer());
 
-		// 前フレームの位置は同じ領域(同じオフセット)で運用しているので、今フレームの側だけ出す
-		_push("Animated Vertex", sizeof(Resource::MeshVertexFloat), _pMesh->GetAnimatedVertexBuffer().GetRangeStats());
+		// 前フレームの位置は自分では配らず、アニメ後の頂点と同じオフセットで使う。
+		// 使われ方はアニメ後の頂点のものを出し、実メモリだけ自分のものを出す
+		_push("Prev Animated Position", sizeof(Math::Vector3), _pMesh->GetAnimatedVertexBuffer().GetRangeStats(), _pMesh->GetPrevAnimatedPositionBuffer());
+		_out.back().isSharedUsage = true;
 
-		_push("Meshlet", sizeof(Resource::Meshlet), _pMesh->GetMeshletBuffer().GetRangeStats());
-		_push("Unique Vertex Index", sizeof(uint32_t), _pMesh->GetUniqueVertexIndicesBuffer().GetRangeStats());
-		_push("Meshlet Triangle", sizeof(DirectX::MeshletTriangle), _pMesh->GetMeshletTriangleBuffer().GetRangeStats());
-		_push("Meshlet Cull Data", sizeof(DirectX::CullData), _pMesh->GetMeshletCullDataBuffer().GetRangeStats());
+		_push("Meshlet", sizeof(Resource::Meshlet), _pMesh->GetMeshletBuffer().GetRangeStats(), _pMesh->GetMeshletBuffer());
+		_push("Unique Vertex Index", sizeof(uint32_t), _pMesh->GetUniqueVertexIndicesBuffer().GetRangeStats(), _pMesh->GetUniqueVertexIndicesBuffer());
+		_push("Meshlet Triangle", sizeof(DirectX::MeshletTriangle), _pMesh->GetMeshletTriangleBuffer().GetRangeStats(), _pMesh->GetMeshletTriangleBuffer());
+		_push("Meshlet Cull Data", sizeof(DirectX::CullData), _pMesh->GetMeshletCullDataBuffer().GetRangeStats(), _pMesh->GetMeshletCullDataBuffer());
 	}
 
 	//======================================================================================

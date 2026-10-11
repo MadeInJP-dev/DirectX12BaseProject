@@ -413,6 +413,9 @@ namespace Editor
 		}
 		for (const auto& _mega : a_snapshot.megaBuffers)
 		{
+			// 使われ方を写しているだけのものは、写し元で知らせるので重ねない
+			if (_mega.isSharedUsage) continue;
+
 			_check("Mega Buffer", _mega.name, _mega.allocated, _mega.capacity);
 
 			// 空きはあるのに大きな塊が無い : 大きいメッシュが入らなくなる
@@ -462,9 +465,9 @@ namespace Editor
 	//======================================================================================
 	void GraphicsProfilerView::DrawMegaBuffers(const Graphics::GraphicsSnapshot& a_snapshot)
 	{
-		Engine::EditorField::HelpText("メッシュをロードするときに切り出す領域。単位は要素数");
+		Engine::EditorField::HelpText("メッシュをロードするときに切り出す領域。Usage〜Largest Free の単位は要素数");
 
-		if (!ImGui::BeginTable("MegaBufferTable", 7, TABLE_FLAGS)) return;
+		if (!ImGui::BeginTable("MegaBufferTable", 9, TABLE_FLAGS)) return;
 
 		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 140.0f);
 		ImGui::TableSetupColumn("Usage", ImGuiTableColumnFlags_WidthStretch);
@@ -472,11 +475,14 @@ namespace Editor
 		ImGui::TableSetupColumn("Peak %", ImGuiTableColumnFlags_WidthFixed, 60.0f);
 		ImGui::TableSetupColumn("Free Blocks", ImGuiTableColumnFlags_WidthFixed, 80.0f);
 		ImGui::TableSetupColumn("Largest Free", ImGuiTableColumnFlags_WidthFixed, 90.0f);
-		ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 150.0f);
+		ImGui::TableSetupColumn("Data", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+		ImGui::TableSetupColumn("Mapped", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+		ImGui::TableSetupColumn("Reserved", ImGuiTableColumnFlags_WidthFixed, 80.0f);
 		ImGui::TableHeadersRow();
 
-		size_t _totalUsedBytes = 0;
-		size_t _totalCapacityBytes = 0;
+		uint64_t _totalDataBytes = 0;
+		uint64_t _totalMappedBytes = 0;
+		uint64_t _totalReservedBytes = 0;
 
 		for (const auto& _row : a_snapshot.megaBuffers)
 		{
@@ -484,6 +490,10 @@ namespace Editor
 
 			ImGui::TableSetColumnIndex(0);
 			ImGui::TextUnformatted(_row.name.c_str());
+			if (_row.isSharedUsage)
+			{
+				Engine::EditorField::Tooltip("自分では配らず、Animated Vertex と同じオフセットで使う。\nUsage〜Largest Free は Animated Vertex のもの");
+			}
 
 			ImGui::TableSetColumnIndex(1);
 			DrawUsageBar(_row.allocated, _row.capacity);
@@ -502,22 +512,34 @@ namespace Editor
 			ImGui::TableSetColumnIndex(5);
 			ImGui::Text("%u", _row.largestFreeBlock);
 
-			const size_t _usedBytes = static_cast<size_t>(_row.allocated) * _row.strideBytes;
-			const size_t _capacityBytes = static_cast<size_t>(_row.capacity) * _row.strideBytes;
-			_totalUsedBytes += _usedBytes;
-			_totalCapacityBytes += _capacityBytes;
+			// 配っている中身・実メモリ・仮想アドレス(バイト)
+			const uint64_t _dataBytes = static_cast<uint64_t>(_row.allocated) * _row.strideBytes;
+			const uint64_t _usedEndBytes = static_cast<uint64_t>(_row.usedEnd) * _row.strideBytes;
+			_totalDataBytes += _dataBytes;
+			_totalMappedBytes += _row.mappedBytes;
+			_totalReservedBytes += _row.reservedBytes;
 
 			ImGui::TableSetColumnIndex(6);
-			ImGui::Text("%s / %s",
-				FormatBytes(static_cast<double>(_usedBytes)).c_str(),
-				FormatBytes(static_cast<double>(_capacityBytes)).c_str());
+			ImGui::TextUnformatted(FormatBytes(static_cast<double>(_dataBytes)).c_str());
+
+			ImGui::TableSetColumnIndex(7);
+			ImGui::TextUnformatted(FormatBytes(static_cast<double>(_row.mappedBytes)).c_str());
+			Engine::EditorField::Tooltip("実メモリを割り当てた大きさ。使っている範囲の終わり(%s)を 4MB 単位に切り上げ、\n余裕を 1 単位足したところまで残し、それより後ろは空きが続くと返す",
+				FormatBytes(static_cast<double>(_usedEndBytes)).c_str());
+
+			ImGui::TableSetColumnIndex(8);
+			ImGui::TextUnformatted(FormatBytes(static_cast<double>(_row.reservedBytes)).c_str());
+			Engine::EditorField::Tooltip(_row.isReserved
+				? "予約リソース : 仮想アドレスだけで、実メモリは Mapped のぶんだけ"
+				: "committed : 最初から全体の実メモリを持っている(予約リソースが使えない GPU)");
 		}
 		ImGui::EndTable();
 
-		Engine::EditorField::Value("Total", "%s / %s",
-			FormatBytes(static_cast<double>(_totalUsedBytes)).c_str(),
-			FormatBytes(static_cast<double>(_totalCapacityBytes)).c_str());
-		Engine::EditorField::Tooltip("Animated Vertex は前フレームの位置(1 要素 12 バイト)を同じ要素数でもう1本持っている(ここには含めていない)");
+		Engine::EditorField::Value("Total", "Data %s / Mapped %s / Reserved %s",
+			FormatBytes(static_cast<double>(_totalDataBytes)).c_str(),
+			FormatBytes(static_cast<double>(_totalMappedBytes)).c_str(),
+			FormatBytes(static_cast<double>(_totalReservedBytes)).c_str());
+		Engine::EditorField::Tooltip("VRAM を実際に使っているのは Mapped。Data との差は断片化と、後ろに残している余裕");
 	}
 
 	//======================================================================================

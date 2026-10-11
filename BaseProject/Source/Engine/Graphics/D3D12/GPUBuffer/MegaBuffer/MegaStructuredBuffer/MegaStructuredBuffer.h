@@ -61,6 +61,9 @@ namespace Engine::Graphics::D3D12
 		// 領域の使われ方(計測用)
 		RangeAllocatorStats GetRangeStats() const { return m_rangeAllocator.GetStats(); }
 
+		// 使っている範囲の終わり(要素数)。同じオフセットで並走するバッファの実メモリを合わせるのに使う
+		uint32_t GetUsedEnd() const { return m_rangeAllocator.GetUsedEnd(); }
+
 	private:
 		bool m_isDirty = false;
 		RangeAllocator<T> m_rangeAllocator;
@@ -115,5 +118,8 @@ namespace Engine::Graphics::D3D12
 	inline void MegaStructuredBuffer<T>::Update(uint64_t a_currentFrameFence)
 	{
 		m_rangeAllocator.ApplyReservedFrees(a_currentFrameFence);
+
+		// 空いた後ろの実メモリを返す(予約リソースのとき)
+		TrimMapped([this]() { return m_rangeAllocator.GetUsedEnd(); });
 	}
 }

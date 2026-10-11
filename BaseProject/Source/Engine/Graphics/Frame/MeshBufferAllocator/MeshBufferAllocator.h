@@ -55,10 +55,13 @@ namespace Engine::Graphics
 		void UpdateFrame(D3D12::GraphicsCommandList* a_pCmdList,uint64_t a_completedFenceValue);
 
 		/// <summary>
-		/// 確保で足した実メモリの割り当てをキューへ流す。
+		/// 確保で足した実メモリの割り当て・返すための外しをキューへ流す。
 		/// コマンドプールがリストを流す直前に呼ぶ(そのキューで割り当てるバッファのぶんだけ流れる)
 		/// </summary>
-		void FlushTileMappings(D3D12_COMMAND_LIST_TYPE a_queueType, D3D12::CommandQueue* a_pQueue);
+		/// <param name="a_pFence">流した直後にそのキューがシグナルするフェンス</param>
+		/// <param name="a_signalValue">そのときの値 : 外したヒープはこの値を越えてから手放す</param>
+		/// <returns>何か流したか</returns>
+		bool FlushTileMappings(D3D12_COMMAND_LIST_TYPE a_queueType, D3D12::CommandQueue* a_pQueue, D3D12::Fence* a_pFence, UINT64 a_signalValue);
 
 		//--------------------------------------------------------------------------------------------
 		// バッファにアロケート

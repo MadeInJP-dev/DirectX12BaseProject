@@ -43,6 +43,13 @@ namespace Engine::Graphics
 		uint32_t	peakAllocated = 0;		// 作ってから一番多く配っていたとき
 		uint32_t	freeBlockCount = 0;		// 空き領域の塊の数(多いほど断片化している)
 		uint32_t	largestFreeBlock = 0;	// 一番大きい空き領域 : 一度に確保できる上限
+		uint32_t	usedEnd = 0;			// 使っている範囲の終わり : 実メモリはここまで要る
+		bool		isSharedUsage = false;	// 使われ方は別のバッファのものを写している(自分では配らない)
+
+		// 実メモリ(バイト)。予約リソースでなければどちらも全体の大きさ
+		bool		isReserved = false;		// 予約リソースで作ったか
+		uint64_t	reservedBytes = 0;		// 仮想アドレスの大きさ
+		uint64_t	mappedBytes = 0;		// 実メモリを割り当てた大きさ
 	};
 
 	// 定数バッファ(フレームごとのアップロード領域)。単位はバイト

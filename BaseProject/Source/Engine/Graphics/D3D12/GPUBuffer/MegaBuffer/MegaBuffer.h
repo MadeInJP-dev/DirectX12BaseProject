@@ -16,7 +16,11 @@ namespace Engine::Graphics::D3D12
 	// その範囲を使うコマンドリストより先に、同じキューへ流す必要がある。
 	// 確保した側はここへ積んでおくだけで、流すのは FlushTileMappings
 	// (コマンドプールがリストを流す直前に呼ぶ)。
-	// どのキューで流すかはバッファごとに決まっていて、最初に中身を書くキューに合わせる
+	// どのキューで流すかはバッファごとに決まっていて、最初に中身を書くキューに合わせる。
+	//
+	// 使っている範囲の後ろに、余裕(1 単位)を超える空きがしばらく続いたら、
+	// 後ろの単位から割り当てを外して実メモリを返す(TrimMapped)。
+	// 外すのも割り当てと同じキューに積み、ヒープはそのキューが外し終えてから手放す
 	//==========================================================================================
 	class MegaBuffer : public GPUBuffer
 	{
@@ -37,14 +41,29 @@ namespace Engine::Graphics::D3D12
 		bool EnsureMapped(uint32_t a_endElement);
 
 		/// <summary>
-		/// 積んである割り当てをキューへ流す。
+		/// 積んである割り当て・外しをキューへ流す。
 		/// このバッファの割り当てを流すキュー(a_queueType が一致するもの)のときだけ流す
 		/// </summary>
-		void FlushTileMappings(D3D12_COMMAND_LIST_TYPE a_queueType, D3D12::CommandQueue* a_pQueue);
+		/// <param name="a_pFence">流した直後にそのキューがシグナルするフェンス</param>
+		/// <param name="a_signalValue">そのときの値 : 外したヒープはこの値を越えてから手放す</param>
+		/// <returns>何か流したか</returns>
+		bool FlushTileMappings(D3D12_COMMAND_LIST_TYPE a_queueType, D3D12::CommandQueue* a_pQueue, D3D12::Fence* a_pFence, UINT64 a_signalValue);
+
+		/// <summary>
+		/// 使っていない後ろの実メモリを返す。毎フレーム、領域の遅延解放を済ませた後に呼ぶ。
+		/// 空きがしばらく続いたときだけ、後ろの単位から割り当てを外す(流すのは FlushTileMappings)。
+		/// 外し終えたヒープの手放しもここで行う
+		/// </summary>
+		/// <param name="a_getUsedEnd">
+		/// 使っている範囲の終わり(要素数)を返す関数。確保との食い違いを防ぐため、
+		/// 割り当ての状態を止めている間に呼ぶ
+		/// </param>
+		void TrimMapped(const std::function<uint32_t()>& a_getUsedEnd);
 
 		// 計測用
 		bool IsReserved() const { return m_isReserved; }
 		uint64_t GetMappedBytes() const;		// 実メモリを割り当てた大きさ(committed なら全体)
+		uint64_t GetReservedBytes() const;		// 仮想アドレスの大きさ(committed なら全体)
 
 		/// <summary>
 		/// バッファの作成
@@ -113,12 +132,37 @@ namespace Engine::Graphics::D3D12
 		// 実メモリを足すときの単位(タイル数) : 64 タイル = 4MB
 		static constexpr uint32_t CHUNK_TILE_COUNT = 64;
 
-		// キューへ流す前の割り当て 1 件ぶん : タイル [startTile, startTile + tileCount) をヒープの先頭から
-		struct PendingMapping
+		// 返さずに残しておく余裕(単位の数)。使っている範囲のすぐ後ろで確保と解放を繰り返しても、
+		// そのたびに足したり返したりしないように
+		static constexpr uint32_t SPARE_CHUNK_COUNT = 1;
+
+		// 返せる空きがこのフレーム数続いたら返す。シーンの切り替えで一度空いてすぐ埋まるときに、
+		// 返してすぐ足し直さないように
+		static constexpr uint32_t TRIM_DELAY_FRAMES = 120;
+
+		// 実メモリの単位 1 つ : タイル [startTile, startTile + tileCount) にヒープの先頭から割り当ててある
+		struct MappedChunk
+		{
+			ComPtr<ID3D12Heap> cpHeap = nullptr;
+			uint32_t startTile = 0;
+			uint32_t tileCount = 0;
+		};
+
+		// キューへ流す前の割り当て・外し 1 件ぶん
+		struct PendingTileOp
 		{
 			uint32_t startTile = 0;
 			uint32_t tileCount = 0;
-			ID3D12Heap* pHeap = nullptr;	// m_heapVec が持っている
+			ID3D12Heap* pHeap = nullptr;					// 割り当て先。nullptr なら割り当てを外す
+			ComPtr<ID3D12Heap> cpRetiredHeap = nullptr;		// 外したあとに手放すヒープ(外すときだけ)
+		};
+
+		// 外し終えるのを待っているヒープ
+		struct RetiredHeap
+		{
+			ComPtr<ID3D12Heap> cpHeap = nullptr;
+			D3D12::Fence* pFence = nullptr;		// 外しを流したキューのフェンス(借り物)
+			UINT64 fenceValue = 0;				// これを越えたら手放してよい
 		};
 
 		// 予約リソースで作ったか(false なら committed で、割り当ては要らない)
@@ -132,7 +176,9 @@ namespace Engine::Graphics::D3D12
 		mutable std::mutex m_mappingMutex;
 		uint32_t m_reservedTileCount = 0;							// 仮想アドレスの大きさ(タイル数)
 		uint32_t m_mappedTileCount = 0;								// 実メモリを足し終えたタイル数(流す前のぶんも含む)
-		std::vector<ComPtr<ID3D12Heap>> m_heapVec = {};				// 足した実メモリ。先頭から順にタイルへ割り当ててある
-		std::vector<PendingMapping> m_pendingMappingVec = {};		// まだキューへ流していない割り当て
+		std::vector<MappedChunk> m_chunkVec = {};					// 足した実メモリ。先頭のタイルから順に並ぶ
+		std::vector<PendingTileOp> m_pendingOpVec = {};				// まだキューへ流していない割り当て・外し
+		std::vector<RetiredHeap> m_retiredHeapVec = {};				// 外し終えるのを待っているヒープ
+		uint32_t m_trimWaitFrames = 0;								// 返せる空きが続いているフレーム数
 	};
 }
