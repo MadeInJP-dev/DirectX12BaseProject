@@ -198,6 +198,10 @@ namespace Engine::Graphics
 		/// 切り抜く矩形(px)。この外へ出たぶんは描かない。nullptr なら切らない。
 		/// スクロールする一覧のように、範囲の外へはみ出した項目を切るときに渡す
 		/// </param>
+		/// <param name="a_postEffectFlags">
+		/// このUIに掛けるポストプロセスの印(UI_POST_EFFECT_*)。0 なら何も掛けない。
+		/// UIPass がマスクへ書き、マスクを繋いだパス(ScanLinePass など)がここにだけ効果を掛ける
+		/// </param>
 		void SubmitUI(
 			const Handle<Resource::Texture>& a_texHandle,
 			const Math::Vector2& a_pixelPos,
@@ -210,7 +214,8 @@ namespace Engine::Graphics
 			const Math::Vector2& a_uvScale = { 1.0f, 1.0f },
 			float a_curveK = 0.0f,
 			float a_curveOffsetX = 0.0f,
-			const UIClipRect* a_pClipRect = nullptr
+			const UIClipRect* a_pClipRect = nullptr,
+			UINT a_postEffectFlags = 0
 		);
 
 		/// <summary>
@@ -311,7 +316,8 @@ namespace Engine::Graphics
 			const Math::Vector2& a_uvScale = { 1.0f, 1.0f },
 			float a_curveK = 0.0f,
 			float a_curveOffsetX = 0.0f,
-			const UIClipRect* a_pClipRect = nullptr
+			const UIClipRect* a_pClipRect = nullptr,
+			UINT a_postEffectFlags = 0
 		);
 
 	private:

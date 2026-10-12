@@ -41,6 +41,10 @@ namespace App::Object
 		float curveRadius = 1.0f;				// 反りの深さの倍率(1で素直な円弧。0も1として扱う)
 		float curveAngle = 0.0f;				// 開き角(ラジアン)。0で曲げない。正で山なり、負で谷
 
+		// スキャンライン(ScanLinePass)を掛けるか。飾りも含めてこのUI全体に効く。
+		// パイプラインで UIPass の ScanLineMask を ScanLinePass の Mask へ繋いでおく必要がある
+		bool isScanLine = false;
+
 		//==================================================================================
 
 		// 大きさを持っているか(幅0の矩形はどこにも当たらない)

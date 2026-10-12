@@ -1411,6 +1411,7 @@
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Fog\SceneVolumetricFogPass\SceneVolumetricFogPass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Fog\SceneFogCompositePass\SceneFogCompositePass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Distortion\FishEyePass\FishEyePass.cpp" />
+    <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine\ScanLinePass\ScanLinePass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\CoCPass\CoCPass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\DoFPass\DoFPass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\AntiAliasing\TAAPass\TAAPass.cpp" />
@@ -2020,6 +2021,7 @@
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Fog\SceneVolumetricFogPass\SceneVolumetricFogPass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Fog\SceneFogCompositePass\SceneFogCompositePass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Distortion\FishEyePass\FishEyePass.h" />
+    <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine\ScanLinePass\ScanLinePass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\CoCPass\CoCPass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\DoFPass\DoFPass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\AntiAliasing\TAAPass\TAAPass.h" />
@@ -2432,6 +2434,20 @@
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CSMain</EntryPointName>
     </FxCompile>
     <FxCompile Include="Asset\Shader\Source\PostProcess\Distortion\FishEyeCS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.6</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">6.6</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">6.6</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.6</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CSMain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CSMain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CSMain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CSMain</EntryPointName>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\Source\PostProcess\ScanLine\ScanLineCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.6</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>

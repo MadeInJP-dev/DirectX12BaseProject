@@ -60,6 +60,9 @@ namespace App::Object::Decoration
 
 			// 切り抜き(親の持ち物を指すだけ)。nullptr なら切らない
 			const Engine::Graphics::UIClipRect* pClipRect = nullptr;
+
+			// 掛けるポストプロセスの印(Engine::Graphics::UI_POST_EFFECT_*)
+			UINT postEffectFlags = 0;
 		};
 
 		Resolved Resolve(
@@ -124,6 +127,9 @@ namespace App::Object::Decoration
 			// 切り抜きは親(UI)が実行中だけ持つもの。描き終わるまで親の側に残っているので指すだけでよい
 			_out.pClipRect = a_parentOp.opClipRect ? &a_parentOp.opClipRect.value() : nullptr;
 
+			// ポストプロセスは UI 単位で選ぶので、飾りはどれも親の設定に従う
+			if (a_parentOp.isScanLine) _out.postEffectFlags |= Engine::Graphics::UI_POST_EFFECT_SCAN_LINE;
+
 			return _out;
 		}
 
@@ -175,7 +181,8 @@ namespace App::Object::Decoration
 				a_uvScale,
 				a_resolved.curveK,
 				_curveOffsetX,
-				a_resolved.pClipRect
+				a_resolved.pClipRect,
+				a_resolved.postEffectFlags
 			);
 		}
 

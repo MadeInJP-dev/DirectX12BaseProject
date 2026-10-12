@@ -44,4 +44,20 @@ struct VSOutput
 	// 矩形はインスタンスごとに一定なので nointerpolation で渡す
 	float2 ndc : TEXCOORD3;
 	nointerpolation float4 clipRect : TEXCOORD4;
+
+	// 掛けるポストプロセスの印(UI_POST_EFFECT_*)。インスタンスごとに一定
+	nointerpolation uint postEffectFlags : TEXCOORD5;
+};
+
+// ピクセル出力
+//
+//   0 : 色(シーンの上へアルファ合成する)
+//   1 : スキャンラインのマスク(r)。ScanLinePass がここだけに効果を掛ける
+//
+// ブレンドは全ターゲット共通(UIPass)。マスクも a で重ねるので、
+// 印の無いUIが上に重なれば、その下のマスクはちゃんと消える
+struct PSOutput
+{
+	float4 color : SV_Target0;
+	float4 scanLineMask : SV_Target1;
 };

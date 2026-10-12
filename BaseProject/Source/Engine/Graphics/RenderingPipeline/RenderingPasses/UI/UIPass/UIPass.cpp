@@ -13,6 +13,13 @@ namespace Engine::Graphics::Pipeline
 		// すでに描かれている絵へ重ねるので Load
 		Slot& _color = DeclareOutput("Color", "AfterUI", DXGI_FORMAT_R16G16B16A16_FLOAT,EAccessType::RTV);
 		_color.loadOp = ELoadOp::Load;
+
+		// スキャンラインを掛けるUIのマスク(r : 1 = 掛ける)。ScanLinePass の Mask へ繋ぐ。
+		// 毎フレーム 0(どこにも掛けない)で消してから描く。
+		// RTV の並び = シェーダーの SV_Target の番号なので、Color より後に宣言すること
+		Slot& _scanLineMask = DeclareOutput("ScanLineMask", "UIScanLineMask", DXGI_FORMAT_R8_UNORM, EAccessType::RTV);
+		_scanLineMask.loadOp = ELoadOp::Clear;
+		_scanLineMask.clearColor = { 0.f, 0.f, 0.f, 0.f };
 	}
 
 	// 描き足す先が繋がっていれば、そのリソースへ重ねる
@@ -40,7 +47,8 @@ namespace Engine::Graphics::Pipeline
 				// スクリーン向きの板ポリなのでカリング自体を無効化する
 				a_pso.CullMode(D3D12_CULL_MODE_NONE);
 
-				// 半透明UIをシーンへアルファ合成する
+				// 半透明UIをシーンへアルファ合成する。
+				// ターゲットごとのブレンドは使わないので、マスクも同じ式で重なる
 				a_pso.BlendEnable(true);
 				a_pso.SrcBlend(D3D12_BLEND_SRC_ALPHA);
 				a_pso.DestBlend(D3D12_BLEND_INV_SRC_ALPHA);

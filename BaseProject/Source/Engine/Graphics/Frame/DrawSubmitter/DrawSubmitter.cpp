@@ -307,7 +307,7 @@ namespace Engine::Graphics
 		}
 	}
 
-	void DrawSubmitter::SubmitUI(const Handle<Resource::Texture>& a_texHandle, const Math::Vector2& a_screenPos, const Math::Vector2& a_screenRect, const Math::Color& a_color, float a_rotation, float a_layer, const Math::Vector2& a_uvOffset, const Math::Vector2& a_pivot, const Math::Vector2& a_uvScale, float a_curveK, float a_curveOffsetX, const UIClipRect* a_pClipRect)
+	void DrawSubmitter::SubmitUI(const Handle<Resource::Texture>& a_texHandle, const Math::Vector2& a_screenPos, const Math::Vector2& a_screenRect, const Math::Color& a_color, float a_rotation, float a_layer, const Math::Vector2& a_uvOffset, const Math::Vector2& a_pivot, const Math::Vector2& a_uvScale, float a_curveK, float a_curveOffsetX, const UIClipRect* a_pClipRect, UINT a_postEffectFlags)
 	{
 		auto& _resourceManager = (*m_pResourceManager);
 
@@ -320,7 +320,7 @@ namespace Engine::Graphics
 		if (!_pTex) return;
 
 		// サイズは呼び出し側の指定値をそのまま使う
-		PushUIData(_pTex->GetSRV().GetIndex(), a_screenPos, a_screenRect, a_color, a_rotation, a_layer, a_uvOffset, a_pivot, a_uvScale, a_curveK, a_curveOffsetX, a_pClipRect);
+		PushUIData(_pTex->GetSRV().GetIndex(), a_screenPos, a_screenRect, a_color, a_rotation, a_layer, a_uvOffset, a_pivot, a_uvScale, a_curveK, a_curveOffsetX, a_pClipRect, a_postEffectFlags);
 	}
 
 	void DrawSubmitter::SubmitUI(const Handle<Resource::Texture>& a_texHandle, const Math::Vector2& a_screenPos, float a_scale, const Math::Color& a_color, float a_rotation, float a_layer, const Math::Vector2& a_uvOffset, const Math::Vector2& a_pivot, float a_curveK, float a_curveOffsetX)
@@ -622,7 +622,8 @@ namespace Engine::Graphics
 		const Math::Vector2& a_uvScale,
 		float a_curveK,
 		float a_curveOffsetX,
-		const UIClipRect* a_pClipRect
+		const UIClipRect* a_pClipRect,
+		UINT a_postEffectFlags
 	)
 	{
 		// スクリーン解像度(px)
@@ -691,6 +692,8 @@ namespace Engine::Graphics
 				1.0f - a_pClipRect->min.y / _h * 2.0f
 			};
 		}
+
+		_data.postEffectFlags = a_postEffectFlags;
 
 		m_pDrawLists->AddUI(_data);
 	}

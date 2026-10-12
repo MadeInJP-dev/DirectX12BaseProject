@@ -28,6 +28,8 @@ namespace App::Object
 		_parent.curveRadius = curveRadius;
 		_parent.curveAngle = curveAngle;
 
+		_parent.isScanLine = isScanLine;
+
 		return _parent;
 	}
 
@@ -207,5 +209,11 @@ namespace App::Object
 		Engine::EditorField::Field("Pivot (0-1)", pivot, 0.01f, 0.0f, 1.0f);
 		Engine::EditorField::Field("Layer", layer, 0.1f);
 		Engine::EditorField::Tooltip("重なり順。大きいほど手前(同じ値なら置いた順)");
+
+		Engine::EditorField::Line();
+
+		// ポストプロセス
+		Engine::EditorField::Field("ScanLine", isScanLine);
+		Engine::EditorField::Tooltip("スキャンラインを掛ける。UIPass の ScanLineMask を ScanLinePass の Mask へ繋いだパイプラインで効く");
 	}
 }

@@ -58,5 +58,7 @@ VSOutput VSMain(VSInput a_input)
 	// 切り抜きはピクセルごとに見るので、位置と矩形をそのままPSへ渡す
 	_out.ndc = _ndc;
 	_out.clipRect = _uiData.clipRect;
+
+	_out.postEffectFlags = _uiData.postEffectFlags;
 	return _out;
 }

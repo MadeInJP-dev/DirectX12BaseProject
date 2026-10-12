@@ -1,6 +1,6 @@
 #include "UI.hlsli"
 
-float4 PSMain(VSOutput a_input) : SV_TARGET
+PSOutput PSMain(VSOutput a_input)
 {
 	// 切り抜き : 矩形の外へ出たところは描かない(スクロールする一覧の項目など)
 	if (any(a_input.ndc < a_input.clipRect.xy) || any(a_input.ndc > a_input.clipRect.zw))
@@ -20,6 +20,13 @@ float4 PSMain(VSOutput a_input) : SV_TARGET
 	{
 		discard;
 	}
-	
-	return _outColor;
+
+	PSOutput _out;
+	_out.color = _outColor;
+
+	// マスクは r に印、a に色と同じ不透明度を入れる(ブレンドで下のマスクへ重なる)
+	const float _isScanLine = (a_input.postEffectFlags & UI_POST_EFFECT_SCAN_LINE) ? 1.0f : 0.0f;
+	_out.scanLineMask = float4(_isScanLine, 0.0f, 0.0f, _outColor.a);
+
+	return _out;
 }

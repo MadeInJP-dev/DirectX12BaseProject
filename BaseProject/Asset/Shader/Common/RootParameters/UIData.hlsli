@@ -7,9 +7,13 @@
 //    float2 が16バイト境界をまたぐ位置に来ると次の境界へ押し出されるので、
 //    各行がちょうど float4 に収まる順序を崩さないこと
 //    (row0: pos+axisX / row1: axisY+uvOffset / row2: color / row3: layer+texIndex+uvScale
-//     / row4: 湾曲 / row5: clipRect)
+//     / row4: 湾曲 / row5: clipRect / row6: postEffectFlags)
 #ifndef ROOTPARAM_UI_DATA_HLSLI
 #define ROOTPARAM_UI_DATA_HLSLI
+
+// UIに掛けるポストプロセスの印(UIData::postEffectFlags のビット)
+// ※ CPU 側 Engine::Graphics::UI_POST_EFFECT_* と値を合わせること
+#define UI_POST_EFFECT_SCAN_LINE (1u << 0)	// ScanLinePass を掛ける
 
 struct UIData
 {
@@ -42,6 +46,12 @@ struct UIData
 	// 切り抜き(NDC)。(minX, minY, maxX, maxY) の外のピクセルは PS で捨てる。
 	// 切らないものには十分に広い矩形が入っている
 	float4 clipRect;
+
+	// 掛けるポストプロセスの印(UI_POST_EFFECT_*)。UIPS が効果ごとのマスクへ書き分ける
+	uint postEffectFlags;
+	float pad0;
+	float pad1;
+	float pad2;
 };
 
 #endif

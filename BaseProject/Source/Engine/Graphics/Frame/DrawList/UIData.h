@@ -1,12 +1,17 @@
 ﻿#pragma once
 namespace Engine::Graphics
 {
+	// UIに掛けるポストプロセスの印(UIData::postEffectFlags のビット)。
+	// UIPass がこれを見て、効果ごとのマスクへ書き分ける
+	// ※ HLSL 側(UIData.hlsli)と値を合わせること
+	inline constexpr UINT UI_POST_EFFECT_SCAN_LINE = 1u << 0;	// ScanLinePass を掛ける
+
 	// UIデータ
 	// StructuredBuffer<UIData> と1バイトもズレないよう、16バイト(float4)境界を意識して並べる。
 	// HLSLの構造化バッファは float2 が16バイト境界をまたぐ位置に来ると次の境界へ押し出される。
 	// 各行がちょうど float4 に収まる順序にしておけばパディングのズレが起きない。
 	// (row0: pos+axisX / row1: axisY+uvOffset / row2: color / row3: layer+texIndex+uvScale
-	//  / row4: 湾曲 / row5: clipRect)
+	//  / row4: 湾曲 / row5: clipRect / row6: postEffectFlags)
 	//
 	// 回転・アスペクト補正・ピボットはCPU(SubmitUI)側でピクセル空間で計算し、
 	// クアッド頂点(-1..1)を線形変換する基底(axisX/axisY)とNDC中心座標(pos)として渡す。
@@ -50,6 +55,14 @@ namespace Engine::Graphics
 		// スクロールする一覧のように、決まった範囲の外へはみ出した項目を切るために使う。
 		// 既定は何も切らないよう十分に広くしてある。row5 にまるごと入れているので境界はずれない
 		Math::Vector4 clipRect = { -1.0e30f, -1.0e30f, 1.0e30f, 1.0e30f };
+
+		// 掛けるポストプロセスの印(UI_POST_EFFECT_*)。
+		// 立っているぶんだけ UIPass がマスクへ書き、そのマスクを見たパスがこのUIにだけ効果を掛ける。
+		// row6 を丸ごと使うので、余りは詰め物
+		UINT postEffectFlags = 0;
+		float pad0 = 0.0f;
+		float pad1 = 0.0f;
+		float pad2 = 0.0f;
 
 		// 曲げるかどうか。
 		// 曲げるものは横に分割した板ポリで描く必要があるので、

@@ -391,6 +391,9 @@ namespace App::Object::Decoration
 		// アンカーの設定ではなく、持ち主の UI が実行中だけ持つもの
 		// (スクロールする一覧の項目など。UIBase::SetClipRect)
 		std::optional<Engine::Graphics::UIClipRect> opClipRect = std::nullopt;
+
+		// スキャンライン(ScanLinePass)を掛けるか。UIAnchor::isScanLine がそのまま入る
+		bool isScanLine = false;
 	};
 
 	//======================================================================================

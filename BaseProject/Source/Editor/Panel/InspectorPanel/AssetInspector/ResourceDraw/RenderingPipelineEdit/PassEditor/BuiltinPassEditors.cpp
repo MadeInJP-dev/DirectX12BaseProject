@@ -48,6 +48,7 @@
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Blur/GaussianBlurPass/GaussianBlurPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Blur/RadialBlurPass/RadialBlurPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Distortion/FishEyePass/FishEyePass.h"
+#include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/ScanLine/ScanLinePass/ScanLinePass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/DoF/CoCPass/CoCPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/DoF/DoFPass/DoFPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/GroundEffect/GroundFieldPass/GroundFieldPass.h"
@@ -121,10 +122,10 @@ namespace Editor::Inspector
 		}
 
 		// 有効/無効のチェックボックス : CB では int で持っているので橋渡しする
-		bool DrawEnableCheck(int& a_enable)
+		bool DrawEnableCheck(int& a_enable, const char* a_pLabel = "Enable")
 		{
 			bool _isEnable = (a_enable != 0);
-			if (!Engine::EditorField::Field("Enable", _isEnable)) return false;
+			if (!Engine::EditorField::Field(a_pLabel, _isEnable)) return false;
 
 			a_enable = _isEnable ? 1 : 0;
 			return true;
@@ -444,7 +445,7 @@ namespace Editor::Inspector
 
 		//==================================================================================
 		//
-		// Distortion / DoF / ToneMap
+		// Distortion / ScanLine / DoF / ToneMap
 		//
 		//==================================================================================
 		class FishEyeEditor : public PassEditor<FishEyePass>
@@ -461,6 +462,32 @@ namespace Editor::Inspector
 				_isEdit |= Engine::EditorField::Field("Strength", _params.strength, 0.01f, -2.0f, 2.0f);
 
 				Engine::EditorField::HelpText("カメラが FishEyeComponent を持つあいだはそちらの値が優先される");
+
+				return _isEdit ? EPassEditResult::Param : EPassEditResult::None;
+			}
+		};
+
+		class ScanLineEditor : public PassEditor<ScanLinePass>
+		{
+		protected:
+			EPassEditResult OnDrawDetail(ScanLinePass& a_pass) override
+			{
+				auto& _params = a_pass.RefParams();
+				bool _isEdit = DrawEnableCheck(_params.enable);
+
+				// 効果ごとに掛けるかどうかを選べる
+				_isEdit |= DrawEnableCheck(_params.enableScanLine, "ScanLine");
+				_isEdit |= Engine::EditorField::Field("ScanLine Opacity", _params.opacityScanLine, 0.01f, 0.0f, 1.0f);
+
+				_isEdit |= DrawEnableCheck(_params.enableNoise, "Noise");
+				_isEdit |= Engine::EditorField::Field("Noise Opacity", _params.opacityNoise, 0.01f, 0.0f, 1.0f);
+
+				_isEdit |= DrawEnableCheck(_params.enableFlickering, "Flickering");
+				_isEdit |= Engine::EditorField::Field("Flickering Speed", _params.flickeringSpeed, 0.1f, 0.0f, 100.0f);
+				_isEdit |= Engine::EditorField::Field("Flickering Strength", _params.flickeringStrength, 0.01f, 0.0f, 1.0f);
+
+				Engine::EditorField::HelpText("Mask に UIPass の ScanLineMask を繋ぐと、ScanLine を選んだUIにだけ掛かる");
+				Engine::EditorField::HelpText("Mask を繋がなければ画面全体に掛かる");
 
 				return _isEdit ? EPassEditResult::Param : EPassEditResult::None;
 			}
@@ -753,6 +780,7 @@ namespace Editor::Inspector
 		a_registry.Register<GaussianBlurPass, GaussianBlurEditor>();
 		a_registry.Register<RadialBlurPass, RadialBlurEditor>();
 		a_registry.Register<FishEyePass, FishEyeEditor>();
+		a_registry.Register<ScanLinePass, ScanLineEditor>();
 		a_registry.Register<CoCPass, DoFParamEditor<CoCPass>>("DoFPass と同じ値にすること");
 		a_registry.Register<DoFPass, DoFParamEditor<DoFPass>>("CoCPass と同じ値にすること");
 		a_registry.Register<SceneVolumetricFogPass, NoteOnlyEditor<SceneVolumetricFogPass>>(std::initializer_list<const char*>{ "フォグとグラウンドダストの設定はシーンの環境設定(SceneAmbientPanel)の持ち物です", "GroundDepth を繋がないとチリは出ません", "GroundField を繋がないとチリは衝撃で動きません" });
@@ -763,7 +791,7 @@ namespace Editor::Inspector
 		// ---- Sky / Present / UI ----
 		a_registry.Register<SkyPass, NoteOnlyEditor<SkyPass>>(std::initializer_list<const char*>{ "空の設定はシーンの環境設定(SceneAmbientPanel)の持ち物です" });
 		a_registry.Register<FinalOutputPass, FinalOutputEditor>();
-		a_registry.Register<UIPass, NoteOnlyEditor<UIPass>>(std::initializer_list<const char*>{ "深度を持たないので、積んだ順がそのまま前後になります" });
+		a_registry.Register<UIPass, NoteOnlyEditor<UIPass>>(std::initializer_list<const char*>{ "深度を持たないので、積んだ順がそのまま前後になります", "ScanLineMask を ScanLinePass の Mask へ繋ぐと、ScanLine を選んだUIにだけ掛かります" });
 
 		// ---- Utility / Test ----
 		a_registry.Register<UpScalePass, UpScaleEditor>();

@@ -567,6 +567,7 @@ namespace App::Object
 
 		// 区切りを持たない古い .ob* には無いので読まない(読まなければクラスの既定値のまま)
 		if (!a_ar.IsLegacyLayout()) a_ar.Field("IsHUD", m_isHUD);
+		if (!a_ar.IsLegacyLayout()) a_ar.Field("IsScanLine", m_anchor.isScanLine);
 
 		m_anchor.editSize = m_anchor.pixelSize;
 

@@ -1147,6 +1147,9 @@
     <Filter Include="Asset\Shader\Source\PostProcess\Distortion">
       <UniqueIdentifier>{71ae1542-91b0-4c4e-988d-81985052d328}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Asset\Shader\Source\PostProcess\ScanLine">
+      <UniqueIdentifier>{ec4e5c9b-9d23-4519-a6c3-2bca5e66fe77}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Graphics\RenderingPipeline">
       <UniqueIdentifier>{d4933552-c71b-4be1-9083-2a1c348a797a}</UniqueIdentifier>
     </Filter>
@@ -1245,6 +1248,12 @@
     </Filter>
     <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Distortion\FishEyePass">
       <UniqueIdentifier>{958e5ee4-f52a-4f61-aeb1-cc1354a840a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine">
+      <UniqueIdentifier>{5e90a0b0-7f66-4b9f-959f-8f1b64b8522f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine\ScanLinePass">
+      <UniqueIdentifier>{39c8d58b-5b29-4fcd-b5bd-1a421d5fb5f6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\CoCPass">
       <UniqueIdentifier>{fc650a5f-cde1-4995-a392-adcfe14059fd}</UniqueIdentifier>
@@ -2504,6 +2513,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Distortion\FishEyePass\FishEyePass.cpp">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Distortion\FishEyePass</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine\ScanLinePass\ScanLinePass.cpp">
+      <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine\ScanLinePass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\CoCPass\CoCPass.cpp">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\CoCPass</Filter>
@@ -4352,6 +4364,9 @@
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Distortion\FishEyePass\FishEyePass.h">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Distortion\FishEyePass</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine\ScanLinePass\ScanLinePass.h">
+      <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine\ScanLinePass</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\CoCPass\CoCPass.h">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\CoCPass</Filter>
     </ClInclude>
@@ -4982,6 +4997,9 @@
     </None>
     <FxCompile Include="Asset\Shader\Source\PostProcess\Distortion\FishEyeCS.hlsl">
       <Filter>Asset\Shader\Source\PostProcess\Distortion</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\Source\PostProcess\ScanLine\ScanLineCS.hlsl">
+      <Filter>Asset\Shader\Source\PostProcess\ScanLine</Filter>
     </FxCompile>
     <FxCompile Include="Asset\Shader\Source\PostProcess\Blend\BlendCS.hlsl">
       <Filter>Asset\Shader\Source\PostProcess\Blend</Filter>
