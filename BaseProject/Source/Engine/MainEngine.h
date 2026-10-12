@@ -93,6 +93,18 @@ namespace Engine
 		void ChangeMode(EAppMode a_mode);
 		EAppMode GetMode() const { return m_appMode; }
 
+		/// <summary>
+		/// アプリの終了を予約する : 次のフレームの頭(BeginFrame)でメインループを抜ける
+		/// </summary>
+		/// <remarks>
+		/// ゲーム側の「ゲームを終了」から呼ぶ。その場で抜けずにフレームの区切りまで待つので、
+		/// 呼んだフレームの更新・描画は最後まで走る
+		/// </remarks>
+		void ReserveQuit() { m_isQuitReserved = true; }
+
+		// 開発ツール(エディター)が差し込まれているか
+		bool HasDevTool() const { return m_pDevTool != nullptr; }
+
 		// グラフィックス関係
 		void ExecuteDrawCmd();
 
@@ -218,6 +230,9 @@ namespace Engine
 
 		// プレイヤーが選んだ FPS の上限(未選択なら作り手の値)
 		std::optional<EFPSRate> m_opUserFPSRate = std::nullopt;
+
+		// 終了の予約(ReserveQuit)。次のフレームの頭でメインループを抜ける
+		bool m_isQuitReserved = false;
 		EBuildConfiguration m_buildMode = EBuildConfiguration::Debug;		// ビルドモード
 
 		// フレーム分のごみ箱を用意する。

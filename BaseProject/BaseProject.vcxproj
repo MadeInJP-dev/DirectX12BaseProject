@@ -572,6 +572,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\SideMenu\SideMenu.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\OptionHUDs\SoundOptionPanel\SoundOptionPanel.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1835,6 +1840,7 @@
     <ClInclude Include="Source\Application\Object\UI\UIPanel\UIPanel.h" />
     <ClInclude Include="Source\Application\Object\UI\UIButton\UIButton.h" />
     <ClInclude Include="Source\Application\Object\UI\UIGauge\UIGauge.h" />
+    <ClInclude Include="Source\Application\Object\UI\SideMenu\SideMenu.h" />
     <ClInclude Include="Source\Application\Object\UI\OptionHUDs\SoundOptionPanel\SoundOptionPanel.h" />
     <ClInclude Include="Source\Application\Object\UI\OptionHUDs\OptionHUD.h" />
     <ClInclude Include="Source\Application\Object\UI\OptionHUDs\ScrollPanelBase.h" />

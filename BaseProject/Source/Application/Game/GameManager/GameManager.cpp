@@ -29,6 +29,7 @@
 #include "Application/Object/UI/UIPanel/UIPanel.h"
 #include "Application/Object/UI/UIGauge/UIGauge.h"
 #include "Application/Object/UI/OptionHUDs/OptionHUD.h"
+#include "Application/Object/UI/SideMenu/SideMenu.h"
 #include "Application/Object/Sequence/TitleSequence/TitleSequence.h"
 #include "Application/Object/Sequence/LoadingSequence/LoadingSequence.h"
 #include "Application/Object/Sequence/HomeSequence/HomeSequence.h"
@@ -126,6 +127,7 @@ namespace App::Game
 			_objRegistry.RegisterType<App::Object::LoadingSequence>("LoadingSequence");			// ロード画面の進行役。読み込みの進み具合をゲージへ流す
 			_objRegistry.RegisterType<App::Object::PlayerSpawner>("PlayerSpawner");				// プレイヤーのスポナー。シーンの始まりにプレハブから出し、カメラの追従先へつなぐ
 			_objRegistry.RegisterType<App::Object::OptionHUD>("OptionHUD");						// 設定画面。専用シーンに置き、開く側が Push する。パネル(ゲーム・グラフィック・サウンド・入力)を抱え、選んだ1つをスクロールして出す
+			_objRegistry.RegisterType<App::Object::SideMenu>("SideMenu");						// カーソルを乗せると開く横のメニュー(ホームの左上)。開閉だけを持ち、中のボタンは進行役が差し込む
 		}
 
 		// ------------------------------------------------------------------

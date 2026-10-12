@@ -157,7 +157,7 @@ namespace App::Object
 			Math::Vector2 _size = {};
 			if (CalcDecorationBounds(_center, _size, _isHitFollowAnim))
 			{
-				a_outRect.pixelPos = m_anchor.ToScreenPos(_center);	// 範囲の中心を指す点。回転と倍率はアンカーのものが乗る
+				a_outRect.pixelPos = m_anchor.ToScreenPos(_center) + m_runtimeOffset;	// 範囲の中心を指す点。回転と倍率はアンカーのものが乗る
 				a_outRect.pixelSize = _size * m_anchor.scale;
 				a_outRect.pivot = { 0.5f, 0.5f };						// 中心を出しているのでピボットは中央
 				return true;
@@ -168,7 +168,7 @@ namespace App::Object
 
 		if (!m_anchor.HasSize()) return false;
 
-		a_outRect.pixelPos = m_anchor.pixelPos;
+		a_outRect.pixelPos = m_anchor.pixelPos + m_runtimeOffset;	// 実行中だけのずらしは絵と同じだけ掛ける
 		a_outRect.pixelSize = m_anchor.pixelSize;
 		a_outRect.pivot = m_anchor.pivot;
 		return true;
@@ -409,7 +409,7 @@ namespace App::Object
 		auto* _pGE = a_context.pServices->pMainEngine->RefGraphicsEngine();
 		if (!_pGE) return;
 
-		const Decoration::ParentTransform _parentTr = m_anchor.MakeParentTransform();
+		const Decoration::ParentTransform _parentTr = MakeParentTransform();
 		const Decoration::ParentOption _parentOp = MakeParentOption();
 
 		// 配列の順に積む : 後ろにあるものほど手前に出る
@@ -443,7 +443,7 @@ namespace App::Object
 			_pGE,
 			a_context.pServices->pResourceManager,
 			m_decorationVec[a_index],
-			m_anchor.MakeParentTransform(),
+			MakeParentTransform(),
 			MakeParentOption(),
 			a_override);
 	}
@@ -462,6 +462,13 @@ namespace App::Object
 		if (!_pUserDataResource || !_pUserDataResource->pUserData) return false;
 
 		return !_pUserDataResource->pUserData->GetGraphicsSettings().isHUDVisible;
+	}
+
+	Decoration::ParentTransform UIBase::MakeParentTransform() const
+	{
+		Decoration::ParentTransform _parentTr = m_anchor.MakeParentTransform();
+		_parentTr.pixelPos = _parentTr.pixelPos + m_runtimeOffset;
+		return _parentTr;
 	}
 
 	Decoration::ParentOption UIBase::MakeParentOption() const

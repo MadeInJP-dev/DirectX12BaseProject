@@ -359,6 +359,12 @@ namespace Engine
 			return false;
 		}
 
+		// ゲーム側から終了を頼まれていれば、ここでメインループを抜ける
+		if (m_isQuitReserved)
+		{
+			return false;
+		}
+
 		// タイトルにFPSを表示するかどうか
 		if (_optionManager.GetWindowOption().isTitleFPS)
 		{

@@ -631,6 +631,9 @@
     <Filter Include="Source\Application\Object\UI\UIGauge">
       <UniqueIdentifier>{1b890504-cbda-42a6-9729-0f9364a04ec5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Object\UI\SideMenu">
+      <UniqueIdentifier>{3e7fb560-9e13-4529-9c0d-a3707aec13c3}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Application\Object\UI\OptionHUDs\SoundOptionPanel">
       <UniqueIdentifier>{bc3e867d-9efd-48c1-be4a-ad9e7d479126}</UniqueIdentifier>
     </Filter>
@@ -1565,6 +1568,9 @@
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\UIGauge\UIGauge.cpp">
       <Filter>Source\Application\Object\UI\UIGauge</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\SideMenu\SideMenu.cpp">
+      <Filter>Source\Application\Object\UI\SideMenu</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\OptionHUDs\SoundOptionPanel\SoundOptionPanel.cpp">
       <Filter>Source\Application\Object\UI\OptionHUDs\SoundOptionPanel</Filter>
@@ -3130,6 +3136,9 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\UIGauge\UIGauge.h">
       <Filter>Source\Application\Object\UI\UIGauge</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\SideMenu\SideMenu.h">
+      <Filter>Source\Application\Object\UI\SideMenu</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\OptionHUDs\SoundOptionPanel\SoundOptionPanel.h">
       <Filter>Source\Application\Object\UI\OptionHUDs\SoundOptionPanel</Filter>

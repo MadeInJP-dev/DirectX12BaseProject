@@ -4,6 +4,8 @@
 #include "Engine/GameObject/GameObjectManager/GameObjectManager.h"
 #include "Engine/Input/InputManager/InputManager.h"
 #include "Engine/Option/OptionManager.h"
+#include "Engine/Scene/SceneManager/SceneManager.h"
+#include "Engine/MainEngine.h"
 #include "Engine/EditorField/EditorField.h"
 
 #include "../../ObjectPicker.h"
@@ -95,6 +97,25 @@ namespace App::Object
 				[this, _pObjectManager]() { SetMode(EHomeMode::Home, _pObjectManager); });
 		}
 
+		//--------------------------------------------------------------
+		// 左上のメニュー(SideMenu)のボタン
+		//--------------------------------------------------------------
+		auto* _pSceneManager = a_context.pServices ? a_context.pServices->pSceneManager : nullptr;
+		auto* _pEngine = a_context.pServices ? a_context.pServices->pMainEngine : nullptr;
+
+		if (auto* _pOption = Picker::Find<UIButton>(_pObjectManager, m_optionButtonGUID); _pOption && _pSceneManager)
+		{
+			_pOption->SetOnClick([this, _pSceneManager]() { ReserveOpenOption(*_pSceneManager); });
+		}
+		if (auto* _pTitle = Picker::Find<UIButton>(_pObjectManager, m_titleButtonGUID); _pTitle && _pSceneManager)
+		{
+			_pTitle->SetOnClick([this, _pSceneManager]() { ReserveReturnTitle(*_pSceneManager); });
+		}
+		if (auto* _pQuit = Picker::Find<UIButton>(_pObjectManager, m_quitButtonGUID); _pQuit && _pEngine)
+		{
+			_pQuit->SetOnClick([this, _pEngine]() { ReserveQuitGame(*_pEngine); });
+		}
+
 		m_isBound = true;
 
 		// そろったところで、今のモードの見た目にしておく
@@ -109,8 +130,68 @@ namespace App::Object
 		if (!Picker::IsReady<UIButton>(a_pObjectManager, m_missionSelectButtonGUID)) return false;
 		if (!Picker::IsReady<UIButton>(a_pObjectManager, m_warehouseButtonGUID))     return false;
 		if (!Picker::IsReady<UIButton>(a_pObjectManager, m_backButtonGUID))          return false;
+		if (!Picker::IsReady<UIButton>(a_pObjectManager, m_optionButtonGUID))        return false;
+		if (!Picker::IsReady<UIButton>(a_pObjectManager, m_titleButtonGUID))         return false;
+		if (!Picker::IsReady<UIButton>(a_pObjectManager, m_quitButtonGUID))          return false;
 
 		return true;
+	}
+
+	//======================================================================================
+	// メニュー : 設定画面を重ねる
+	//--------------------------------------------------------------------------------------
+	// ホームは閉じずに上へ重ねる。更新されるのは一番上のシーンだけなので、
+	// 設定画面が自分を外せばホームの続きへ戻る
+	//======================================================================================
+	void HomeSequence::ReserveOpenOption(Engine::Scene::SceneManager& a_sceneManager)
+	{
+		if (m_isLeaving) return;
+
+		if (!m_optionSceneGUID.IsValid())
+		{
+			ENGINE_WARNING("[HomeSequence] 設定画面のシーンが設定されていません");
+			return;
+		}
+
+		a_sceneManager.ReserveChangeScene(m_optionSceneGUID, Engine::Scene::ESceneChangeType::Push);
+	}
+
+	//======================================================================================
+	// メニュー : タイトルへ戻る
+	//======================================================================================
+	void HomeSequence::ReserveReturnTitle(Engine::Scene::SceneManager& a_sceneManager)
+	{
+		if (m_isLeaving) return;
+
+		if (!m_titleSceneGUID.IsValid())
+		{
+			ENGINE_WARNING("[HomeSequence] タイトルのシーンが設定されていません");
+			return;
+		}
+
+		m_isLeaving = true;
+		a_sceneManager.ReserveChangeScene(m_titleSceneGUID, Engine::Scene::ESceneChangeType::Replace);
+	}
+
+	//======================================================================================
+	// メニュー : ゲームを終了する
+	//--------------------------------------------------------------------------------------
+	// エディターが差し込まれているときは、アプリを閉じずにエディターへ戻るだけにする。
+	// 閉じるとエディターごと終わり、保存していない編集が消えてしまう
+	//======================================================================================
+	void HomeSequence::ReserveQuitGame(Engine::MainEngine& a_engine)
+	{
+		if (m_isLeaving) return;
+
+		if (a_engine.HasDevTool())
+		{
+			ENGINE_LOG("[HomeSequence] エディターが居るので、終了せずエディターへ戻ります");
+			a_engine.ChangeMode(Engine::EAppMode::Editor);
+			return;
+		}
+
+		m_isLeaving = true;
+		a_engine.ReserveQuit();
 	}
 
 	//======================================================================================
@@ -221,6 +302,17 @@ namespace App::Object
 
 		m_bgm.Archive(a_ar);
 
+		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
+		// 区切りを持たない古い .ob* には無いので読まない
+		if (!a_ar.IsLegacyLayout())
+		{
+			a_ar.GUIDField("OptionButtonGUID", m_optionButtonGUID);
+			a_ar.GUIDField("TitleButtonGUID", m_titleButtonGUID);
+			a_ar.GUIDField("QuitButtonGUID", m_quitButtonGUID);
+			a_ar.GUIDField("OptionSceneGUID", m_optionSceneGUID);
+			a_ar.GUIDField("TitleSceneGUID", m_titleSceneGUID);
+		}
+
 		if (a_ar.IsLoading())
 		{
 			// 指し先が変わったので差し込み直す。開くのはトップから
@@ -265,6 +357,21 @@ namespace App::Object
 			ApplyVisible(_pObjectManager);
 		}
 		Engine::EditorField::Tooltip("倉庫はまだ中身が無いので、押しても何も起きない");
+
+		//----------------------------------------------------------------------
+		// 左上のメニュー(SideMenu の中のボタン)
+		//----------------------------------------------------------------------
+		Engine::EditorField::Header("Menu");
+
+		if (Picker::DrawCombo<UIButton>("Option", _pObjectManager, m_optionButtonGUID)) m_isBound = false;
+		if (Picker::DrawCombo<UIButton>("Title", _pObjectManager, m_titleButtonGUID))   m_isBound = false;
+		if (Picker::DrawCombo<UIButton>("Quit", _pObjectManager, m_quitButtonGUID))     m_isBound = false;
+		Engine::EditorField::Tooltip("エディターが居るときは終了せず、エディターへ戻る");
+
+		Engine::EditorField::AssetField(*a_context.pServices, "Scene", "OptionScene", m_optionSceneGUID);
+		Engine::EditorField::Tooltip("Option を押したときに重ねる設定画面のシーン");
+		Engine::EditorField::AssetField(*a_context.pServices, "Scene", "TitleScene", m_titleSceneGUID);
+		Engine::EditorField::Tooltip("Title を押したときに切り替えるタイトルのシーン");
 
 		//----------------------------------------------------------------------
 		// 出し分け

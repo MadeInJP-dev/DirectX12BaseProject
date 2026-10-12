@@ -4,6 +4,16 @@
 
 #include "../../SequenceBgm.h"
 
+namespace Engine
+{
+	class MainEngine;
+}
+
+namespace Engine::Scene
+{
+	class SceneManager;
+}
+
 namespace App::Object
 {
 	/// <summary>
@@ -42,6 +52,11 @@ namespace App::Object
 	///
 	/// ・倉庫はまだ無いので、ボタンだけ置いて押しても何もしない
 	///     既定では押せない状態(灰色)にしてある。作れたら遷移先を足す。
+	///
+	/// ・左上のメニュー(SideMenu)のボタン : 設定 / タイトルへ戻る / ゲームを終了
+	///     開閉は SideMenu が持ち、押されて何をするかはここが差し込む。
+	///     ゲームの終了は、エディターが差し込まれているときはエディターへ戻るだけにする
+	///     (エディターごと閉じて、保存していない編集が消えないように)。
 	/// </remarks>
 	class HomeSequence : public Engine::GameObject::BaseObject
 	{
@@ -80,6 +95,15 @@ namespace App::Object
 		// 指しているものがそろっているか
 		bool IsAllReady(Engine::GameObject::GameObjectManager* a_pObjectManager) const;
 
+		// メニュー : 設定画面のシーンを重ねる
+		void ReserveOpenOption(Engine::Scene::SceneManager& a_sceneManager);
+
+		// メニュー : タイトルへ戻る
+		void ReserveReturnTitle(Engine::Scene::SceneManager& a_sceneManager);
+
+		// メニュー : ゲームを終了する(エディターが居ればエディターへ戻る)
+		void ReserveQuitGame(Engine::MainEngine& a_engine);
+
 	private:
 
 		//-------------------------------------------------------------------
@@ -88,6 +112,15 @@ namespace App::Object
 		Core::GUID m_missionSelectButtonGUID = {};	// トップ : ミッションセレクトを開く
 		Core::GUID m_warehouseButtonGUID     = {};	// トップ : 倉庫(まだ何もしない)
 		Core::GUID m_backButtonGUID          = {};	// セレクト : トップへ戻る(任意)
+
+		//-------------------------------------------------------------------
+		// 設定(保存される) : 左上のメニュー(SideMenu の中のボタン)。どれも任意
+		//-------------------------------------------------------------------
+		Core::GUID m_optionButtonGUID = {};		// 設定画面を重ねる
+		Core::GUID m_titleButtonGUID  = {};		// タイトルへ戻る
+		Core::GUID m_quitButtonGUID   = {};		// ゲームを終了する
+		Core::GUID m_optionSceneGUID  = {};		// 設定画面のシーン(Push で重ねる)
+		Core::GUID m_titleSceneGUID   = {};		// タイトルのシーン(Replace で切り替える)
 
 		//-------------------------------------------------------------------
 		// 設定(保存される) : 出し分け
@@ -114,6 +147,7 @@ namespace App::Object
 		EHomeMode m_mode = EHomeMode::Home;	// 今見ている場所
 
 		bool m_isBound = false;	// ボタンへ差し込み済みか
+		bool m_isLeaving = false;	// タイトルへ戻る・終了を頼んだか(二重に頼まないため)
 
 		//-------------------------------------------------------------------
 		// BGM

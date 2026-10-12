@@ -160,6 +160,18 @@ namespace App::Object
 		void SetClipRect(const Engine::Graphics::UIClipRect& a_clipRect) { m_opClipRect = a_clipRect; }
 		void ClearClipRect() { m_opClipRect = std::nullopt; }
 
+		/// <summary>
+		/// 実行中だけのずらし(px) : 描画と当たり判定の両方に掛かる
+		/// </summary>
+		/// <remarks>
+		/// 横から滑り込むメニュー(SideMenu)のように、置き場所は変えずに一時的に動かすときに使う。
+		/// アンカーの PixelPos を書き換えると、動いている途中でシーンを保存したときにずれたまま残るため、
+		/// 別に持って保存しない。
+		/// ※ 位置を自前で差し替えて描く派生(DrawOverride::isUsePos)には掛からない
+		/// </remarks>
+		void SetRuntimeOffset(const Math::Vector2& a_offset) { m_runtimeOffset = a_offset; }
+		const Math::Vector2& GetRuntimeOffset() const { return m_runtimeOffset; }
+
 		//-----------------------------------------------------------------------
 		// 飾り
 		//-----------------------------------------------------------------------
@@ -330,6 +342,9 @@ namespace App::Object
 		// 飾りへ渡す親の設定 : アンカーの設定に、実行中だけの切り抜きを足したもの
 		Decoration::ParentOption MakeParentOption() const;
 
+		// 飾りへ渡す親の位置・回転など : アンカーの値に、実行中だけのずらしを足したもの
+		Decoration::ParentTransform MakeParentTransform() const;
+
 		// HUD として隠れているか : HUD で、プレイヤーが HUD を消しているとき true
 		bool IsHiddenAsHUD(const Engine::GameObject::ObjectContext& a_context) const;
 
@@ -359,5 +374,8 @@ namespace App::Object
 
 		// 切り抜き(px)。持ち主(スクロールする一覧など)が毎フレーム入れる。保存しない
 		std::optional<Engine::Graphics::UIClipRect> m_opClipRect = std::nullopt;
+
+		// 実行中だけのずらし(px)。持ち主(滑り込むメニューなど)が入れる。保存しない
+		Math::Vector2 m_runtimeOffset = {};
 	};
 }
