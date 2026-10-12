@@ -872,6 +872,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Transform\JointSwaySystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Combat\LockOnTargetSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1790,6 +1795,7 @@
     <ClInclude Include="Source\Application\Components\Movement\GravityComponent.h" />
     <ClInclude Include="Source\Application\Components\Transform\FollowAnimationNodeComponent.h" />
     <ClInclude Include="Source\Application\Components\Transform\HierarchyComponent.h" />
+    <ClInclude Include="Source\Application\Components\Transform\JointSwayComponent.h" />
     <ClInclude Include="Source\Application\Components\Core\SpawnerComponent.h" />
     <ClInclude Include="Source\Application\Components\Combat\ActionIntentComponent.h" />
     <ClInclude Include="Source\Application\Components\Movement\MoveIntentComponent.h" />
@@ -1903,6 +1909,7 @@
     <ClInclude Include="Source\Application\Systems\Transform\FollowAnimationNodeSystem.h" />
     <ClInclude Include="Source\Application\Systems\Transform\CommitHierarchyWorldMatrixSystem.h" />
     <ClInclude Include="Source\Application\Systems\Transform\CalcMatrixSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Transform\JointSwaySystem.h" />
     <ClInclude Include="Source\Application\Systems\Combat\LockOnTargetSystem.h" />
     <ClInclude Include="Source\Application\Systems\Weapon\MissileSalvoSystem.h" />
     <ClInclude Include="Source\Application\Systems\Weapon\ProjectileSpawn.h" />

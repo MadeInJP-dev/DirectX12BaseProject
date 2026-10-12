@@ -44,6 +44,7 @@
 #include "Engine/ECS/Component/TransientTag.h"
 #include "Application/Components/Core/NameComponent.h"
 #include "Application/Components/Transform/HierarchyComponent.h"
+#include "Application/Components/Transform/JointSwayComponent.h"
 #include "Application/Components/Transform/FollowAnimationNodeComponent.h"
 #include "Application/Components/Core/SpawnerComponent.h"
 #include "Application/Components/Transform/PreviousWorldMatrixComponent.h"
@@ -115,6 +116,7 @@
 #include "Application/Systems/Camera/RadialBlurSpeedSystem.h"
 #include "Application/Systems/Camera/AimTargetSystem.h"
 #include "Application/Systems/Transform/CalcMatrixSystem.h"
+#include "Application/Systems/Transform/JointSwaySystem.h"
 #include "Application/Systems/Combat/LockOnTargetSystem.h"
 #include "Application/Systems/Weapon/MissileSalvoSystem.h"
 #include "Application/Systems/Boss/BossMissileSalvoSystem.h"
@@ -278,6 +280,7 @@ namespace App::ECS
 		// 実行中にプレハブから出したものの印。シーンの保存(BaseScene::Archive)はこれを飛ばす
 		a_world.RegisterComponent<Engine::ECS::TransientTag>("TransientTag");
 		a_world.RegisterComponent<Component::HierarchyComponent>("HierarchyComponent");
+		a_world.RegisterComponent<Component::JointSwayComponent>("JointSwayComponent");
 		// 出現させた側(SceneSequence)の印。ウェーブの全滅判定に使う
 		a_world.RegisterComponent<Component::SpawnerComponent>("SpawnerComponent");
 		a_world.RegisterComponent<Component::FollowAnimationNodeComponent>("FollowAnimationNodeComponent");
@@ -440,6 +443,7 @@ namespace App::ECS
 		a_world.RegisterSystem<System::InputMoveSystem>();
 		a_world.RegisterSystem<System::GravitySystem>();
 		a_world.RegisterSystem<System::RotationSystem>();
+		a_world.RegisterSystem<System::JointSwaySystem>();
 		// プレイヤーの旋回は「撃っているか」で進行方向/狙い方向を切り替えるので専用システムが持つ
 		a_world.RegisterSystem<System::LockOnRotationSystem>();
 		a_world.RegisterSystem<System::FaceTargetSystem>();

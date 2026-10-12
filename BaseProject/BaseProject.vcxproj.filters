@@ -1761,6 +1761,9 @@
     <ClCompile Include="Source\Application\Systems\Transform\CalcMatrixSystem.cpp">
       <Filter>Source\Application\Systems\Transform</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Transform\JointSwaySystem.cpp">
+      <Filter>Source\Application\Systems\Transform</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Combat\DeathStateSystem.cpp">
       <Filter>Source\Application\Systems\Combat</Filter>
     </ClCompile>
@@ -2918,6 +2921,9 @@
     <ClInclude Include="Source\Application\Components\Transform\HierarchyComponent.h">
       <Filter>Source\Application\Components\Transform</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Components\Transform\JointSwayComponent.h">
+      <Filter>Source\Application\Components\Transform</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Components\Core\SpawnerComponent.h">
       <Filter>Source\Application\Components\Core</Filter>
     </ClInclude>
@@ -3336,6 +3342,9 @@
       <Filter>Source\Application\Systems\Transform</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Transform\CalcMatrixSystem.h">
+      <Filter>Source\Application\Systems\Transform</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Transform\JointSwaySystem.h">
       <Filter>Source\Application\Systems\Transform</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Combat\DeathStateSystem.h">
