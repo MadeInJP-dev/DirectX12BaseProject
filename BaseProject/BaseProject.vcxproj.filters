@@ -280,6 +280,9 @@
     <Filter Include="Source\Engine\Graphics\Frame\DrawSubmitter">
       <UniqueIdentifier>{0b6307d0-d8a0-4015-94dd-64536dc69c45}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs">
+      <UniqueIdentifier>{e2114135-d8a1-44da-8ec0-0b1228a12269}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Graphics\RenderingPipeline\CameraPipelineManager">
       <UniqueIdentifier>{e4f7ac3c-3124-465c-890c-03d69a940492}</UniqueIdentifier>
     </Filter>
@@ -2740,6 +2743,18 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\DrawSubmitter.h">
       <Filter>Source\Engine\Graphics\Frame\DrawSubmitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\FontSubmitDesc.h">
+      <Filter>Source\Engine\Graphics\Frame\DrawSubmitter\Descs</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\GPUSkiningSbumitDesc.h">
+      <Filter>Source\Engine\Graphics\Frame\DrawSubmitter\Descs</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\ModelSubmitDesc.h">
+      <Filter>Source\Engine\Graphics\Frame\DrawSubmitter\Descs</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\SpriteSubmitDesc.h">
+      <Filter>Source\Engine\Graphics\Frame\DrawSubmitter\Descs</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\Frame\SceneView\SceneView.h">
       <Filter>Source\Engine\Graphics\Frame\SceneView</Filter>

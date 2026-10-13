@@ -5,11 +5,11 @@
     },
     "Graphics": {
         "Brightness": 100,
-        "HasWindowMode": false,
+        "HasWindowMode": true,
         "IsBloomEnable": true,
         "IsHUDVisible": true,
         "ScreenShake": 100,
-        "WindowMode": 0
+        "WindowMode": 2
     },
     "Input": {
         "HasIsInvertLookY": false,

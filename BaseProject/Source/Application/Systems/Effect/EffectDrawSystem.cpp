@@ -354,14 +354,14 @@ namespace App::System
 							_emissiveAdd *= _pEffect->EvaluateParamScale(
 								Engine::Resource::EEffectParamTarget::MeshEmissive, _m, _override.params);
 
-							_pGE->RefDrawSubmitter()->SubmitModel(
-								*a_ctx.pWorld,
-								_pModel,
-								_meshWorld,
-								_colorScale,
-								{ 1.0f, 1.0f, 1.0f },	// エミッシブテクスチャの倍率は素通し
-								_emissiveAdd
-							);
+							// エミッシブテクスチャの倍率(emissiveScale)は素通し
+							Engine::Graphics::ModelSubmitDesc _desc = {};
+							_desc.pWorld = a_ctx.pWorld;
+							_desc.modelHandle = _meshParts[_m].modelHandle;
+							_desc.worldMat = _meshWorld;
+							_desc.colorScale = _colorScale;
+							_desc.bloomAdd = _emissiveAdd;
+							_pGE->RefDrawSubmitter()->SubmitModel(_desc);
 						}
 					}
 

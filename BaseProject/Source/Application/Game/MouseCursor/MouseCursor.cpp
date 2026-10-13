@@ -173,15 +173,13 @@ namespace App::Game
 		// レイヤーは並べ替えのための値なので、大きくしても絵が消えることはない
 		constexpr float CURSOR_LAYER = 10000.0f;
 
-		a_pDrawSubmitter->SubmitUI(
-			m_texRef,
-			_renderPos,
-			Math::Vector2(_cursorOp.sizePixel, _cursorOp.sizePixel),
-			_cursorOp.color,
-			0.0f,
-			CURSOR_LAYER,
-			Math::Vector2(0.0f, 0.0f),
-			_cursorOp.hotspot
-		);
+		Engine::Graphics::SpriteSubmitDesc _desc = {};
+		_desc.texHandle = m_texRef;
+		_desc.pixelPos = _renderPos;
+		_desc.pixelSize = Math::Vector2(_cursorOp.sizePixel, _cursorOp.sizePixel);
+		_desc.color = _cursorOp.color;
+		_desc.Zlayer = CURSOR_LAYER;
+		_desc.pivot = _cursorOp.hotspot;
+		a_pDrawSubmitter->SubmitUI(_desc);
 	}
 }

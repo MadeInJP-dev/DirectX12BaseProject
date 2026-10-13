@@ -1706,6 +1706,10 @@
     <ClInclude Include="Source\Engine\EditorField\EditorField.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\CameraPipelineManager\CameraPipelineManager.h" />
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\DrawSubmitter.h" />
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\FontSubmitDesc.h" />
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\GPUSkiningSbumitDesc.h" />
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\ModelSubmitDesc.h" />
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\SpriteSubmitDesc.h" />
     <ClInclude Include="Source\Engine\Graphics\Frame\SceneView\SceneView.h" />
     <ClInclude Include="Source\Engine\Graphics\Device\RenderDevice.h" />
     <ClInclude Include="..\Library\Include\imgui-docking\imconfig.h" />

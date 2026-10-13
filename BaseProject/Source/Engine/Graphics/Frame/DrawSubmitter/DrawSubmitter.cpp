@@ -27,18 +27,18 @@ namespace Engine::Graphics
 		m_renderHeight = a_pGraphicsEngine->GetRenderHeight();
 	}
 
-	void DrawSubmitter::SubmitSkinning(
-		ECS::World& a_world,
-		const Resource::Model* a_pModel,
-		const Handle<Raytracing::DynamicRaytracingData> dynamicHandle,
-		const RangeHandle<Resource::NodePoseMatrix> nodePoseHandle,
-		const RangeHandle<Resource::BoneMatrix> boneHandle
-	)
+	void DrawSubmitter::SubmitSkinning(const GPUSkiningSubmitDesc& a_desc)
 	{
-		// このワールドのボーン行列をパレットへ積み、GPU上の土台を得る
-		const uint32_t _boneBaseIndex = m_pDrawLists->AcquireBoneBaseIndex(a_world);
+		if (!a_desc.pWorld) return;
+		auto& _world = *a_desc.pWorld;
 
-		const auto& _drawCmdVec = a_pModel->GetDrawCommandVec();
+		const auto* _pModel = (*m_pResourceManager).Get(a_desc.modelHandle);
+		if (!_pModel) return;
+
+		// このワールドのボーン行列をパレットへ積み、GPU上の土台を得る
+		const uint32_t _boneBaseIndex = m_pDrawLists->AcquireBoneBaseIndex(_world);
+
+		const auto& _drawCmdVec = _pModel->GetDrawCommandVec();
 		for (const auto& _cmd : _drawCmdVec)
 		{
 			// マテリアル取得
@@ -53,19 +53,19 @@ namespace Engine::Graphics
 			if (!_pMesh->HasRtData()) continue;
 
 			SkinningDispatchItem _item = {};
-			_item.pWorld = &a_world;
+			_item.pWorld = &_world;
 			_item.staticVertexHandle = _pMesh->GetRtData().vertexHandle;
 			_item.skinVertexHandle = _pMesh->GetRtData().skinVertexHandle;
 			_item.staticIndexHandle = _pMesh->GetRtData().indexHandle;
-			_item.nodePoseMat = nodePoseHandle;
-			_item.animHandle = dynamicHandle;
-			_item.boneHandle = boneHandle;
+			_item.nodePoseMat = a_desc.nodeposeHandle;
+			_item.animHandle = a_desc.rtAnimHandle;
+			_item.boneHandle = a_desc.boneHandle;
 
 			// スキニングのコンピュートが読むのはGPU上の位置なので土台を足す
-			_item.boneBufferStart = _boneBaseIndex + boneHandle.startIndex;
+			_item.boneBufferStart = _boneBaseIndex + a_desc.boneHandle.startIndex;
 
-			auto& _pool = a_world.RefResource<Pool::ItemPool<Raytracing::DynamicRaytracingData>>();
-			auto* _data = _pool.Get(dynamicHandle);
+			auto& _pool = _world.RefResource<Pool::ItemPool<Raytracing::DynamicRaytracingData>>();
+			auto* _data = _pool.Get(a_desc.rtAnimHandle);
 			if (!_data) continue;
 
 			for (auto& _meshData : _data->meshDataVec)
@@ -79,40 +79,17 @@ namespace Engine::Graphics
 			m_pDrawLists->AddSkinning(_item);
 		}
 	}
-	void DrawSubmitter::SubmitModel(
-		ECS::World& a_world,
-		const Resource::Model* a_pModel,
-		const Math::Matrix& a_worldMatrix,
-		const Math::Color& a_albedoScale,
-		const Math::Vector3& a_emissiveScale,
-		const Math::Vector3& a_emissiveAdd
-	)
-	{
-		SubmitModel(
-			a_world,
-			a_pModel,
-			a_worldMatrix,
-			a_worldMatrix,
-			a_albedoScale,
-			a_emissiveScale,
-			a_emissiveAdd
-		);
-	}
 
-	void DrawSubmitter::SubmitModel(
-		ECS::World& /*a_world*/,
-		const Resource::Model* a_pModel,
-		const Math::Matrix& a_worldMatrix,
-		const Math::Matrix& a_prevMatrix,
-		const Math::Color& a_albedoScale,
-		const Math::Vector3& a_emissiveScale,
-		const Math::Vector3& a_emissiveAdd
-	)
+	void DrawSubmitter::SubmitModel(const ModelSubmitDesc& a_desc)
 	{
-		if (!a_pModel) return;
+		const auto* _pModel = (*m_pResourceManager).Get(a_desc.modelHandle);
+		if (!_pModel) return;
+
+		// 過去行列が無ければ止まっているものとして今の行列を使う
+		const Math::Matrix& _prevWorldMat = a_desc.prevWorldMat ? *a_desc.prevWorldMat : a_desc.worldMat;
 
 		// モデルが持っている描画コマンド（サブセット）を展開
-		const auto& _drawCmdVec = a_pModel->GetDrawCommandVec();
+		const auto& _drawCmdVec = _pModel->GetDrawCommandVec();
 
 		for (const auto& _cmd : _drawCmdVec)
 		{
@@ -126,9 +103,9 @@ namespace Engine::Graphics
 			// -----------------------------------------------------
 			// 行列計算
 			// -----------------------------------------------------
-			Math::Matrix _nodeTransMat(a_pModel->GetOriginalNodeVec()[_cmd.nodeIndex].worldTransform);
-			Math::Matrix _mat = _nodeTransMat * a_worldMatrix;
-			Math::Matrix _prevMat = _nodeTransMat * a_prevMatrix;
+			Math::Matrix _nodeTransMat(_pModel->GetOriginalNodeVec()[_cmd.nodeIndex].worldTransform);
+			Math::Matrix _mat = _nodeTransMat * a_desc.worldMat;
+			Math::Matrix _prevMat = _nodeTransMat * _prevWorldMat;
 
 			// -----------------------------------------------------
 			// PermutationFlags の構築
@@ -152,40 +129,38 @@ namespace Engine::Graphics
 				_cmd, _pMesh, _pMaterial,
 				_mat, _prevMat,
 				IS_ANIMATION, 0 /*animatedVertexStart*/,
-				a_albedoScale, a_emissiveScale, a_emissiveAdd, _psoKey);
+				a_desc.colorScale, a_desc.emissiveScale, a_desc.bloomAdd, _psoKey);
 		}
 	}
 
-	void DrawSubmitter::SubmitModel(
-		ECS::World& a_world,
-		const Resource::Model* a_pModel,
-		const Math::Matrix& a_worldMatrix,
-		const Math::Matrix& a_prevMatrix,
-		const RangeHandle<Resource::BoneMatrix>& a_boneHandle,
-		const RangeHandle<Resource::NodePoseMatrix>& a_nodePoseHandle,
-		const Handle<Raytracing::DynamicRaytracingData>& a_animData,
-		const Math::Color& a_albedoScale,
-		const Math::Vector3& a_emissiveScale,
-		const Math::Vector3& a_emissiveAdd
-	)
+	void DrawSubmitter::SubmitModel(const AnimationModelSubmitDesc& a_desc)
 	{
+		if (!a_desc.pWorld) return;
+		auto& _world = *a_desc.pWorld;
+
+		const auto* _pModel = (*m_pResourceManager).Get(a_desc.modelHandle);
+		if (!_pModel) return;
+
+		// 過去行列が無ければ止まっているものとして今の行列を使う
+		const Math::Matrix& _prevWorldMat = a_desc.prevWorldMat ? *a_desc.prevWorldMat : a_desc.worldMat;
+
 		// ノード行列取得
-		auto& _nodePosePool = a_world.RefResource<Pool::RangePool<Resource::NodePoseMatrix>>();
-		const auto& _nodePoseMatVec = _nodePosePool.GetRange(a_nodePoseHandle);
+		auto& _nodePosePool = _world.RefResource<Pool::RangePool<Resource::NodePoseMatrix>>();
+		const auto& _nodePoseMatVec = _nodePosePool.GetRange(a_desc.nodeposeHandle);
 
 		// アニメーション後データ (※1つのモデルに対して共通ならループ外で取得・チェックすると効率的です)
-		auto& _pool = a_world.RefResource<Pool::ItemPool<Raytracing::DynamicRaytracingData>>();
-		auto* _data = _pool.Get(a_animData);
+		auto& _pool = _world.RefResource<Pool::ItemPool<Raytracing::DynamicRaytracingData>>();
+		auto* _data = _pool.Get(a_desc.rtAnimHandle);
 		if (!_data) return;
 
 		// このワールドのボーン行列をパレットへ積む。
 		// 戻り値の土台位置はここでは使わない(頂点をスキニングするのはコンピュートの
 		// スキニングパスで、描画側はその結果の頂点バッファを読むだけ)。
 		// ただし積むこと自体はそのパスに要るので、呼び出しを外してはいけない
-		m_pDrawLists->AcquireBoneBaseIndex(a_world);
+		m_pDrawLists->AcquireBoneBaseIndex(_world);
 
 		// モデルが持っている描画コマンド（サブセット）を展開
-		const auto& _drawCmdVec = a_pModel->GetDrawCommandVec();
+		const auto& _drawCmdVec = _pModel->GetDrawCommandVec();
 		for (const auto& _cmd : _drawCmdVec)
 		{
 			// メッシュ・マテリアルの取得と検証
@@ -214,9 +189,9 @@ namespace Engine::Graphics
 			// クラッシュさせずこのコマンドの描画をスキップする
 			if (_cmd.nodeIndex >= _nodePoseMatVec.size()) continue;
 			Math::Matrix _nodeTransMat(_nodePoseMatVec[_cmd.nodeIndex].world);
-			Math::Matrix _mat = _nodeTransMat * a_worldMatrix;
+			Math::Matrix _mat = _nodeTransMat * a_desc.worldMat;
 
-			Math::Matrix _prevMat = _nodeTransMat * a_prevMatrix;
+			Math::Matrix _prevMat = _nodeTransMat * _prevWorldMat;
 
 			// =========================================================
 			// PermutationFlags を構築
@@ -224,7 +199,7 @@ namespace Engine::Graphics
 			uint32_t _flags = static_cast<uint32_t>(Engine::Graphics::EShaderPermutationFlags::None);
 
 			// アニメーション判定
-			bool _isAnimation = (a_boneHandle.count > 0);
+			bool _isAnimation = (a_desc.boneHandle.count > 0);
 			_flags |= static_cast<uint32_t>(_isAnimation ?
 				Engine::Graphics::EShaderPermutationFlags::Skinned :
 				Engine::Graphics::EShaderPermutationFlags::Static);
@@ -245,24 +220,17 @@ namespace Engine::Graphics
 				_cmd, _pMesh, _pMaterial,
 				_mat, _prevMat,
 				_isAnimation, _animatedVertexStart,
-				a_albedoScale, a_emissiveScale, a_emissiveAdd, _psoKey);
+				a_desc.colorScale, a_desc.emissiveScale, a_desc.bloomAdd, _psoKey);
 		}
 	}
 
-	void DrawSubmitter::SubmitModel(const Math::Matrix& a_worldMat, const Math::Color& a_colorScale, const Math::Vector3& a_emissiveScale, const Engine::Handle<Raytracing::DynamicRaytracingData> dynamicHandle, const Engine::Handle<Resource::NodePoseMatrix> nodePoseHandle, const Math::Vector3& a_emissiveAdd)
+	void DrawSubmitter::SubmitGroundModel(const GroundModelSubmitDesc& a_desc)
 	{
-
-		m_pDrawLists->AddDynamicRayRequest(
-			{ a_worldMat,a_colorScale,a_emissiveScale,a_emissiveAdd,dynamicHandle,nodePoseHandle }
-		);
-	}
-
-	void DrawSubmitter::SubmitGroundModel(ECS::World& /*a_world*/, const Resource::Model* a_pModel, const Math::Matrix& a_worldMatrix)
-	{
-		if (!a_pModel) return;
+		const auto* _pModel = (*m_pResourceManager).Get(a_desc.modelHandle);
+		if (!_pModel) return;
 
 		// モデルが持っている描画コマンド（サブセット）を展開
-		const auto& _drawCmdVec = a_pModel->GetDrawCommandVec();
+		const auto& _drawCmdVec = _pModel->GetDrawCommandVec();
 
 		for (const auto& _cmd : _drawCmdVec)
 		{
@@ -276,9 +244,9 @@ namespace Engine::Graphics
 			// -----------------------------------------------------
 			// 行列計算
 			// -----------------------------------------------------
-			Math::Matrix _nodeTransMat(a_pModel->GetOriginalNodeVec()[_cmd.nodeIndex].worldTransform);
-			Math::Matrix _mat = _nodeTransMat * a_worldMatrix;
-			Math::Matrix _prevMat = _nodeTransMat * a_worldMatrix;		// 動くことはない予定
+			Math::Matrix _nodeTransMat(_pModel->GetOriginalNodeVec()[_cmd.nodeIndex].worldTransform);
+			Math::Matrix _mat = _nodeTransMat * a_desc.worldMat;
+			Math::Matrix _prevMat = _nodeTransMat * a_desc.worldMat;		// 動くことはない予定
 
 			// -----------------------------------------------------
 			// PermutationFlags の構築
@@ -307,35 +275,20 @@ namespace Engine::Graphics
 		}
 	}
 
-	void DrawSubmitter::SubmitUI(const Handle<Resource::Texture>& a_texHandle, const Math::Vector2& a_screenPos, const Math::Vector2& a_screenRect, const Math::Color& a_color, float a_rotation, float a_layer, const Math::Vector2& a_uvOffset, const Math::Vector2& a_pivot, const Math::Vector2& a_uvScale, float a_curveK, float a_curveOffsetX, const UIClipRect* a_pClipRect, UINT a_postEffectFlags)
+	void DrawSubmitter::SubmitUI(const SpriteSubmitDesc& a_desc)
 	{
 		auto& _resourceManager = (*m_pResourceManager);
 
 		// 読み込みが終わっていないものは、そのフレームは描かない。
 		// 非同期ロード中のスロットには空の実体が入っているため、
 		// ポインタのnullチェックだけでは弾けない
-		if (!_resourceManager.IsReady(a_texHandle)) return;
+		if (!_resourceManager.IsReady(a_desc.texHandle)) return;
 
-		auto* _pTex = _resourceManager.Get(a_texHandle);
+		auto* _pTex = _resourceManager.Get(a_desc.texHandle);
 		if (!_pTex) return;
 
 		// サイズは呼び出し側の指定値をそのまま使う
-		PushUIData(_pTex->GetSRV().GetIndex(), a_screenPos, a_screenRect, a_color, a_rotation, a_layer, a_uvOffset, a_pivot, a_uvScale, a_curveK, a_curveOffsetX, a_pClipRect, a_postEffectFlags);
-	}
-
-	void DrawSubmitter::SubmitUI(const Handle<Resource::Texture>& a_texHandle, const Math::Vector2& a_screenPos, float a_scale, const Math::Color& a_color, float a_rotation, float a_layer, const Math::Vector2& a_uvOffset, const Math::Vector2& a_pivot, float a_curveK, float a_curveOffsetX)
-	{
-		auto& _resourceManager = (*m_pResourceManager);
-
-		// 読み込み中のものは描かない : 空の実体のサイズを掛けても意味がない
-		if (!_resourceManager.IsReady(a_texHandle)) return;
-
-		auto* _pTex = _resourceManager.Get(a_texHandle);
-		if (!_pTex) return;
-
-		// テクスチャの元サイズにスケールを掛けたものを表示サイズにする
-		Math::Vector2 _size = { _pTex->GetDesc().Width * a_scale, _pTex->GetDesc().Height * a_scale };
-		PushUIData(_pTex->GetSRV().GetIndex(), a_screenPos, _size, a_color, a_rotation, a_layer, a_uvOffset, a_pivot, {1.0f,1.0f}, a_curveK, a_curveOffsetX);
+		PushUIData(_pTex->GetSRV().GetIndex(), a_desc);
 	}
 
 	//------------------------------------------------------------------------------------------
@@ -610,21 +563,7 @@ namespace Engine::Graphics
 		}
 	}
 
-	void DrawSubmitter::PushUIData(
-		uint32_t a_texIndex,
-		const Math::Vector2& a_pixelPos,
-		const Math::Vector2& a_pixelSize,
-		const Math::Color& a_color,
-		float a_rotationDeg,
-		float a_layer,
-		const Math::Vector2& a_uvOffset,
-		const Math::Vector2& a_pivot,
-		const Math::Vector2& a_uvScale,
-		float a_curveK,
-		float a_curveOffsetX,
-		const UIClipRect* a_pClipRect,
-		UINT a_postEffectFlags
-	)
+	void DrawSubmitter::PushUIData(uint32_t a_texIndex, const SpriteSubmitDesc& a_desc)
 	{
 		// スクリーン解像度(px)
 		const float _w = static_cast<float>(m_renderWidth);
@@ -633,16 +572,16 @@ namespace Engine::Graphics
 
 		// 回転(度→ラジアン)。回転はピクセル空間(等方)で行い、そのあとNDCへ変換する。
 		// こうしないと、NDC空間(x,yで縮尺が違う)で回転させたときに斜めで画像が歪む。
-		const float _rad = DirectX::XMConvertToRadians(a_rotationDeg);
+		const float _rad = DirectX::XMConvertToRadians(a_desc.rotationDeg);
 		const float _cos = std::cos(_rad);
 		const float _sin = std::sin(_rad);
 
 		// 半サイズ(px)と、ピボット(正規化[0,1])からクアッド中心までのオフセット(px)。
 		// (0.5 - pivot) * size がクアッド中心のピボットからのずれ。
-		const Math::Vector2 _halfPx = { a_pixelSize.x * 0.5f, a_pixelSize.y * 0.5f };
+		const Math::Vector2 _halfPx = { a_desc.pixelSize.x * 0.5f, a_desc.pixelSize.y * 0.5f };
 		const Math::Vector2 _pivotOffPx = {
-			(0.5f - a_pivot.x) * a_pixelSize.x,
-			(0.5f - a_pivot.y) * a_pixelSize.y
+			(0.5f - a_desc.pivot.x) * a_desc.pixelSize.x,
+			(0.5f - a_desc.pivot.y) * a_desc.pixelSize.y
 		};
 
 		// クアッド頂点 q∈[-1,1] に対し、ピクセル空間での最終座標は
@@ -655,8 +594,8 @@ namespace Engine::Graphics
 		//   axisXpx = R*( halfX,      0) = ( halfX*cos, halfX*sin)
 		//   axisYpx = R*(     0, -halfY) = ( halfY*sin,-halfY*cos)
 		const Math::Vector2 _centerPx = {
-			a_pixelPos.x + (_pivotOffPx.x * _cos - _pivotOffPx.y * _sin),
-			a_pixelPos.y + (_pivotOffPx.x * _sin + _pivotOffPx.y * _cos)
+			a_desc.pixelPos.x + (_pivotOffPx.x * _cos - _pivotOffPx.y * _sin),
+			a_desc.pixelPos.y + (_pivotOffPx.x * _sin + _pivotOffPx.y * _cos)
 		};
 		const Math::Vector2 _axisXpx = { _halfPx.x * _cos,  _halfPx.x * _sin };
 		const Math::Vector2 _axisYpx = { _halfPx.y * _sin, -_halfPx.y * _cos };
@@ -667,33 +606,33 @@ namespace Engine::Graphics
 		_data.pos   = { _centerPx.x / _w * 2.0f - 1.0f, 1.0f - _centerPx.y / _h * 2.0f };
 		_data.axisX = { _axisXpx.x * 2.0f / _w, -_axisXpx.y * 2.0f / _h };
 		_data.axisY = { _axisYpx.x * 2.0f / _w, -_axisYpx.y * 2.0f / _h };
-		_data.uvOffset = a_uvOffset;
-		_data.uvScale = a_uvScale;
-		_data.color = Math::DX::ToVector4(a_color);
-		_data.layer = a_layer;
+		_data.uvOffset = a_desc.uvOffset;
+		_data.uvScale = a_desc.uvScale;
+		_data.color = Math::DX::ToVector4(a_desc.color);
+		_data.layer = a_desc.Zlayer;
 		_data.texIndex = a_texIndex;
 		// 湾曲。
 		// 反りは「弧の中心からの横ずれ(px)」で決まるので、シェーダーが px へ戻せるように
 		// このクアッドの実寸(半分の大きさ)も一緒に送る。
 		// NDCの基底(axisX/axisY)からは画面解像度なしにpxを復元できないため
-		_data.curveK = a_curveK;
-		_data.curveOffsetX = a_curveOffsetX;
+		_data.curveK = a_desc.curveK;
+		_data.curveOffsetX = a_desc.curveOffsetX;
 		_data.curveHalfWidth = _halfPx.x;
 		_data.curveInvHalfHeight = (_halfPx.y > 0.0f) ? (1.0f / _halfPx.y) : 0.0f;
 
 		// 切り抜き。点と同じくピクセル → NDC へ直す。
 		// Y は上下が入れ替わるので、ピクセルの下端(max.y)が NDC の下端(minY)になる
-		if (a_pClipRect)
+		if (a_desc.pClipRect)
 		{
 			_data.clipRect = {
-				a_pClipRect->min.x / _w * 2.0f - 1.0f,
-				1.0f - a_pClipRect->max.y / _h * 2.0f,
-				a_pClipRect->max.x / _w * 2.0f - 1.0f,
-				1.0f - a_pClipRect->min.y / _h * 2.0f
+				a_desc.pClipRect->min.x / _w * 2.0f - 1.0f,
+				1.0f - a_desc.pClipRect->max.y / _h * 2.0f,
+				a_desc.pClipRect->max.x / _w * 2.0f - 1.0f,
+				1.0f - a_desc.pClipRect->min.y / _h * 2.0f
 			};
 		}
 
-		_data.postEffectFlags = a_postEffectFlags;
+		_data.postEffectFlags = a_desc.postEffectFlags;
 
 		m_pDrawLists->AddUI(_data);
 	}

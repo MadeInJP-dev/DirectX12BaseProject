@@ -1,4 +1,4 @@
-#include "DecorationInternal.h"
+﻿#include "DecorationInternal.h"
 
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
@@ -169,21 +169,21 @@ namespace App::Object::Decoration
 			const float _curveOffsetX =
 				a_resolved.localOffset.x + a_localTopLeft.x + a_size.x * 0.5f - a_resolved.curveOriginX;
 
-			a_pGE->RefDrawSubmitter()->SubmitUI(
-				a_texHandle,
-				_pos,
-				a_size,
-				a_color,
-				a_resolved.rotation,
-				a_resolved.layer,
-				a_uvOffset,
-				{ 0.0f, 0.0f },		// ずれで位置を決めているのでピボットは左上固定
-				a_uvScale,
-				a_resolved.curveK,
-				_curveOffsetX,
-				a_resolved.pClipRect,
-				a_resolved.postEffectFlags
-			);
+			Engine::Graphics::SpriteSubmitDesc _desc = {};
+			_desc.texHandle = a_texHandle;
+			_desc.pixelPos = _pos;
+			_desc.pixelSize = a_size;
+			_desc.rotationDeg = a_resolved.rotation;
+			_desc.Zlayer = a_resolved.layer;
+			_desc.color = a_color;
+			_desc.uvOffset = a_uvOffset;
+			_desc.pivot = { 0.0f, 0.0f };		// ずれで位置を決めているのでピボットは左上固定
+			_desc.uvScale = a_uvScale;
+			_desc.curveK = a_resolved.curveK;
+			_desc.curveOffsetX = _curveOffsetX;
+			_desc.pClipRect = a_resolved.pClipRect;
+			_desc.postEffectFlags = a_resolved.postEffectFlags;
+			a_pGE->RefDrawSubmitter()->SubmitUI(_desc);
 		}
 
 		//----------------------------------------------------------------------------------

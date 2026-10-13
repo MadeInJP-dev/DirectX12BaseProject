@@ -9,7 +9,6 @@
 #include "Application/Components/Render/DynamicRaytracingComponent.h"
 #include "Application/Components/Animation/NodePoseComponent.h"
 #include "Application/Components/Transform/WorldMatrixComponent.h"
-#include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 #include "Engine/Graphics/Frame/RenderContext/RenderContext.h"
 
 namespace App::System
@@ -50,26 +49,21 @@ namespace App::System
 					const Component::NodePoseComponent& _nodePoseComp = a_nodePoseArray[_i];
 					const Component::DynamicRaytracingComponent& _rayComp = a_aniArray[_i];
 
-					// モデル取得
-					auto* _model = a_ctx.pServices->pResourceManager->Get(_modelComp.handle);
-					if (!_model) continue;
-
 					// 描画
-					_pGE->RefDrawSubmitter()->SubmitModel(
-						*a_ctx.pWorld,
-						_model,
-						_matComp.worldMat,
-						_matComp.worldMat,
-						_skeComp.skeletonPoseHandle,
-						_nodePoseComp.nodePoseHandle,
-						_rayComp.dynamicInstanceHandle,
-						// 静的・動的の描画システムと同じく、コンポーネントの色設定を渡す。
-						// (ここだけ既定値のままで、インスペクタの ColorScale /
-						//  EmissiveScale がアニメーションモデルにだけ効いていなかった)
-						_modelComp.colorScale,
-						_modelComp.emissiveScale,
-						_modelComp.GetEmissiveAdd()
-					);
+					Engine::Graphics::AnimationModelSubmitDesc _desc = {};
+					_desc.pWorld = a_ctx.pWorld;
+					_desc.modelHandle = _modelComp.handle;
+					_desc.worldMat = _matComp.worldMat;
+					_desc.boneHandle = _skeComp.skeletonPoseHandle;
+					_desc.nodeposeHandle = _nodePoseComp.nodePoseHandle;
+					_desc.rtAnimHandle = _rayComp.dynamicInstanceHandle;
+					// 静的・動的の描画システムと同じく、コンポーネントの色設定を渡す。
+					// (ここだけ既定値のままで、インスペクタの ColorScale /
+					//  EmissiveScale がアニメーションモデルにだけ効いていなかった)
+					_desc.colorScale = _modelComp.colorScale;
+					_desc.emissiveScale = _modelComp.emissiveScale;
+					_desc.bloomAdd = _modelComp.GetEmissiveAdd();
+					_pGE->RefDrawSubmitter()->SubmitModel(_desc);
 				}
 			}); 
 	}

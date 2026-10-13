@@ -51,17 +51,14 @@ namespace App::System
 					auto* _pGE = a_ctx.pServices->pMainEngine->RefGraphicsEngine();
 					if (!_pGE) continue;
 
-					auto* _model = a_ctx.pServices->pResourceManager->Get(_modelComp.handle);;
-					if (!_model) continue;
-
 					// GPUスキニング登録
-					_pGE->RefDrawSubmitter()->SubmitSkinning(
-						*a_ctx.pWorld,
-						_model,
-						_rayComp.dynamicInstanceHandle,
-						_nodePoseComp.nodePoseHandle,
-						_skePoseComp.skeletonPoseHandle
-					);
+					Engine::Graphics::GPUSkiningSubmitDesc _desc = {};
+					_desc.pWorld = a_ctx.pWorld;
+					_desc.modelHandle = _modelComp.handle;
+					_desc.boneHandle = _skePoseComp.skeletonPoseHandle;
+					_desc.nodeposeHandle = _nodePoseComp.nodePoseHandle;
+					_desc.rtAnimHandle = _rayComp.dynamicInstanceHandle;
+					_pGE->RefDrawSubmitter()->SubmitSkinning(_desc);
 				}
 			}
 		);
