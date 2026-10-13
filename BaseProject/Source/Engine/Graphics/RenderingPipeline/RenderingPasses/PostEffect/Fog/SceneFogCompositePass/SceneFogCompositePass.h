@@ -13,7 +13,9 @@ namespace Engine::Graphics::Pipeline
 	// パスは SceneView から受け取って送るだけ。
 	//
 	// トーンマップ前(HDR)に置くこと。
-	// フォグはUVで引くので、フォグ側だけ縮小解像度で回しても合わせられる
+	// フォグ側が縮小解像度のときは、シーンの深度(SceneDepth。任意)を見ながら引き伸ばす。
+	// 物体の縁で、奥の地面のフォグがにじまないようにするため。
+	// 深度を繋がないときは、ただのバイリニアで引く
 	//======================================================================================
 	class SceneFogCompositePass final : public Pass
 	{
@@ -34,5 +36,6 @@ namespace Engine::Graphics::Pipeline
 		static constexpr int ROOT_COMPOSITE_CB = 0;
 		static constexpr int ROOT_INPUT_SRV = 1;
 		static constexpr int ROOT_OUTPUT_UAV = 2;
+		static constexpr int ROOT_CAMERA_CB = 3;
 	};
 }

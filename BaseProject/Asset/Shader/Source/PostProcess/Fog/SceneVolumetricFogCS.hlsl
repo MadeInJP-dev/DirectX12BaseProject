@@ -43,6 +43,7 @@
 #include "../../../Common/RootParameters/AmbientData.hlsli"
 #include "../../../Common/RootParameters/ShadowMapData.hlsli"
 #include "../../../Common/RootParameters/LightData.hlsli"
+#include "../../../Common/Lighting/FogResolution.hlsli"
 
 //==========================================================================================
 // ルートパラメーター
@@ -429,15 +430,21 @@ void CSMain(uint3 DTid : SV_DispatchThreadID)
 	// 画面外チェック
 	if (DTid.x >= _width || DTid.y >= _height) return;
 
-	int2 _coord = int2(DTid.xy);
+	int2 _coord = int2(DTid.xy);	// 出力(フォグ)の画素
 
-	const float2 _size = float2(_width, _height);	// 出力画像サイズ
-	float2 _uv = (float2(_coord) + 0.5f) / _size;	// 画素の中心を指すUV
+	// 出力は描画解像度より小さいことがある(パスの Resolution)。
+	// レイは、この画素が覆う範囲の中から代表の1画素を選んで、その画素を通す。
+	// 合成側(SceneFogCompositeCS)は同じ決め方で代表の深度を引き、深度の近い画素から引き伸ばす
+	uint _depthWidth, _depthHeight;
+	g_sceneDepthTex.GetDimensions(_depthWidth, _depthHeight);
+	const int2 _depthCoord = CalcFogRepresentativePixel(_coord, uint2(_width, _height), uint2(_depthWidth, _depthHeight));
+
+	float2 _uv = (float2(_depthCoord) + 0.5f) / float2(_depthWidth, _depthHeight);	// 代表の画素の中心を指すUV
 
 	//------------------------------------------------------------------------------
 	// レイ : カメラから見えている面まで。空なら maxDistance 先まで
 	//------------------------------------------------------------------------------
-	const float _sceneDepth = g_sceneDepthTex.Load(int3(_coord, 0));
+	const float _sceneDepth = g_sceneDepthTex.Load(int3(_depthCoord, 0));
 	const float3 _rayStart = g_camera.cameraPos.xyz;
 	float3 _rayEnd;
 	if (_sceneDepth < 1.0f)
@@ -530,7 +537,12 @@ void CSMain(uint3 DTid : SV_DispatchThreadID)
 
 	if (_isUseDust && _sceneDepth < 1.0f)
 	{
-		const float _groundDepth = g_groundDepthTex.Load(int3(_coord, 0));
+		// シーンの深度と同じ点を引く(大きさが違っても UV で合わせる)
+		uint _groundWidth, _groundHeight;
+		g_groundDepthTex.GetDimensions(_groundWidth, _groundHeight);
+		const int2 _groundCoord = min(int2(_uv * float2(_groundWidth, _groundHeight)), int2(_groundWidth, _groundHeight) - 1);
+
+		const float _groundDepth = g_groundDepthTex.Load(int3(_groundCoord, 0));
 		if (_groundDepth < 1.0f)
 		{
 			const float3 _groundPos = ReconstructWorldPos(_uv, _groundDepth);

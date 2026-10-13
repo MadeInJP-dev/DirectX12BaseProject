@@ -4860,6 +4860,9 @@
     <None Include="Asset\Shader\Common\Lighting\Fog.hlsli">
       <Filter>Asset\Shader\Common\Lighting</Filter>
     </None>
+    <None Include="Asset\Shader\Common\Lighting\FogResolution.hlsli">
+      <Filter>Asset\Shader\Common\Lighting</Filter>
+    </None>
     <None Include="Asset\Shader\Common\Math\CalcLighting.hlsli">
       <Filter>Asset\Shader\Common\Math</Filter>
     </None>

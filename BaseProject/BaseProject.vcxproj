@@ -2378,6 +2378,7 @@
     <None Include="Asset\Shader\Source\Lighting\Sky\SkyShader.hlsl" />
     <None Include="Asset\Shader\Source\Lighting\Shadow\ShadowMapMaskCS.hlsl" />
     <None Include="Asset\Shader\Common\Lighting\Fog.hlsli" />
+    <None Include="Asset\Shader\Common\Lighting\FogResolution.hlsli" />
     <None Include="Asset\Shader\Common\Math\EnvBRDF.hlsli" />
     <None Include="Asset\Shader\Common\Math\Hash.hlsli" />
     <None Include="Asset\Shader\Common\Math\Normal.hlsli" />

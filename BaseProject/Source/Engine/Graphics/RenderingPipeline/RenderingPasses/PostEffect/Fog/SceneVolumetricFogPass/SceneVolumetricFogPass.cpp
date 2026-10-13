@@ -30,9 +30,24 @@ namespace Engine::Graphics::Pipeline
 		DeclareInput("VolumeShadow", EAccessType::SRV, EPassSlotType::Texture, false, ROOT_INPUT_SRV);
 
 		// フォグ。rgb = 色 / a = 濃さ。
-		// 全画素を書き潰すのでクリアは不要
+		// 全画素を書き潰すのでクリアは不要。大きさは描画解像度の resolutionDivisor 分の1
 		DeclareOutput("Fog", "SceneFog", DXGI_FORMAT_R16G16B16A16_FLOAT,
 			EAccessType::UAV, EPassSlotType::Texture, false, ROOT_OUTPUT_UAV);
+
+		ApplyResolution();
+	}
+
+	void SceneVolumetricFogPass::ApplyResolution()
+	{
+		Slot* _pOut = FindOutputSlot(MakeSlotID("Fog"));
+		if (!_pOut) return;
+
+		const uint32_t _divisor = std::clamp(m_params.resolutionDivisor, 1u, 4u);
+
+		// 描画解像度 × scale : 解像度違いのカメラやリサイズに追従させるため絶対値にはしない
+		_pOut->width = 0;
+		_pOut->height = 0;
+		_pOut->scale = 1.0f / static_cast<float>(_divisor);
 	}
 
 	void SceneVolumetricFogPass::Compile(const PassContext& a_context)
@@ -91,14 +106,18 @@ namespace Engine::Graphics::Pipeline
 		const auto _sunCB = _pLightManager->GetSunLightCB();
 		_pCtx->BindCB()->BindAndAttachDataComputeRootCBV(_pCmd, ROOT_SUN_LIGHT_CB, _sunCB);
 
-		DispatchFullScreen(a_context);
+		// 出力の大きさで回す(描画解像度より小さいことがある)
+		const Slot* _pOut = FindOutputSlot(MakeSlotID("Fog"));
+		if (_pOut) DispatchForSlot(a_context, *_pOut);
 	}
 
 
 
 	void SceneVolumetricFogPass::Archive(Engine::Persistence::Archive& a_arch)
 	{
-		// 値はシーンの持ち物なので、パスとして保存するものは無い
-		(void)a_arch;
+		// フォグの値はシーンの持ち物。パスとして保存するのは回す解像度だけ
+		a_arch.Field("resolutionDivisor", m_params.resolutionDivisor);
+
+		if (a_arch.IsLoading()) ApplyResolution();
 	}
 }

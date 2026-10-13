@@ -246,6 +246,41 @@ namespace Editor::Inspector
 			}
 		};
 
+		// ボリュメトリックフォグ : 回す解像度だけ触れる。
+		// フォグとダストの値はシーンの環境設定(SceneAmbientPanel)の持ち物
+		class SceneVolumetricFogEditor : public PassEditor<SceneVolumetricFogPass>
+		{
+		protected:
+			EPassEditResult OnDrawDetail(SceneVolumetricFogPass& a_pass) override
+			{
+				Engine::EditorField::HelpText("フォグとグラウンドダストの設定はシーンの環境設定(SceneAmbientPanel)の持ち物です");
+				Engine::EditorField::HelpText("GroundDepth を繋がないとチリは出ません");
+				Engine::EditorField::HelpText("GroundField を繋がないとチリは衝撃で動きません");
+
+				auto& _params = a_pass.RefParams();
+
+				static constexpr const char* ITEMS[] = { "1/1", "1/2", "1/4" };
+				static constexpr uint32_t VALUES[] = { 1, 2, 4 };
+
+				int _index = -1;
+				for (int _i = 0; _i < static_cast<int>(std::size(VALUES)); ++_i)
+				{
+					if (VALUES[_i] == _params.resolutionDivisor) _index = _i;
+				}
+
+				if (Engine::EditorField::Combo("Resolution", _index, ITEMS) && _index >= 0)
+				{
+					// テクスチャを作り直すので組み直しが要る
+					_params.resolutionDivisor = VALUES[_index];
+					a_pass.ApplyResolution();
+					return EPassEditResult::Structure;
+				}
+				Engine::EditorField::Tooltip("描画解像度の何分の1で回すか。縮めたときは SceneFogCompositePass の SceneDepth も繋いでください(物体の縁にフォグがにじむのを防ぎます)");
+
+				return EPassEditResult::None;
+			}
+		};
+
 		// 鏡面反射 : レイの届く距離と、当たった先の影だけ触れる
 		class RaytracingReflectionEditor : public PassEditor<RaytracingReflectionPass>
 		{
@@ -783,8 +818,8 @@ namespace Editor::Inspector
 		a_registry.Register<ScanLinePass, ScanLineEditor>();
 		a_registry.Register<CoCPass, DoFParamEditor<CoCPass>>("DoFPass と同じ値にすること");
 		a_registry.Register<DoFPass, DoFParamEditor<DoFPass>>("CoCPass と同じ値にすること");
-		a_registry.Register<SceneVolumetricFogPass, NoteOnlyEditor<SceneVolumetricFogPass>>(std::initializer_list<const char*>{ "フォグとグラウンドダストの設定はシーンの環境設定(SceneAmbientPanel)の持ち物です", "GroundDepth を繋がないとチリは出ません", "GroundField を繋がないとチリは衝撃で動きません" });
-		a_registry.Register<SceneFogCompositePass, NoteOnlyEditor<SceneFogCompositePass>>(std::initializer_list<const char*>{ "合成の強さと有効/無効はシーンの環境設定(SceneAmbientPanel)の持ち物です", "トーンマップ前(HDR)に置いてください" });
+		a_registry.Register<SceneVolumetricFogPass, SceneVolumetricFogEditor>();
+		a_registry.Register<SceneFogCompositePass, NoteOnlyEditor<SceneFogCompositePass>>(std::initializer_list<const char*>{ "合成の強さと有効/無効はシーンの環境設定(SceneAmbientPanel)の持ち物です", "トーンマップ前(HDR)に置いてください", "SceneDepth にフォグのパスと同じ深度を繋ぐと、縮小したフォグを物体の縁でにじませずに引き伸ばします" });
 		a_registry.Register<GroundFieldPass, NoteOnlyEditor<GroundFieldPass>>(std::initializer_list<const char*>{ "カメラを中心にした範囲の衝撃を、真上から見たテクスチャへ書きます", "Field を SceneVolumetricFogPass の GroundField へ繋いでください" });
 		a_registry.Register<ToneMapPass, ToneMapEditor>();
 

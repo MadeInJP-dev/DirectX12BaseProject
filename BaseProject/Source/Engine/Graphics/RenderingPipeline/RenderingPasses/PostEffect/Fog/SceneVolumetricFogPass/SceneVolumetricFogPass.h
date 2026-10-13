@@ -24,6 +24,11 @@ namespace Engine::Graphics::Pipeline
 	// どちらも引けないフレーム(どちらの入力も繋がっていない)は、平行光を遮らずに照らす。
 	// 影を引くのはシーンの影の距離(ShadowDistance)まで。その先は遮らない。
 	//
+	// フォグは低周波なので、描画解像度より小さく回せる(既定 1/2)。
+	// フォグの1画素は、覆う範囲の中の代表の1画素を通るレイを積分する。
+	// 合成(SceneFogCompositePass)は代表の深度を見ながら引き伸ばすので、
+	// 合成のパスにもシーンの深度を繋ぐこと(繋がないと物体の縁にフォグがにじむ)
+	//
 	// 値(フォグ・ダストの調整値とノイズテクスチャ)はシーン(Engine::Scene::SceneAmbient)の
 	// 持ち物で、パスは SceneView から受け取って送るだけ。パス自身は設定を持たない。
 	// ノイズテクスチャはグラフのリソースではないので、スロットには乗らない。
@@ -42,6 +47,18 @@ namespace Engine::Graphics::Pipeline
 
 		void Archive(Engine::Persistence::Archive& a_arch) override;
 
+		struct Params
+		{
+			// 描画解像度の何分の1で回すか(1 / 2 / 4)
+			uint32_t resolutionDivisor = 2;
+		};
+
+		// 編集対象の値 : エディターはここだけを触る
+		Params& RefParams() { return m_params; }
+
+		// resolutionDivisor を出力スロットの大きさへ写す。変えたらグラフの組み直しが要る
+		void ApplyResolution();
+
 	private:
 
 		// ルートパラメータの番号 : シェーダー(SceneVolumetricFogCS)の並びと合わせる
@@ -57,6 +74,8 @@ namespace Engine::Graphics::Pipeline
 
 		// ノイズが張られていないときに渡す番号(シェーダーの DESCRIPTOR_INDEX_NONE と合わせる)
 		static constexpr UINT DESCRIPTOR_INDEX_NONE = 0xFFFFFFFF;
+
+		Params m_params = {};
 
 		// パスが回り始めてからの経過時間(秒)。
 		// 実行インスタンスごとに持つので、パイプラインを組み直すと 0 から数え直す
