@@ -11,6 +11,15 @@
 
 namespace Engine::Resource
 {
+	namespace
+	{
+		// このスレッドで LOD モデルを読んでいる深さ。
+		// LOD として読まれているモデルは、自分の LOD を読まない。
+		// LOD を持てるのは LOD0 だけで、読むのを1段で止めておけば、
+		// LOD 同士を指し合っていても同じモデルの読み終わりを自分で待つことが無い
+		thread_local int t_lodLoadDepth = 0;
+	}
+
 	Model ModelIO::Import(const std::string& a_filePath, const ResourceBuildContext* a_pContext)
 	{
 		// アセットデータベースからメタファイルを検索。
@@ -86,6 +95,9 @@ namespace Engine::Resource
 			std::erase_if(_mask.bones, [&](const BoneWeight& a_bone) { return a_bone.nodeIndex >= _nodeCount; });
 		}
 
+		// LOD : ボーンレイヤーの後ろ
+		ArchiveLodLevels(_ar, _assetData.lodLevels);
+
 		ModelRuntimeData _runtimeData = {};
 
 		// ---- 参照しているデータの復元 ----
@@ -116,6 +128,9 @@ namespace Engine::Resource
 
 		// 描画用コマンドの構築
 		CreateDrawCmd(a_ctx, _assetData, _runtimeData);
+
+		// LOD モデル
+		LoadLodModels(a_ctx, a_filePath, _assetData, _runtimeData);
 
 		return Model(std::move(_assetData), std::move(_runtimeData));
 	}
@@ -227,6 +242,69 @@ namespace Engine::Resource
 				}
 			}
 		}
+
+		//--------------------------------------------------------------------------------
+		// モデル全体を囲む球 : 描画するメッシュの球を、ノードの変換を掛けてから合わせる。
+		// LOD を選ぶときに、画面にどれだけの大きさで映るかを測るのに使う
+		//--------------------------------------------------------------------------------
+		bool _hasBounds = false;
+		for (const auto& _cmd : a_runtimeData.drawCommands)
+		{
+			const auto* _pMesh = _resourceManager.Get(_cmd.meshHandle);
+			if (!_pMesh) continue;
+
+			const DirectX::XMMATRIX _nodeMat = Math::DX::Load(a_modelAssetData.originalNodes[_cmd.nodeIndex].worldTransform);
+			DirectX::BoundingSphere _sphere = {};
+			_pMesh->GetMetaData().bSphere.Transform(_sphere, _nodeMat);
+
+			if (_hasBounds)
+			{
+				DirectX::BoundingSphere::CreateMerged(a_runtimeData.localBounds, a_runtimeData.localBounds, _sphere);
+			}
+			else
+			{
+				a_runtimeData.localBounds = _sphere;
+				_hasBounds = true;
+			}
+		}
+	}
+
+	void ModelIO::LoadLodModels(const ResourceBuildContext& a_ctx, const std::string& a_filePath, const ModelAssetData& a_modelAssetData, ModelRuntimeData& a_runtimeData)
+	{
+		a_runtimeData.lodModels.clear();
+		if (a_modelAssetData.lodLevels.empty()) return;
+
+		// LOD として読まれているモデルは、自分の LOD を読まない
+		if (t_lodLoadDepth > 0)
+		{
+			ENGINE_LOG("LOD モデルが自分の LOD を持っているため無視します(LOD を持てるのは LOD0 だけ) : %s", a_filePath.c_str());
+			return;
+		}
+
+		auto& _resourceManager = *a_ctx.pResourceManager;
+		auto& _assetDB = a_ctx.pAssetDatabase
+			? *a_ctx.pAssetDatabase
+			: _resourceManager.RefAssetDatabase();
+
+		// 自分自身を LOD に指していたら読まない(読み終わりを自分で待つことになる)
+		const auto* _pSelfProp = _assetDB.GetAssetProperty(a_filePath);
+		const Core::GUID _selfGUID = _pSelfProp ? _pSelfProp->guid : Core::GUID();
+
+		++t_lodLoadDepth;
+		for (const auto& _level : a_modelAssetData.lodLevels)
+		{
+			ResourceRef<Model> _lodModel = {};
+
+			const auto* _pProp = _level.modelGUID.IsValid() ? _assetDB.GetAssetProperty(_level.modelGUID) : nullptr;
+			if (_pProp && _pProp->type == "Model" && !(_level.modelGUID == _selfGUID))
+			{
+				_lodModel = _resourceManager.LoadImmediate<Model>(_level.modelGUID, &a_ctx);
+			}
+
+			// 読めなかった段も並びを保つために空のまま入れる(描くときに飛ばす)
+			a_runtimeData.lodModels.push_back(std::move(_lodModel));
+		}
+		--t_lodLoadDepth;
 	}
 
 

@@ -62,8 +62,13 @@ namespace Engine::Graphics
 		UINT AddInstanceData(const MeshInstanceData& a_instanceData);
 		UINT AddMeshMaterial(const MeshMaterial& a_meshMaterial);
 
+		// LOD の表 : 1つのインスタンスの段をまとめて積み、先頭の位置を返す。
+		// 容量(MESH_LOD_DATA_CAPACITY)に収まらなければ積まずに false
+		bool AddMeshLodData(std::span<const MeshLodData> a_levels, UINT& a_outStart);
+
 		const std::vector<MeshInstanceData>& GetInstanceDataVec() const { return m_meshInstanceDataVec; }
 		const std::vector<MeshMaterial>& GetMeshMaterialVec() const { return m_meshMaterialDataVec; }
+		const std::vector<MeshLodData>& GetMeshLodDataVec() const { return m_meshLodDataVec; }
 
 		//--------------------------------------------------------------------------------------------
 		// UI
@@ -110,6 +115,9 @@ namespace Engine::Graphics
 
 		// サブセット単位データ
 		std::vector<MeshMaterial> m_meshMaterialDataVec = {};
+
+		// LOD の表(インスタンスごとに段の数だけ並ぶ)
+		std::vector<MeshLodData> m_meshLodDataVec = {};
 
 		// UI用アイテム配列
 		std::vector<UIData> m_uiDrawItemVec = {};

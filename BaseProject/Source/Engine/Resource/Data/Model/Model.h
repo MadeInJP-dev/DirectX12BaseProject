@@ -68,6 +68,30 @@ namespace Engine::Resource
 	/// 読込時は名前のハッシュも作り直す
 	void ArchiveBoneMasks(Persistence::Archive& a_ar, std::vector<BoneMask>& a_masks);
 
+	//==========================================================================================
+	// LOD の1段
+	//
+	// LOD0(このモデル自身)より粗いモデルと、そこへ切り替える大きさ。
+	// どの段で描くかは増幅シェーダーがパスごとのカメラで決める(影のカスケードは光源のカメラ)。
+	//
+	// ・LOD モデルの描画コマンド(サブセット)は、LOD0 と同じ並びにそろえること。
+	//   i 番目の描画コマンドは LOD0 の i 番目の代わりに描かれる。LOD 側に無い番号は、その段では描かない
+	// ・ノードの変換は LOD0 のものを使う(LOD モデルは同じノード構成で書き出すこと)
+	// ・LOD を持てるのは LOD0 だけ。LOD モデル自身の LOD は読まない
+	// ・アニメーションするモデルには効かない(スキニングは LOD0 で回すため)
+	//==========================================================================================
+	struct ModelLodLevel
+	{
+		GUID modelGUID = {};		// この段で描くモデル
+		float screenSize = 0.1f;	// 画面の高さに対する、モデルの直径の割合。これより小さく映るとこの段で描く
+	};
+
+	// LOD の段数の上限(LOD0 を含まない)
+	constexpr size_t MAX_MODEL_LOD_LEVELS = 4;
+
+	/// LOD の保存・読込(.mdl の末尾。ボーンレイヤーの後ろ)
+	void ArchiveLodLevels(Persistence::Archive& a_ar, std::vector<ModelLodLevel>& a_levels);
+
 	struct ModelAssetData
 	{
 		std::string name;
@@ -87,9 +111,12 @@ namespace Engine::Resource
 		// アニメーション用のボーンレイヤー
 		std::vector<BoneMask> boneMasks;
 
-		// LODモデル : LODが0のモデルにのみぶら下げれるようにする
-		std::vector<GUID> lodModelGUIDs;			// ぶら下がっているLODモデルGUID
+		// LODモデル : LODが0のモデルにのみぶら下げれるようにする。
+		// 細かい順(LOD1, LOD2, ...)に並べる
+		std::vector<ModelLodLevel> lodLevels;
 	};
+
+	class Model;
 
 	struct ModelRuntimeData
 	{
@@ -99,8 +126,12 @@ namespace Engine::Resource
 
 		std::vector<ModelDrawCommand> drawCommands;
 
-		// LODモデルごとのメッシュハンドル
-		std::vector<std::vector<ResourceRef<Mesh>>> lodMeshes;
+		// LODモデル(lodLevels と同じ並び)。読めなかった段は無効なハンドルのまま
+		std::vector<ResourceRef<Model>> lodModels;
+
+		// モデル全体を囲む球(モデルのローカル空間。描画ノードの変換を掛けたもの)。
+		// LOD を選ぶときに、画面にどれだけの大きさで映るかを測るのに使う
+		DirectX::BoundingSphere localBounds = {};
 	};
 	// モデルデータ
 	class Model
@@ -151,6 +182,15 @@ namespace Engine::Resource
 
 		// 描画時用コマンド取得
 		const std::vector<ModelDrawCommand>& GetDrawCommandVec() const { return m_runtimeData.drawCommands; }
+
+		// LOD
+		const std::vector<ModelLodLevel>& GetLodLevelVec() const { return m_AssetData.lodLevels; }
+		std::vector<ModelLodLevel>& RefLodLevelVec() { return m_AssetData.lodLevels; }		// エディターでの編集用
+		const std::vector<ResourceRef<Model>>& GetLodModels() const { return m_runtimeData.lodModels; }
+		void SetLodModels(std::vector<ResourceRef<Model>>&& a_lodModels) { m_runtimeData.lodModels = std::move(a_lodModels); }		// エディターでの編集用
+
+		// モデル全体を囲む球(ローカル空間)
+		const DirectX::BoundingSphere& GetLocalBounds() const { return m_runtimeData.localBounds; }
 
 		// モデルの全データ取得
 		const ModelAssetData& GetAssestData() const { return m_AssetData; }

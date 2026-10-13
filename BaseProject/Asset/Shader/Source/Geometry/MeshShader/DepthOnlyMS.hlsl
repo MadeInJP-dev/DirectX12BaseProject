@@ -60,15 +60,16 @@ void MSMain(
 	// ---------------------------------------------------------
 	if (a_gtid < _m.vertexCount)
 	{
-		// ユニーク頂点インデックスの取得
-		uint _globalUVI = _inst.uviOffset + _m.vertexOffset + a_gtid;
+		// ユニーク頂点インデックスの取得。
+		// 位置はペイロード(増幅シェーダーが選んだ LOD の段)から引く
+		uint _globalUVI = a_meshPayload.uviOffset + _m.vertexOffset + a_gtid;
 		uint _localVertexIndex = g_uniqueVertexIndices[_globalUVI];
 
 		// アニメメッシュはスキニング後の座標、静的なメッシュは静的な頂点の座標
 		float3 _localPos;
 		if (_inst.isAnimated == 0)
 		{
-			_localPos = g_vertices[_inst.vertexOffset + _localVertexIndex].pos;
+			_localPos = g_vertices[a_meshPayload.vertexOffset + _localVertexIndex].pos;
 		}
 		else
 		{
@@ -87,7 +88,7 @@ void MSMain(
 	// ---------------------------------------------------------
 	if (a_gtid < _m.primitiveCount)
 	{
-		uint _globalPrimIndex = _inst.primitiveOffset + _m.primitiveOffset + a_gtid;
+		uint _globalPrimIndex = a_meshPayload.primitiveOffset + _m.primitiveOffset + a_gtid;
 		primIndices[a_gtid] = UnpackPrimitive(g_primitiveIndices[_globalPrimIndex]);
 	}
 }

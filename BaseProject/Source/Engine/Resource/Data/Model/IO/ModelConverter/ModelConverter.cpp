@@ -355,6 +355,7 @@ namespace Engine::Resource::Converter
 
 		// ModelIO::Load と同じ順で、末尾に書く
 		ArchiveBoneMasks(_ar, a_asset.boneMasks);
+		ArchiveLodLevels(_ar, a_asset.lodLevels);
 	}
 	void ModelConverter::ConvertMaterialToBinary(ResourceManager& a_resourceManager, const std::string& a_basePath, ModelAssetData& a_asset,const ModelRuntimeData& a_runtime)
 	{

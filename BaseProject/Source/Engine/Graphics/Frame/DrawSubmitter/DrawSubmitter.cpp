@@ -88,11 +88,24 @@ namespace Engine::Graphics
 		// 過去行列が無ければ止まっているものとして今の行列を使う
 		const Math::Matrix& _prevWorldMat = a_desc.prevWorldMat ? *a_desc.prevWorldMat : a_desc.worldMat;
 
+		// LOD : モデル全体を囲む球をワールドへ移しておく。
+		// どのサブセットも同じ球で段を選ぶので、1体の中で段が食い違わない
+		const bool _hasLod = !_pModel->GetLodModels().empty();
+		Math::Vector4 _worldSphere = {};
+		if (_hasLod)
+		{
+			DirectX::BoundingSphere _sphere = {};
+			_pModel->GetLocalBounds().Transform(_sphere, Math::DX::Load(a_desc.worldMat));
+			_worldSphere = Math::Vector4(_sphere.Center.x, _sphere.Center.y, _sphere.Center.z, _sphere.Radius);
+		}
+
 		// モデルが持っている描画コマンド（サブセット）を展開
 		const auto& _drawCmdVec = _pModel->GetDrawCommandVec();
 
-		for (const auto& _cmd : _drawCmdVec)
+		for (size_t _cmdIndex = 0; _cmdIndex < _drawCmdVec.size(); ++_cmdIndex)
 		{
+			const auto& _cmd = _drawCmdVec[_cmdIndex];
+
 			// -----------------------------------------------------
 			// リソースの取得と検証
 			// -----------------------------------------------------
@@ -123,13 +136,24 @@ namespace Engine::Graphics
 			_psoKey.permutationFlags = _flags;
 
 			// -----------------------------------------------------
+			// LOD の段 : どの段で描くかは増幅シェーダーがパスごとに決める
+			// -----------------------------------------------------
+			uint32_t _lodStart = 0;
+			uint32_t _lodCount = 0;
+			if (_hasLod)
+			{
+				PushMeshLodData(*_pModel, _cmdIndex, _cmd, _pMesh, _worldSphere, _lodStart, _lodCount);
+			}
+
+			// -----------------------------------------------------
 			// 各パスへの描画アイテム登録(共通処理)
 			// -----------------------------------------------------
 			RegisterDrawCommandToPasses(
 				_cmd, _pMesh, _pMaterial,
 				_mat, _prevMat,
 				IS_ANIMATION, 0 /*animatedVertexStart*/,
-				a_desc.colorScale, a_desc.emissiveScale, a_desc.bloomAdd, _psoKey);
+				a_desc.colorScale, a_desc.emissiveScale, a_desc.bloomAdd, _psoKey,
+				_lodStart, _lodCount);
 		}
 	}
 
@@ -455,7 +479,9 @@ namespace Engine::Graphics
 		const Math::Color& a_albedoScale,
 		const Math::Vector3& a_emissiveScale,
 		const Math::Vector3& a_emissiveAdd,
-		PSOKey a_psoKey)
+		PSOKey a_psoKey,
+		uint32_t a_lodStart,
+		uint32_t a_lodCount)
 	{
 		// マテリアルの透明モードで、どちらのキューへ流すかを決める。
 		// Mask はアルファで抜くだけで前後関係は不透明と同じ扱いなので Opaque
@@ -465,11 +491,12 @@ namespace Engine::Graphics
 		RegisterDrawCommandToPasses(
 			_queue, a_cmd, a_pMesh, a_pMaterial, 
 			a_mat, a_prevMat, a_isAnimation, a_animatedVertexStart, 
-			a_albedoScale, a_emissiveScale, a_emissiveAdd, a_psoKey
+			a_albedoScale, a_emissiveScale, a_emissiveAdd, a_psoKey,
+			a_lodStart, a_lodCount
 		);
 	}
 
-	void DrawSubmitter::RegisterDrawCommandToPasses(const EGeometryQueue& a_eGeoQue, const Resource::ModelDrawCommand& a_cmd, const Resource::Mesh* a_pMesh, const Resource::Material* a_pMaterial, const Math::Matrix& a_mat, const Math::Matrix& a_prevMat, bool a_isAnimation, uint32_t a_animatedVertexStart, const Math::Color& a_albedoScale, const Math::Vector3& a_emissiveScale, const Math::Vector3& a_emissiveAdd, PSOKey a_psoKey)
+	void DrawSubmitter::RegisterDrawCommandToPasses(const EGeometryQueue& a_eGeoQue, const Resource::ModelDrawCommand& a_cmd, const Resource::Mesh* a_pMesh, const Resource::Material* a_pMaterial, const Math::Matrix& a_mat, const Math::Matrix& a_prevMat, bool a_isAnimation, uint32_t a_animatedVertexStart, const Math::Color& a_albedoScale, const Math::Vector3& a_emissiveScale, const Math::Vector3& a_emissiveAdd, PSOKey a_psoKey, uint32_t a_lodStart, uint32_t a_lodCount)
 	{
 		const EGeometryQueue _queue = a_eGeoQue;
 
@@ -505,6 +532,8 @@ namespace Engine::Graphics
 				_meshInstanceData.meshletCount = _subsetMeshlet.meshletCount;
 				_meshInstanceData.animatedVertexStart = a_animatedVertexStart;
 				_meshInstanceData.isAnimated = a_isAnimation ? 1 : 0;
+				_meshInstanceData.lodStart = a_lodStart;
+				_meshInstanceData.lodCount = a_lodCount;
 
 				_meshInstanceIndex = m_pDrawLists->AddInstanceData(_meshInstanceData);
 				return _meshInstanceIndex;
@@ -561,6 +590,84 @@ namespace Engine::Graphics
 
 			m_pDrawLists->AddItem(_item);
 		}
+	}
+
+	void DrawSubmitter::PushMeshLodData(
+		const Resource::Model& a_model,
+		size_t a_cmdIndex,
+		const Resource::ModelDrawCommand& a_baseCmd,
+		const Resource::Mesh* a_pBaseMesh,
+		const Math::Vector4& a_worldSphere,
+		uint32_t& a_outStart,
+		uint32_t& a_outCount)
+	{
+		a_outStart = 0;
+		a_outCount = 0;
+
+		const auto& _lodModels = a_model.GetLodModels();
+		const auto& _lodLevels = a_model.GetLodLevelVec();
+		const size_t _levelCount = (std::min)({ _lodModels.size(), _lodLevels.size(), Resource::MAX_MODEL_LOD_LEVELS });
+		if (_levelCount == 0 || !a_pBaseMesh) return;
+
+		// メッシュの位置をそのまま段へ写す(インスタンスデータと同じ求め方)
+		auto _fillFromMesh = [](MeshLodData& a_out, const Resource::Mesh& a_mesh, const Resource::SubsetMeshletData& a_subset)
+			{
+				const auto& _msData = a_mesh.GetMeshShaderData();
+				a_out.meshletOffset = _msData.meshletHandle.startIndex + a_subset.meshletOffset;
+				a_out.meshletCount = a_subset.meshletCount;
+				a_out.cullStart = _msData.cullDataHandle.startIndex + a_subset.cullOffset;
+				a_out.vertexOffset = a_mesh.GetRtData().vertexHandle.startIndex;
+				a_out.uviOffset = _msData.uniqueVertexIndicesHandle.startIndex;
+				a_out.primitiveOffset = _msData.primitiveIndicesHandle.startIndex;
+			};
+
+		const auto& _baseSubset = a_pBaseMesh->GetMeshShaderData().subsetMeshlets[a_baseCmd.subIdx];
+
+		// 増幅シェーダーは LOD0 のメッシュレット数でグループを起こす(1グループ32枚)。
+		// それより多いメッシュレットを持つ段は描き切れないので、その段も LOD0 で描く
+		const uint32_t _maxMeshletCount = ((_baseSubset.meshletCount + 31u) / 32u) * 32u;
+
+		std::array<MeshLodData, Resource::MAX_MODEL_LOD_LEVELS> _levels = {};
+		for (size_t _k = 0; _k < _levelCount; ++_k)
+		{
+			MeshLodData& _level = _levels[_k];
+			_level.boundingSphere = a_worldSphere;
+			_level.screenSize = _lodLevels[_k].screenSize;
+
+			// 既定は LOD0 と同じもの : 段のモデルがまだ読めていない・描き切れないとき
+			_fillFromMesh(_level, *a_pBaseMesh, _baseSubset);
+
+			const Resource::Model* _pLodModel = m_pResourceManager->Get(_lodModels[_k]);
+			if (!_pLodModel) continue;
+
+			// LOD0 と同じ番号の描画コマンドが、この段の代わりのサブセット。
+			// 無ければこの段ではこのサブセットを描かない(粗い段でまとめて消した部品など)
+			const auto& _lodCmdVec = _pLodModel->GetDrawCommandVec();
+			if (a_cmdIndex >= _lodCmdVec.size())
+			{
+				_level.meshletCount = 0;
+				continue;
+			}
+
+			const auto& _lodCmd = _lodCmdVec[a_cmdIndex];
+			const Resource::Mesh* _pLodMesh = m_pResourceManager->Get(_lodCmd.meshHandle);
+			if (!_pLodMesh) continue;
+
+			const auto& _lodSubsetVec = _pLodMesh->GetMeshShaderData().subsetMeshlets;
+			if (_lodCmd.subIdx >= _lodSubsetVec.size()) continue;
+
+			const auto& _lodSubset = _lodSubsetVec[_lodCmd.subIdx];
+			if (_lodSubset.meshletCount > _maxMeshletCount) continue;
+
+			_fillFromMesh(_level, *_pLodMesh, _lodSubset);
+		}
+
+		// 表に収まらなければ LOD0 だけで描く
+		UINT _start = 0;
+		if (!m_pDrawLists->AddMeshLodData(std::span<const MeshLodData>(_levels.data(), _levelCount), _start)) return;
+
+		a_outStart = _start;
+		a_outCount = static_cast<uint32_t>(_levelCount);
 	}
 
 	void DrawSubmitter::PushUIData(uint32_t a_texIndex, const SpriteSubmitDesc& a_desc)

@@ -34,6 +34,7 @@ namespace Engine::Graphics
 		//------------------------------------------------------------------------------------------
 		constexpr UINT MESH_ROOT_BASE_INSTANCE = 9;			// RootConstants(b1) : 表を引く土台
 		constexpr UINT MESH_ROOT_DRAW_INSTANCE_INDEX = 11;		// SRV(t9) : 描く順のインスタンス番号の表
+		constexpr UINT MESH_ROOT_MESH_LOD = 12;					// SRV(t10) : LOD の表
 
 		//------------------------------------------------------------------------------------------
 		// DispatchMesh の上限
@@ -78,6 +79,7 @@ namespace Engine::Graphics
 		// メッシュ用データの作成
 		m_meshInstanceBuffer.Create(a_desc.pDevice, m_pHeapManager, a_pCmdList, 100000, nullptr);
 		m_meshMaterialBuffer.Create(a_desc.pDevice, m_pHeapManager, a_pCmdList, 100000, nullptr);
+		m_meshLodBuffer.Create(a_desc.pDevice, m_pHeapManager, a_pCmdList, MESH_LOD_DATA_CAPACITY, nullptr);
 
 		// 描く順のインスタンス番号の表。
 		// 1つのインスタンスデータを複数のパス(ZPre・GBuffer・影など)のアイテムが指すので、
@@ -110,6 +112,7 @@ namespace Engine::Graphics
 		m_debugLineBuffer.Release();
 		m_meshInstanceBuffer.Release();
 		m_meshMaterialBuffer.Release();
+		m_meshLodBuffer.Release();
 		m_drawInstanceIndexBuffer.Release();
 		m_uiInstanceBuffer.Release();
 	}
@@ -145,6 +148,7 @@ namespace Engine::Graphics
 		FrameBufferCapacity _capacity = {};
 		_capacity.meshInstance = m_meshInstanceBuffer.GetElementNum();
 		_capacity.meshMaterial = m_meshMaterialBuffer.GetElementNum();
+		_capacity.meshLod = m_meshLodBuffer.GetElementNum();
 		_capacity.drawInstanceIndex = m_drawInstanceIndexBuffer.GetElementNum();
 		_capacity.bone = m_boneBuffer.GetElementNum();
 		_capacity.ui = m_uiInstanceBuffer.GetElementNum();
@@ -255,6 +259,7 @@ namespace Engine::Graphics
 	void RenderContext::UpdateBuffer(
 		const std::vector<MeshInstanceData>& a_mesInstance,
 		const std::vector<MeshMaterial>& a_mesMaterial,
+		const std::vector<MeshLodData>& a_meshLod,
 		const std::vector<Resource::BoneMatrix>& a_boneMatVec)
 	{
 		// インスタンスデータバッファ
@@ -268,6 +273,12 @@ namespace Engine::Graphics
 		{
 			m_meshMaterialBuffer.UpdateData(a_mesMaterial.data(),a_mesMaterial.size() * sizeof(MeshMaterial));
 			m_meshMaterialBuffer.Update(m_pCmdList);
+		}
+		// LOD の表 : 積む側(DrawLists::AddMeshLodData)が容量に収めている
+		if (!a_meshLod.empty())
+		{
+			m_meshLodBuffer.UpdateData(a_meshLod.data(), a_meshLod.size() * sizeof(MeshLodData));
+			m_meshLodBuffer.Update(m_pCmdList);
 		}
 
 		// ボーン行列の更新
@@ -354,6 +365,7 @@ namespace Engine::Graphics
 		m_pCmdList->SetGraphicsRootShaderResourceView(1, m_meshInstanceBuffer.GetGPUVirtualAddress());
 		m_pCmdList->SetGraphicsRootShaderResourceView(2,m_meshMaterialBuffer.GetGPUVirtualAddress());
 		m_pCmdList->SetGraphicsRootShaderResourceView(MESH_ROOT_DRAW_INSTANCE_INDEX, m_drawInstanceIndexBuffer.GetGPUVirtualAddress());
+		m_pCmdList->SetGraphicsRootShaderResourceView(MESH_ROOT_MESH_LOD, m_meshLodBuffer.GetGPUVirtualAddress());
 	}
 
 	void RenderContext::BindMeshlet()

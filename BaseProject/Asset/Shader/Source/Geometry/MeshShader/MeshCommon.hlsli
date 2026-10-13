@@ -22,6 +22,7 @@
 //    9 : RootConstants(b1)  描く順のインスタンス番号の表を引く土台
 //   10 : SRV(t8)            前フレームのスキニング済み頂点(モーションベクター用)
 //   11 : SRV(t9)            描く順のインスタンス番号の表(インスタンシング用)
+//   12 : SRV(t10)           LOD の表
 //
 // ※ 追加は必ず末尾へ。C++側は添字でバインドしているので
 //    (RenderContext::BindMeshInstance / BindMeshlet、DrawQueueDispathMesh の 9 番など)、
@@ -41,6 +42,7 @@
     "RootConstants(num32BitConstants=1, b1)," \
     "SRV(t8)," \
     "SRV(t9)," \
+    "SRV(t10)," \
     "StaticSampler(s0, " \
     "    filter = FILTER_MIN_MAG_MIP_LINEAR, " \
     "    addressU = TEXTURE_ADDRESS_WRAP, " \
@@ -73,6 +75,7 @@ StructuredBuffer<AnimatedVertex>	g_animatedVertices		: register(t6);	// スキ�
 StructuredBuffer<MeshletCullData>	g_cullData				: register(t7);
 StructuredBuffer<float3>			g_prevAnimatedPositions	: register(t8);	// 前フレームのスキニング済みの位置
 StructuredBuffer<uint>				g_drawInstanceIndices	: register(t9);	// 描く順 → インスタンスデータの番号
+StructuredBuffer<MeshLodData>		g_meshLodData			: register(t10);	// LOD の表
 
 SamplerState smp : register(s0);
 
@@ -106,7 +109,69 @@ struct PayloadStruct
 	uint MeshletIndices[32];
 
 	uint instanceID;
+
+	// 増幅シェーダーが選んだ LOD の段の、メガバッファ上の位置。
+	// メッシュシェーダーはインスタンスデータではなくこちらから頂点とプリミティブを引く
+	uint vertexOffset;
+	uint uviOffset;
+	uint primitiveOffset;
 };
+
+// ==========================================================
+// LOD の選択
+// ----------------------------------------------------------
+// 描く段のメッシュレット・頂点・プリミティブの位置
+// ==========================================================
+struct MeshLodRange
+{
+	uint meshletOffset;
+	uint meshletCount;
+	uint cullStart;
+	uint vertexOffset;
+	uint uviOffset;
+	uint primitiveOffset;
+};
+
+// インスタンスをどの段で描くかを、いま張られているカメラ(パスのカメラ)で決める。
+//
+// 大きさは「画面の高さに対する、モデルの直径の割合」で測る。
+//   直径(NDC) = 2 × 半径 × proj._22 / w  →  割合 = 半径 × proj._22 / w
+// 透視投影なら w は奥行き、正射影(影のカスケード)なら w = 1 で proj._22 = 1 / 箱の半分の高さ
+// になるので、同じ式でカスケードの箱に対する大きさになる。
+// 段の screenSize より小さく映るほど粗い段へ進む(screenSize は細かい段ほど大きい)。
+//
+// ZPre と GBuffer は同じカメラ・同じ式で選ぶので、段が食い違って深度の EQUAL が崩れることはない。
+// アニメーションするメッシュには段が積まれない(lodCount = 0)
+MeshLodRange SelectMeshLod(MeshInstanceData a_inst)
+{
+	MeshLodRange _range;
+	_range.meshletOffset = a_inst.meshletOffset;
+	_range.meshletCount = a_inst.meshletCount;
+	_range.cullStart = a_inst.cullStart;
+	_range.vertexOffset = a_inst.vertexOffset;
+	_range.uviOffset = a_inst.uviOffset;
+	_range.primitiveOffset = a_inst.primitiveOffset;
+
+	if (a_inst.lodCount == 0) return _range;
+
+	const float4 _sphere = g_meshLodData[a_inst.lodStart].boundingSphere;
+	const float4 _clipCenter = mul(float4(_sphere.xyz, 1.0f), g_camera.viewProj);
+	const float _screenSize = _sphere.w * abs(g_camera.proj._22) / max(abs(_clipCenter.w), 1e-4f);
+
+	for (uint _k = 0; _k < a_inst.lodCount; ++_k)
+	{
+		const MeshLodData _level = g_meshLodData[a_inst.lodStart + _k];
+		if (_screenSize >= _level.screenSize) break;
+
+		_range.meshletOffset = _level.meshletOffset;
+		_range.meshletCount = _level.meshletCount;
+		_range.cullStart = _level.cullStart;
+		_range.vertexOffset = _level.vertexOffset;
+		_range.uviOffset = _level.uviOffset;
+		_range.primitiveOffset = _level.primitiveOffset;
+	}
+	return _range;
+}
 
 // ==========================================================
 // 座標の変換 : ローカル → ワールド → クリップ

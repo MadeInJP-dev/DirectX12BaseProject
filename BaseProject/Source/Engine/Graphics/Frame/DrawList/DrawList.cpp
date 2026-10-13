@@ -33,6 +33,9 @@ namespace Engine::Graphics
 
 		// サブセット情報
 		ClearAndReserve(m_meshMaterialDataVec, 10000);
+
+		// LOD の表
+		ClearAndReserve(m_meshLodDataVec, 10000);
 	}
 
 	//==========================================================================================
@@ -132,6 +135,15 @@ namespace Engine::Graphics
 		UINT _index = static_cast<UINT>(m_meshInstanceDataVec.size());
 		m_meshInstanceDataVec.push_back(a_instanceData);
 		return _index;
+	}
+
+	bool DrawLists::AddMeshLodData(std::span<const MeshLodData> a_levels, UINT& a_outStart)
+	{
+		if (m_meshLodDataVec.size() + a_levels.size() > MESH_LOD_DATA_CAPACITY) return false;
+
+		a_outStart = static_cast<UINT>(m_meshLodDataVec.size());
+		m_meshLodDataVec.insert(m_meshLodDataVec.end(), a_levels.begin(), a_levels.end());
+		return true;
 	}
 
 	UINT DrawLists::AddMeshMaterial(const MeshMaterial& a_meshMaterial)

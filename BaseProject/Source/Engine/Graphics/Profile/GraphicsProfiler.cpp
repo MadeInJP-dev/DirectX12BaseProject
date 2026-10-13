@@ -245,6 +245,7 @@ namespace Engine::Graphics
 
 		_push("Mesh Instance", _pDrawLists->GetInstanceDataVec().size(), _capacity.meshInstance, sizeof(MeshInstanceData));
 		_push("Mesh Material", _pDrawLists->GetMeshMaterialVec().size(), _capacity.meshMaterial, sizeof(MeshMaterial));
+		_push("Mesh LOD", _pDrawLists->GetMeshLodDataVec().size(), _capacity.meshLod, sizeof(MeshLodData));
 		_push("Draw Instance Index", _pDrawLists->GetDrawInstanceIndexVec().size(), _capacity.drawInstanceIndex, sizeof(uint32_t));
 		_push("Bone Matrix", _pDrawLists->GetBoneMatrixVec().size(), _capacity.bone, sizeof(Resource::BoneMatrix));
 		_push("UI", _pDrawLists->GetUIDataVec().size(), _capacity.ui, sizeof(UIData));

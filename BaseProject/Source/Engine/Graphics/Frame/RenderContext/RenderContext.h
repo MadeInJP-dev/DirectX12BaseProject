@@ -49,6 +49,7 @@ namespace Engine::Graphics
 	{
 		size_t meshInstance = 0;
 		size_t meshMaterial = 0;
+		size_t meshLod = 0;
 		size_t drawInstanceIndex = 0;
 		size_t bone = 0;
 		size_t ui = 0;
@@ -181,6 +182,7 @@ namespace Engine::Graphics
 		void UpdateBuffer(
 			const std::vector<MeshInstanceData>& a_mesInstance,
 			const std::vector<MeshMaterial>& a_mesMaterial,
+			const std::vector<MeshLodData>& a_meshLod,
 			const std::vector<Resource::BoneMatrix>& a_boneMatVec
 		);
 		void UpdateUIBuffer(const std::vector<UIData>& a_uiInstanceVec);
@@ -299,6 +301,7 @@ namespace Engine::Graphics
 		// メッシュシェーダー用データ
 		D3D12::StaticStructuredBuffer<MeshInstanceData>		m_meshInstanceBuffer;
 		D3D12::StaticStructuredBuffer<MeshMaterial>			m_meshMaterialBuffer;
+		D3D12::StaticStructuredBuffer<MeshLodData>			m_meshLodBuffer;			// LOD の表(MeshLodData)
 
 		// 描く順のインスタンス番号の表(増幅シェーダーが「土台 + SV_GroupID.y」で引く)
 		D3D12::DynamicStructuredBuffer<uint32_t>			m_drawInstanceIndexBuffer;

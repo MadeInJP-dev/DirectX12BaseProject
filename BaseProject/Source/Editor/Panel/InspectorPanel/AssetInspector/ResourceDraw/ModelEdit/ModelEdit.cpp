@@ -360,6 +360,119 @@ namespace Editor::Inspector
 				s_dirtyModelSet.insert(&a_model);
 			}
 		}
+
+		//-----------------------------------------------------------------------------------------
+		// LOD の段を読み直して、モデルへ持たせる(編集した結果をすぐ描画へ反映するため)
+		//
+		// 読み込み時(ModelIO::LoadLodModels)と同じく、自分自身と、LOD を持っているモデルは段にしない。
+		// LOD を持てるのは LOD0 だけ
+		//-----------------------------------------------------------------------------------------
+		void ReloadLodModels(EditorContext& a_editContext, Resource::Model& a_model)
+		{
+			auto& _resManager = *a_editContext.pServices->pResourceManager;
+			auto& _assetDB = _resManager.RefAssetDatabase();
+			const Core::GUID _selfGUID = a_editContext.pAssetProp ? a_editContext.pAssetProp->guid : Core::GUID();
+
+			std::vector<Engine::ResourceRef<Resource::Model>> _lodModels = {};
+			for (const auto& _level : a_model.GetLodLevelVec())
+			{
+				Engine::ResourceRef<Resource::Model> _lodModel = {};
+
+				const auto* _pProp = _level.modelGUID.IsValid() ? _assetDB.FindAssetProperty(_level.modelGUID) : nullptr;
+				if (_pProp && _pProp->type == "Model" && !(_level.modelGUID == _selfGUID))
+				{
+					_lodModel = _resManager.LoadImmediate<Resource::Model>(_level.modelGUID);
+
+					const auto* _pLodModel = _resManager.Get(_lodModel);
+					if (_pLodModel && !_pLodModel->GetLodLevelVec().empty())
+					{
+						ENGINE_LOG("LOD を持っているモデルは LOD の段にできません : %s", _pLodModel->GetName().c_str());
+						_lodModel = {};
+					}
+				}
+				_lodModels.push_back(std::move(_lodModel));
+			}
+			a_model.SetLodModels(std::move(_lodModels));
+		}
+
+		//-----------------------------------------------------------------------------------------
+		// LOD の段の編集
+		//-----------------------------------------------------------------------------------------
+		void DrawLodLevels(EditorContext& a_editContext, Resource::Model& a_model)
+		{
+			auto& _levelVec = a_model.RefLodLevelVec();
+			const auto& _lodModels = a_model.GetLodModels();
+			auto& _resManager = *a_editContext.pServices->pResourceManager;
+			bool _isChanged = false;
+
+			Engine::EditorField::HelpText("LOD モデルの描画コマンド(サブセット)は、このモデルと同じ並びにしてください");
+			Engine::EditorField::HelpText("Screen Size : 画面の高さに対する直径の割合。これより小さく映るとその段で描きます(上の段ほど大きく)");
+			Engine::EditorField::HelpText("アニメーションするモデルには効きません");
+
+			// 追加 : 1つ上の段の半分の大きさで切り替える
+			if (_levelVec.size() < Resource::MAX_MODEL_LOD_LEVELS && Engine::EditorField::CreateButton("Add LOD"))
+			{
+				Resource::ModelLodLevel _level = {};
+				if (!_levelVec.empty()) _level.screenSize = _levelVec.back().screenSize * 0.5f;
+				_levelVec.push_back(_level);
+				_isChanged = true;
+			}
+
+			// 保存 : .mdl へ書き出す(gltf のままのモデルはコンバートされる)
+			Engine::EditorField::SameLine();
+			if (Engine::EditorField::Button("Save##Lod") && a_editContext.pAssetProp)
+			{
+				if (Resource::Converter::ModelConverter::SaveModelAsset(_resManager, a_editContext.pAssetProp->guid))
+				{
+					s_dirtyModelSet.erase(&a_model);
+					ENGINE_LOG("LOD を保存 : %s", a_model.GetName().c_str());
+				}
+			}
+			if (s_dirtyModelSet.contains(&a_model))
+			{
+				Engine::EditorField::SameLine();
+				Engine::EditorField::WarningText("(unsaved)");
+			}
+
+			// 段ごと
+			int _deleteIdx = -1;
+			for (size_t _i = 0; _i < _levelVec.size(); ++_i)
+			{
+				auto& _level = _levelVec[_i];
+				ImGui::PushID(static_cast<int>(_i));
+
+				Engine::EditorField::Value("Level", "LOD%zu", _i + 1);
+				Engine::EditorField::SameLine();
+				if (Engine::EditorField::DeleteSmallButton("Delete"))
+				{
+					_deleteIdx = static_cast<int>(_i);
+				}
+
+				_isChanged |= Engine::EditorField::AssetField(*a_editContext.pServices, "Model", "Model", _level.modelGUID);
+				_isChanged |= Engine::EditorField::Field("Screen Size", _level.screenSize, 0.001f, 0.0f, 1.0f, "%.3f");
+
+				// 段にできなかったものを知らせる(未設定・自分自身・LOD を持つモデル)
+				const bool _isLoaded = (_i < _lodModels.size()) && _resManager.Get(_lodModels[_i]);
+				if (!_isLoaded)
+				{
+					Engine::EditorField::WarningText("(この段は LOD0 で描かれます)");
+				}
+
+				ImGui::PopID();
+			}
+
+			if (_deleteIdx >= 0)
+			{
+				_levelVec.erase(_levelVec.begin() + _deleteIdx);
+				_isChanged = true;
+			}
+
+			if (_isChanged)
+			{
+				ReloadLodModels(a_editContext, a_model);
+				s_dirtyModelSet.insert(&a_model);
+			}
+		}
 	}
 
 	//-----------------------------------------------------------------------------------------
@@ -380,6 +493,7 @@ namespace Editor::Inspector
 		Engine::EditorField::Value("Animations", "%zu", _assetData.animationGUIDs.size());
 		Engine::EditorField::Value("Bones", "%zu", a_pModel->GetBoneNodeVec().size());
 		Engine::EditorField::Value("Bone Layers", "%zu", a_pModel->GetBoneMaskVec().size());
+		Engine::EditorField::Value("LOD Levels", "%zu", a_pModel->GetLodLevelVec().size());
 
 		Engine::EditorField::Line();
 
@@ -400,6 +514,13 @@ namespace Editor::Inspector
 		if (ImGui::CollapsingHeader("Bone Layers"))
 		{
 			DrawBoneMasks(a_editContext, *a_pModel);
+		}
+
+		// ---- LOD ----
+		// 遠くで描く粗いモデル。どの段で描くかは増幅シェーダーがパスごとのカメラで決める
+		if (ImGui::CollapsingHeader("LOD"))
+		{
+			DrawLodLevels(a_editContext, *a_pModel);
 		}
 
 		// ---- アニメーション ----

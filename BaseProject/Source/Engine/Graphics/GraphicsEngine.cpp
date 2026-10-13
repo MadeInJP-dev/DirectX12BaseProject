@@ -486,6 +486,7 @@ namespace Engine::Graphics
 		// 「今の一番上のシーン」から引いてはいけない(ポーズ中は後ろのゲームのボーンが載らない)
 		m_upRenderContextVec[m_currentFrameIndex]->UpdateBuffer(
 			m_drawLists.GetInstanceDataVec(), m_drawLists.GetMeshMaterialVec(),
+			m_drawLists.GetMeshLodDataVec(),
 			m_drawLists.GetBoneMatrixVec()
 		);
 		//------------------------------------------------------------------

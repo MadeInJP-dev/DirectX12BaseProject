@@ -19,8 +19,36 @@ namespace Engine::Graphics
 		uint32_t cullStart;					// カリングバッファオフセット
 
 		uint32_t meshletCount;				// メッシュレットカウント
-		Math::Vector3 pad;
+		uint32_t lodStart;					// LOD の表(MeshLodData)の先頭。lodCount が 0 なら使わない
+		uint32_t lodCount;					// LOD の段数(LOD0 を含まない)。0 なら LOD0 だけ
+		float pad;
 	};
+
+	//==========================================================================================
+	// LOD の1段(サブセット単位)
+	//
+	// 増幅シェーダーが、パスのカメラから見た大きさで段を選び、
+	// 選んだ段のメッシュレット・頂点・プリミティブの位置から描く。
+	// LOD0 はインスタンスデータそのものなので、ここに並ぶのは LOD1 から。
+	// 境界球はどの段にも同じものを入れる(段を選ぶ前に読むのは先頭だけ)
+	//==========================================================================================
+	struct MeshLodData
+	{
+		Math::Vector4 boundingSphere;		// モデル全体を囲む球(ワールド空間。xyz = 中心 / w = 半径)
+
+		float screenSize;					// 画面の高さに対する直径の割合。これより小さく映るとこの段で描く
+		uint32_t meshletOffset;				// この段のメッシュレットオフセット(メッシュレット数 0 ならこの段では描かない)
+		uint32_t meshletCount;				// この段のメッシュレットカウント
+		uint32_t cullStart;					// この段のカリングバッファオフセット
+
+		uint32_t vertexOffset;				// この段の頂点オフセット
+		uint32_t uviOffset;					// この段のユニーク頂点インデックスオフセット
+		uint32_t primitiveOffset;			// この段のプリミティブオフセット
+		uint32_t pad;
+	};
+
+	// LOD の表の容量(要素数)。超えたぶんのモデルは LOD0 だけで描く
+	constexpr UINT MESH_LOD_DATA_CAPACITY = 100000;
 	struct MeshMaterial
 	{
 		// マテリアルのテクスチャスケール値

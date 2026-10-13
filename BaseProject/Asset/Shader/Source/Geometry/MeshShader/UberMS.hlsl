@@ -20,18 +20,13 @@ void MSMain(
 	out vertices VertexOutput outVerts[64]
 )
 {
-	
-	//uint _arbitraryData = a_meshPayload.SurvivingMeshlets;
-	
 	// ---------------------------------------------------------
 	// インスタンスとメッシュレットの情報取得
 	// ---------------------------------------------------------
-	//uint _instanceID = g_baseInstanceIndex + a_gid.y;
 	uint _instanceID = a_meshPayload.instanceID;					// インスタンスIDはAS側で求めたものを使用
 	MeshInstanceData _inst = g_instanceData[_instanceID];
 
 	// 対象のメッシュレットを取得
-	//uint _globalMeshletIndex = _inst.meshletOffset + _arbitraryData;
 	uint _globalMeshletIndex = a_meshPayload.MeshletIndices[a_gid.x];
 	Meshlet _m = g_meshletData[_globalMeshletIndex];
 
@@ -48,11 +43,12 @@ void MSMain(
 	if (a_gtid < _m.vertexCount)
 	{
 		// ユニーク頂点インデックスの取得 
-		uint _globalUVI = _inst.uviOffset + _m.vertexOffset + a_gtid;
+		// 位置はペイロード(増幅シェーダーが選んだ LOD の段)から引く
+		uint _globalUVI = a_meshPayload.uviOffset + _m.vertexOffset + a_gtid;
 		uint _localVertexIndex = g_uniqueVertexIndices[_globalUVI];
 
 		// 静的な頂点。アニメメッシュでも uv はここから読む(スキニングで変わらないため)
-		MeshVertex _static = g_vertices[_inst.vertexOffset + _localVertexIndex];
+		MeshVertex _static = g_vertices[a_meshPayload.vertexOffset + _localVertexIndex];
 
 		Vertex _v;
 		if(_inst.isAnimated == 0)
@@ -107,7 +103,7 @@ void MSMain(
 	if (a_gtid < _m.primitiveCount)
 	{
 		// プリミティブインデックスの取得 
-		uint _globalPrimIndex = _inst.primitiveOffset + _m.primitiveOffset + a_gtid;
+		uint _globalPrimIndex = a_meshPayload.primitiveOffset + _m.primitiveOffset + a_gtid;
 		uint3 _indices = UnpackPrimitive(g_primitiveIndices[_globalPrimIndex]);
 		
 		primIndices[a_gtid] = _indices;

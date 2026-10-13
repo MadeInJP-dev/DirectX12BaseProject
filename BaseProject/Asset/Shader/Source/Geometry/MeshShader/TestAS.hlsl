@@ -110,27 +110,34 @@ void ASMain(
 	// Y は同じメッシュをまとめて描いたときの何体目か(インスタンシング)。
 	// インスタンスデータはパス間で共有していて描く順に並んでいないので、表を1枚挟んで引く
 	uint _instanceID = g_drawInstanceIndices[g_baseInstanceIndex + a_groupID.y];
-	
-	if (a_gtid == 0)
-	{
-		s_payload.instanceID = _instanceID;
-		s_VisibleCount = 0; // カウンターを0にリセット
-	}
-	
-	// 初期化が終わるのを全スレッドで確実に待つ！
-	GroupMemoryBarrierWithGroupSync();
 
 	MeshInstanceData _inst = g_instanceData[_instanceID];
 
-	// メッシュレットIDを計算
+	// このパスのカメラで、どの LOD の段で描くかを決める(段を持たなければ LOD0)。
+	// グループの全スレッドが同じインスタンスを同じ式で見るので、結果はそろう
+	const MeshLodRange _lod = SelectMeshLod(_inst);
+
+	if (a_gtid == 0)
+	{
+		s_payload.instanceID = _instanceID;
+		s_payload.vertexOffset = _lod.vertexOffset;
+		s_payload.uviOffset = _lod.uviOffset;
+		s_payload.primitiveOffset = _lod.primitiveOffset;
+		s_VisibleCount = 0; // カウンターを0にリセット
+	}
+
+	// 初期化が終わるのを全スレッドで確実に待つ！
+	GroupMemoryBarrierWithGroupSync();
+
+	// メッシュレットIDを計算(選んだ段の中での番号)
 	uint _localMeshletID = (a_groupID.x * 32) + a_gtid;
-	uint _globalMeshletID = _inst.meshletOffset + _localMeshletID;
+	uint _globalMeshletID = _lod.meshletOffset + _localMeshletID;
 
 	// --------------------------------------------------
 	// 可視性チェック
 	// --------------------------------------------------
 	bool _isVisible = false;
-	if (_localMeshletID < _inst.meshletCount)
+	if (_localMeshletID < _lod.meshletCount)
 	{
 		// ==========================================================
 		// スキニングするメッシュはカリングしない
@@ -155,7 +162,7 @@ void ASMain(
 		}
 		else
 		{
-			uint _cullDataIndex = _inst.cullStart + _localMeshletID;
+			uint _cullDataIndex = _lod.cullStart + _localMeshletID;
 			_isVisible = IsVisible(g_cullData[_cullDataIndex], _inst.worldMat);
 		}
 	}

@@ -24,7 +24,26 @@ struct MeshInstanceData
 	uint cullStart;
 	uint meshletCount;		// 範囲外ディスパッチを弾くための総数
 
-	float3 pad;
+	uint lodStart;			// LOD の表(MeshLodData)の先頭。lodCount が 0 なら使わない
+	uint lodCount;			// LOD の段数(LOD0 を含まない)。0 なら LOD0 だけ
+	float pad;
+};
+
+// LOD の1段(サブセット単位)。LOD0 はインスタンスデータそのものなので、並ぶのは LOD1 から。
+// 境界球はどの段にも同じものが入っている(段を選ぶ前に読むのは先頭だけ)
+struct MeshLodData
+{
+	float4 boundingSphere;	// モデル全体を囲む球(ワールド空間。xyz = 中心 / w = 半径)
+
+	float screenSize;		// 画面の高さに対する直径の割合。これより小さく映るとこの段で描く
+	uint meshletOffset;		// メッシュレット数 0 ならこの段では描かない
+	uint meshletCount;
+	uint cullStart;
+
+	uint vertexOffset;
+	uint uviOffset;
+	uint primitiveOffset;
+	uint pad;
 };
 
 struct MeshMaterial

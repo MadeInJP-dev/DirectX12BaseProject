@@ -95,6 +95,7 @@ namespace Engine::Resource
 		_ar.VectorField("DrawMeshNodeIndices", m_AssetData.drawMeshNodeIndices);
 
 		ArchiveBoneMasks(_ar, m_AssetData.boneMasks);
+		ArchiveLodLevels(_ar, m_AssetData.lodLevels);
 
 	}
 	void Model::Release()
@@ -173,6 +174,31 @@ namespace Engine::Resource
 			{
 				_mask.nameHash = Core::String::ToHash(_mask.name);
 			}
+			a_ar.EndObject();
+		}
+		a_ar.EndArray();
+	}
+
+	void ArchiveLodLevels(Persistence::Archive& a_ar, std::vector<ModelLodLevel>& a_levels)
+	{
+		// 追加前に書き出された .mdl は末尾にこのデータが無い。
+		// そのときは要素数が読めず 0 のままなので、LOD 無しとして読まれる
+		size_t _levelCount = a_ar.IsLoading() ? 0 : a_levels.size();
+		if (!a_ar.BeginArray("LodLevels", _levelCount)) return;
+
+		// 壊れたデータで要素数が膨らんでいても、上限までしか持たない
+		const size_t _keepCount = (std::min)(_levelCount, MAX_MODEL_LOD_LEVELS);
+		if (a_ar.IsLoading()) a_levels.resize(_keepCount);
+
+		for (size_t _i = 0; _i < _levelCount; ++_i)
+		{
+			if (!a_ar.BeginObject(_i)) continue;
+
+			ModelLodLevel _dummy = {};
+			auto& _level = (_i < a_levels.size()) ? a_levels[_i] : _dummy;
+			a_ar.GUIDField("ModelGUID", _level.modelGUID);
+			a_ar.Field("ScreenSize", _level.screenSize);
+
 			a_ar.EndObject();
 		}
 		a_ar.EndArray();
