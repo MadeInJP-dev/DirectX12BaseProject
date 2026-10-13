@@ -28,6 +28,14 @@ namespace Engine::Pool
 	// Remove()/Release() は「誰もポインタを持っていない」と言えるタイミング
 	// (GCのスイープなど、ジョブを流していないところ) で呼ぶこと。
 	// ロックの中で読み書きを完結させたい場合は Read()/Write() を使う。
+	//
+	// ---- 破棄はロックの外で ----
+	// Remove()/Release() はロックの中で実体をスロットから取り出すだけにして、
+	// デストラクタはロックを外してから走らせる。
+	// 実体が同じプールのリソースへの参照(ResourceRef)を持っていると、
+	// そのデストラクタが IsValid() でこのプールのロックを取りに来る。
+	// std::shared_mutex は同じスレッドでも二重に取れないので、ロックの中で壊すと
+	// 自分で自分を待ち続けて止まる(LOD モデルを持つ Model で、終了時に固まった)
 	//==========================================================================================
 	template<typename T>
 	class AtomicItemPool
@@ -182,11 +190,15 @@ namespace Engine::Pool
 	template<typename T>
 	inline void AtomicItemPool<T>::Release()
 	{
-		std::unique_lock _lock(m_mutex);
+		// 実体はロックの中で取り出すだけにして、壊すのはロックを外してから
+		std::deque<std::optional<T>> _released;
+		{
+			std::unique_lock _lock(m_mutex);
 
-		m_data.clear();
-		m_generations.clear();
-		m_freeIndices.clear();
+			_released.swap(m_data);
+			m_generations.clear();
+			m_freeIndices.clear();
+		}
 	}
 
 	template<typename T>
@@ -237,16 +249,21 @@ namespace Engine::Pool
 	template<typename T>
 	inline void AtomicItemPool<T>::Remove(const Handle<T>& a_handle)
 	{
-		std::unique_lock _lock(m_mutex);
-
-		// 存在チェック
-		if (IsValidUnlocked(a_handle))
+		// 実体はロックの中で取り出すだけにして、壊すのはロックを外してから
+		std::optional<T> _removed;
 		{
-			// デストラクタを呼ぶ
-			m_data[a_handle.GetIndex()].reset();
+			std::unique_lock _lock(m_mutex);
 
-			m_freeIndices.push_back(a_handle.GetIndex());	// インデックスキューに返却
-			m_generations[a_handle.GetIndex()]++;			// 無効化のため世代を進める
+			// 存在チェック
+			if (IsValidUnlocked(a_handle))
+			{
+				auto& _slot = m_data[a_handle.GetIndex()];
+				_removed = std::move(_slot);
+				_slot.reset();
+
+				m_freeIndices.push_back(a_handle.GetIndex());	// インデックスキューに返却
+				m_generations[a_handle.GetIndex()]++;			// 無効化のため世代を進める
+			}
 		}
 	}
 
