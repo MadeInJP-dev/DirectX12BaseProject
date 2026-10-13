@@ -28,7 +28,8 @@ namespace Engine::Graphics::Pipeline
 		auto& _resManager = *a_context.pResourceManager;
 
 		// MSセット
-		const auto _guidMS = _assetDB.GetGUIDFromFilePath("Asset/Shader/Source/Geometry/MeshShader/UberMS.cso");
+		// 深度だけを書くので、クリップ座標だけを出すメッシュシェーダーを使う
+		const auto _guidMS = _assetDB.GetGUIDFromFilePath("Asset/Shader/Source/Geometry/MeshShader/DepthOnlyMS.cso");
 		const auto _msHandle = _resManager.LoadImmediate<Resource::Shader>(_guidMS);
 		m_pipelineBuilder.RegisterMeshShader(EShaderPermutationFlags::Static, _msHandle);
 

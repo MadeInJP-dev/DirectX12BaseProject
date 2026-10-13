@@ -51,7 +51,8 @@ namespace Engine::Graphics::Pipeline
 
 		// 形の読み方とカリングは ZPre と同じ。
 		// カメラの定数バッファにライトのカメラを張れば、そのまま光源から見た絵になる
-		const auto _guidMS = _assetDB.GetGUIDFromFilePath("Asset/Shader/Source/Geometry/MeshShader/UberMS.cso");
+		// 深度だけを書くので、クリップ座標だけを出すメッシュシェーダーを使う
+		const auto _guidMS = _assetDB.GetGUIDFromFilePath("Asset/Shader/Source/Geometry/MeshShader/DepthOnlyMS.cso");
 		const auto _msHandle = _resManager.LoadImmediate<Resource::Shader>(_guidMS);
 		m_pipelineBuilder.RegisterMeshShader(EShaderPermutationFlags::Static, _msHandle);
 		m_pipelineBuilder.RegisterMeshShader(EShaderPermutationFlags::Skinned, _msHandle);

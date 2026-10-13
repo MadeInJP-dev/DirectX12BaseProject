@@ -107,3 +107,20 @@ struct PayloadStruct
 
 	uint instanceID;
 };
+
+// ==========================================================
+// 座標の変換 : ローカル → ワールド → クリップ
+// ----------------------------------------------------------
+// 深度だけを描くパス(DepthOnlyMS)と、色を描くパス(UberMS)の両方がここを通す。
+// GBuffer は ZPre の深度と EQUAL で比べるので、2つのシェーダーで深度が1ビットでも
+// 違うと面が抜ける。precise を付けて、コンパイラが掛け算と足し算をまとめたり
+// (FMA)並べ替えたりしないようにし、どちらのシェーダーでも同じ計算順にそろえる
+// ==========================================================
+float4 TransformMeshPosition(float3 a_localPos, float4x4 a_worldMat, out float3 a_outWorldPos)
+{
+	precise float4 _worldPos = mul(float4(a_localPos, 1.0f), a_worldMat);
+	precise float4 _clipPos = mul(_worldPos, g_camera.viewProj);
+
+	a_outWorldPos = _worldPos.xyz;
+	return _clipPos;
+}

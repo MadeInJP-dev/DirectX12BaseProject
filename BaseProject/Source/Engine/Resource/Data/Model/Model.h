@@ -86,6 +86,9 @@ namespace Engine::Resource
 
 		// アニメーション用のボーンレイヤー
 		std::vector<BoneMask> boneMasks;
+
+		// LODモデル : LODが0のモデルにのみぶら下げれるようにする
+		std::vector<GUID> lodModelGUIDs;			// ぶら下がっているLODモデルGUID
 	};
 
 	struct ModelRuntimeData
@@ -95,6 +98,9 @@ namespace Engine::Resource
 		std::vector<ResourceRef<AnimationData>> animations;
 
 		std::vector<ModelDrawCommand> drawCommands;
+
+		// LODモデルごとのメッシュハンドル
+		std::vector<std::vector<ResourceRef<Mesh>>> lodMeshes;
 	};
 	// モデルデータ
 	class Model

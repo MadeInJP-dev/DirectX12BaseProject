@@ -104,17 +104,6 @@ void ASMain(
     uint a_gtid : SV_GroupThreadID,
     uint3 a_groupID : SV_GroupID)
 {
- //   // ペイロードの書き込みは代表スレッド1つにやらせる
-	//if (a_gtid == 0)
-	//{
-	//	s_payload.SurvivingMeshlets = a_groupID.x;
-	//}
-    
- //   // 書き込みが終わるのをグループ内の全スレッドで待つ
-	//GroupMemoryBarrierWithGroupSync();
-
-	//DispatchMesh(1, 1, 1, s_payload);
-
 	// --------------------------------------------------
 	// ペイロードとカウンターの初期化（スレッド0が行う）
 	// --------------------------------------------------

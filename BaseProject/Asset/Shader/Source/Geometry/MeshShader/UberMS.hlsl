@@ -71,9 +71,8 @@ void MSMain(
 		VertexOutput _vout;
 		
 		// 座標変換 (現在フレーム)
-		float4 _worldPos = mul(float4(_v.pos, 1.0f), _inst.worldMat);
-		_vout.pos = mul(_worldPos, g_camera.viewProj);
-		_vout.worldPos = _worldPos.xyz;
+		// 深度だけのパス(DepthOnlyMS)と同じ関数を通し、ZPre の深度と1ビットもずれないようにする
+		_vout.pos = TransformMeshPosition(_v.pos, _inst.worldMat, _vout.worldPos);
 
 		// モーションベクター用の過去位置。
 		// アニメメッシュは「前フレームのスキニング済み座標」を使わないと、

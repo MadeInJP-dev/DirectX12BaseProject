@@ -4977,6 +4977,9 @@
     <None Include="Asset\Shader\Source\Geometry\MeshShader\TestAS.hlsl">
       <Filter>Asset\Shader\Source\Geometry\MeshShader</Filter>
     </None>
+    <None Include="Asset\Shader\Source\Geometry\MeshShader\DepthOnlyMS.hlsl">
+      <Filter>Asset\Shader\Source\Geometry\MeshShader</Filter>
+    </None>
     <None Include="Asset\Shader\Source\Geometry\MeshShader\UberMS.hlsl">
       <Filter>Asset\Shader\Source\Geometry\MeshShader</Filter>
     </None>
