@@ -23,6 +23,7 @@
 // シーンのフォグは一様なので、光が一定の区間は式で一度に求める。
 // レイマーチするのは、影の届く範囲とダストの層の中だけ(歩数をそこへ集めるため)。
 // 1歩目の位置は画素ごと・フレームごとにずらし、残る縞は TAA に均させる。
+// 手前で透過率がほぼ 0 になったら、その奥は見えないので歩くのをやめる(MIN_TRANSMITTANCE)。
 //
 // ・ダストは見えている地面の画素にだけ置く
 //     シーンの深度と地面だけの深度を比べ、見えている面が地面そのものの画素だけにダストを積分する。
@@ -93,6 +94,11 @@ RS_STATIC_SAMPLER "," \
 // 区間の長さによらず同じ歩数なので、レイが短い(屋内など)ほど1歩が細かくなる。
 // 歩くのはシャドウマップの影だけ(レイトレの影は割合が届くので歩かない)
 #define SUN_SHADOW_STEPS 32
+
+// 透過率がこれを切ったら積分をやめる。
+// 奥から届く光はこの割合より小さく、足しても見た目は変わらない。
+// 出力の色は濃さで割り戻すので打ち切っても色はずれず、濃さ(a)が最大でこのぶん薄くなるだけ
+#define MIN_TRANSMITTANCE 0.01f
 
 // 影の求め方
 #define SUN_SHADOW_NONE       0	// 影を引かない(平行光は遮られない)
@@ -375,6 +381,7 @@ void IntegrateSceneFog(FogLighting a_light, float3 a_rayStart, float3 a_rayDir, 
 	inout float3 a_inoutColor, inout float a_inoutTransmittance)
 {
 	if (a_end <= a_start || g_sceneFog.density <= 0.0f) return;
+	if (a_inoutTransmittance < MIN_TRANSMITTANCE) return;	// 手前でもう見えなくなっている
 
 	// 影の届く範囲の中 : シャドウマップは歩く
 	const float _marchEnd = (a_light.shadowMethod == SUN_SHADOW_SHADOW_MAP) ? min(a_end, a_light.shadowEnd) : a_start;
@@ -390,6 +397,9 @@ void IntegrateSceneFog(FogLighting a_light, float3 a_rayStart, float3 a_rayDir, 
 
 			a_inoutColor += a_inoutTransmittance * g_sceneFog.fogColor * _light * (1.0f - _stepTransmittance);
 			a_inoutTransmittance *= _stepTransmittance;
+
+			// ここより奥は見えない。残りの区間(一定の光の式)も足さずに抜ける
+			if (a_inoutTransmittance < MIN_TRANSMITTANCE) return;
 		}
 	}
 
@@ -622,6 +632,9 @@ void CSMain(uint3 DTid : SV_DispatchThreadID)
 
 			_color += _transmittance * _mediaColor * _lightAt * (1.0f - _stepTransmittance);
 			_transmittance *= _stepTransmittance;
+
+			// ここより奥は見えない(層の奥のシーンのフォグも IntegrateSceneFog が飛ばす)
+			if (_transmittance < MIN_TRANSMITTANCE) break;
 		}
 	}
 
