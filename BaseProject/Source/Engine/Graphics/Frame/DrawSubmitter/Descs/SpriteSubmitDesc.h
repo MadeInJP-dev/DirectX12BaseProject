@@ -55,8 +55,9 @@ namespace Engine::Graphics
 		Math::Vector2 pivot = { 0.5f, 0.5f };		// 中心点 : 回転軸、基準点
 		Math::Vector2 uvScale = { 1.0f, 1.0f };		// UVの拡大値
 
-		float curveK = 0.0f;						// 湾曲度
-		float curveOffsetX = 0.0f;					// 湾曲の中心からこのクアッドまでの横ずれ
+		float curvature = 0.0f;						// 湾曲 : 曲率(1/px, 符号付き)。0 で曲げない
+		float curveOffsetX = 0.0f;					// 湾曲 : 弧の頂点からこのクアッドの中心までの横ずれ(px, 右が正)
+		float curveOffsetY = 0.0f;					// 湾曲 : 弧の頂点からこのクアッドの中心までの縦ずれ(px, 下が正)
 
 		const UIClipRect* pClipRect = nullptr;		// 切り抜く矩形 : レクトアングル
 

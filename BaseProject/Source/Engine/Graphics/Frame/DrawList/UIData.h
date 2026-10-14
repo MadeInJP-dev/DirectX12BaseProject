@@ -25,7 +25,7 @@ namespace Engine::Graphics
 	// 各行がちょうど float4 に収まる順序にしておけばパディングのズレが起きない。
 	// (row0: pos+axisX / row1: axisY+uvOffset / row2: color / row3: layer+texIndex+uvScale
 	//  / row4: 湾曲 / row5: clipRect / row6: postEffectFlags+効果 / row7: ノイズの座標
-	//  / row8: 縁の色 / row9: 縁の幅)
+	//  / row8: 縁の色 / row9: 縁の幅+湾曲の半分の高さ)
 	//
 	// 回転・アスペクト補正・ピボットはCPU(SubmitUI)側でピクセル空間で計算し、
 	// クアッド頂点(-1..1)を線形変換する基底(axisX/axisY)とNDC中心座標(pos)として渡す。
@@ -51,19 +51,20 @@ namespace Engine::Graphics
 		// row3 の余りに入れているので、構造体の大きさは変わらない
 		Math::Vector2 uvScale = { 1.0f, 1.0f };
 
-		// 湾曲
+		// 湾曲 : UIを1つの円に巻き付ける
 		//
-		// 「弧の中心から横へ dx 離れた点を、下へ k*dx^2 ずらす」だけの形にしてある。
-		// 開き角・半径・弧の中心といった作り手が触る値は、CPU側(Decoration::Resolve)で
-		// この4つへ畳んである。
+		// 弧の頂点から横へ dx・下へ dy 離れた点を、角度 dx/R・半径 R-dy の位置へ移す
+		// (R は円の半径。弧の長さが dx のままなので、曲げても伸び縮みしない)。
+		// 開き角・深さ・弧の頂点といった作り手が触る値は、CPU側(Decoration::Resolve)で
+		// 曲率と頂点からのずれへ畳んである。
 		//
 		// こうしているのは、1つのUIが枠・中身・文字と複数のクアッドに分かれるため。
 		// クアッドごとに自分の幅で曲げると、幅の違う中身(ゲージの残量など)と枠が
-		// 別々の弧に乗ってしまう。ずれをUIの共通ローカル(px)で測れば1本の弧に乗る
-		float curveK = 0.0f;				// 反りの強さ(1/px)。0で曲げない
-		float curveOffsetX = 0.0f;			// 弧の中心からこのクアッドの中心までの横ずれ(px)
+		// 別々の弧に乗ってしまう。ずれをUIの共通ローカル(px)で測れば1つの円に乗る
+		float curvature = 0.0f;				// 曲率(1/px, 符号付き)。正で山なり・負で谷。0で曲げない
+		float curveOffsetX = 0.0f;			// 弧の頂点からこのクアッドの中心までの横ずれ(px, 右が正)
+		float curveOffsetY = 0.0f;			// 弧の頂点からこのクアッドの中心までの縦ずれ(px, 下が正)
 		float curveHalfWidth = 0.0f;		// このクアッドの半幅(px)
-		float curveInvHalfHeight = 0.0f;	// このクアッドの半分の高さの逆数(1/px)
 
 		// 切り抜き(NDC)。(minX, minY, maxX, maxY) の外へ出たピクセルは UIPS が捨てる。
 		// スクロールする一覧のように、決まった範囲の外へはみ出した項目を切るために使う。
@@ -94,11 +95,11 @@ namespace Engine::Graphics
 		// row8 : 縁の色(a は乗せる強さ)
 		Math::Vector4 edgeColor = {};
 
-		// row9 : 縁の幅(ノイズの値の幅)。余りは詰め物
+		// row9 : 縁の幅(ノイズの値の幅)と、湾曲に使うこのクアッドの半分の高さ(px)。余りは詰め物
 		float edgeWidth = 0.0f;
+		float curveHalfHeight = 0.0f;
 		float pad0 = 0.0f;
 		float pad1 = 0.0f;
-		float pad2 = 0.0f;
 
 		// 曲げるかどうか。
 		// 曲げるものは横に分割した板ポリで描く必要があるので、
@@ -107,7 +108,7 @@ namespace Engine::Graphics
 		// 頂点シェーダー(UIVS)側の分岐より必ず広く拾うこと。
 		// こちらが取りこぼすと、曲げるつもりのUIが4頂点の板で来て曲がらない
 		// (逆に多めに拾うぶんには、分割板でまっすぐ描かれるだけで害はない)
-		bool IsCurved() const { return curveK != 0.0f; }
+		bool IsCurved() const { return curvature != 0.0f; }
 	};
 	static_assert(sizeof(UIData) == 16 * 10, "UIData は float4 の10行ぶん。HLSL 側と並びを合わせること");
 

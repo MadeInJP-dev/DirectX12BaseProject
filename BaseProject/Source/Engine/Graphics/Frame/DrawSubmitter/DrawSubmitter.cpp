@@ -730,13 +730,14 @@ namespace Engine::Graphics
 		_data.layer = a_desc.Zlayer;
 		_data.texIndex = a_texIndex;
 		// 湾曲。
-		// 反りは「弧の中心からの横ずれ(px)」で決まるので、シェーダーが px へ戻せるように
+		// 曲げは「弧の頂点からのずれ(px)」で決まるので、シェーダーが px へ戻せるように
 		// このクアッドの実寸(半分の大きさ)も一緒に送る。
 		// NDCの基底(axisX/axisY)からは画面解像度なしにpxを復元できないため
-		_data.curveK = a_desc.curveK;
+		_data.curvature = a_desc.curvature;
 		_data.curveOffsetX = a_desc.curveOffsetX;
+		_data.curveOffsetY = a_desc.curveOffsetY;
 		_data.curveHalfWidth = _halfPx.x;
-		_data.curveInvHalfHeight = (_halfPx.y > 0.0f) ? (1.0f / _halfPx.y) : 0.0f;
+		_data.curveHalfHeight = _halfPx.y;
 
 		// 切り抜き。点と同じくピクセル → NDC へ直す。
 		// Y は上下が入れ替わるので、ピクセルの下端(max.y)が NDC の下端(minY)になる

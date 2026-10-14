@@ -177,20 +177,24 @@ namespace App::Object
 		Engine::EditorField::Tooltip("アンカー自身の矩形(当たり判定・判定円の基準)。見た目は飾り側のサイズ");
 
 		// 湾曲オプション
-		// 曲げても幅は変わらない。反りだけが増えていく。
-		// 弧は上の PixelSize を -1..1 として張るので、幅0だと曲がらない
+		// 上の PixelSize の幅を、開き角ぶんの円弧へ巻き付ける(弧の長さは幅のまま)。
+		// 幅0だと曲がらない
 		Engine::EditorField::Field("CurveAngle", curveAngle, 0.01f, -3.0f, 3.0f);
-		Engine::EditorField::Tooltip("開き角(ラジアン)。0で曲げない / 正で山なり・負で谷");
+		Engine::EditorField::Tooltip("開き角(ラジアン)。PixelSize の幅がこの角度の円弧になる\n0で曲げない / 正で山なり・負で谷");
 		Engine::EditorField::Field("CurveRadius", curveRadius, 0.01f, 0.0f, 4.0f);
-		Engine::EditorField::Tooltip("反りの深さの倍率。1で素直な円弧(0も1として扱う)");
+		Engine::EditorField::Tooltip("巻き付ける角度の倍率。1で開き角そのまま(0も1として扱う)");
 		Engine::EditorField::Field("CurveCenter", curveCenter, 0.01f);
 		Engine::EditorField::Tooltip("弧の頂点。PixelSizeを-1..1とした座標(x=横位置 / y=上下のずらし)");
 
-		// 端がどれだけ下がるかを出しておく : 数字だけだと効き具合が読めない
-		if (curveAngle != 0.0f)
+		// 円の半径と、端がどれだけ下がるかを出しておく : 角度だけだと効き具合が読めない
+		//   半径 R = 幅 / 角度、端の反り = R * (1 - cos(角度 / 2))
+		if (curveAngle != 0.0f && pixelSize.x > 0.0f)
 		{
 			const float _depth = (curveRadius > 0.0f) ? curveRadius : 1.0f;
-			const float _sag = pixelSize.x * 0.5f * std::tan(curveAngle * 0.25f) * _depth;
+			const float _angle = curveAngle * _depth;
+			const float _radius = pixelSize.x / _angle;
+			const float _sag = _radius * (1.0f - std::cos(_angle * 0.5f));
+			Engine::EditorField::Value("円の半径", "%.1f px", std::abs(_radius));
 			Engine::EditorField::Value("端の反り", "%.1f px", _sag);
 		}
 
