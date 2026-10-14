@@ -1819,6 +1819,7 @@
     <ClInclude Include="Source\Application\Components\Combat\ScoreTargetComponent.h" />
     <ClInclude Include="Source\Application\Components\Effect\BoosterEffectComponent.h" />
     <ClInclude Include="Source\Application\Components\Attachment\AttachmentSlotsComponent.h" />
+    <ClInclude Include="Source\Application\Components\Attachment\WeaponMountComponent.h" />
     <ClInclude Include="Source\Application\Components\Weapon\Hand\WeaponStateComponent.h" />
     <ClInclude Include="Source\Application\Components\Weapon\WeaponTriggerComponent.h" />
     <ClInclude Include="Source\Application\Components\Physics\CapsuleCollider.h" />

@@ -101,7 +101,7 @@ namespace App::Object
 		// 進行
 		//-------------------------------------------------------------------
 
-		// ボタンへ押下時の処理を差し込む(そろっていなければ次のフレームへ回す)
+		// ボタンへ押下時の処理を差し込む(見つかったものだけ。見つからないものは知らせる)
 		void TryBind(Engine::GameObject::ObjectContext& a_context);
 
 		// カーソルが乗っているミッションを追う(詳細の出し分け用)
@@ -129,8 +129,8 @@ namespace App::Object
 		/// </remarks>
 		Decoration::Decoration* ResolveNameDecoration(UIBase& a_nameUI);
 
-		// 指しているものがそろっているか
-		bool IsAllReady() const;
+		// 指しているのに見つからないボタンを知らせる
+		void WarnMissingButtons() const;
 
 		// 有効な添え字か
 		bool IsValidIndex(int a_index) const

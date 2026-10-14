@@ -27,18 +27,33 @@ namespace App::Object::Picker
 	}
 
 	/// <summary>
-	/// 指しているものが全部そろっているか
+	/// 設定されているのに引けなければ警告を出す
 	/// </summary>
 	/// <remarks>
-	/// 設定されているのに引けないものが1つでもあれば、まだ読み込みの途中とみなす。
-	/// 差し込み(SetOnClick)は全部そろってから一度に行うので、差し込み漏れが起きない
+	/// 進行役がボタンへ差し込むときに、指している先を確かめるのに使う。
+	///
+	/// 以前は「全部そろうまで差し込まない」形で、引けないものを読み込みの途中とみなして待っていた。
+	/// ところがシーンはファイルから一度に組み立てられ、GameObject の更新は読み込みが
+	/// 済むまで回らないので、更新の時点で引けないものは「消したオブジェクトを指したまま」の設定漏れ。
+	/// 待ち続けると、ボタンを1つ消しただけで残りのボタンまで全部反応しなくなっていた。
+	/// 今は引けたものにだけ差し込み、引けないものはここで知らせる
 	/// </remarks>
+	/// <param name="a_owner">知らせる文に出す持ち主の名前</param>
+	/// <param name="a_label">知らせる文に出す設定の名前</param>
+	/// <returns>未設定か、引けたら true</returns>
 	template<typename T>
-	inline bool IsReady(Engine::GameObject::GameObjectManager* a_pObjectManager, const Core::GUID& a_guid)
+	inline bool CheckFound(
+		Engine::GameObject::GameObjectManager* a_pObjectManager,
+		const Core::GUID& a_guid,
+		const char* a_owner,
+		const char* a_label)
 	{
-		if (!a_guid.IsValid()) return true;	// 設定されていないものは待たない
+		if (!a_guid.IsValid()) return true;	// 設定されていないものは問題にしない
+		if (Find<T>(a_pObjectManager, a_guid) != nullptr) return true;
 
-		return Find<T>(a_pObjectManager, a_guid) != nullptr;
+		ENGINE_WARNING("[%s] %s が指しているオブジェクトがシーンにありません(消したものを指したままの可能性) : %s",
+			a_owner, a_label, a_guid.String().c_str());
+		return false;
 	}
 
 	//======================================================================================

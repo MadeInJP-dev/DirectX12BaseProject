@@ -83,7 +83,7 @@ namespace App::Object
 
 	private:
 
-		// ボタンへ押下時の処理を差し込む(そろっていなければ次のフレームへ回す)
+		// ボタンへ押下時の処理を差し込む(見つかったものだけ。見つからないものは知らせる)
 		void TryBindButtons(Engine::GameObject::ObjectContext& a_context);
 
 		// 見ている場所を切り替える(表示の出し分けもここで行う)
@@ -92,8 +92,8 @@ namespace App::Object
 		// 今のモードに合わせて表示を切り替える
 		void ApplyVisible(Engine::GameObject::GameObjectManager* a_pObjectManager);
 
-		// 指しているものがそろっているか
-		bool IsAllReady(Engine::GameObject::GameObjectManager* a_pObjectManager) const;
+		// 指しているのに見つからないボタンを知らせる
+		void WarnMissingButtons(Engine::GameObject::GameObjectManager* a_pObjectManager) const;
 
 		// メニュー : 設定画面のシーンを重ねる
 		void ReserveOpenOption(Engine::Scene::SceneManager& a_sceneManager);

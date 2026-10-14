@@ -124,4 +124,22 @@ namespace App::Utility
 		Engine::ECS::World& a_world,
 		std::vector<Engine::Resource::PrefabInstanceData>& a_instanceVec,
 		std::vector<Engine::ECS::Entity>* a_pOutEntityVec = nullptr);
+
+	/// <summary>
+	/// プレハブを、指定のエンティティの子としてその場で生成する(子も一緒に作る)。
+	/// 機体の取り付け口へ武器を付けるのに使う
+	/// </summary>
+	/// <remarks>
+	/// ・ルートの位置と向きはプレハブの保存値のまま(親からのローカル)。
+	///   武器なら「取り付け口からの握り方のずれ」として持たせておく。
+	/// ・ルートの親は ID で付ける。親が GUIDComponent を持っていれば GUID も入れる。
+	///   階層の深さは親の深さぶんだけ下げる(プレハブの中の深さはルートを 0 とした相対値)。
+	/// ・保存しない印(TransientTag)を全ノードへ付ける(出したプレイヤーと同じ扱い)。
+	/// ・即時生成なので、システムの反復中からは呼ばないこと。
+	/// </remarks>
+	/// <returns>ルートのエンティティ。作れなければ INVALID_ENTITY</returns>
+	Engine::ECS::Entity CreateChildInstanceNow(
+		Engine::ECS::World& a_world,
+		const Engine::Resource::Prefab& a_prefab,
+		Engine::ECS::Entity a_parent);
 }

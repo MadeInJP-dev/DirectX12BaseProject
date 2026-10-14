@@ -2948,6 +2948,9 @@
     <ClInclude Include="Source\Application\Components\Attachment\AttachmentSlotsComponent.h">
       <Filter>Source\Application\Components\Attachment</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Components\Attachment\WeaponMountComponent.h">
+      <Filter>Source\Application\Components\Attachment</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Components\Effect\BoosterEffectComponent.h">
       <Filter>Source\Application\Components\Effect</Filter>
     </ClInclude>

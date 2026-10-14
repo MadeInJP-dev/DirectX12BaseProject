@@ -43,6 +43,15 @@ namespace Editor
 		// 子供の取得
 		std::vector<ECS::Entity> GetChildEntities(Engine::ECS::World* a_pWorld, ECS::Entity a_parent) const;
 
+		// 親の状態
+		enum class EParentState
+		{
+			None,		// 親を持たない(ルート)
+			HasParent,	// 親が居る(その子として出る)
+			Missing,	// 親を指しているのに見つからない(ルートに印付きで出す)
+		};
+		EParentState GetParentState(Engine::ECS::World* a_pWorld, const ECS::Entity& a_entity) const;
+
 	private:
 		// 検索時のフィルター
 		enum class EFilterType

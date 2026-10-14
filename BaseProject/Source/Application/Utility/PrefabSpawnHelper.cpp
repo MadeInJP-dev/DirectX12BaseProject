@@ -287,4 +287,66 @@ namespace App::Utility
 
 		return _entityVec.empty() ? Engine::ECS::Limits::INVALID_ENTITY : _entityVec[0];
 	}
+
+	Engine::ECS::Entity CreateChildInstanceNow(
+		Engine::ECS::World& a_world,
+		const Engine::Resource::Prefab& a_prefab,
+		Engine::ECS::Entity a_parent)
+	{
+		if (a_parent == Engine::ECS::Limits::INVALID_ENTITY || !a_world.IsAliveEntity(a_parent))
+		{
+			return Engine::ECS::Limits::INVALID_ENTITY;
+		}
+
+		std::vector<Engine::Resource::PrefabInstanceData> _instanceVec = a_prefab.BuildInstanceData(&a_world);
+		if (_instanceVec.empty()) return Engine::ECS::Limits::INVALID_ENTITY;
+
+		const Engine::ECS::ComponentTypeID _transientTypeID = a_world.GetCompTypeID<Engine::ECS::TransientTag>();
+		const Engine::ECS::ComponentTypeID _hierarchyTypeID = a_world.GetCompTypeID<Component::HierarchyComponent>();
+
+		// 親の深さ。子の深さはここからの相対で並べ直す
+		UINT _parentDepth = 0;
+		if (const auto* _pParentHierarchy = a_world.RefData<Component::HierarchyComponent>(a_parent))
+		{
+			_parentDepth = _pParentHierarchy->depth;
+		}
+
+		Core::GUID _parentGUID = Core::DEFAULT_GUID;
+		if (const auto* _pParentGUID = a_world.RefData<Engine::ECS::GUIDComponent>(a_parent))
+		{
+			_parentGUID = _pParentGUID->guid;
+		}
+
+		for (size_t _i = 0; _i < _instanceVec.size(); ++_i)
+		{
+			Engine::Resource::PrefabInstanceData& _data = _instanceVec[_i];
+
+			EnsureInstanceComponent(a_world, _data, _transientTypeID);
+
+			// ルートは親が要るので階層を必ず持たせる。子はプレハブに入っているものをそのまま使う
+			uint8_t* _pBuf = (_i == 0)
+				? EnsureInstanceComponent(a_world, _data, _hierarchyTypeID)
+				: ((_data.sig.test(_hierarchyTypeID) && _data.dataMap.count(_hierarchyTypeID)) ? _data.dataMap[_hierarchyTypeID].data() : nullptr);
+			if (!_pBuf) continue;
+
+			Component::HierarchyComponent _hierarchy = {};
+			std::memcpy(&_hierarchy, _pBuf, sizeof(_hierarchy));
+
+			if (_i == 0)
+			{
+				_hierarchy.parentID   = a_parent;
+				_hierarchy.parentGUID = _parentGUID;
+				_hierarchy.depth      = _parentDepth + 1;
+			}
+			else
+			{
+				_hierarchy.depth += _parentDepth + 1;
+			}
+
+			std::memcpy(_pBuf, &_hierarchy, sizeof(_hierarchy));
+		}
+
+		// 中の親子とスロットは ID で付く(ルートの親は上で入れてある)
+		return CreateInstanceNow(a_world, _instanceVec);
+	}
 }

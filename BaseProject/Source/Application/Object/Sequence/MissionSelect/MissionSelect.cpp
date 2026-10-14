@@ -55,14 +55,15 @@ namespace App::Object
 	//======================================================================================
 	// ボタンへ押下時の処理を差し込む
 	//--------------------------------------------------------------------------------------
-	// 指しているものが1つでも見つからなければ、まだ読み込みの途中とみなして次のフレームへ。
-	// 全部そろってから一度に差し込むので、差し込み漏れが起きない。
+	// 見つかったボタンにだけ差し込む。見つからないものは知らせるだけで待たない
+	// (理由は HomeSequence::TryBindButtons と同じ。待つと残りのボタンまで押せなくなる)。
 	//======================================================================================
 	void MissionSelect::TryBind(Engine::GameObject::ObjectContext& a_context)
 	{
 		if (m_isBound) return;
 		if (m_pObjectManager == nullptr) return;
-		if (!IsAllReady()) return;
+
+		WarnMissingButtons();
 
 		// 出撃はシーンの切り替え。押されたときに使うので、ここで受け取って掴ませる
 		auto* _pSceneManager = a_context.pServices ? a_context.pServices->pSceneManager : nullptr;
@@ -95,19 +96,18 @@ namespace App::Object
 	}
 
 	//======================================================================================
-	// 指しているものがそろっているか
+	// 指しているのに見つからないボタンを知らせる
 	//======================================================================================
-	bool MissionSelect::IsAllReady() const
+	void MissionSelect::WarnMissingButtons() const
 	{
+		constexpr const char* OWNER = "MissionSelect";
 		for (const MissionEntry& _mission : m_missionVec)
 		{
-			if (!Picker::IsReady<UIButton>(m_pObjectManager, _mission.buttonGUID)) return false;
+			Picker::CheckFound<UIButton>(m_pObjectManager, _mission.buttonGUID, OWNER, _mission.name.c_str());
 		}
 
-		if (!Picker::IsReady<UIButton>(m_pObjectManager, m_yesButtonGUID)) return false;
-		if (!Picker::IsReady<UIButton>(m_pObjectManager, m_noButtonGUID)) return false;
-
-		return true;
+		Picker::CheckFound<UIButton>(m_pObjectManager, m_yesButtonGUID, OWNER, "YesButton");
+		Picker::CheckFound<UIButton>(m_pObjectManager, m_noButtonGUID, OWNER, "NoButton");
 	}
 
 	//======================================================================================

@@ -130,18 +130,8 @@ namespace Editor
 					continue;
 				}
 
-				// 親を持っていないものをルートとして抽出
-				// ヒエラルキーコンポーネントを持っているものは親がいるかチェック。
-				// GUID を持たないもの(スポナーが出したプレイヤーの武器など)は親をIDだけで持つので、両方を見る
-				if (_pWorld->HasComponent<App::Component::HierarchyComponent>(_entity))
-				{
-					auto* _pHieComp = _pWorld->RefData<App::Component::HierarchyComponent>(_entity);
-					if (_pHieComp->parentGUID != Core::DEFAULT_GUID ||
-						_pHieComp->parentID != ECS::Limits::INVALID_ENTITY)
-					{
-						continue;
-					}
-				}
+				// 親を持っていないもの・親が見つからないものをルートとして抽出
+				if (GetParentState(_pWorld, _entity) == EParentState::HasParent) continue;
 				_drawEntities.push_back(_entity);
 			}
 
@@ -266,8 +256,12 @@ namespace Editor
 			_flags |= ImGuiTreeNodeFlags_Leaf;
 		}
 
-		// ラベル作成
+		// ラベル作成。親を指しているのに見つからないものは、それと分かるようにしておく
 		std::string _label = GetEntityLabel(a_pWorld, a_entity);
+		if (GetParentState(a_pWorld, a_entity) == EParentState::Missing)
+		{
+			_label += "  (parent missing)";
+		}
 
 		// ツリーノード表示
 		bool _isNodeOpen = ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<intptr_t>(a_entity)), _flags, _label.c_str());
@@ -385,6 +379,37 @@ namespace Editor
 			auto _compTypeID = a_pWorld->GetCompTypeID<App::Component::HierarchyComponent>();
 			a_pWorld->ReserveAddComponent(_compTypeID, a_child, reinterpret_cast<uint8_t*>(&_newComp));
 		}
+	}
+
+	//======================================================================================
+	// 親の状態
+	//--------------------------------------------------------------------------------------
+	// 親IDが付いていればそれで見る。付く前(読み込み直後の Awake 前)は GUID で見る
+	// (GetChildEntities と同じ見方。GUID を持たない親(スポナーが出したプレイヤー)の子は ID でしか引けない)。
+	//
+	// 指している親が見つからないものは「親が居ない」として扱い、ルートに出す。
+	// 以前はルートにも誰かの子にも出ず、一覧から消えていた(居るのに選べない)
+	//======================================================================================
+	Editor::HierarchyPanel::EParentState Editor::HierarchyPanel::GetParentState(Engine::ECS::World* a_pWorld, const ECS::Entity& a_entity) const
+	{
+		if (!a_pWorld->HasComponent<App::Component::HierarchyComponent>(a_entity)) return EParentState::None;
+
+		const auto* _pHieComp = a_pWorld->RefData<App::Component::HierarchyComponent>(a_entity);
+		if (!_pHieComp) return EParentState::None;
+
+		if (_pHieComp->parentID != ECS::Limits::INVALID_ENTITY)
+		{
+			return a_pWorld->IsAliveEntity(_pHieComp->parentID) ? EParentState::HasParent : EParentState::Missing;
+		}
+
+		if (_pHieComp->parentGUID.IsValid())
+		{
+			return (a_pWorld->GetEntity(_pHieComp->parentGUID) != ECS::Limits::INVALID_ENTITY)
+				? EParentState::HasParent
+				: EParentState::Missing;
+		}
+
+		return EParentState::None;
 	}
 
 	std::vector<Engine::ECS::Entity> Editor::HierarchyPanel::GetChildEntities(Engine::ECS::World* a_pWorld, ECS::Entity a_parent) const

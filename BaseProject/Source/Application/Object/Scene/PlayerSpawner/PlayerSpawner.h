@@ -2,6 +2,8 @@
 
 #include "Engine/GameObject/BaseObject/BaseObject.h"
 
+namespace App::Game { struct PlayerLoadout; }
+
 namespace App::Object
 {
 	//======================================================================================
@@ -21,6 +23,14 @@ namespace App::Object
 	// ・出したプレイヤーには TransientTag が付く(BuildSpawnInstanceData)ので、
 	//   シーンを保存しても書き込まれない。シーンに残るのはこのスポナーだけ。
 	// ・カメラはシーンの持ち物のまま(GUID で指定する)。
+	//
+	// 出撃構成(GlobalGameContext::loadout)
+	// ・本体が設定されていれば、自分のプレハブではなくそちらを出す。
+	//   ホームで選んだ機体と武器を、次に開いたゲームシーンへ持ち込むため。
+	// ・本体を出したら、本体の子の取り付け口(WeaponMountComponent)へ武器のプレハブを子として出し、
+	//   本体のアタッチメントのスロット(rightWeapon / leftWeapon / missile)へ ID で入れる。
+	// ・構成の本体が未設定なら、自分のプレハブ(武器込みの一体物)をそのまま出す
+	//   (出撃構成を持たない起動のしかたでも、ゲームシーンを単体で試せるように)。
 	//======================================================================================
 	class PlayerSpawner : public Engine::GameObject::BaseObject
 	{
@@ -55,6 +65,19 @@ namespace App::Object
 		// プレハブからプレイヤーを出す。出せたら true
 		bool SpawnPlayer(Engine::GameObject::ObjectContext& a_context);
 
+		// 出撃構成を引く。本体が設定されていなければ nullptr(自分のプレハブを出す)
+		const Game::PlayerLoadout* FindLoadout(Engine::GameObject::ObjectContext& a_context) const;
+
+		// 出す本体のプレハブ(出撃構成の本体、無ければ自分のプレハブ)
+		Core::GUID ResolveBodyPrefabGUID(Engine::GameObject::ObjectContext& a_context) const;
+
+		// 出撃構成の武器を本体の取り付け口へ付け、スロットへつなぐ
+		// a_bodyEntityVec : 出した本体のエンティティ(先頭がルート)
+		void AttachLoadoutWeapons(
+			Engine::GameObject::ObjectContext& a_context,
+			const Game::PlayerLoadout& a_loadout,
+			const std::vector<Engine::ECS::Entity>& a_bodyEntityVec);
+
 		// カメラの追従先を出したプレイヤーへ付ける
 		void LinkCamera(Engine::GameObject::ObjectContext& a_context);
 
@@ -77,6 +100,10 @@ namespace App::Object
 		// 状態(保存しない)
 		//-------------------------------------------------------------------
 		Engine::ResourceRef<Engine::Resource::Prefab> m_prefabRef = {};
+
+		// 付けた武器のプレハブ(取り付け口の種類ごと。RightHand / LeftHand / Shoulder)
+		static constexpr size_t WEAPON_MOUNT_COUNT = 3;
+		std::array<Engine::ResourceRef<Engine::Resource::Prefab>, WEAPON_MOUNT_COUNT> m_weaponPrefabRefArray = {};
 
 		// 出したプレイヤーのルート。出していなければ INVALID
 		Engine::ECS::Entity m_playerEntity = Engine::ECS::Limits::INVALID_ENTITY;

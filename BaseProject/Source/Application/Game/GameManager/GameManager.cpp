@@ -52,7 +52,7 @@ namespace App::Game
 	//======================================================================================
 	// ゲーム設定ファイルの置き場所
 	//
-	// 持っているのは「起動時に立ち上げるシーン」だけ。アセットではないので
+	// 持っているのは「起動時に立ち上げるシーン」と「既定の出撃構成」だけ。アセットではないので
 	// AssetDatabase には載せず、エンジン設定(EngineData)と同じく Asset/Data の下へ直接置く。
 	//======================================================================================
 	namespace
@@ -66,8 +66,11 @@ namespace App::Game
 	{
 		m_pEngine = &a_engine;
 
-		// ゲーム設定(起動時に立ち上げるシーン)の読み込み
+		// ゲーム設定(起動時に立ち上げるシーン・既定の出撃構成)の読み込み
 		LoadGameSetting();
+
+		// 出撃構成は既定のものから始める(ホームで選び直せば上書きされる)
+		m_gameData.loadout = m_defaultLoadout;
 
 		// ユーザーデータの復元
 		if (!m_upUserData)
@@ -244,8 +247,7 @@ namespace App::Game
 			Engine::Persistence::Archive::EMode::Load,
 			GAME_SETTING_DIR, GAME_SETTING_NAME, GAME_SETTING_EXT);
 
-		_arch.Field("m_farstScene", m_farstScene);
-		_arch.Field("m_loadingScene", m_loadingScene);
+		ArchiveGameSetting(_arch);
 	}
 	void GameManager::SaveGameSetting()
 	{
@@ -253,8 +255,18 @@ namespace App::Game
 			Engine::Persistence::Archive::EMode::Save,
 			GAME_SETTING_DIR, GAME_SETTING_NAME, GAME_SETTING_EXT);
 
-		_arch.Field("m_farstScene", m_farstScene);
-		_arch.Field("m_loadingScene", m_loadingScene);
+		ArchiveGameSetting(_arch);
+	}
+	void GameManager::ArchiveGameSetting(Engine::Persistence::Archive& a_ar)
+	{
+		a_ar.Field("m_farstScene", m_farstScene);
+		a_ar.Field("m_loadingScene", m_loadingScene);
+
+		// ※ 追加は末尾に。バイナリは順次読みなので途中に挿すと既存データが全部ずれる
+		a_ar.Field("defaultLoadoutBody", m_defaultLoadout.bodyPrefabGUID);
+		a_ar.Field("defaultLoadoutRightHand", m_defaultLoadout.rightHandWeaponPrefabGUID);
+		a_ar.Field("defaultLoadoutLeftHand", m_defaultLoadout.leftHandWeaponPrefabGUID);
+		a_ar.Field("defaultLoadoutShoulder", m_defaultLoadout.shoulderWeaponPrefabGUID);
 	}
 	//======================================================================================
 	// ゲーム設定の編集UI
@@ -279,6 +291,26 @@ namespace App::Game
 			"Scene",
 			m_loadingScene);
 		Engine::EditorField::Tooltip("読み込みが長引いたときに重ねて出すシーン。反映は次の起動から");
+
+		//------------------------------------------------------------------
+		// 既定の出撃構成
+		//
+		// 選び直したら今の出撃構成(GlobalGameContext)にもすぐ入れる。
+		// エディターでゲームシーンを開き直したときに、そのまま試せるようにするため
+		//------------------------------------------------------------------
+		Engine::EditorField::Line();
+		Engine::EditorField::Header("Default Loadout");
+
+		const auto& _services = m_pEngine->GetEngineServices();
+		bool _isLoadoutChanged = false;
+		_isLoadoutChanged |= Engine::EditorField::AssetField(_services, "Body", "Prefab", m_defaultLoadout.bodyPrefabGUID);
+		Engine::EditorField::Tooltip("取り付け口(WeaponMountComponent)を持つ機体。未設定なら PlayerSpawner のプレハブをそのまま出す");
+		_isLoadoutChanged |= Engine::EditorField::AssetField(_services, "Right Hand", "Prefab", m_defaultLoadout.rightHandWeaponPrefabGUID);
+		_isLoadoutChanged |= Engine::EditorField::AssetField(_services, "Left Hand", "Prefab", m_defaultLoadout.leftHandWeaponPrefabGUID);
+		_isLoadoutChanged |= Engine::EditorField::AssetField(_services, "Shoulder", "Prefab", m_defaultLoadout.shoulderWeaponPrefabGUID);
+		Engine::EditorField::Tooltip("反映は次にゲームシーンを開いたとき(プレイヤーを出すのはシーンの始まり)");
+
+		if (_isLoadoutChanged) m_gameData.loadout = m_defaultLoadout;
 
 		Engine::EditorField::Line();
 

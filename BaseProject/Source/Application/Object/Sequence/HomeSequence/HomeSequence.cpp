@@ -63,8 +63,9 @@ namespace App::Object
 	//======================================================================================
 	// ボタンへ押下時の処理を差し込む
 	//--------------------------------------------------------------------------------------
-	// 設定されているのに見つからないものが1つでもあれば、まだ読み込みの途中とみなして
-	// 次のフレームへ回す。全部そろってから差し込むので、差し込み漏れが起きない。
+	// 見つかったボタンにだけ差し込む。見つからないものは知らせるだけで待たない。
+	// シーンのオブジェクトは読み込みの時点で全部できているので、ここで引けないものは
+	// 消したボタンを指したままの設定漏れ。待つと残りのボタンまで全部押せなくなる。
 	//======================================================================================
 	void HomeSequence::TryBindButtons(Engine::GameObject::ObjectContext& a_context)
 	{
@@ -72,7 +73,8 @@ namespace App::Object
 
 		auto* _pObjectManager = a_context.pObjectManager;
 		if (!_pObjectManager) return;
-		if (!IsAllReady(_pObjectManager)) return;
+
+		WarnMissingButtons(_pObjectManager);
 
 		// ボタンは同じシーンに居るので、this もマネージャーも寿命は一緒に尽きる
 		if (auto* _pMissionSelect = Picker::Find<UIButton>(_pObjectManager, m_missionSelectButtonGUID))
@@ -123,18 +125,17 @@ namespace App::Object
 	}
 
 	//======================================================================================
-	// 指しているものがそろっているか
+	// 指しているのに見つからないボタンを知らせる
 	//======================================================================================
-	bool HomeSequence::IsAllReady(Engine::GameObject::GameObjectManager* a_pObjectManager) const
+	void HomeSequence::WarnMissingButtons(Engine::GameObject::GameObjectManager* a_pObjectManager) const
 	{
-		if (!Picker::IsReady<UIButton>(a_pObjectManager, m_missionSelectButtonGUID)) return false;
-		if (!Picker::IsReady<UIButton>(a_pObjectManager, m_warehouseButtonGUID))     return false;
-		if (!Picker::IsReady<UIButton>(a_pObjectManager, m_backButtonGUID))          return false;
-		if (!Picker::IsReady<UIButton>(a_pObjectManager, m_optionButtonGUID))        return false;
-		if (!Picker::IsReady<UIButton>(a_pObjectManager, m_titleButtonGUID))         return false;
-		if (!Picker::IsReady<UIButton>(a_pObjectManager, m_quitButtonGUID))          return false;
-
-		return true;
+		constexpr const char* OWNER = "HomeSequence";
+		Picker::CheckFound<UIButton>(a_pObjectManager, m_missionSelectButtonGUID, OWNER, "MissionSelectButton");
+		Picker::CheckFound<UIButton>(a_pObjectManager, m_warehouseButtonGUID,     OWNER, "WarehouseButton");
+		Picker::CheckFound<UIButton>(a_pObjectManager, m_backButtonGUID,          OWNER, "BackButton");
+		Picker::CheckFound<UIButton>(a_pObjectManager, m_optionButtonGUID,        OWNER, "OptionButton");
+		Picker::CheckFound<UIButton>(a_pObjectManager, m_titleButtonGUID,         OWNER, "TitleButton");
+		Picker::CheckFound<UIButton>(a_pObjectManager, m_quitButtonGUID,          OWNER, "QuitButton");
 	}
 
 	//======================================================================================

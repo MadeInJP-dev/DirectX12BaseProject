@@ -61,6 +61,7 @@
 #include "Application/Components/Physics/CapsuleCollider.h"
 #include "Application/Components/Combat/ActionIntentComponent.h"
 #include "Application/Components/Weapon/WeaponTriggerComponent.h"
+#include "Application/Components/Attachment/WeaponMountComponent.h"
 #include "Application/Components/Weapon/WeaponFireComponent.h"
 #include "Application/Components/Weapon/WeaponConfig/MuzzleComponent.h"
 #include "Application/Components/Weapon/WeaponConfig/AutoFireComponent.h"
@@ -327,6 +328,8 @@ namespace App::ECS
 		// 肩の武器(Shoulder) : ミサイルのカタログと一斉射
 		a_world.RegisterComponent<Component::MissileStateComponent>("MissileStateComponent");
 		a_world.RegisterComponent<Component::MissileFireComponent>("MissileFireComponent");
+		// 機体の武器の取り付け口。出撃構成の武器を PlayerSpawner がここへ付ける
+		a_world.RegisterComponent<Component::WeaponMountComponent>("WeaponMountComponent");
 		a_world.RegisterComponent<Engine::ECS::CollisionEvent>("CollisionEvent");
 		a_world.RegisterComponent<Component::ExplodeOnHitComponent>("ExplodeOnHitComponent");
 		a_world.RegisterComponent<Component::CameraFocusTargetComponent>("CameraFocusTargetComponent");

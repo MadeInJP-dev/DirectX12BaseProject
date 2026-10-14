@@ -82,9 +82,14 @@ namespace App::Game
 		void SaveGameSetting();
 
 		/// <summary>
-		/// ゲーム設定の編集UI(起動時に立ち上げるシーンを選ぶ)
+		/// ゲーム設定の編集UI(起動時に立ち上げるシーン・既定の出撃構成を選ぶ)
 		/// </summary>
 		void DrawGameSettingEdit();
+
+		/// <summary>
+		/// ゲーム設定の項目の読み書き(Load / Save で同じ並びを使う)
+		/// </summary>
+		void ArchiveGameSetting(Engine::Persistence::Archive& a_ar);
 
 	private:
 
@@ -99,6 +104,10 @@ namespace App::Game
 
 		// ロード画面のシーン : 起動時に SceneManager へ渡して常駐させる(無効なら出さない)
 		Core::GUID m_loadingScene;
+
+		// 既定の出撃構成 : 起動時に m_gameData.loadout へ入れる。
+		// ホームで選び直したものはここへは書かない(ゲーム設定の保存に混ざらないように)
+		PlayerLoadout m_defaultLoadout = {};
 
 		// ユーザーデータ
 		std::unique_ptr<UserData> m_upUserData;
