@@ -264,7 +264,8 @@ namespace App::Object
 	//======================================================================================
 	void UIGauge::Draw(Engine::GameObject::ObjectContext& a_context)
 	{
-		if (!IsVisibleInHierarchy(a_context)) return;
+		// 消える演出の最中は Visible が切れていても描くので、描くかどうかはこちらで見る
+		if (!IsDrawnInHierarchy(a_context)) return;
 
 		// 値が取れていないフレームは何も出さない。
 		// Visible を落とさないのは、進行役が握っている出し入れと取り合わないため

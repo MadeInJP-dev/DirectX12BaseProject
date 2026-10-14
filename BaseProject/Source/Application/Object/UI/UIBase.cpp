@@ -74,6 +74,10 @@ namespace App::Object
 		{
 			Decoration::AdvanceAnimation(_decoration, _state, a_context.dt);
 		}
+
+		// 出し入れと合図の演出も、飾りと同じく出していないフレームも進める
+		// (消える演出が終わったことを知るのはここ)
+		m_transition.Advance(a_context.dt);
 	}
 
 	Decoration::EUIState UIBase::GetUIState() const
@@ -90,7 +94,44 @@ namespace App::Object
 	}
 
 	//======================================================================================
-	// 実際に出ているか
+	// 表示の切り替え
+	//--------------------------------------------------------------------------------------
+	// 切り替わったときだけ演出を流す。進行役が毎フレーム同じ値を入れてくる
+	// (一覧のスクロールバーなど)ので、同じ値では何もしない
+	//======================================================================================
+	void UIBase::SetVisible(bool a_isVisible)
+	{
+		if (m_isVisible == a_isVisible) return;
+
+		m_isVisible = a_isVisible;
+		m_transition.OnVisibleChanged(a_isVisible);
+	}
+
+	//======================================================================================
+	// 実際に出ているか : 自分の指定と、上にある UIPanel の表示
+	//======================================================================================
+	bool UIBase::IsVisibleInHierarchy(const Engine::GameObject::ObjectContext& a_context) const
+	{
+		if (!m_isVisible) return false;
+		return IsParentPanelsVisible(a_context);
+	}
+
+	//======================================================================================
+	// 描くか
+	//--------------------------------------------------------------------------------------
+	// 出ているかどうか(IsVisibleInHierarchy)とは分けてある。
+	// 消える演出の最中は描くが押せず、合図の間だけ描く UI は出ていても描かないため
+	//======================================================================================
+	bool UIBase::IsDrawnInHierarchy(const Engine::GameObject::ObjectContext& a_context) const
+	{
+		if (!m_isVisible && !m_transition.IsHiding()) return false;
+		if (m_transition.isPulseOnly && !m_transition.IsPulsePlaying()) return false;
+
+		return IsParentPanelsVisible(a_context);
+	}
+
+	//======================================================================================
+	// 上にある UIPanel が全部出ているか
 	//--------------------------------------------------------------------------------------
 	// 上へ辿って、途中にある UIPanel が1つでも隠れていれば出ていない。
 	// 親がパネルでないところ(ボタンの下にまとめただけの画像など)は何も伝えないので、
@@ -98,9 +139,8 @@ namespace App::Object
 	//
 	// 親子が輪になっていても止まるよう、辿る深さに上限を設けてある
 	//======================================================================================
-	bool UIBase::IsVisibleInHierarchy(const Engine::GameObject::ObjectContext& a_context) const
+	bool UIBase::IsParentPanelsVisible(const Engine::GameObject::ObjectContext& a_context) const
 	{
-		if (!m_isVisible) return false;
 		if (!a_context.pObjectManager) return true;
 
 		constexpr int DEPTH_MAX = 32;
@@ -401,7 +441,7 @@ namespace App::Object
 		// 出さない指示はここでまとめて弾く。
 		// 継承先が Draw を自前で持っていても、切れば(パネルごと隠せば)必ず消えるようにするため
 		if (m_decorationVec.empty()) return;
-		if (!IsVisibleInHierarchy(a_context)) return;
+		if (!IsDrawnInHierarchy(a_context)) return;
 		if (IsHiddenAsHUD(a_context)) return;
 		if (!a_context.pServices || !a_context.pServices->pMainEngine) return;
 		if (!a_context.pServices->pResourceManager) return;
@@ -411,6 +451,7 @@ namespace App::Object
 
 		const Decoration::ParentTransform _parentTr = MakeParentTransform();
 		const Decoration::ParentOption _parentOp = MakeParentOption();
+		const Decoration::DrawOverride _override = ApplyTransition(a_override);
 
 		// 配列の順に積む : 後ろにあるものほど手前に出る
 		for (const Decoration::Decoration& _decoration : m_decorationVec)
@@ -421,7 +462,7 @@ namespace App::Object
 				_decoration,
 				_parentTr,
 				_parentOp,
-				a_override);
+				_override);
 		}
 	}
 
@@ -431,7 +472,7 @@ namespace App::Object
 		const Decoration::DrawOverride& a_override)
 	{
 		if (a_index >= m_decorationVec.size()) return;
-		if (!IsVisibleInHierarchy(a_context)) return;
+		if (!IsDrawnInHierarchy(a_context)) return;
 		if (IsHiddenAsHUD(a_context)) return;
 		if (!a_context.pServices || !a_context.pServices->pMainEngine) return;
 		if (!a_context.pServices->pResourceManager) return;
@@ -445,7 +486,24 @@ namespace App::Object
 			m_decorationVec[a_index],
 			MakeParentTransform(),
 			MakeParentOption(),
-			a_override);
+			ApplyTransition(a_override));
+	}
+
+	//======================================================================================
+	// 演出の値を掛ける
+	//--------------------------------------------------------------------------------------
+	// 継承先が渡した差し替え(位置・UV・色など)はそのまま残し、倍率と色の a にだけ掛ける。
+	// 倍率は DrawOverride::scale へ入れるので、飾りの位置のずれにも掛かる
+	// (枠と文字がばらけずに、UI がまとまって伸び縮みする)
+	//======================================================================================
+	Decoration::DrawOverride UIBase::ApplyTransition(const Decoration::DrawOverride& a_override) const
+	{
+		const UITransitionValue _value = m_transition.CalcValue();
+
+		Decoration::DrawOverride _override = a_override;
+		_override.scale *= _value.scale;
+		_override.tint.a *= _value.alpha;
+		return _override;
 	}
 
 	//======================================================================================
@@ -568,6 +626,13 @@ namespace App::Object
 		// 区切りを持たない古い .ob* には無いので読まない(読まなければクラスの既定値のまま)
 		if (!a_ar.IsLegacyLayout()) a_ar.Field("IsHUD", m_isHUD);
 		if (!a_ar.IsLegacyLayout()) a_ar.Field("IsScanLine", m_anchor.isScanLine);
+
+		// 出し入れと合図の演出。自分の区切りを持つので、この後ろへ足しても読み出しはずれない
+		if (!a_ar.IsLegacyLayout())
+		{
+			const bool _isLoaded = m_transition.Archive(a_ar);
+			if (a_ar.IsLoading()) m_isTransitionLoaded = _isLoaded;
+		}
 
 		m_anchor.editSize = m_anchor.pixelSize;
 

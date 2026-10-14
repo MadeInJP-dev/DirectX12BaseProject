@@ -5,6 +5,7 @@
 //   アンカー       … UIAnchor::DrawInspector
 //   カーソルへの反応 … UIInteraction::DrawSettingsInspector / DrawSoundInspector
 //   飾り1つ       … Decoration::DrawDecorationInspector
+//   演出          … UITransition::DrawSettingsInspector
 // ここはそれを並べ、UIBase でしか分からないもの(判定の範囲・取り合いの結果・飾りの一覧)を足す
 //==========================================================================================
 #include "UIBase.h"
@@ -29,7 +30,9 @@ namespace App::Object
 		const float _h = static_cast<float>(_winOp.windowHeight);
 
 		// 表示するか : 出し分けを持つ画面(ホームなど)は進行役がここを切り替える
-		Engine::EditorField::Field("Visible", m_isVisible);
+		// SetVisible を通すので、出し入れの演出を付けていればここで確かめられる
+		bool _isVisible = m_isVisible;
+		if (Engine::EditorField::Field("Visible", _isVisible)) SetVisible(_isVisible);
 		Engine::EditorField::Tooltip("切ると描画も入力も止まる");
 
 		// 自分は出す指示なのに、上のパネルが隠れているせいで出ていないことが分かるようにする
@@ -47,6 +50,9 @@ namespace App::Object
 
 		// カーソルへの反応(押せる UI だけ)
 		if (m_opInteraction) DrawInteractionInspector(a_context);
+
+		// 出し入れと合図の演出
+		DrawTransitionInspector();
 
 		Engine::EditorField::Line();
 
@@ -109,6 +115,24 @@ namespace App::Object
 		{
 			Engine::EditorField::WarningText("Cursor : 手前の別UIに取られています(Layer %.1f)", m_anchor.layer);
 		}
+	}
+
+	//======================================================================================
+	// 出し入れと合図の演出
+	//--------------------------------------------------------------------------------------
+	// 確認用のボタンは Visible を変えずに流すだけ。Hide を流し終えると元どおり出る
+	//======================================================================================
+	void UIBase::DrawTransitionInspector()
+	{
+		Engine::EditorField::Header("Transition");
+
+		m_transition.DrawSettingsInspector();
+
+		if (Engine::EditorField::SmallButton("Play Show")) m_transition.PlayShow();
+		Engine::EditorField::SameLine();
+		if (Engine::EditorField::SmallButton("Play Hide")) m_transition.PlayHide();
+		Engine::EditorField::SameLine();
+		if (Engine::EditorField::SmallButton("Play Pulse")) m_transition.PlayPulse();
 	}
 
 	//======================================================================================

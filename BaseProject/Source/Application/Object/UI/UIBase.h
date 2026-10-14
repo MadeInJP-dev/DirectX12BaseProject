@@ -5,6 +5,7 @@
 #include "Application/Object/UI/Decoration/DecorationDraw.h"
 #include "Application/Object/UI/Core/UIAnchor.h"
 #include "Application/Object/UI/Core/UIInteraction.h"
+#include "Application/Object/UI/Core/UITransition.h"
 
 namespace App::Object
 {
@@ -16,6 +17,7 @@ namespace App::Object
 	//   UIAnchor      … 画面のどこに、どの向き・どの大きさで置くか(位置・大きさ・回転・倍率・色・Z順・湾曲)
 	//   Decoration    … そこから相対で出す絵(板ポリ・画像・文字)。配列で何枚でも重ねられる
 	//   UIInteraction … カーソルへの反応(当たり判定の設定・押下・音)。押せる UI だけが持つ
+	//   UITransition  … 出し入れと合図の演出(拡大して戻る・薄くなって消える など)。全部の飾りの上から掛かる
 	//
 	// テクスチャを1枚だけ持たせる作りをやめたのは、枠と文字とアイコンのように
 	// 複数の絵で1つのUIを組みたいときに、UIを人数ぶん並べるしかなくなるため。
@@ -93,19 +95,31 @@ namespace App::Object
 		/// 画面の中で出したり引っ込めたりするもの(ホームとステージセレクトの
 		/// 出し分けなど)は、消さずにこれで切り替える。
 		///
-		/// 実際に出るかは、上にある UIPanel の表示も合わせて決まる(IsVisibleInHierarchy)
+		/// 実際に出るかは、上にある UIPanel の表示も合わせて決まる(IsVisibleInHierarchy)。
+		/// 切り替わったときは出し入れの演出(UITransition の show / hide)が流れる
 		/// </remarks>
 		bool IsVisible() const override { return m_isVisible; }
-		void SetVisible(bool a_isVisible) override { m_isVisible = a_isVisible; }
+		void SetVisible(bool a_isVisible) override;
 
 		/// <summary>
 		/// 実際に出ているか : 自分の指定と、上にある UIPanel 全部の表示
 		/// </summary>
 		/// <remarks>
 		/// ヒエラルキーの親を GUID で辿る(引くのは対応表なので軽い)。
-		/// 親がパネルでないところは飛ばして、さらに上を見る
+		/// 親がパネルでないところは飛ばして、さらに上を見る。
+		/// 押せるか・進行を止めるかの判断はこちらで行う(消える演出の最中は false)
 		/// </remarks>
 		bool IsVisibleInHierarchy(const Engine::GameObject::ObjectContext& a_context) const;
+
+		/// <summary>
+		/// 描くか : 実際に出ているものに、演出の都合を足したもの
+		/// </summary>
+		/// <remarks>
+		/// 消える演出(hide)の最中は Visible が切れていても描き、
+		/// 合図の間だけ描く UI(PulseOnly)は合図が終わったら描かない。
+		/// 上の UIPanel が隠れていれば、どちらでも描かない
+		/// </remarks>
+		bool IsDrawnInHierarchy(const Engine::GameObject::ObjectContext& a_context) const;
 
 		/// <summary>
 		/// HUD か : プレイヤーが設定画面で HUD を消したとき、一緒に描かれなくなる
@@ -139,6 +153,19 @@ namespace App::Object
 		// 触れるかどうか。切ると乗っても押しても反応しない(Disabled 扱い)
 		bool IsInteractable() const { return m_opInteraction && m_opInteraction->isInteractable; }
 		void SetInteractable(bool a_isInteractable);
+
+		//-----------------------------------------------------------------------
+		// 演出(出し入れと合図)
+		//-----------------------------------------------------------------------
+
+		// 合図の演出を頭から流す(当たった・増えた、など)
+		void PlayPulse() { m_transition.PlayPulse(); }
+
+		// 合図の演出を流している最中か
+		bool IsPulsePlaying() const { return m_transition.IsPulsePlaying(); }
+
+		const UITransition& GetTransition() const { return m_transition; }
+		UITransition& RefTransition() { return m_transition; }
 
 		//-----------------------------------------------------------------------
 		// アンカー
@@ -323,6 +350,13 @@ namespace App::Object
 		// 飾り(保存される) : 配列の順に描くので、後ろにあるものほど手前に出る
 		std::vector<Decoration::Decoration> m_decorationVec = {};
 
+		// 出し入れと合図の演出(保存される)。全部の飾りの上から掛かる
+		UITransition m_transition = {};
+
+		// 読み込みで演出の値が読めたか(保存しない)。
+		// 演出を持つ前のデータなら false。継承先が自分の古い値から演出へ移すかどうかの判断に使う
+		bool m_isTransitionLoaded = false;
+
 	private:
 
 		// 旧形式(テクスチャ1枚)から飾りへ移し替える(読み込みの最後から)
@@ -357,6 +391,15 @@ namespace App::Object
 
 		// インスペクター : カーソルへの反応(判定の範囲の表示を含む)
 		void DrawInteractionInspector(Engine::GameObject::ObjectContext& a_context);
+
+		// インスペクター : 出し入れと合図の演出(確認用に流すボタンを含む)
+		void DrawTransitionInspector();
+
+		// 上にある UIPanel が全部出ているか(自分の Visible は見ない)
+		bool IsParentPanelsVisible(const Engine::GameObject::ObjectContext& a_context) const;
+
+		// 描く前の差し替えに、演出の値を掛ける
+		Decoration::DrawOverride ApplyTransition(const Decoration::DrawOverride& a_override) const;
 
 	private:
 

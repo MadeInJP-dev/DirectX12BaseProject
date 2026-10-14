@@ -35,15 +35,17 @@ namespace App::Object
 	///
 	/// ・桁は左から順に置く。表示桁数は固定で、足りないぶんは 0 で埋める
 	///   (桁数で幅が変わると、加算のたびに数字が横へずれて読みにくいため)。
+	///
+	/// ・増えた瞬間の弾み方は UIBase の演出(Transition の Pulse)で決める。ここは合図を出すだけ。
 	/// </summary>
 	class ScoreHUD : public UIBase
 	{
 	public:
 
 		// 押されることのない HUD なので、カーソルへの反応を持たない
-		ScoreHUD() : UIBase(false) {}
+		ScoreHUD();
 
-		// 更新処理 : 合計を読み、増えたフレームは弾ませる
+		// 更新処理 : 合計を読み、増えたフレームは合図を流す
 		void Update(Engine::GameObject::ObjectContext& a_context) override;
 
 		// 描画処理 : 桁ぶんの数字を並べる
@@ -71,8 +73,10 @@ namespace App::Object
 		void DrawDigit(
 			Engine::GameObject::ObjectContext& a_context,
 			int a_digit,
-			int a_index,
-			float a_scale);
+			int a_index);
+
+		// 演出を持つ前のデータ : 自分で持っていた弾み方を演出へ移す
+		void MigrateLegacyTransition();
 
 	private:
 
@@ -84,14 +88,15 @@ namespace App::Object
 		int   m_atlasCount   = 10;		// テクスチャに並んでいるコマ数(0〜9 なら 10)
 		float m_digitSpacing = 0.0f;	// 桁と桁の間隔(px)。0 で隙間なく並ぶ
 
-		// 増えた瞬間の演出。0 にすると弾まない
-		float m_punchScale = 1.3f;		// 増えたフレームの拡大率
-		float m_punchTime  = 0.2f;		// 元の大きさへ戻るまでの秒数
+		// ---- 旧形式の名残(保存される) ----
+		// 弾み方を演出(Transition の Pulse)へ移す前の値。保存の並びを保つために読み書きは続けるが、
+		// 使うのは演出を持たないデータを読んだときの移し替えだけ
+		float m_legacyPunchScale = 1.3f;	// 増えたフレームの拡大率
+		float m_legacyPunchTime  = 0.2f;	// 元の大きさへ戻るまでの秒数
 
 		// ---- ランタイム ----
 		int   m_value      = 0;			// 表示している数(GlobalGameContext から毎フレーム貰う)
 		int   m_prevValue  = 0;			// 前フレームの数。増えた瞬間を見るために覚えておく
 		bool  m_isFirst    = true;		// 初回か(出た瞬間に弾ませないための印)
-		float m_punchTimer = 0.0f;		// 戻るまでの残り時間(秒)
 	};
 }

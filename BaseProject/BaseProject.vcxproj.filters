@@ -1569,6 +1569,9 @@
     <ClCompile Include="Source\Application\Object\UI\Core\UIInteraction.cpp">
       <Filter>Source\Application\Object\UI\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Core\UITransition.cpp">
+      <Filter>Source\Application\Object\UI\Core</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\Widget\UIPanel\UIPanel.cpp">
       <Filter>Source\Application\Object\UI\Widget\UIPanel</Filter>
     </ClCompile>
@@ -3165,6 +3168,9 @@
       <Filter>Source\Application\Object\UI\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\Core\UIInteraction.h">
+      <Filter>Source\Application\Object\UI\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\Core\UITransition.h">
       <Filter>Source\Application\Object\UI\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\Widget\UIPanel\UIPanel.h">

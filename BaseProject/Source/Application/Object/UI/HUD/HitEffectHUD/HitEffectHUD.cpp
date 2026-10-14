@@ -19,6 +19,34 @@ namespace App::Object
 		constexpr float DEFAULT_MARK_SIZE = 64.0f;
 	}
 
+	HitEffectHUD::HitEffectHUD() : UIBase(false)
+	{
+		m_isHUD = true;
+
+		// 新しく置いたときの出し方 : 当たった瞬間に少し大きく出て、薄くなりながら戻って消える
+		MigrateLegacyTransition();
+	}
+
+	//======================================================================================
+	// 旧形式からの引き継ぎ
+	//--------------------------------------------------------------------------------------
+	// 以前は「出しておく時間・消えぎわに薄くするか・出た瞬間の拡大率」を自分で持ち、
+	// 残り時間の割合で倍率と色を直線で動かしていた。同じ動きになるよう演出の合図へ移す
+	//======================================================================================
+	void HitEffectHUD::MigrateLegacyTransition()
+	{
+		UITransitionClip& _pulse = m_transition.pulse;
+		_pulse.duration = m_legacyShowTime;
+		_pulse.ease = Decoration::EEase::Linear;
+		_pulse.startAlpha = 1.0f;
+		_pulse.endAlpha = m_legacyIsFadeOut ? 0.0f : 1.0f;
+		_pulse.startScale = m_legacyPunchScale;
+		_pulse.endScale = 1.0f;
+
+		// 合図の間だけ描く
+		m_transition.isPulseOnly = true;
+	}
+
 	void HitEffectHUD::PostDeserialize(Engine::GameObject::ObjectContext& a_context)
 	{
 		if (!a_context.pServices || !a_context.pServices->pOptionManager) return;
@@ -87,7 +115,7 @@ namespace App::Object
 		++m_hitCount;
 
 		// 出ている最中に当たったら、そこから出し直す
-		m_remainTime = m_showTime;
+		PlayPulse();
 
 		// 間引き中は鳴らさない(連射で頭出しを繰り返して潰れるのを防ぐ)
 		if (m_coolTime > 0.0f) return;
@@ -104,12 +132,11 @@ namespace App::Object
 
 	void HitEffectHUD::Update(Engine::GameObject::ObjectContext& a_context)
 	{
-		// 飾りのアニメーションを進める
+		// 飾りのアニメーションと演出を進める
 		UIBase::Update(a_context);
 
-		// 表示時間と間引きを進める
-		if (m_remainTime > 0.0f) m_remainTime = std::max(m_remainTime - a_context.dt, 0.0f);
-		if (m_coolTime > 0.0f)   m_coolTime   = std::max(m_coolTime - a_context.dt, 0.0f);
+		// 間引きを進める
+		if (m_coolTime > 0.0f) m_coolTime = std::max(m_coolTime - a_context.dt, 0.0f);
 
 		auto* _pWorld = a_context.pWorld;
 		if (!_pWorld) return;
@@ -138,26 +165,6 @@ namespace App::Object
 		OnHit(a_context);
 	}
 
-	void HitEffectHUD::Draw(Engine::GameObject::ObjectContext& a_context)
-	{
-		if (m_remainTime <= 0.0f) return;
-
-		// 残り時間の割合(1 → 0)。出た瞬間が 1
-		const float _rate = (m_showTime > 1e-4f)
-			? std::clamp(m_remainTime / m_showTime, 0.0f, 1.0f)
-			: 1.0f;
-
-		Decoration::DrawOverride _override = {};
-
-		// 出た瞬間だけ少し大きく見せる(punchScale → 等倍へ戻る)
-		_override.scale = 1.0f + (m_punchScale - 1.0f) * _rate;
-
-		// 消えぎわに薄くする : 掛ける色なので、飾りごとの色はそのまま残る
-		if (m_isFadeOut) _override.tint.a = _rate;
-
-		DrawDecorations(a_context, _override);
-	}
-
 	void HitEffectHUD::Archive(Engine::Persistence::Archive& a_ar, Engine::GameObject::ObjectContext& a_context)
 	{
 		// テクスチャ・色・サイズなどの共通ぶん
@@ -169,14 +176,17 @@ namespace App::Object
 
 		a_ar.GUIDField("SoundGUID", m_soundGUID);
 		a_ar.Field("Volume", m_volume);
-		a_ar.Field("ShowTime", m_showTime);
+		a_ar.Field("ShowTime", m_legacyShowTime);
 		a_ar.Field("MinInterval", m_minInterval);
-		a_ar.Field("IsFadeOut", m_isFadeOut);
-		a_ar.Field("PunchScale", m_punchScale);
+		a_ar.Field("IsFadeOut", m_legacyIsFadeOut);
+		a_ar.Field("PunchScale", m_legacyPunchScale);
 
-		// 読み込み時は復元したGUIDでサウンドを取り直す
 		if (a_ar.IsLoading())
 		{
+			// 演出を持つ前のシーンは、自分で持っていた出し方を移す
+			if (!m_isTransitionLoaded) MigrateLegacyTransition();
+
+			// 復元したGUIDでサウンドを取り直す
 			CreateSound(a_context);
 		}
 	}
@@ -210,17 +220,15 @@ namespace App::Object
 		}
 
 		Engine::EditorField::Line();
-		Engine::EditorField::Field("ShowTime", m_showTime, 0.01f, 0.0f, 5.0f);
 		Engine::EditorField::Field("MinInterval", m_minInterval, 0.01f, 0.0f, 1.0f);
-		Engine::EditorField::Field("FadeOut", m_isFadeOut);
-		Engine::EditorField::Field("PunchScale", m_punchScale, 0.01f, 0.1f, 4.0f);
+		Engine::EditorField::HelpText("出し方(時間・拡大・薄くなり方)は Transition の Pulse で決めます");
 
 		// 確認用に鳴らしてみる
 		if (Engine::EditorField::Button("Test")) OnHit(a_context);
 
 		Engine::EditorField::Line();
 		Engine::EditorField::Value("HitCount", "%d", m_hitCount);
-		Engine::EditorField::Value("Remain", "%.2f", m_remainTime);
+		Engine::EditorField::Value("Showing", "%s", IsPulsePlaying() ? "yes" : "no");
 		Engine::EditorField::Tooltip("自分が撃った弾が HealthComponent 持ちに当たったフレームに反応します");
 	}
 }

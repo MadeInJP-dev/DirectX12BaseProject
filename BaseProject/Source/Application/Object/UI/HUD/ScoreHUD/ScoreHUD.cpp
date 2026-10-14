@@ -10,6 +10,29 @@
 
 namespace App::Object
 {
+	ScoreHUD::ScoreHUD() : UIBase(false)
+	{
+		// 新しく置いたときの弾み方 : 増えた瞬間に大きくなって戻る
+		MigrateLegacyTransition();
+	}
+
+	//======================================================================================
+	// 旧形式からの引き継ぎ
+	//--------------------------------------------------------------------------------------
+	// 以前は「拡大率・戻るまでの秒数」を自分で持ち、残り時間の割合で倍率を直線で戻していた。
+	// 同じ動きになるよう演出の合図へ移す(色は変えない)
+	//======================================================================================
+	void ScoreHUD::MigrateLegacyTransition()
+	{
+		UITransitionClip& _pulse = m_transition.pulse;
+		_pulse.duration = m_legacyPunchTime;
+		_pulse.ease = Decoration::EEase::Linear;
+		_pulse.startAlpha = 1.0f;
+		_pulse.endAlpha = 1.0f;
+		_pulse.startScale = m_legacyPunchScale;
+		_pulse.endScale = 1.0f;
+	}
+
 	//======================================================================================
 	// 出す数を GlobalGameContext から取る
 	//======================================================================================
@@ -35,14 +58,8 @@ namespace App::Object
 
 	void ScoreHUD::Update(Engine::GameObject::ObjectContext& a_context)
 	{
-		// 飾りのアニメーションを進める
+		// 飾りのアニメーションと演出を進める
 		UIBase::Update(a_context);
-
-		// 戻りを進める
-		if (m_punchTimer > 0.0f)
-		{
-			m_punchTimer = std::max(m_punchTimer - a_context.dt, 0.0f);
-		}
 
 		m_value = PickValue(InstanceResource::GameDataResource::Find(a_context.pWorld));
 
@@ -58,7 +75,7 @@ namespace App::Object
 		//==================================================================
 		if (!m_isFirst && m_value > m_prevValue)
 		{
-			m_punchTimer = m_punchTime;
+			PlayPulse();
 		}
 
 		m_prevValue = m_value;
@@ -68,8 +85,7 @@ namespace App::Object
 	void ScoreHUD::DrawDigit(
 		Engine::GameObject::ObjectContext& a_context,
 		int a_digit,
-		int a_index,
-		float a_scale)
+		int a_index)
 	{
 		// 桁の送りは「元の大きさ」で決める。
 		// 弾んでいる間の大きさで送ると、拡大するたびに桁が横へ広がってしまう
@@ -88,7 +104,6 @@ namespace App::Object
 		_override.isUsePos = true;
 		_override.pixelPos = m_anchor.pixelPos;
 		_override.pixelPos.x += _step * static_cast<float>(a_index);
-		_override.scale = a_scale;
 
 		_override.isUseUvScale = true;
 		_override.uvScale = { _cellWidth, 1.0f };
@@ -101,14 +116,6 @@ namespace App::Object
 	{
 		if (!a_context.pServices || !a_context.pServices->pMainEngine) return;
 		if (m_digitCount <= 0 || m_atlasCount <= 0) return;
-
-		// 弾みの割合(1 → 0)。増えた瞬間が 1
-		float _rate = 0.0f;
-		if (m_punchTime > 1e-4f)
-		{
-			_rate = std::clamp(m_punchTimer / m_punchTime, 0.0f, 1.0f);
-		}
-		const float _scale = 1.0f + (m_punchScale - 1.0f) * _rate;
 
 		//--------------------------------------------------------------
 		// 桁を左から並べる
@@ -135,7 +142,7 @@ namespace App::Object
 			if (_divisor <= 0) break;
 
 			const int _digit = (_value / _divisor) % 10;
-			DrawDigit(a_context, _digit, _i, _scale);
+			DrawDigit(a_context, _digit, _i);
 
 			_divisor /= 10;
 		}
@@ -154,8 +161,11 @@ namespace App::Object
 		a_ar.Field("DigitCount", m_digitCount);
 		a_ar.Field("AtlasCount", m_atlasCount);
 		a_ar.Field("DigitSpacing", m_digitSpacing);
-		a_ar.Field("PunchScale", m_punchScale);
-		a_ar.Field("PunchTime", m_punchTime);
+		a_ar.Field("PunchScale", m_legacyPunchScale);
+		a_ar.Field("PunchTime", m_legacyPunchTime);
+
+		// 演出を持つ前のシーンは、自分で持っていた弾み方を移す
+		if (a_ar.IsLoading() && !m_isTransitionLoaded) MigrateLegacyTransition();
 	}
 
 	void ScoreHUD::DrawInspector(Engine::GameObject::ObjectContext& a_context)
@@ -185,10 +195,7 @@ namespace App::Object
 		Engine::EditorField::Field("DigitSpacing", m_digitSpacing, 0.5f);
 		Engine::EditorField::Tooltip("桁と桁の間隔(px)。アンカーの PixelSize.x が1桁ぶんの送り幅");
 
-		Engine::EditorField::Line();
-		Engine::EditorField::Field("PunchScale", m_punchScale, 0.01f, 1.0f, 4.0f);
-		Engine::EditorField::Field("PunchTime", m_punchTime, 0.01f, 0.0f, 2.0f);
-		Engine::EditorField::Tooltip("スコアが増えたフレームだけ大きくして戻す");
+		Engine::EditorField::HelpText("増えたフレームの弾み方は Transition の Pulse で決めます");
 
 		Engine::EditorField::Line();
 

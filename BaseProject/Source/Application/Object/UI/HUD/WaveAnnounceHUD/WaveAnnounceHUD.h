@@ -17,15 +17,17 @@ namespace App::Object
 	///   影付きにしたいときは同じ文字を2枚重ねて色と位置をずらせばよい。
 	///   枠や背景は Polygon / Image の飾りとして並べれば一緒に出る。
 	///
-	/// ・出ている間だけ描く。出た瞬間だけ少し大きく見せ、消えぎわに薄くするのは
-	///   HitEffectHUD と同じ作り(掛ける色と倍率の差し替えだけで、飾りの値は触らない)。
+	/// ・出し方(出た瞬間だけ少し大きく見せ、消えぎわに薄くする)は UIBase の演出
+	///   (Transition の Pulse)で決める。ウェーブが出るたびに合図を流し、流している間だけ描く。
+	///   HitEffectHUD と同じ作り。
 	/// </summary>
 	class WaveAnnounceHUD : public UIBase
 	{
 	public:
 
-		// 押されることのない HUD なので、カーソルへの反応を持たない
-		WaveAnnounceHUD() : UIBase(false) { m_isHUD = true; }	// ゲーム中の HUD : プレイヤーが HUD を消すと一緒に消える
+		// 押されることのない HUD なので、カーソルへの反応を持たない。
+		// ゲーム中の HUD : プレイヤーが HUD を消すと一緒に消える
+		WaveAnnounceHUD();
 
 		// 初期化処理 : 飾りの絵と音を用意する
 		void PostDeserialize(Engine::GameObject::ObjectContext& a_context) override;
@@ -36,9 +38,6 @@ namespace App::Object
 
 		// 更新処理 : ウェーブが出ていないか見て、出ていたら出し直す
 		void Update(Engine::GameObject::ObjectContext& a_context) override;
-
-		// 描画処理 : 表示時間が残っている間だけ描く
-		void Draw(Engine::GameObject::ObjectContext& a_context) override;
 
 		// アーカイブ
 		void Archive(Engine::Persistence::Archive& a_ar, Engine::GameObject::ObjectContext& a_context) override;
@@ -55,7 +54,10 @@ namespace App::Object
 
 	private:
 
-		// ウェーブが出たときの反応(文字の差し替え・表示時間の巻き戻し・発音)
+		// 演出を持つ前のデータ : 自分で持っていた出し方を演出へ移す
+		void MigrateLegacyTransition();
+
+		// ウェーブが出たときの反応(文字の差し替え・合図の出し直し・発音)
 		void OnWaveSpawned(Engine::GameObject::ObjectContext& a_context, int a_waveIndex, int a_waveCount);
 
 		// 出す文字列を組む(例 : "WAVE 3" / "WAVE 3 / 6")
@@ -74,10 +76,12 @@ namespace App::Object
 		Engine::Handle<Engine::Resource::SoundInstance> m_soundHandle = {};
 		float m_volume = 1.0f;
 
-		// ---- 表示(保存される) ----
-		float m_showTime  = 2.0f;		// 1回で出しておく時間(秒)
-		bool  m_isFadeOut = true;		// 消えぎわに薄くするか
-		float m_punchScale = 1.35f;		// 出た瞬間の拡大率(等倍へ戻る)
+		// ---- 旧形式の名残(保存される) ----
+		// 出し方を演出(Transition の Pulse)へ移す前の値。保存の並びを保つために読み書きは続けるが、
+		// 使うのは演出を持たないデータを読んだときの移し替えだけ
+		float m_legacyShowTime   = 2.0f;	// 1回で出しておく時間(秒)
+		bool  m_legacyIsFadeOut  = true;	// 消えぎわに薄くするか
+		float m_legacyPunchScale = 1.35f;	// 出た瞬間の拡大率
 
 		// 文字の組み立て。番号は1始まりで出す(データ上は0始まり)
 		std::string m_prefix      = "WAVE ";
@@ -85,7 +89,6 @@ namespace App::Object
 		std::string m_separator   = " / ";
 
 		// ---- 状態(保存しない) ----
-		float    m_remainTime = 0.0f;	// 残りの表示時間(秒)
 		uint32_t m_lastSerial = 0;		// 前回反応したときの通し番号
 		int      m_lastWaveIndex = -1;	// 最後に出したウェーブ(インスペクター表示用)
 	};
