@@ -6,12 +6,26 @@ namespace Engine::Graphics
 	// ※ HLSL 側(UIData.hlsli)と値を合わせること
 	inline constexpr UINT UI_POST_EFFECT_SCAN_LINE = 1u << 0;	// ScanLinePass を掛ける
 
+	// UIに掛ける効果(UIData::effectType)。UIPS がこれを見て色の作り方を変える。
+	// 選ぶのは UI のマテリアル(Engine::Resource::UIMaterial)
+	// ※ HLSL 側(UIData.hlsli の UI_EFFECT_*)と値を合わせること。値は保存されるので末尾へ足す
+	enum class EUIEffect : uint32_t
+	{
+		None = 0,		// 何もしない(テクスチャ × 色)
+		Dissolve = 1,	// ノイズで虫食いに消す。縁に色を乗せる
+	};
+
+	// ノイズのテクスチャを持たないときの印(UIData::noiseTexIndex)。シェーダー内で作ったノイズを使う
+	// ※ HLSL 側(UI_NOISE_TEX_NONE)と値を合わせること
+	inline constexpr UINT UI_NOISE_TEX_NONE = 0xFFFFFFFFu;
+
 	// UIデータ
 	// StructuredBuffer<UIData> と1バイトもズレないよう、16バイト(float4)境界を意識して並べる。
 	// HLSLの構造化バッファは float2 が16バイト境界をまたぐ位置に来ると次の境界へ押し出される。
 	// 各行がちょうど float4 に収まる順序にしておけばパディングのズレが起きない。
 	// (row0: pos+axisX / row1: axisY+uvOffset / row2: color / row3: layer+texIndex+uvScale
-	//  / row4: 湾曲 / row5: clipRect / row6: postEffectFlags)
+	//  / row4: 湾曲 / row5: clipRect / row6: postEffectFlags+効果 / row7: ノイズの座標
+	//  / row8: 縁の色 / row9: 縁の幅)
 	//
 	// 回転・アスペクト補正・ピボットはCPU(SubmitUI)側でピクセル空間で計算し、
 	// クアッド頂点(-1..1)を線形変換する基底(axisX/axisY)とNDC中心座標(pos)として渡す。
@@ -57,9 +71,31 @@ namespace Engine::Graphics
 		Math::Vector4 clipRect = { -1.0e30f, -1.0e30f, 1.0e30f, 1.0e30f };
 
 		// 掛けるポストプロセスの印(UI_POST_EFFECT_*)。
-		// 立っているぶんだけ UIPass がマスクへ書き、そのマスクを見たパスがこのUIにだけ効果を掛ける。
-		// row6 を丸ごと使うので、余りは詰め物
+		// 立っているぶんだけ UIPass がマスクへ書き、そのマスクを見たパスがこのUIにだけ効果を掛ける
 		UINT postEffectFlags = 0;
+
+		//------------------------------------------------------------------
+		// 効果(UIマテリアル)
+		//
+		// ノイズは「UIの原点からのずれ」で引く。1つのUIが枠・中身・文字と
+		// 複数のクアッドに分かれても、同じ座標でノイズを引けば1枚の絵として崩れる
+		// (クアッドごとのUVで引くと、枠と文字がばらばらに虫食いになる)。
+		// 湾曲と同じ考え方で、ずれはUIの共通の座標で測る
+		//------------------------------------------------------------------
+		UINT effectType = 0;						// EUIEffect
+		UINT noiseTexIndex = UI_NOISE_TEX_NONE;		// ノイズのSRVインデックス。無ければシェーダー内のノイズ
+		float effectProgress = 0.0f;				// 進み具合(0 で何もしない・1 で全部消える)
+
+		// row7 : ノイズの座標。noiseUV = (ndc - effectOriginNdc) * noiseUVPerNdc
+		// NDC で渡すのは、画面の解像度を知らない VS でもそのまま計算できるようにするため
+		Math::Vector2 effectOriginNdc = {};			// UIの原点(NDC)
+		Math::Vector2 noiseUVPerNdc = {};			// NDC 1 あたりのノイズの UV(縦横の比と上下の向きを含む)
+
+		// row8 : 縁の色(a は乗せる強さ)
+		Math::Vector4 edgeColor = {};
+
+		// row9 : 縁の幅(ノイズの値の幅)。余りは詰め物
+		float edgeWidth = 0.0f;
 		float pad0 = 0.0f;
 		float pad1 = 0.0f;
 		float pad2 = 0.0f;
@@ -73,6 +109,7 @@ namespace Engine::Graphics
 		// (逆に多めに拾うぶんには、分割板でまっすぐ描かれるだけで害はない)
 		bool IsCurved() const { return curveK != 0.0f; }
 	};
+	static_assert(sizeof(UIData) == 16 * 10, "UIData は float4 の10行ぶん。HLSL 側と並びを合わせること");
 
 	// UIの切り抜き矩形 : 座標はピクセル(左上原点/Y下向き)。
 	// SubmitUI へ渡すと、この外へ出たぶんを描かない(UIData::clipRect へ直して積まれる)

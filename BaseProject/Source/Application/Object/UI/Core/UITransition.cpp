@@ -24,6 +24,7 @@ namespace App::Object
 			UITransitionValue _value = {};
 			_value.alpha = Lerp(a_clip.startAlpha, a_clip.endAlpha, _eased);
 			_value.scale = Lerp(a_clip.startScale, a_clip.endScale, _eased);
+			_value.dissolve = Lerp(a_clip.startDissolve, a_clip.endDissolve, _eased);
 			return _value;
 		}
 
@@ -57,6 +58,9 @@ namespace App::Object
 			Engine::EditorField::Field("StartScale", a_clip.startScale, 0.01f, 0.0f, 4.0f);
 			Engine::EditorField::Field("EndScale", a_clip.endScale, 0.01f, 0.0f, 4.0f);
 			Engine::EditorField::Tooltip("大きさへ掛ける(1 で等倍)");
+			Engine::EditorField::Field("StartDissolve", a_clip.startDissolve, 0.01f, 0.0f, 1.0f);
+			Engine::EditorField::Field("EndDissolve", a_clip.endDissolve, 0.01f, 0.0f, 1.0f);
+			Engine::EditorField::Tooltip("ディゾルブの進み具合(0 で変化なし・1 で全部消える)\nディゾルブの UIマテリアルを付けたときだけ効く");
 		}
 	}
 
@@ -128,6 +132,9 @@ namespace App::Object
 			const UITransitionValue _pulse = CalcClipValue(pulse, pulseTime);
 			_value.alpha *= _pulse.alpha;
 			_value.scale *= _pulse.scale;
+
+			// 消え具合は「残っている割合」を掛け合わせる(どちらかが 1 なら全部消える)
+			_value.dissolve = 1.0f - (1.0f - _value.dissolve) * (1.0f - _pulse.dissolve);
 		}
 
 		return _value;
@@ -153,6 +160,16 @@ namespace App::Object
 		ArchiveClip(a_ar, "TransitionShow", show);
 		ArchiveClip(a_ar, "TransitionHide", hide);
 		ArchiveClip(a_ar, "TransitionPulse", pulse);
+
+		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
+
+		// ディゾルブ(区切りの中は並び順で読むので、演出1回ぶんの保存には混ぜずにここへ並べる)
+		a_ar.Field("TransitionShowStartDissolve", show.startDissolve);
+		a_ar.Field("TransitionShowEndDissolve", show.endDissolve);
+		a_ar.Field("TransitionHideStartDissolve", hide.startDissolve);
+		a_ar.Field("TransitionHideEndDissolve", hide.endDissolve);
+		a_ar.Field("TransitionPulseStartDissolve", pulse.startDissolve);
+		a_ar.Field("TransitionPulseEndDissolve", pulse.endDissolve);
 
 		return a_ar.IsLoading() && _hasTransition;
 	}

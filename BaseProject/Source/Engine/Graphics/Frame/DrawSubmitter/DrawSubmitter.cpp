@@ -311,8 +311,19 @@ namespace Engine::Graphics
 		auto* _pTex = _resourceManager.Get(a_desc.texHandle);
 		if (!_pTex) return;
 
+		// 効果のノイズ : 指定が無い・まだ届いていないときはシェーダー内のノイズで代わりにする
+		// (届くまで描かないと、ディゾルブの最中にUIごと消えてしまうため)
+		uint32_t _noiseTexIndex = UI_NOISE_TEX_NONE;
+		if (a_desc.effect.noiseTexHandle.IsValid() && _resourceManager.IsReady(a_desc.effect.noiseTexHandle))
+		{
+			if (const auto* _pNoise = _resourceManager.Get(a_desc.effect.noiseTexHandle))
+			{
+				_noiseTexIndex = _pNoise->GetSRV().GetIndex();
+			}
+		}
+
 		// サイズは呼び出し側の指定値をそのまま使う
-		PushUIData(_pTex->GetSRV().GetIndex(), a_desc);
+		PushUIData(_pTex->GetSRV().GetIndex(), _noiseTexIndex, a_desc);
 	}
 
 	//------------------------------------------------------------------------------------------
@@ -670,7 +681,7 @@ namespace Engine::Graphics
 		a_outCount = static_cast<uint32_t>(_levelCount);
 	}
 
-	void DrawSubmitter::PushUIData(uint32_t a_texIndex, const SpriteSubmitDesc& a_desc)
+	void DrawSubmitter::PushUIData(uint32_t a_texIndex, uint32_t a_noiseTexIndex, const SpriteSubmitDesc& a_desc)
 	{
 		// スクリーン解像度(px)
 		const float _w = static_cast<float>(m_renderWidth);
@@ -740,6 +751,35 @@ namespace Engine::Graphics
 		}
 
 		_data.postEffectFlags = a_desc.postEffectFlags;
+
+		//--------------------------------------------------------------
+		// 効果(UIマテリアル)
+		//
+		// ノイズの座標は NDC で渡す。原点は点なので原点シフトあり、
+		// 1px あたりの量は方向なので Y の向きだけ反転する(ピクセルは下向き、NDC は上向き)。
+		//   noiseUV = (ndc - originNdc) * noiseUVPerNdc
+		//           = (px - originPx) / noisePixel
+		//--------------------------------------------------------------
+		const UIEffectDesc& _effect = a_desc.effect;
+		_data.effectType = _effect.effect;
+		if (_effect.effect != static_cast<uint32_t>(EUIEffect::None))
+		{
+			_data.noiseTexIndex = a_noiseTexIndex;
+			_data.effectProgress = _effect.progress;
+			_data.effectOriginNdc = {
+				_effect.originPixel.x / _w * 2.0f - 1.0f,
+				1.0f - _effect.originPixel.y / _h * 2.0f
+			};
+
+			const float _noisePixel = std::max(_effect.noisePixel, 1.0f);
+			_data.noiseUVPerNdc = {
+				 (_w * 0.5f) / _noisePixel,
+				-(_h * 0.5f) / _noisePixel
+			};
+
+			_data.edgeColor = Math::DX::ToVector4(_effect.edgeColor);
+			_data.edgeWidth = _effect.edgeWidth;
+		}
 
 		m_pDrawLists->AddUI(_data);
 	}

@@ -14,6 +14,9 @@ namespace Engine::Resource
 		// フォント : アトラステクスチャを ResourceRef で握っているのでテクスチャより先に捨てる
 		ReleaseData<Font>();
 
+		// UIマテリアル : ノイズのテクスチャを ResourceRef で握っているのでテクスチャより先に捨てる
+		ReleaseData<UIMaterial>();
+
 		ReleaseData<Model>();
 		ReleaseData<Material>();
 		ReleaseData<Mesh>();
@@ -61,6 +64,9 @@ namespace Engine::Resource
 		// フォントもアトラステクスチャを ResourceRef で握っているので、テクスチャより先に片付ける
 		SweepUnused<Font>();
 
+		// UIマテリアルもノイズのテクスチャを握っているので、テクスチャより先に片付ける
+		SweepUnused<UIMaterial>();
+
 		// モデルは中身(メッシュ・マテリアル・アニメーション)を ResourceRef で握っているので、
 		// モデルが消えた後でないと下は 0 にならない
 		SweepUnused<Model>();
@@ -98,6 +104,7 @@ namespace Engine::Resource
 		if (_type == "Texture")					{ a_func(std::type_identity<Texture>{});				return true; }
 		if (_type == "EffectAsset")				{ a_func(std::type_identity<EffectAsset>{});			return true; }
 		if (_type == "Font")					{ a_func(std::type_identity<Font>{});					return true; }
+		if (_type == "UIMaterial")				{ a_func(std::type_identity<UIMaterial>{});				return true; }
 		if (_type == "Mesh")					{ a_func(std::type_identity<Mesh>{});					return true; }
 		if (_type == "Material")				{ a_func(std::type_identity<Material>{});				return true; }
 		if (_type == "Animation")				{ a_func(std::type_identity<AnimationData>{});			return true; }

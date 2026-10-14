@@ -12,6 +12,7 @@
 #include "AnimatorEdit/AnimatorEdit.h"
 #include "AudioBehaviorEdit/AudioBehaviorEdit.h"
 #include "EffectAssetEdit/EffectAssetEdit.h"
+#include "UIMaterialEdit/UIMaterialEdit.h"
 
 #include "Engine/Resource/Data/EffectPrefab/EffectPrefab.h"
 #include "Editor/EffectEditor/EffectEditor.h"
@@ -181,6 +182,19 @@ namespace Editor::Inspector
 		if (!_pShader) { return; }
 
 		ShaderEdit(a_editContext, _pShader);
+	}
+
+	//-----------------------------------------------------------------------------------------
+	// UIマテリアル
+	//-----------------------------------------------------------------------------------------
+	void UIMaterialDraw(EditorContext& a_editContext)
+	{
+		auto _guid = a_editContext.pAssetProp->guid;
+
+		auto* _pMaterial = ResolveAsset<Resource::UIMaterial>(*a_editContext.pServices->pResourceManager, _guid);
+		if (!_pMaterial) { return; }
+
+		UIMaterialEdit(a_editContext, _pMaterial);
 	}
 
 	//-----------------------------------------------------------------------------------------

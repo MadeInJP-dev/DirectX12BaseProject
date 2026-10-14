@@ -7,13 +7,23 @@
 //    float2 が16バイト境界をまたぐ位置に来ると次の境界へ押し出されるので、
 //    各行がちょうど float4 に収まる順序を崩さないこと
 //    (row0: pos+axisX / row1: axisY+uvOffset / row2: color / row3: layer+texIndex+uvScale
-//     / row4: 湾曲 / row5: clipRect / row6: postEffectFlags)
+//     / row4: 湾曲 / row5: clipRect / row6: postEffectFlags+効果 / row7: ノイズの座標
+//     / row8: 縁の色 / row9: 縁の幅)
 #ifndef ROOTPARAM_UI_DATA_HLSLI
 #define ROOTPARAM_UI_DATA_HLSLI
 
 // UIに掛けるポストプロセスの印(UIData::postEffectFlags のビット)
 // ※ CPU 側 Engine::Graphics::UI_POST_EFFECT_* と値を合わせること
 #define UI_POST_EFFECT_SCAN_LINE (1u << 0)	// ScanLinePass を掛ける
+
+// UIに掛ける効果(UIData::effectType)
+// ※ CPU 側 Engine::Graphics::EUIEffect と値を合わせること
+#define UI_EFFECT_NONE		0u	// 何もしない
+#define UI_EFFECT_DISSOLVE	1u	// ノイズで虫食いに消す
+
+// ノイズのテクスチャを持たないときの印(シェーダー内のノイズを使う)
+// ※ CPU 側 Engine::Graphics::UI_NOISE_TEX_NONE と値を合わせること
+#define UI_NOISE_TEX_NONE	0xFFFFFFFFu
 
 struct UIData
 {
@@ -49,6 +59,18 @@ struct UIData
 
 	// 掛けるポストプロセスの印(UI_POST_EFFECT_*)。UIPS が効果ごとのマスクへ書き分ける
 	uint postEffectFlags;
+
+	// 効果(UIマテリアル)。ノイズはUIの原点からのずれで引く(枠も文字も1枚の絵として崩れるように)
+	uint effectType;		// UI_EFFECT_*
+	uint noiseTexIndex;		// ノイズのSRVインデックス。UI_NOISE_TEX_NONE ならシェーダー内のノイズ
+	float effectProgress;	// 進み具合(0 で何もしない・1 で全部消える)
+
+	float2 effectOriginNdc;	// UIの原点(NDC)
+	float2 noiseUVPerNdc;	// noiseUV = (ndc - effectOriginNdc) * noiseUVPerNdc
+
+	float4 edgeColor;		// 縁の色(a は乗せる強さ)
+
+	float edgeWidth;		// 縁の幅(ノイズの値の幅)
 	float pad0;
 	float pad1;
 	float pad2;

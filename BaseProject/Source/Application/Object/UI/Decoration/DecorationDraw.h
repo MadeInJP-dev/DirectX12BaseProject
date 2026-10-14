@@ -11,7 +11,7 @@
 //==========================================================================================
 // 描画命令の積み先。ヘッダーでは前方宣言だけにして、実装側で GraphicsEngine.h を読む
 namespace Engine::Graphics { class GraphicsEngine; }
-namespace Engine::Resource { class ResourceManager; }
+namespace Engine::Resource { class ResourceManager; struct UIMaterial; }
 
 namespace App::Object::Decoration
 {
@@ -52,6 +52,10 @@ namespace App::Object::Decoration
 
 		// スキャンライン(ScanLinePass)を掛けるか。UIAnchor::isScanLine がそのまま入る
 		bool isScanLine = false;
+
+		// 掛ける効果(UIマテリアル)。UI 単位で1つ持ち、飾りは全部これに従う。
+		// 読み込み中・未指定なら nullptr(何も掛けない)。指すだけで持ち主は UI
+		const Engine::Resource::UIMaterial* pMaterial = nullptr;
 	};
 
 	//======================================================================================
@@ -90,6 +94,13 @@ namespace App::Object::Decoration
 		// 群の絞り込み : 立てるとこの群のデコレーションだけ描く
 		bool isUseGroup = false;
 		uint32_t group = 0;
+
+		/// <summary>ディゾルブの進み具合(0 で何もしない・1 で全部消える)</summary>
+		/// <remarks>
+		/// UIマテリアルの効果がディゾルブのときだけ効く(マテリアルが無ければ何も起きない)。
+		/// 出し入れの演出(UITransition)はここへ入れる
+		/// </remarks>
+		float dissolve = 0.0f;
 	};
 
 	//======================================================================================

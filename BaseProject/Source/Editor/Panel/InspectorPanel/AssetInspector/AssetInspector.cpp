@@ -137,5 +137,9 @@ namespace Editor::Inspector
 		{
 			EffectPrefabDraw(a_editContext);
 		}
+		else if (_type == "UIMaterial")
+		{
+			UIMaterialDraw(a_editContext);
+		}
 	}
 }

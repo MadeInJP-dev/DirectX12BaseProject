@@ -514,6 +514,7 @@ namespace Engine::Resource
 		ResourceData<EffectPrefab> m_effectPrefabData;							// エフェクトプレハブ(炊いたら時間で消える大きな演出)
 		ResourceData<EffectAsset> m_effectAssetData;							// エフェクト(パーティクル+メッシュ)
 		ResourceData<Font> m_fontData;											// フォント(.ttf/.otf/.ttc)
+		ResourceData<UIMaterial> m_uiMaterialData;								// UIマテリアル(UIに掛ける効果)
 		ResourceData<Graphics::Pipeline::RenderingPipelineAsset> m_renderingPipelineData;	// レンダリングパイプライン(レンダーグラフの設計図)
 
 		// 非同期ロードの実行先 : 未登録なら同期で読む
@@ -1218,6 +1219,7 @@ namespace Engine::Resource
 	template<> inline ResourceData<EffectAsset>& ResourceManager::RefData<EffectAsset>() { return m_effectAssetData; }
 	template<> inline ResourceData<EffectPrefab>& ResourceManager::RefData<EffectPrefab>() { return m_effectPrefabData; }
 	template<> inline ResourceData<Font>& ResourceManager::RefData<Font>() { return m_fontData; }
+	template<> inline ResourceData<UIMaterial>& ResourceManager::RefData<UIMaterial>() { return m_uiMaterialData; }
 	template<> inline ResourceData<Graphics::Pipeline::RenderingPipelineAsset>& ResourceManager::RefData<Graphics::Pipeline::RenderingPipelineAsset>() { return m_renderingPipelineData; }
 
 	// プールの取得
@@ -1235,6 +1237,7 @@ namespace Engine::Resource
 	template<> inline const ResourceData<EffectAsset>& ResourceManager::GetData<EffectAsset>() const { return m_effectAssetData; }
 	template<> inline const ResourceData<EffectPrefab>& ResourceManager::GetData<EffectPrefab>() const { return m_effectPrefabData; }
 	template<> inline const ResourceData<Font>& ResourceManager::GetData<Font>() const { return m_fontData; }
+	template<> inline const ResourceData<UIMaterial>& ResourceManager::GetData<UIMaterial>() const { return m_uiMaterialData; }
 	template<> inline const ResourceData<Graphics::Pipeline::RenderingPipelineAsset>& ResourceManager::GetData<Graphics::Pipeline::RenderingPipelineAsset>() const { return m_renderingPipelineData; }
 }
 

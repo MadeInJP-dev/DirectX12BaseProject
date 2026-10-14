@@ -6,6 +6,7 @@
 //   カーソルへの反応 … UIInteraction::DrawSettingsInspector / DrawSoundInspector
 //   飾り1つ       … Decoration::DrawDecorationInspector
 //   演出          … UITransition::DrawSettingsInspector
+//   マテリアル     … アセット(UIMaterial)を指すだけ。中身はアセットのインスペクターで編集する
 // ここはそれを並べ、UIBase でしか分からないもの(判定の範囲・取り合いの結果・飾りの一覧)を足す
 //==========================================================================================
 #include "UIBase.h"
@@ -50,6 +51,9 @@ namespace App::Object
 
 		// カーソルへの反応(押せる UI だけ)
 		if (m_opInteraction) DrawInteractionInspector(a_context);
+
+		// 飾り全部に掛ける効果
+		DrawMaterialInspector(a_context);
 
 		// 出し入れと合図の演出
 		DrawTransitionInspector();
@@ -114,6 +118,26 @@ namespace App::Object
 		if (_interaction.isCursorInside && !_interaction.IsCursorOwner(a_context, this))
 		{
 			Engine::EditorField::WarningText("Cursor : 手前の別UIに取られています(Layer %.1f)", m_anchor.layer);
+		}
+	}
+
+	//======================================================================================
+	// マテリアル
+	//======================================================================================
+	void UIBase::DrawMaterialInspector(Engine::GameObject::ObjectContext& a_context)
+	{
+		Engine::EditorField::Header("Material");
+
+		Core::GUID _guid = m_materialGUID;
+		if (Engine::EditorField::AssetField(*a_context.pServices, "UIMaterial", "UIMaterial", _guid))
+		{
+			SetMaterialGUID(a_context, _guid);
+		}
+		Engine::EditorField::Tooltip("飾り全部に掛ける効果(ディゾルブなど)。進み具合は Transition の Dissolve で動かす");
+
+		if (m_materialGUID.IsValid() && !FindReadyMaterial(a_context.pServices->pResourceManager))
+		{
+			Engine::EditorField::WarningText("読み込み中です(終わるまでは効果なしで描きます)");
 		}
 	}
 

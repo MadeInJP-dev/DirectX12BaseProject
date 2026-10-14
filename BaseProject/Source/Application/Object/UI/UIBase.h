@@ -18,6 +18,7 @@ namespace App::Object
 	//   Decoration    … そこから相対で出す絵(板ポリ・画像・文字)。配列で何枚でも重ねられる
 	//   UIInteraction … カーソルへの反応(当たり判定の設定・押下・音)。押せる UI だけが持つ
 	//   UITransition  … 出し入れと合図の演出(拡大して戻る・薄くなって消える など)。全部の飾りの上から掛かる
+	//   UIMaterial    … 飾り全部に掛ける効果(ディゾルブなど)。アセットを GUID で指す。無くてもよい
 	//
 	// テクスチャを1枚だけ持たせる作りをやめたのは、枠と文字とアイコンのように
 	// 複数の絵で1つのUIを組みたいときに、UIを人数ぶん並べるしかなくなるため。
@@ -166,6 +167,16 @@ namespace App::Object
 
 		const UITransition& GetTransition() const { return m_transition; }
 		UITransition& RefTransition() { return m_transition; }
+
+		//-----------------------------------------------------------------------
+		// マテリアル(飾り全部に掛ける効果)
+		//-----------------------------------------------------------------------
+
+		// 指しているUIマテリアル(空なら効果なし)
+		const Core::GUID& GetMaterialGUID() const { return m_materialGUID; }
+
+		// UIマテリアルを差し替えて、読み込みを頼む(空の GUID で外す)
+		void SetMaterialGUID(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_guid);
 
 		//-----------------------------------------------------------------------
 		// アンカー
@@ -353,6 +364,10 @@ namespace App::Object
 		// 出し入れと合図の演出(保存される)。全部の飾りの上から掛かる
 		UITransition m_transition = {};
 
+		// 飾り全部に掛ける効果(保存されるのは GUID だけ)。空なら効果なし
+		Core::GUID m_materialGUID = {};
+		Engine::ResourceRef<Engine::Resource::UIMaterial> m_materialRef = {};
+
 		// 読み込みで演出の値が読めたか(保存しない)。
 		// 演出を持つ前のデータなら false。継承先が自分の古い値から演出へ移すかどうかの判断に使う
 		bool m_isTransitionLoaded = false;
@@ -400,6 +415,15 @@ namespace App::Object
 
 		// 描く前の差し替えに、演出の値を掛ける
 		Decoration::DrawOverride ApplyTransition(const Decoration::DrawOverride& a_override) const;
+
+		// 保存されている GUID からUIマテリアルを引き直す(実体の到着は待たない)
+		void RequestMaterial(Engine::GameObject::ObjectContext& a_context);
+
+		// 読み終わっているUIマテリアル(まだ・未指定なら nullptr)
+		const Engine::Resource::UIMaterial* FindReadyMaterial(Engine::Resource::ResourceManager* a_pResourceManager) const;
+
+		// インスペクター : UIマテリアル
+		void DrawMaterialInspector(Engine::GameObject::ObjectContext& a_context);
 
 	private:
 

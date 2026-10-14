@@ -51,6 +51,9 @@ namespace Editor::Inspector
 	/// エフェクト
 	void EffectAssetDraw(EditorContext& a_editContext);
 
+	/// UIマテリアル
+	void UIMaterialDraw(EditorContext& a_editContext);
+
 	// レンダリングパイプライン(レンダーグラフの設計図)は
 	// ノードエディターの状態を持つので RenderingPipelineEditor 側にある
 }

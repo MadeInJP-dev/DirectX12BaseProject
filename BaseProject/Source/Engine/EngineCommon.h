@@ -184,6 +184,7 @@ namespace Engine::Resource
 #include "Resource/Data/EffectAsset/EffectAsset.h"							// エフェクト(パーティクル+メッシュのまとめ)
 #include "Resource/Data/EffectPrefab/EffectPrefab.h"						// エフェクトプレハブ(炊いたら時間で消える大きな演出)
 #include "Resource/Data/Font/Font.h"									// フォント(.ttf/.otf/.ttc)
+#include "Resource/Data/UIMaterial/UIMaterial.h"							// UIマテリアル(UIに掛ける効果)
 // 
 //-----------------------------------------------------------------------------------------
 

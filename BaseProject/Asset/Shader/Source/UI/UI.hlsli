@@ -47,6 +47,14 @@ struct VSOutput
 
 	// 掛けるポストプロセスの印(UI_POST_EFFECT_*)。インスタンスごとに一定
 	nointerpolation uint postEffectFlags : TEXCOORD5;
+
+	// 効果(UIマテリアル)。ノイズの座標だけピクセルごとに変わる
+	float2 noiseUV : TEXCOORD6;
+	nointerpolation uint effectType : TEXCOORD7;
+	nointerpolation uint noiseTexIndex : TEXCOORD8;
+	nointerpolation float effectProgress : TEXCOORD9;
+	nointerpolation float edgeWidth : TEXCOORD10;
+	nointerpolation float4 edgeColor : TEXCOORD11;
 };
 
 // ピクセル出力

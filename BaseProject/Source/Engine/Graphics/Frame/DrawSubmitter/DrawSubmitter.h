@@ -174,7 +174,8 @@ namespace Engine::Graphics
 
 		// ピクセル空間で回転・アスペクト補正・ピボットを解決し、UIData(NDC基底)を
 		// 1件バッファへ積む。
-		void PushUIData(uint32_t a_texIndex, const SpriteSubmitDesc& a_desc);
+		// a_noiseTexIndex は効果のノイズのSRV番号(無ければ UI_NOISE_TEX_NONE)
+		void PushUIData(uint32_t a_texIndex, uint32_t a_noiseTexIndex, const SpriteSubmitDesc& a_desc);
 
 	private:
 

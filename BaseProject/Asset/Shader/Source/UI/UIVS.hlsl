@@ -60,5 +60,14 @@ VSOutput VSMain(VSInput a_input)
 	_out.clipRect = _uiData.clipRect;
 
 	_out.postEffectFlags = _uiData.postEffectFlags;
+
+	// 効果 : ノイズの座標はUIの原点からのずれ。
+	// 枠・中身・文字のどのクアッドも同じ原点から測るので、1枚の絵として崩れる
+	_out.noiseUV = (_ndc - _uiData.effectOriginNdc) * _uiData.noiseUVPerNdc;
+	_out.effectType = _uiData.effectType;
+	_out.noiseTexIndex = _uiData.noiseTexIndex;
+	_out.effectProgress = _uiData.effectProgress;
+	_out.edgeWidth = _uiData.edgeWidth;
+	_out.edgeColor = _uiData.edgeColor;
 	return _out;
 }

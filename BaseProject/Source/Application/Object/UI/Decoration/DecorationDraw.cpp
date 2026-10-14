@@ -4,6 +4,7 @@
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 #include "Engine/Resource/Data/Texture/IO/TextureIO.h"
+#include "Engine/Resource/Data/UIMaterial/UIMaterial.h"
 
 //==========================================================================================
 // デコレーションの描画
@@ -64,6 +65,9 @@ namespace App::Object::Decoration
 
 			// 掛けるポストプロセスの印(Engine::Graphics::UI_POST_EFFECT_*)
 			UINT postEffectFlags = 0;
+
+			// 掛ける効果(UIマテリアルと、その場の進み具合)
+			Engine::Graphics::UIEffectDesc effect = {};
 		};
 
 		Resolved Resolve(
@@ -131,6 +135,26 @@ namespace App::Object::Decoration
 			// ポストプロセスは UI 単位で選ぶので、飾りはどれも親の設定に従う
 			if (a_parentOp.isScanLine) _out.postEffectFlags |= Engine::Graphics::UI_POST_EFFECT_SCAN_LINE;
 
+			//--------------------------------------------------------------
+			// 効果(UIマテリアル)
+			//
+			// ノイズの原点は親のピボット(位置の差し替えがあっても親のもの)。
+			// 枠・中身・文字・桁ごとの数字が同じ原点から測るので、UI が1枚の絵として崩れる
+			//--------------------------------------------------------------
+			if (const Engine::Resource::UIMaterial* _pMaterial = a_parentOp.pMaterial)
+			{
+				Engine::Graphics::UIEffectDesc& _effect = _out.effect;
+				_effect.effect = static_cast<uint32_t>(_pMaterial->effect);
+				_effect.noiseTexHandle = _pMaterial->noiseTexRef.GetRaw();
+				_effect.progress = std::clamp(a_override.dissolve, 0.0f, 1.0f);
+				_effect.noisePixel = _pMaterial->noisePixel;
+				_effect.edgeWidth = _pMaterial->edgeWidth;
+				_effect.edgeColor = _pMaterial->edgeColor;
+				_effect.originPixel = a_parentTr.pixelPos;
+
+				if (_pMaterial->isScanLine) _out.postEffectFlags |= Engine::Graphics::UI_POST_EFFECT_SCAN_LINE;
+			}
+
 			return _out;
 		}
 
@@ -184,6 +208,7 @@ namespace App::Object::Decoration
 			_desc.curveOffsetX = _curveOffsetX;
 			_desc.pClipRect = a_resolved.pClipRect;
 			_desc.postEffectFlags = a_resolved.postEffectFlags;
+			_desc.effect = a_resolved.effect;
 			a_pGE->RefDrawSubmitter()->SubmitUI(_desc);
 		}
 

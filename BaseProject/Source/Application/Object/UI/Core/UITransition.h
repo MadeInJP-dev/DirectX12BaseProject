@@ -9,9 +9,11 @@ namespace App::Object
 	//======================================================================================
 	// 演出1回ぶん : 始まりの値から終わりの値へ duration 秒で動かす
 	//
-	// 値は UI 全体(全部の飾り)へ掛ける倍率。1 のままのものは何も変えない。
-	//   alpha … 色の a へ掛ける
-	//   scale … 大きさへ掛ける(飾りの位置のずれにも掛かるので、並びごと伸び縮みする)
+	// 値は UI 全体(全部の飾り)へ掛ける。既定のままなら何も変えない。
+	//   alpha    … 色の a へ掛ける倍率(1 で変化なし)
+	//   scale    … 大きさへ掛ける倍率(飾りの位置のずれにも掛かるので、並びごと伸び縮みする)
+	//   dissolve … ディゾルブの進み具合(0 で変化なし・1 で全部消える)。
+	//              UI にディゾルブの UIマテリアルを付けたときだけ効く
 	//
 	// ※ 動かす値を足すときは、UITransitionValue・Lerp・保存(末尾)の3か所へ
 	//======================================================================================
@@ -25,6 +27,9 @@ namespace App::Object
 
 		float startScale = 1.0f;
 		float endScale = 1.0f;
+
+		float startDissolve = 0.0f;
+		float endDissolve = 0.0f;
 	};
 
 	//--------------------------------------------------------------------------------------
@@ -34,6 +39,7 @@ namespace App::Object
 	{
 		float alpha = 1.0f;
 		float scale = 1.0f;
+		float dissolve = 0.0f;
 	};
 
 	//======================================================================================
@@ -63,8 +69,8 @@ namespace App::Object
 		//-----------------------------------------------------------------------
 		bool isUseShow = false;			// 出てくるときに show を流すか
 		bool isUseHide = false;			// 消えるときに hide を流すか
-		UITransitionClip show = { 0.2f, Decoration::EEase::OutQuad, 0.0f, 1.0f, 0.9f, 1.0f };
-		UITransitionClip hide = { 0.15f, Decoration::EEase::InQuad, 1.0f, 0.0f, 1.0f, 0.9f };
+		UITransitionClip show = { 0.2f, Decoration::EEase::OutQuad, 0.0f, 1.0f, 0.9f, 1.0f, 0.0f, 0.0f };
+		UITransitionClip hide = { 0.15f, Decoration::EEase::InQuad, 1.0f, 0.0f, 1.0f, 0.9f, 0.0f, 0.0f };
 		UITransitionClip pulse = {};
 
 		// 合図を流している間だけ描く(ヒットマーカー・ウェーブの告知のような、一瞬出して消えるもの)

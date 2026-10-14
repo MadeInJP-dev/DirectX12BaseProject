@@ -6,6 +6,7 @@
 #include "Engine/MainEngine.h"
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
+#include "Engine/Resource/Data/UIMaterial/UIMaterial.h"
 #include "Engine/GameObject/GameObjectManager/GameObjectManager.h"	// 親(パネル)を GUID で引く
 
 #include "Application/InstanceResource/UserDataResource.h"	// HUD を出すか(プレイヤーの設定)
@@ -450,7 +451,8 @@ namespace App::Object
 		if (!_pGE) return;
 
 		const Decoration::ParentTransform _parentTr = MakeParentTransform();
-		const Decoration::ParentOption _parentOp = MakeParentOption();
+		Decoration::ParentOption _parentOp = MakeParentOption();
+		_parentOp.pMaterial = FindReadyMaterial(a_context.pServices->pResourceManager);
 		const Decoration::DrawOverride _override = ApplyTransition(a_override);
 
 		// 配列の順に積む : 後ろにあるものほど手前に出る
@@ -480,12 +482,15 @@ namespace App::Object
 		auto* _pGE = a_context.pServices->pMainEngine->RefGraphicsEngine();
 		if (!_pGE) return;
 
+		Decoration::ParentOption _parentOp = MakeParentOption();
+		_parentOp.pMaterial = FindReadyMaterial(a_context.pServices->pResourceManager);
+
 		Decoration::DrawDecoration(
 			_pGE,
 			a_context.pServices->pResourceManager,
 			m_decorationVec[a_index],
 			MakeParentTransform(),
-			MakeParentOption(),
+			_parentOp,
 			ApplyTransition(a_override));
 	}
 
@@ -503,7 +508,39 @@ namespace App::Object
 		Decoration::DrawOverride _override = a_override;
 		_override.scale *= _value.scale;
 		_override.tint.a *= _value.alpha;
+
+		// 消え具合は「残っている割合」を掛け合わせる(継承先が渡した分と演出の分)
+		_override.dissolve = 1.0f - (1.0f - a_override.dissolve) * (1.0f - _value.dissolve);
 		return _override;
+	}
+
+	//======================================================================================
+	// マテリアル
+	//--------------------------------------------------------------------------------------
+	// UI 単位で1つ持ち、飾り全部に同じ効果を掛ける(ParentOption::pMaterial)。
+	// 読み終わるまでは効果なしで描く(届くまで描かないと、出た瞬間に UI が見えない)
+	//======================================================================================
+	void UIBase::SetMaterialGUID(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_guid)
+	{
+		m_materialGUID = a_guid;
+		RequestMaterial(a_context);
+	}
+
+	void UIBase::RequestMaterial(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (!a_context.pServices || !a_context.pServices->pResourceManager) return;
+
+		m_materialRef = m_materialGUID.IsValid()
+			? a_context.pServices->pResourceManager->RequestLoad<Engine::Resource::UIMaterial>(m_materialGUID)
+			: Engine::ResourceRef<Engine::Resource::UIMaterial>();
+	}
+
+	const Engine::Resource::UIMaterial* UIBase::FindReadyMaterial(Engine::Resource::ResourceManager* a_pResourceManager) const
+	{
+		if (!a_pResourceManager || !m_materialRef.IsValid()) return nullptr;
+		if (!a_pResourceManager->IsReady(m_materialRef)) return nullptr;
+
+		return a_pResourceManager->Get(m_materialRef);
 	}
 
 	//======================================================================================
@@ -634,6 +671,9 @@ namespace App::Object
 			if (a_ar.IsLoading()) m_isTransitionLoaded = _isLoaded;
 		}
 
+		// 飾り全部に掛ける効果(UIマテリアル)
+		if (!a_ar.IsLegacyLayout()) a_ar.GUIDField("MaterialGUID", m_materialGUID);
+
 		m_anchor.editSize = m_anchor.pixelSize;
 
 		if (!a_ar.IsLoading()) return;
@@ -641,10 +681,11 @@ namespace App::Object
 		MigrateLegacyTexture(_hasDecorationArray);
 		AssignDecorationIds();
 
-		// 読み込み時は復元したGUIDでテクスチャ・フォントを引き直す。
+		// 読み込み時は復元したGUIDでテクスチャ・フォント・マテリアルを引き直す。
 		// 実体が届くのを待つ必要はないので、要求だけ出して先へ進む
 		// (描画側は IsReady を見て、まだのフレームは描かない)
 		RequestDecorationResources(a_context);
+		RequestMaterial(a_context);
 	}
 
 	//======================================================================================

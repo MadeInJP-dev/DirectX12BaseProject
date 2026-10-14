@@ -58,6 +58,9 @@
     <Filter Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\AudioBehaviorEdit">
       <UniqueIdentifier>{9106565e-8ffb-4d57-b341-022f3521dc1b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit">
+      <UniqueIdentifier>{2e3e8123-7f34-42ed-be8f-ba23dc851a7a}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit">
       <UniqueIdentifier>{55c82092-9480-4bc1-899c-f8347aa4699d}</UniqueIdentifier>
     </Filter>
@@ -994,8 +997,14 @@
     <Filter Include="Source\Engine\Resource\Data\AudioBehavior">
       <UniqueIdentifier>{c0de0011-1111-4222-8333-0000c0de0011}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Resource\Data\UIMaterial">
+      <UniqueIdentifier>{de0708cf-932b-472e-8c44-51612ab21d29}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Resource\Data\AudioBehavior\IO">
       <UniqueIdentifier>{c0de0012-1111-4222-8333-0000c0de0012}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Resource\Data\UIMaterial\IO">
+      <UniqueIdentifier>{d2440823-cf00-4e84-b627-5df82ba509d9}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Resource\Data\EffectAsset">
       <UniqueIdentifier>{c0de0014-1111-4222-8333-0000c0de0014}</UniqueIdentifier>
@@ -2064,6 +2073,9 @@
     <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\AudioBehaviorEdit\AudioBehaviorEdit.cpp">
       <Filter>Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\AudioBehaviorEdit</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit\UIMaterialEdit.cpp">
+      <Filter>Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit\EffectAssetEdit.cpp">
       <Filter>Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit</Filter>
     </ClCompile>
@@ -2277,8 +2289,14 @@
     <ClCompile Include="Source\Engine\Resource\Data\AudioBehavior\AudioBehavior.cpp">
       <Filter>Source\Engine\Resource\Data\AudioBehavior</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Resource\Data\UIMaterial\UIMaterial.cpp">
+      <Filter>Source\Engine\Resource\Data\UIMaterial</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Resource\Data\AudioBehavior\IO\AudioBehaviorIO.cpp">
       <Filter>Source\Engine\Resource\Data\AudioBehavior\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Resource\Data\UIMaterial\IO\UIMaterialIO.cpp">
+      <Filter>Source\Engine\Resource\Data\UIMaterial\IO</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Resource\Data\EffectAsset\EffectAsset.cpp">
       <Filter>Source\Engine\Resource\Data\EffectAsset</Filter>
@@ -3761,6 +3779,9 @@
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\AudioBehaviorEdit\AudioBehaviorEdit.h">
       <Filter>Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\AudioBehaviorEdit</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit\UIMaterialEdit.h">
+      <Filter>Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit\EffectAssetEdit.h">
       <Filter>Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit</Filter>
     </ClInclude>
@@ -4049,8 +4070,14 @@
     <ClInclude Include="Source\Engine\Resource\Data\AudioBehavior\AudioBehavior.h">
       <Filter>Source\Engine\Resource\Data\AudioBehavior</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Resource\Data\UIMaterial\UIMaterial.h">
+      <Filter>Source\Engine\Resource\Data\UIMaterial</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Resource\Data\AudioBehavior\IO\AudioBehaviorIO.h">
       <Filter>Source\Engine\Resource\Data\AudioBehavior\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Resource\Data\UIMaterial\IO\UIMaterialIO.h">
+      <Filter>Source\Engine\Resource\Data\UIMaterial\IO</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Resource\Data\EffectAsset\EffectAsset.h">
       <Filter>Source\Engine\Resource\Data\EffectAsset</Filter>

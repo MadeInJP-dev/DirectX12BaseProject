@@ -1259,6 +1259,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit\UIMaterialEdit.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\AnimatorEdit\AnimatorEdit.cpp">
       <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
@@ -1550,7 +1555,9 @@
     <ClCompile Include="Source\Engine\Resource\Data\Sound\IO\SoundIO.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\Sound\Sound.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\AudioBehavior\AudioBehavior.cpp" />
+    <ClCompile Include="Source\Engine\Resource\Data\UIMaterial\UIMaterial.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\AudioBehavior\IO\AudioBehaviorIO.cpp" />
+    <ClCompile Include="Source\Engine\Resource\Data\UIMaterial\IO\UIMaterialIO.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\EffectAsset\EffectAsset.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\EffectAsset\IO\EffectAssetIO.cpp" />
     <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit\EffectAssetEdit.cpp">
@@ -2143,6 +2150,7 @@
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\ParticleEdit\ParticleEdit.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\ShaderEdit\ShaderEdit.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\AudioBehaviorEdit\AudioBehaviorEdit.h" />
+    <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit\UIMaterialEdit.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\AnimatorEdit\AnimatorEdit.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\TextureEdit\TextureEdit.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\ResourceDraw.h" />
@@ -2297,7 +2305,9 @@
     <ClInclude Include="Source\Engine\Resource\Data\Sound\IO\SoundIO.h" />
     <ClInclude Include="Source\Engine\Resource\Data\Sound\Sound.h" />
     <ClInclude Include="Source\Engine\Resource\Data\AudioBehavior\AudioBehavior.h" />
+    <ClInclude Include="Source\Engine\Resource\Data\UIMaterial\UIMaterial.h" />
     <ClInclude Include="Source\Engine\Resource\Data\AudioBehavior\IO\AudioBehaviorIO.h" />
+    <ClInclude Include="Source\Engine\Resource\Data\UIMaterial\IO\UIMaterialIO.h" />
     <ClInclude Include="Source\Engine\Resource\Data\EffectAsset\EffectAsset.h" />
     <ClInclude Include="Source\Engine\Resource\Data\EffectAsset\IO\EffectAssetIO.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit\EffectAssetEdit.h" />

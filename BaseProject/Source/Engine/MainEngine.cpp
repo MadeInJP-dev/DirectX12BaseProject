@@ -722,6 +722,12 @@ namespace Engine
 		_font.AddExtensions(".otf");
 		_font.AddExtensions(".ttc");
 		_assetDB.AddSupporedExtensions(_font);
+		// UIマテリアル(UIに掛ける効果。ディゾルブなど)
+		Resource::TypeExtension _uiMaterial = {};
+		_uiMaterial.type = "UIMaterial";
+		_uiMaterial.AddExtensions(".ojuimat");
+		_uiMaterial.AddExtensions(".obuimat");
+		_assetDB.AddSupporedExtensions(_uiMaterial);
 		// 全アセットに一括でメタファイル作成
 		// すでにあれば無視
 		_assetDB.CreateMetaFileForAllAssets();

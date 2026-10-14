@@ -14,6 +14,7 @@
 #include "../Data/AudioBehavior/IO/AudioBehaviorIO.h"
 #include "../Data/EffectAsset/IO/EffectAssetIO.h"
 #include "../Data/Font/IO/FontIO.h"
+#include "../Data/UIMaterial/IO/UIMaterialIO.h"
 
 // レンダリングパイプライン : Engine::Resource ではなく Engine::Graphics::Pipeline に居る
 #include "Engine/Graphics/RenderingPipeline/IO/RenderingPipelineAssetIO.h"
@@ -186,6 +187,16 @@ namespace Engine::Resource
 		{
 			// アトラステクスチャをGPUへ転送するため、コンテキストをそのまま渡す
 			return FontIO::LoadFromFile(a_path, a_pContext);
+		}
+	};
+	// UIマテリアル
+	template<>
+	struct DefaultLoader<UIMaterial>
+	{
+		static UIMaterial LoadFromFile(const std::string& a_path, const ResourceBuildContext* a_pContext)
+		{
+			// ノイズのテクスチャを引き当てるので、マネージャーを渡す
+			return UIMaterialIO::LoadFromFile(a_path, *a_pContext->pResourceManager);
 		}
 	};
 }
