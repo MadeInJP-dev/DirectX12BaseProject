@@ -5,7 +5,7 @@
 #include "Engine/Scene/SceneManager/SceneManager.h"
 #include "Engine/EditorField/EditorField.h"
 
-#include "../../UI/UIGauge/UIGauge.h"
+#include "Application/Object/UI/Widget/UIGauge/UIGauge.h"
 
 //==========================================================================================
 // LoadingSequence

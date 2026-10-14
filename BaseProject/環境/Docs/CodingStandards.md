@@ -618,7 +618,7 @@ Context
 * .cpp を足したら、vcxproj で `PrecompiledHeaderFile` / `PrecompiledHeaderOutputFile` / `ForcedIncludeFiles` を分類の PCH にする
   (既定は EnginePCH。分類と PCH が合っていないとビルド時の `CheckPch` で止まる)。
 * 分類の外から読まれるヘッダーは PCH に頼らない。上の層のヘッダーを読むときは、その層の共通ヘッダー
-  (`AppCommon.h` など)を自分で Include する(例 : `Application/Object/UI/Decoration.h`)。
+  (`AppCommon.h` など)を自分で Include する(例 : `Application/Object/UI/Decoration/Decoration.h`)。
 
 ---
 

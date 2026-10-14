@@ -1,9 +1,10 @@
 #pragma once
 
 #include "../../../Engine/GameObject/BaseObject/BaseObject.h"
-#include "Decoration.h"
-#include "UIAnchor.h"
-#include "UIInteraction.h"
+#include "Application/Object/UI/Decoration/Decoration.h"
+#include "Application/Object/UI/Decoration/DecorationDraw.h"
+#include "Application/Object/UI/Core/UIAnchor.h"
+#include "Application/Object/UI/Core/UIInteraction.h"
 
 namespace App::Object
 {

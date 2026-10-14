@@ -1,6 +1,6 @@
 #include "UIBase.h"
 
-#include "UIPanel/UIPanel.h"
+#include "Application/Object/UI/Widget/UIPanel/UIPanel.h"
 
 #include "Engine/ECS/System/SystemContext.h"	// ObjectContext が運ぶサービス群
 #include "Engine/MainEngine.h"

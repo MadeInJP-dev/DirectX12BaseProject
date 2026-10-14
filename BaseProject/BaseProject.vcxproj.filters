@@ -610,55 +610,70 @@
     <Filter Include="Source\Application\Object\UI">
       <UniqueIdentifier>{50ad7784-1d55-4333-957c-60656a8d08e4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\AimReticleHUD">
+    <Filter Include="Source\Application\Object\UI\Core">
+      <UniqueIdentifier>{b675fbbe-143d-4781-9492-78e64235c081}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Object\UI\Decoration">
+      <UniqueIdentifier>{b4f57132-f9c5-41e4-878c-2b9e446a50b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Object\UI\Decoration\Internal">
+      <UniqueIdentifier>{8f71a04f-e864-4f5b-aa08-2ed0da9b78c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Object\UI\Widget">
+      <UniqueIdentifier>{c5f29a7d-8ee3-4abf-9b34-43060a3f9046}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Object\UI\HUD">
+      <UniqueIdentifier>{c7954c4b-5a12-4961-8983-f70eef49eb4b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Object\UI\HUD\AimReticleHUD">
       <UniqueIdentifier>{8c41b2a7-5d63-4e19-9a08-3f7b2c6e4d15}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\CombatReticleHUD">
+    <Filter Include="Source\Application\Object\UI\HUD\CombatReticleHUD">
       <UniqueIdentifier>{2e7d9458-8813-4632-9886-e083cfa06481}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\HitEffectHUD">
+    <Filter Include="Source\Application\Object\UI\HUD\HitEffectHUD">
       <UniqueIdentifier>{8c41b2a7-5d63-4e19-9a08-3f7b2c6e4d16}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\MissileLockBoxHUD">
+    <Filter Include="Source\Application\Object\UI\HUD\MissileLockBoxHUD">
       <UniqueIdentifier>{8a1b0c10-4f2e-4c3a-9d51-7e6b2f0a9110}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\ScoreHUD">
+    <Filter Include="Source\Application\Object\UI\HUD\ScoreHUD">
       <UniqueIdentifier>{c374721c-449b-4b1f-ab47-8ee043754764}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\TargetBoxHUD">
+    <Filter Include="Source\Application\Object\UI\HUD\TargetBoxHUD">
       <UniqueIdentifier>{7c1a2f36-4b90-4e58-9d21-5f0c3ba7e412}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\UIButton">
+    <Filter Include="Source\Application\Object\UI\Widget\UIButton">
       <UniqueIdentifier>{b7c1d2e3-8f40-4a51-9c62-0d73e4f5a601}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\UIGauge">
+    <Filter Include="Source\Application\Object\UI\Widget\UIGauge">
       <UniqueIdentifier>{1b890504-cbda-42a6-9729-0f9364a04ec5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\SideMenu">
+    <Filter Include="Source\Application\Object\UI\Widget\SideMenu">
       <UniqueIdentifier>{3e7fb560-9e13-4529-9c0d-a3707aec13c3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\OptionHUDs\SoundOptionPanel">
+    <Filter Include="Source\Application\Object\UI\Option\SoundOptionPanel">
       <UniqueIdentifier>{bc3e867d-9efd-48c1-be4a-ad9e7d479126}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\OptionHUDs">
+    <Filter Include="Source\Application\Object\UI\Option">
       <UniqueIdentifier>{37386e08-14d8-42c4-adb5-d0f3f2dfebf9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\OptionHUDs\GameOptionPanel">
+    <Filter Include="Source\Application\Object\UI\Option\GameOptionPanel">
       <UniqueIdentifier>{47bf508a-76d7-4a92-93e5-7257783fd2f0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\OptionHUDs\GraphicsOptionPanel">
+    <Filter Include="Source\Application\Object\UI\Option\GraphicsOptionPanel">
       <UniqueIdentifier>{64790f19-55cb-4895-ac22-fcae4dcb3de3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\OptionHUDs\InputOptionPanel">
+    <Filter Include="Source\Application\Object\UI\Option\InputOptionPanel">
       <UniqueIdentifier>{387e3264-5402-40c5-9273-8285295c8dc3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\UIImage">
+    <Filter Include="Source\Application\Object\UI\Widget\UIImage">
       <UniqueIdentifier>{c8d2e3f4-9a51-4b62-8d73-1e84f5a6b703}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\UIPanel">
+    <Filter Include="Source\Application\Object\UI\Widget\UIPanel">
       <UniqueIdentifier>{dbe1007a-6323-4f3f-ba6a-73afc788c512}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\WaveAnnounceHUD">
+    <Filter Include="Source\Application\Object\UI\HUD\WaveAnnounceHUD">
       <UniqueIdentifier>{c59d7e01-7d42-41b4-ac87-a11018f0899d}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Application\Systems">
@@ -1530,17 +1545,17 @@
     <ClCompile Include="Source\Application\Object\Sequence\LoadingSequence\LoadingSequence.cpp">
       <Filter>Source\Application\Object\Sequence\LoadingSequence</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\Decoration.cpp">
-      <Filter>Source\Application\Object\UI</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Decoration\Decoration.cpp">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\DecorationDraw.cpp">
-      <Filter>Source\Application\Object\UI</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationDraw.cpp">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\DecorationArchive.cpp">
-      <Filter>Source\Application\Object\UI</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationArchive.cpp">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\DecorationInspector.cpp">
-      <Filter>Source\Application\Object\UI</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationInspector.cpp">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\UIBase.cpp">
       <Filter>Source\Application\Object\UI</Filter>
@@ -1548,65 +1563,65 @@
     <ClCompile Include="Source\Application\Object\UI\UIBaseInspector.cpp">
       <Filter>Source\Application\Object\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\UIAnchor.cpp">
-      <Filter>Source\Application\Object\UI</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Core\UIAnchor.cpp">
+      <Filter>Source\Application\Object\UI\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\UIInteraction.cpp">
-      <Filter>Source\Application\Object\UI</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Core\UIInteraction.cpp">
+      <Filter>Source\Application\Object\UI\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\UIPanel\UIPanel.cpp">
-      <Filter>Source\Application\Object\UI\UIPanel</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Widget\UIPanel\UIPanel.cpp">
+      <Filter>Source\Application\Object\UI\Widget\UIPanel</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\AimReticleHUD\AimReticleHUD.cpp">
-      <Filter>Source\Application\Object\UI\AimReticleHUD</Filter>
+    <ClCompile Include="Source\Application\Object\UI\HUD\AimReticleHUD\AimReticleHUD.cpp">
+      <Filter>Source\Application\Object\UI\HUD\AimReticleHUD</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\CombatReticleHUD\CombatReticleHUD.cpp">
-      <Filter>Source\Application\Object\UI\CombatReticleHUD</Filter>
+    <ClCompile Include="Source\Application\Object\UI\HUD\CombatReticleHUD\CombatReticleHUD.cpp">
+      <Filter>Source\Application\Object\UI\HUD\CombatReticleHUD</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\HitEffectHUD\HitEffectHUD.cpp">
-      <Filter>Source\Application\Object\UI\HitEffectHUD</Filter>
+    <ClCompile Include="Source\Application\Object\UI\HUD\HitEffectHUD\HitEffectHUD.cpp">
+      <Filter>Source\Application\Object\UI\HUD\HitEffectHUD</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\MissileLockBoxHUD\MissileLockBoxHUD.cpp">
-      <Filter>Source\Application\Object\UI\MissileLockBoxHUD</Filter>
+    <ClCompile Include="Source\Application\Object\UI\HUD\MissileLockBoxHUD\MissileLockBoxHUD.cpp">
+      <Filter>Source\Application\Object\UI\HUD\MissileLockBoxHUD</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\ScoreHUD\ScoreHUD.cpp">
-      <Filter>Source\Application\Object\UI\ScoreHUD</Filter>
+    <ClCompile Include="Source\Application\Object\UI\HUD\ScoreHUD\ScoreHUD.cpp">
+      <Filter>Source\Application\Object\UI\HUD\ScoreHUD</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\TargetBoxHUD\TargetBoxHUD.cpp">
-      <Filter>Source\Application\Object\UI\TargetBoxHUD</Filter>
+    <ClCompile Include="Source\Application\Object\UI\HUD\TargetBoxHUD\TargetBoxHUD.cpp">
+      <Filter>Source\Application\Object\UI\HUD\TargetBoxHUD</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\UIButton\UIButton.cpp">
-      <Filter>Source\Application\Object\UI\UIButton</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Widget\UIButton\UIButton.cpp">
+      <Filter>Source\Application\Object\UI\Widget\UIButton</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\UIGauge\UIGauge.cpp">
-      <Filter>Source\Application\Object\UI\UIGauge</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Widget\UIGauge\UIGauge.cpp">
+      <Filter>Source\Application\Object\UI\Widget\UIGauge</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\SideMenu\SideMenu.cpp">
-      <Filter>Source\Application\Object\UI\SideMenu</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Widget\SideMenu\SideMenu.cpp">
+      <Filter>Source\Application\Object\UI\Widget\SideMenu</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\SoundOptionPanel\SoundOptionPanel.cpp">
-      <Filter>Source\Application\Object\UI\OptionHUDs\SoundOptionPanel</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Option\SoundOptionPanel\SoundOptionPanel.cpp">
+      <Filter>Source\Application\Object\UI\Option\SoundOptionPanel</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\OptionHUD.cpp">
-      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Option\OptionHUD.cpp">
+      <Filter>Source\Application\Object\UI\Option</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\ScrollPanelBase.cpp">
-      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Option\ScrollPanelBase.cpp">
+      <Filter>Source\Application\Object\UI\Option</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\OptionDropdown.cpp">
-      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Option\OptionDropdown.cpp">
+      <Filter>Source\Application\Object\UI\Option</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\GameOptionPanel\GameOptionPanel.cpp">
-      <Filter>Source\Application\Object\UI\OptionHUDs\GameOptionPanel</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Option\GameOptionPanel\GameOptionPanel.cpp">
+      <Filter>Source\Application\Object\UI\Option\GameOptionPanel</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\GraphicsOptionPanel\GraphicsOptionPanel.cpp">
-      <Filter>Source\Application\Object\UI\OptionHUDs\GraphicsOptionPanel</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Option\GraphicsOptionPanel\GraphicsOptionPanel.cpp">
+      <Filter>Source\Application\Object\UI\Option\GraphicsOptionPanel</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\OptionHUDs\InputOptionPanel\InputOptionPanel.cpp">
-      <Filter>Source\Application\Object\UI\OptionHUDs\InputOptionPanel</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Option\InputOptionPanel\InputOptionPanel.cpp">
+      <Filter>Source\Application\Object\UI\Option\InputOptionPanel</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\WaveAnnounceHUD\WaveAnnounceHUD.cpp">
-      <Filter>Source\Application\Object\UI\WaveAnnounceHUD</Filter>
+    <ClCompile Include="Source\Application\Object\UI\HUD\WaveAnnounceHUD\WaveAnnounceHUD.cpp">
+      <Filter>Source\Application\Object\UI\HUD\WaveAnnounceHUD</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Render\AnimationOptionalDraw.cpp">
       <Filter>Source\Application\Systems\Render</Filter>
@@ -3128,80 +3143,89 @@
     <ClInclude Include="Source\Application\Object\Sequence\LoadingSequence\LoadingSequence.h">
       <Filter>Source\Application\Object\Sequence\LoadingSequence</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\Decoration.h">
-      <Filter>Source\Application\Object\UI</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Decoration\Decoration.h">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\DecorationInternal.h">
-      <Filter>Source\Application\Object\UI</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationAnimation.h">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationReaction.h">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationDraw.h">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\Decoration\Internal\DecorationInternal.h">
+      <Filter>Source\Application\Object\UI\Decoration\Internal</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\UIBase.h">
       <Filter>Source\Application\Object\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\UIAnchor.h">
-      <Filter>Source\Application\Object\UI</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Core\UIAnchor.h">
+      <Filter>Source\Application\Object\UI\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\UIInteraction.h">
-      <Filter>Source\Application\Object\UI</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Core\UIInteraction.h">
+      <Filter>Source\Application\Object\UI\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\UIPanel\UIPanel.h">
-      <Filter>Source\Application\Object\UI\UIPanel</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Widget\UIPanel\UIPanel.h">
+      <Filter>Source\Application\Object\UI\Widget\UIPanel</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\AimReticleHUD\AimReticleHUD.h">
-      <Filter>Source\Application\Object\UI\AimReticleHUD</Filter>
+    <ClInclude Include="Source\Application\Object\UI\HUD\AimReticleHUD\AimReticleHUD.h">
+      <Filter>Source\Application\Object\UI\HUD\AimReticleHUD</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\CombatReticleHUD\CombatReticleHUD.h">
-      <Filter>Source\Application\Object\UI\CombatReticleHUD</Filter>
+    <ClInclude Include="Source\Application\Object\UI\HUD\CombatReticleHUD\CombatReticleHUD.h">
+      <Filter>Source\Application\Object\UI\HUD\CombatReticleHUD</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\HitEffectHUD\HitEffectHUD.h">
-      <Filter>Source\Application\Object\UI\HitEffectHUD</Filter>
+    <ClInclude Include="Source\Application\Object\UI\HUD\HitEffectHUD\HitEffectHUD.h">
+      <Filter>Source\Application\Object\UI\HUD\HitEffectHUD</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\MissileLockBoxHUD\MissileLockBoxHUD.h">
-      <Filter>Source\Application\Object\UI\MissileLockBoxHUD</Filter>
+    <ClInclude Include="Source\Application\Object\UI\HUD\MissileLockBoxHUD\MissileLockBoxHUD.h">
+      <Filter>Source\Application\Object\UI\HUD\MissileLockBoxHUD</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\ScoreHUD\ScoreHUD.h">
-      <Filter>Source\Application\Object\UI\ScoreHUD</Filter>
+    <ClInclude Include="Source\Application\Object\UI\HUD\ScoreHUD\ScoreHUD.h">
+      <Filter>Source\Application\Object\UI\HUD\ScoreHUD</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\TargetBoxHUD\TargetBoxHUD.h">
-      <Filter>Source\Application\Object\UI\TargetBoxHUD</Filter>
+    <ClInclude Include="Source\Application\Object\UI\HUD\TargetBoxHUD\TargetBoxHUD.h">
+      <Filter>Source\Application\Object\UI\HUD\TargetBoxHUD</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\UIButton\UIButton.h">
-      <Filter>Source\Application\Object\UI\UIButton</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Widget\UIButton\UIButton.h">
+      <Filter>Source\Application\Object\UI\Widget\UIButton</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\UIGauge\UIGauge.h">
-      <Filter>Source\Application\Object\UI\UIGauge</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Widget\UIGauge\UIGauge.h">
+      <Filter>Source\Application\Object\UI\Widget\UIGauge</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\SideMenu\SideMenu.h">
-      <Filter>Source\Application\Object\UI\SideMenu</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Widget\SideMenu\SideMenu.h">
+      <Filter>Source\Application\Object\UI\Widget\SideMenu</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\SoundOptionPanel\SoundOptionPanel.h">
-      <Filter>Source\Application\Object\UI\OptionHUDs\SoundOptionPanel</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Option\SoundOptionPanel\SoundOptionPanel.h">
+      <Filter>Source\Application\Object\UI\Option\SoundOptionPanel</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\OptionHUD.h">
-      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Option\OptionHUD.h">
+      <Filter>Source\Application\Object\UI\Option</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\ScrollPanelBase.h">
-      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Option\ScrollPanelBase.h">
+      <Filter>Source\Application\Object\UI\Option</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\OptionEnumSelector.h">
-      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Option\OptionEnumSelector.h">
+      <Filter>Source\Application\Object\UI\Option</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\OptionDropdown.h">
-      <Filter>Source\Application\Object\UI\OptionHUDs</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Option\OptionDropdown.h">
+      <Filter>Source\Application\Object\UI\Option</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\GameOptionPanel\GameOptionPanel.h">
-      <Filter>Source\Application\Object\UI\OptionHUDs\GameOptionPanel</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Option\GameOptionPanel\GameOptionPanel.h">
+      <Filter>Source\Application\Object\UI\Option\GameOptionPanel</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\GraphicsOptionPanel\GraphicsOptionPanel.h">
-      <Filter>Source\Application\Object\UI\OptionHUDs\GraphicsOptionPanel</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Option\GraphicsOptionPanel\GraphicsOptionPanel.h">
+      <Filter>Source\Application\Object\UI\Option\GraphicsOptionPanel</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\OptionHUDs\InputOptionPanel\InputOptionPanel.h">
-      <Filter>Source\Application\Object\UI\OptionHUDs\InputOptionPanel</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Option\InputOptionPanel\InputOptionPanel.h">
+      <Filter>Source\Application\Object\UI\Option\InputOptionPanel</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\UIImage\UIImage.h">
-      <Filter>Source\Application\Object\UI\UIImage</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Widget\UIImage\UIImage.h">
+      <Filter>Source\Application\Object\UI\Widget\UIImage</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\WaveAnnounceHUD\WaveAnnounceHUD.h">
-      <Filter>Source\Application\Object\UI\WaveAnnounceHUD</Filter>
+    <ClInclude Include="Source\Application\Object\UI\HUD\WaveAnnounceHUD\WaveAnnounceHUD.h">
+      <Filter>Source\Application\Object\UI\HUD\WaveAnnounceHUD</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Render\AnimationOptionalDraw.h">
       <Filter>Source\Application\Systems\Render</Filter>
