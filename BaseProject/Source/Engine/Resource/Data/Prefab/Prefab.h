@@ -61,6 +61,9 @@ namespace Engine::Resource
 	class Prefab
 	{
 	public:
+		// ノードの位置でルートを表す値(PrefabChild::parentIndex と同じ数え方。0 以上は子の添え字)
+		static constexpr int ROOT_NODE = -1;
+
 		Prefab();
 		~Prefab() = default;
 		NON_COPYABLE_MOVABLE(Prefab);
@@ -101,25 +104,40 @@ namespace Engine::Resource
 		std::vector<PrefabInstanceData> BuildInstanceData(ECS::World* a_pWorld) const;
 
 		//----------------------------------------------------------------------------------
-		// 子エンティティ(エディタのプレハブ化から積む)
+		// 子エンティティ(エディタのプレハブ化・プレハブエディターから積む)
 		//----------------------------------------------------------------------------------
 		void AddChild(PrefabChild a_child) { m_children.push_back(std::move(a_child)); }
 		void ClearChildren() { m_children.clear(); }
 		const std::vector<PrefabChild>& GetChildren() const { return m_children; }
 
+		/// <summary>
+		/// 子を1つ、その下の子孫ごと取り除く(プレハブエディターから使用)。
+		/// 残った子の parentIndex は詰めた後の添え字へ付け直す。
+		/// </summary>
+		/// <param name="a_childIndex">取り除く子の添え字(ルートは取り除けない)</param>
+		/// <returns>取り除いた数(範囲外なら 0)</returns>
+		size_t RemoveChildTree(int a_childIndex);
+
 		// ルートを保存したときのGUID(参照の張り替えに使う)
 		void SetSavedGUID(const Core::GUID& a_guid) { m_savedGUID = a_guid; }
 		const Core::GUID& GetSavedGUID() const { return m_savedGUID; }
 
+		// そのノードを指す鍵(保存時GUID)を取得する。無ければ振ってから返す。
+		// 子を足すとき、子から親を指すのに使う(新規作成したプレハブのルートは鍵を持たないため)
+		const Core::GUID& RequestNodeGUID(int a_nodeIndex);
+
 		//----------------------------------------------------------------------------------
 		// コンポーネント操作(エディタから使用)
+		//
+		// a_nodeIndex で触るノードを選ぶ。既定はルート。
+		// 範囲外の子を指したときは何もしない(参照系は空 / nullptr を返す)
 		//----------------------------------------------------------------------------------
 		// 既定値でコンポーネントを追加する
-		void AddComponentDefault(ECS::World* a_pWorld, ECS::ComponentTypeID a_compTypeID);
+		void AddComponentDefault(ECS::World* a_pWorld, ECS::ComponentTypeID a_compTypeID, int a_nodeIndex = ROOT_NODE);
 		// 既存データ(エンティティのコンポーネント等)をコピーして追加する
 		void AddComponentData(ECS::World* a_pWorld, ECS::ComponentTypeID a_compTypeID, const uint8_t* a_pSrc);
 		// コンポーネントを削除する
-		void RemoveComponent(ECS::ComponentTypeID a_compTypeID);
+		void RemoveComponent(ECS::ComponentTypeID a_compTypeID, int a_nodeIndex = ROOT_NODE);
 
 		/// <summary>
 		/// シグネチャと初期値をまとめて差し替える(エディタのコピー&ペースト用)。
@@ -135,13 +153,18 @@ namespace Engine::Resource
 			const std::unordered_map<ECS::ComponentTypeID, std::vector<uint8_t>>& a_dataMap);
 
 		// 所持しているか
-		bool Has(ECS::ComponentTypeID a_compTypeID) const;
+		bool Has(ECS::ComponentTypeID a_compTypeID, int a_nodeIndex = ROOT_NODE) const;
 		// コンポーネント先頭バイトへのポインタ(エディタ編集用。無ければ nullptr)
-		uint8_t* RefData(ECS::ComponentTypeID a_compTypeID);
+		uint8_t* RefData(ECS::ComponentTypeID a_compTypeID, int a_nodeIndex = ROOT_NODE);
 		// シグネチャ参照
-		const ECS::Signature& GetSignature() const { return m_sigunature; }
+		const ECS::Signature& GetSignature(int a_nodeIndex = ROOT_NODE) const;
 		// コンポーネント初期値バイト列の参照(実体化時の元データ)
-		const std::unordered_map<ECS::ComponentTypeID, std::vector<uint8_t>>& GetDataMap() const { return m_dataMap; }
+		const std::unordered_map<ECS::ComponentTypeID, std::vector<uint8_t>>& GetDataMap(int a_nodeIndex = ROOT_NODE) const;
+
+		// ノードの数(ルート + 子)
+		size_t GetNodeCount() const { return m_children.size() + 1; }
+		// そのノードが在るか
+		bool IsValidNode(int a_nodeIndex) const;
 
 		//----------------------------------------------------------------------------------
 		// シリアライズ処理
@@ -156,6 +179,14 @@ namespace Engine::Resource
 		static void RemapGUIDs(
 			uint8_t* a_pData, size_t a_size,
 			const std::unordered_map<Core::GUID, Core::GUID>& a_guidMap);
+
+	private:
+
+		// ノードのシグネチャと初期値の置き場を引く(範囲外なら false)
+		bool ResolveNode(
+			int a_nodeIndex,
+			ECS::Signature*& a_outSig,
+			std::unordered_map<ECS::ComponentTypeID, std::vector<uint8_t>>*& a_outDataMap);
 
 	private:
 

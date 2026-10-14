@@ -38,9 +38,10 @@ namespace Editor::Inspector
 	void PrefabDraw(EditorContext& a_editContext);
 
 	/// プレハブのコンポーネントの羅列・編集・追加。
-	/// プレハブ / エフェクトプレハブ / エフェクトエディターで同じものを使う
+	/// プレハブ / エフェクトプレハブ / エフェクトエディター / プレハブエディターで同じものを使う
 	/// (片方だけ直し忘れないように、UIは1か所にしておく)
-	void PrefabComponentsEdit(ECS::World* a_pWorld, Resource::Prefab* a_pPrefab);
+	/// a_nodeIndex : 触るノード。既定はルート(Resource::Prefab::ROOT_NODE)、0 以上は子の添え字
+	void PrefabComponentsEdit(ECS::World* a_pWorld, Resource::Prefab* a_pPrefab, int a_nodeIndex = -1);
 
 	/// エフェクトプレハブ
 	void EffectPrefabDraw(EditorContext& a_editContext);

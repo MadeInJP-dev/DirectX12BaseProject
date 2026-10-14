@@ -19,6 +19,7 @@
 #include "Panel/PanelManager.h"
 #include "EditorCamera/EditorCamera.h"
 #include "EffectEditor/EffectEditor.h"
+#include "PrefabEditor/PrefabEditor.h"
 
 namespace Editor
 {
@@ -52,6 +53,12 @@ namespace Editor
 			m_upEffectEditor = std::make_unique<EffectEditor>(a_pServices);
 		}
 
+		// プレハブ編集用のモーダル画面
+		if (!m_upPrefabEditor)
+		{
+			m_upPrefabEditor = std::make_unique<PrefabEditor>(a_pServices);
+		}
+
 		// プロファイラ
 		// パネルより先に作る : パネルへは参照だけを渡す
 		if (!m_upProfiler)
@@ -63,7 +70,7 @@ namespace Editor
 		if (!m_upPanelManager)
 		{
 			m_upPanelManager = std::make_unique<PanelManager>();
-			m_upPanelManager->Init(m_upEditorCamera.get(), m_upEffectEditor.get(), m_upProfiler.get(), a_pServices);
+			m_upPanelManager->Init(m_upEditorCamera.get(), m_upEffectEditor.get(), m_upPrefabEditor.get(), m_upProfiler.get(), a_pServices);
 		}
 
 		// ログパネルの参照を取得しておく。
@@ -113,10 +120,14 @@ namespace Editor
 		// パネル本体より先に参照を切っておく
 		m_pLogPanel = nullptr;
 
-		// エフェクトエディターが抱えている確認用ワールドを捨てる
+		// 確認用の画面が抱えているワールドを捨てる
 		if (m_upEffectEditor)
 		{
 			m_upEffectEditor->Release();
+		}
+		if (m_upPrefabEditor)
+		{
+			m_upPrefabEditor->Release();
 		}
 
 		m_upImGuiContext->Release();
@@ -196,13 +207,14 @@ namespace Editor
 			return;
 		}
 
-		// モーダルな画面(エフェクトエディター)が出ている間は、そちらのカメラを回す。
+		// モーダルな画面(エフェクト / プレハブエディター)が出ている間は、そちらのカメラを回す。
 		// あちらも同じ EditorCamera だが実体は別。シーンビュー側の位置を動かさないため、
 		// ここでシーンビューのフリーカメラは止めておく
 		if (IsModalActive())
 		{
 			if (m_upEditorCamera) m_upEditorCamera->CancelControl();
 			if (m_upEffectEditor) m_upEffectEditor->UpdateCamera(a_dt);
+			if (m_upPrefabEditor) m_upPrefabEditor->UpdateCamera(a_dt);
 			return;
 		}
 
@@ -221,23 +233,28 @@ namespace Editor
 	//======================================================================================
 	bool MainEditor::IsModalActive() const
 	{
-		return m_upEffectEditor && m_upEffectEditor->IsOpen();
+		return IsScenePreviewActive();
 	}
 
 	//======================================================================================
 	// カメラの割り込み
 	//--------------------------------------------------------------------------------------
-	// エフェクトエディターが開いているなら、そちらのカメラが最優先。
+	// エフェクト / プレハブエディターが開いているなら、そちらのカメラが最優先。
 	// 描いているのがあちらの確認用ワールドなので、フリーカメラで見ても何も映らない。
 	// それ以外はエディターモードのときだけフリーカメラを割り込ませる
 	// (実際の上書きは GraphicsEngine::Execute() 内、ECS側のカメラ設定が終わった後)
 	//
 	// カリングをゲームカメラで行うのはフリーカメラのときだけ。
-	// エフェクトエディターは別のワールドを描いているので、ゲームカメラで間引く意味が無い
+	// 確認用の画面は別のワールドを描いているので、ゲームカメラで間引く意味が無い
 	//======================================================================================
 	bool MainEditor::TryGetCameraOverride(EAppMode a_mode, Engine::DevTool::CameraOverride& a_outOverride) const
 	{
 		if (m_upEffectEditor && m_upEffectEditor->TryGetCameraOverride(a_outOverride.worldMat, a_outOverride.projMat))
+		{
+			a_outOverride.isCullByGameCamera = false;
+			return true;
+		}
+		if (m_upPrefabEditor && m_upPrefabEditor->TryGetCameraOverride(a_outOverride.worldMat, a_outOverride.projMat))
 		{
 			a_outOverride.isCullByGameCamera = false;
 			return true;
@@ -254,26 +271,42 @@ namespace Editor
 	}
 
 	//======================================================================================
-	// エフェクトエディターの確認用シーン
+	// 確認用の画面(エフェクト / プレハブエディター)のシーン
 	//--------------------------------------------------------------------------------------
-	// エフェクト単体を見るための画面なので、後ろでゲームが動いていると
-	// 描画も当たり判定も混ざってしまう。開いている間は SceneManager がゲームのシーンの代わりにこちらを回す
+	// 単体を見るための画面なので、後ろでゲームが動いていると
+	// 描画も当たり判定も混ざってしまう。開いている間は SceneManager がゲームのシーンの代わりにこちらを回す。
+	// どちらもモーダルなので、同時に開いていることは無い
 	//======================================================================================
 	bool MainEditor::IsScenePreviewActive() const
 	{
-		return m_upEffectEditor && m_upEffectEditor->IsOpen();
+		return (m_upEffectEditor && m_upEffectEditor->IsOpen()) ||
+			(m_upPrefabEditor && m_upPrefabEditor->IsOpen());
 	}
 
 	void MainEditor::UpdateScenePreview(float a_deltaTime)
 	{
-		if (!IsScenePreviewActive()) return;
-		m_upEffectEditor->UpdateScene(a_deltaTime);
+		if (m_upEffectEditor && m_upEffectEditor->IsOpen())
+		{
+			m_upEffectEditor->UpdateScene(a_deltaTime);
+			return;
+		}
+		if (m_upPrefabEditor && m_upPrefabEditor->IsOpen())
+		{
+			m_upPrefabEditor->UpdateScene(a_deltaTime);
+		}
 	}
 
 	void MainEditor::DrawScenePreview()
 	{
-		if (!IsScenePreviewActive()) return;
-		m_upEffectEditor->DrawScene();
+		if (m_upEffectEditor && m_upEffectEditor->IsOpen())
+		{
+			m_upEffectEditor->DrawScene();
+			return;
+		}
+		if (m_upPrefabEditor && m_upPrefabEditor->IsOpen())
+		{
+			m_upPrefabEditor->DrawScene();
+		}
 	}
 
 	//======================================================================================
@@ -319,6 +352,10 @@ namespace Editor
 		if (m_upEffectEditor)
 		{
 			m_upEffectEditor->OnDrawImGui();
+		}
+		if (m_upPrefabEditor)
+		{
+			m_upPrefabEditor->OnDrawImGui();
 		}
 
 		// 各登録された関数を実行

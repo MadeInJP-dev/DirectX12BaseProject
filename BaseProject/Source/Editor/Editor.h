@@ -23,6 +23,7 @@ namespace Editor
 	class PanelManager;
 	class Profiler;
 	class EffectEditor;
+	class PrefabEditor;
 
 	//=======================================================================
 	// 
@@ -31,7 +32,7 @@ namespace Editor
 	//=======================================================================
 	// Engine へは開発ツールの窓口(IDevTool)として差し込まれる(main.cpp)。
 	// 実体は main.cpp(WinMain)が unique_ptr で持つ。エディターの中では
-	// EditorContext が配るもの(カメラ・エフェクトエディター・サービス)を使い、ここを名指ししないこと
+	// EditorContext が配るもの(カメラ・エフェクトエディター・プレハブエディター・サービス)を使い、ここを名指ししないこと
 	class MainEditor : public Engine::DevTool::IDevTool
 	{
 	public:
@@ -73,10 +74,10 @@ namespace Editor
 		/// </remarks>
 		void OnSceneChanged() override;
 
-		// カメラの割り込み : エフェクトエディターのカメラが最優先、次にエディターモードのフリーカメラ
+		// カメラの割り込み : 確認用の画面(エフェクト / プレハブエディター)のカメラが最優先、次にエディターモードのフリーカメラ
 		bool TryGetCameraOverride(EAppMode a_mode, Engine::DevTool::CameraOverride& a_outOverride) const override;
 
-		// エフェクトエディターの確認用シーン(開いている間はゲームのシーンの代わりに回す)
+		// 確認用の画面(エフェクト / プレハブエディター)のシーン(開いている間はゲームのシーンの代わりに回す)
 		bool IsScenePreviewActive() const override;
 		void UpdateScenePreview(float a_deltaTime) override;
 		void DrawScenePreview() override;
@@ -153,6 +154,15 @@ namespace Editor
 		//=======================================================================
 		EffectEditor* RefEffectEditor() { return m_upEffectEditor.get(); }
 
+		//=======================================================================
+		// プレハブエディター
+		//
+		// プレハブ1つを、出したところを見ながら親子ごと組むモーダル画面。
+		// 作りはエフェクトエディターと同じで、開いている間はゲームのシーンが止まる。
+		// 2つが同時に開くことは無い(どちらもモーダルなので、片方の中から他方を開けない)
+		//=======================================================================
+		PrefabEditor* RefPrefabEditor() { return m_upPrefabEditor.get(); }
+
 		/// <summary>
 		/// エディターがモーダルな画面を出しているか
 		/// </summary>
@@ -184,6 +194,9 @@ namespace Editor
 
 		// エフェクト確認用のモーダル画面
 		std::unique_ptr<EffectEditor> m_upEffectEditor = nullptr;
+
+		// プレハブ編集用のモーダル画面
+		std::unique_ptr<PrefabEditor> m_upPrefabEditor = nullptr;
 
 		// エディター用関数登録
 		std::vector<std::function<void()>> m_editFuncVec = {};

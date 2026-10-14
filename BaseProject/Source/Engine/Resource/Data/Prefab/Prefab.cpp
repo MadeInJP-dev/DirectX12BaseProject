@@ -22,20 +22,50 @@ namespace Engine::Resource
 	//======================================================================================
 	// コンポーネント操作
 	//======================================================================================
-	void Prefab::AddComponentDefault(ECS::World* a_pWorld, ECS::ComponentTypeID a_compTypeID)
+	bool Prefab::ResolveNode(
+		int a_nodeIndex,
+		ECS::Signature*& a_outSig,
+		std::unordered_map<ECS::ComponentTypeID, std::vector<uint8_t>>*& a_outDataMap)
+	{
+		if (a_nodeIndex == ROOT_NODE)
+		{
+			a_outSig     = &m_sigunature;
+			a_outDataMap = &m_dataMap;
+			return true;
+		}
+
+		if (!IsValidNode(a_nodeIndex)) return false;
+
+		PrefabChild& _child = m_children[static_cast<size_t>(a_nodeIndex)];
+		a_outSig     = &_child.sig;
+		a_outDataMap = &_child.dataMap;
+		return true;
+	}
+
+	bool Prefab::IsValidNode(int a_nodeIndex) const
+	{
+		if (a_nodeIndex == ROOT_NODE) return true;
+		return a_nodeIndex >= 0 && static_cast<size_t>(a_nodeIndex) < m_children.size();
+	}
+
+	void Prefab::AddComponentDefault(ECS::World* a_pWorld, ECS::ComponentTypeID a_compTypeID, int a_nodeIndex)
 	{
 		if (!a_pWorld) return;
+
+		ECS::Signature* _pSig = nullptr;
+		std::unordered_map<ECS::ComponentTypeID, std::vector<uint8_t>>* _pDataMap = nullptr;
+		if (!ResolveNode(a_nodeIndex, _pSig, _pDataMap)) return;
 
 		// コンポーネントのサイズ分バッファを確保して既定値で構築する
 		const auto& _meta = a_pWorld->GetComponentMetaData(a_compTypeID);
 
-		auto& _buffer = m_dataMap[a_compTypeID];
+		auto& _buffer = (*_pDataMap)[a_compTypeID];
 		_buffer.assign(_meta.compAlignSize, 0);
 
 		auto _construct = a_pWorld->GetCompFunc(a_compTypeID).construct;
 		if (_construct) _construct(_buffer.data());
 
-		m_sigunature.set(a_compTypeID);
+		_pSig->set(a_compTypeID);
 	}
 
 	void Prefab::AddComponentData(ECS::World* a_pWorld, ECS::ComponentTypeID a_compTypeID, const uint8_t* a_pSrc)
@@ -51,10 +81,14 @@ namespace Engine::Resource
 		m_sigunature.set(a_compTypeID);
 	}
 
-	void Prefab::RemoveComponent(ECS::ComponentTypeID a_compTypeID)
+	void Prefab::RemoveComponent(ECS::ComponentTypeID a_compTypeID, int a_nodeIndex)
 	{
-		m_sigunature.reset(a_compTypeID);
-		m_dataMap.erase(a_compTypeID);
+		ECS::Signature* _pSig = nullptr;
+		std::unordered_map<ECS::ComponentTypeID, std::vector<uint8_t>>* _pDataMap = nullptr;
+		if (!ResolveNode(a_nodeIndex, _pSig, _pDataMap)) return;
+
+		_pSig->reset(a_compTypeID);
+		_pDataMap->erase(a_compTypeID);
 	}
 
 	void Prefab::PasteSignatureAndData(
@@ -76,16 +110,99 @@ namespace Engine::Resource
 		}
 	}
 
-	bool Prefab::Has(ECS::ComponentTypeID a_compTypeID) const
+	bool Prefab::Has(ECS::ComponentTypeID a_compTypeID, int a_nodeIndex) const
 	{
-		return m_sigunature.test(a_compTypeID);
+		return GetSignature(a_nodeIndex).test(a_compTypeID);
 	}
 
-	uint8_t* Prefab::RefData(ECS::ComponentTypeID a_compTypeID)
+	uint8_t* Prefab::RefData(ECS::ComponentTypeID a_compTypeID, int a_nodeIndex)
 	{
-		auto _it = m_dataMap.find(a_compTypeID);
-		if (_it == m_dataMap.end() || _it->second.empty()) return nullptr;
+		ECS::Signature* _pSig = nullptr;
+		std::unordered_map<ECS::ComponentTypeID, std::vector<uint8_t>>* _pDataMap = nullptr;
+		if (!ResolveNode(a_nodeIndex, _pSig, _pDataMap)) return nullptr;
+
+		auto _it = _pDataMap->find(a_compTypeID);
+		if (_it == _pDataMap->end() || _it->second.empty()) return nullptr;
 		return _it->second.data();
+	}
+
+	const ECS::Signature& Prefab::GetSignature(int a_nodeIndex) const
+	{
+		static const ECS::Signature EMPTY_SIG = {};
+
+		if (a_nodeIndex == ROOT_NODE) return m_sigunature;
+		if (!IsValidNode(a_nodeIndex)) return EMPTY_SIG;
+		return m_children[static_cast<size_t>(a_nodeIndex)].sig;
+	}
+
+	const std::unordered_map<ECS::ComponentTypeID, std::vector<uint8_t>>& Prefab::GetDataMap(int a_nodeIndex) const
+	{
+		static const std::unordered_map<ECS::ComponentTypeID, std::vector<uint8_t>> EMPTY_DATA_MAP = {};
+
+		if (a_nodeIndex == ROOT_NODE) return m_dataMap;
+		if (!IsValidNode(a_nodeIndex)) return EMPTY_DATA_MAP;
+		return m_children[static_cast<size_t>(a_nodeIndex)].dataMap;
+	}
+
+	//======================================================================================
+	// ノード(子)の操作
+	//======================================================================================
+	const Core::GUID& Prefab::RequestNodeGUID(int a_nodeIndex)
+	{
+		static const Core::GUID INVALID_GUID = {};
+
+		if (!IsValidNode(a_nodeIndex)) return INVALID_GUID;
+
+		Core::GUID& _guid = (a_nodeIndex == ROOT_NODE)
+			? m_savedGUID
+			: m_children[static_cast<size_t>(a_nodeIndex)].savedGUID;
+
+		if (!_guid.IsValid()) _guid.Create();
+		return _guid;
+	}
+
+	//--------------------------------------------------------------------------------------
+	// 子孫ごと取り除く
+	//
+	// 親は子より前に並んでいるので、消す印は前から一度舐めれば子孫まで伝わる。
+	// 並び順はそのまま詰めるので「親が子より前」は崩れない。
+	//--------------------------------------------------------------------------------------
+	size_t Prefab::RemoveChildTree(int a_childIndex)
+	{
+		if (a_childIndex == ROOT_NODE || !IsValidNode(a_childIndex)) return 0;
+
+		const size_t _count = m_children.size();
+		std::vector<bool> _isRemoveVec(_count, false);
+		_isRemoveVec[static_cast<size_t>(a_childIndex)] = true;
+
+		for (size_t _i = static_cast<size_t>(a_childIndex) + 1; _i < _count; ++_i)
+		{
+			const int _parent = m_children[_i].parentIndex;
+			if (_parent >= 0 && _isRemoveVec[static_cast<size_t>(_parent)]) _isRemoveVec[_i] = true;
+		}
+
+		// 古い添え字 → 詰めた後の添え字
+		std::vector<int> _newIndexVec(_count, ROOT_NODE);
+		std::vector<PrefabChild> _remainVec = {};
+		_remainVec.reserve(_count);
+
+		for (size_t _i = 0; _i < _count; ++_i)
+		{
+			if (_isRemoveVec[_i]) continue;
+
+			_newIndexVec[_i] = static_cast<int>(_remainVec.size());
+			_remainVec.push_back(std::move(m_children[_i]));
+		}
+
+		// 残ったものの親は消えていない(消える親の子は一緒に消えている)
+		for (PrefabChild& _child : _remainVec)
+		{
+			if (_child.parentIndex >= 0) _child.parentIndex = _newIndexVec[static_cast<size_t>(_child.parentIndex)];
+		}
+
+		const size_t _removeCount = _count - _remainVec.size();
+		m_children = std::move(_remainVec);
+		return _removeCount;
 	}
 
 	//======================================================================================
@@ -122,9 +239,13 @@ namespace Engine::Resource
 
 	void Prefab::Load(ECS::World* a_pWorld, const std::string& a_filePath)
 	{
-		// 一旦クリアしてから読み込む
+		// 一旦クリアしてから読み込む。
+		// 子と鍵も空にする : 子を持たないファイルは Children を読まないので、
+		// 読み直し(エディターの Revert)で前の子が残ってしまう
 		m_sigunature = {};
 		m_dataMap.clear();
+		m_savedGUID = {};
+		m_children.clear();
 
 		auto _dir = Core::File::GetDirFromPath(a_filePath);
 		auto _fileName = Core::File::GetFileNameWithoutExtension(a_filePath);

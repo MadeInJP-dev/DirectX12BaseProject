@@ -118,8 +118,10 @@ namespace App::Utility
 	/// 材料からエンティティをその場で生成する(子も一緒に作る)。
 	/// 親子とアタッチメントのスロットはエンティティIDで付ける
 	/// </summary>
+	/// <param name="a_pOutEntityVec">作ったエンティティ(材料と同じ並び。作れなかった所は INVALID_ENTITY)の書き込み先。要らなければ nullptr</param>
 	/// <returns>ルートのエンティティ。作れなければ INVALID_ENTITY</returns>
 	Engine::ECS::Entity CreateInstanceNow(
 		Engine::ECS::World& a_world,
-		std::vector<Engine::Resource::PrefabInstanceData>& a_instanceVec);
+		std::vector<Engine::Resource::PrefabInstanceData>& a_instanceVec,
+		std::vector<Engine::ECS::Entity>* a_pOutEntityVec = nullptr);
 }

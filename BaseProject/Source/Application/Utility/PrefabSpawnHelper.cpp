@@ -247,7 +247,8 @@ namespace App::Utility
 
 	Engine::ECS::Entity CreateInstanceNow(
 		Engine::ECS::World& a_world,
-		std::vector<Engine::Resource::PrefabInstanceData>& a_instanceVec)
+		std::vector<Engine::Resource::PrefabInstanceData>& a_instanceVec,
+		std::vector<Engine::ECS::Entity>* a_pOutEntityVec)
 	{
 		// 作ったエンティティ(材料と同じ並び)。親子とスロットをIDで付けるのに使う
 		std::vector<Engine::ECS::Entity> _entityVec(a_instanceVec.size(), Engine::ECS::Limits::INVALID_ENTITY);
@@ -281,6 +282,8 @@ namespace App::Utility
 
 		// スロットの相手は自分より後ろに並ぶ(子)ことがあるので、全員を作ってから付ける
 		LinkAttachmentSlots(a_world, a_instanceVec, _entityVec);
+
+		if (a_pOutEntityVec) *a_pOutEntityVec = _entityVec;
 
 		return _entityVec.empty() ? Engine::ECS::Limits::INVALID_ENTITY : _entityVec[0];
 	}

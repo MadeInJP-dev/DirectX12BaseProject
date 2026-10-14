@@ -1199,6 +1199,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Editor\PrefabEditor\PrefabEditor.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Panel\AssetDataBasePanel\AssetDataBasePanel.cpp">
       <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
@@ -2138,6 +2143,7 @@
     <ClInclude Include="Source\Editor\Profiler\Profiler.h" />
     <ClInclude Include="Source\Editor\EditorCamera\EditorCamera.h" />
     <ClInclude Include="Source\Editor\EffectEditor\EffectEditor.h" />
+    <ClInclude Include="Source\Editor\PrefabEditor\PrefabEditor.h" />
     <ClInclude Include="Source\Editor\Panel\AssetDataBasePanel\AssetDataBasePanel.h" />
     <ClInclude Include="Source\Editor\Panel\GameObjectHierarchyPanel\GameObjectHierarchyPanel.h" />
     <ClInclude Include="Source\Editor\Panel\HierarchyPanel\HierarchyPanel.h" />

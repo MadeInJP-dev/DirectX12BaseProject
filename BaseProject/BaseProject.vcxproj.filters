@@ -13,6 +13,9 @@
     <Filter Include="Source\Editor\EffectEditor">
       <UniqueIdentifier>{bcb02616-0410-4ca2-a7ec-c73ee465b582}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\PrefabEditor">
+      <UniqueIdentifier>{8ce1b7d8-f02a-403c-a11a-f85d8e869c21}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\Helper">
       <UniqueIdentifier>{6994aee8-ff1e-49af-b2f5-bb1b337752b1}</UniqueIdentifier>
     </Filter>
@@ -2028,6 +2031,9 @@
     <ClCompile Include="Source\Editor\EffectEditor\EffectEditor.cpp">
       <Filter>Source\Editor\EffectEditor</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\PrefabEditor\PrefabEditor.cpp">
+      <Filter>Source\Editor\PrefabEditor</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Helper\EditorHelper.cpp">
       <Filter>Source\Editor\Helper</Filter>
     </ClCompile>
@@ -3724,6 +3730,9 @@
     </ClInclude>
     <ClInclude Include="Source\Editor\EffectEditor\EffectEditor.h">
       <Filter>Source\Editor\EffectEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\PrefabEditor\PrefabEditor.h">
+      <Filter>Source\Editor\PrefabEditor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\EditorPCH.h">
       <Filter>Source\Editor</Filter>

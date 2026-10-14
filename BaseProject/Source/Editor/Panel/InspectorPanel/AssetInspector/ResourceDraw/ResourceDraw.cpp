@@ -16,6 +16,7 @@
 
 #include "Engine/Resource/Data/EffectPrefab/EffectPrefab.h"
 #include "Editor/EffectEditor/EffectEditor.h"
+#include "Editor/PrefabEditor/PrefabEditor.h"
 
 #include "Engine/MainEngine.h"
 #include "Engine/Graphics/GraphicsEngine.h"
@@ -304,6 +305,16 @@ namespace Editor::Inspector
 			ENGINE_LOG("Save Prefab : %s", _path.c_str());
 		}
 
+		// 出したところを見ながら、子も含めて組む
+		Engine::EditorField::SameLine();
+		if (ImGui::Button("Open Prefab Editor"))
+		{
+			if (auto* _pPrefabEditor = a_editContext.pPrefabEditor)
+			{
+				_pPrefabEditor->Open(_guid);
+			}
+		}
+
 		//------------------------------------------------------------------
 		// シグネチャのコピー / ペースト
 		//
@@ -362,6 +373,7 @@ namespace Editor::Inspector
 		// 一緒に覚えている子エンティティ
 		//------------------------------------------------------------------
 		// ここで編集はできない(このインスペクタはルートの構成を触る場所)。
+		// 子の追加・削除・編集はプレハブエディター(Open Prefab Editor)で行う。
 		// 実体化すると、この一覧ぶんが親子リンク付きで一緒に生成される。
 		//------------------------------------------------------------------
 		const auto& _childVec = _pPrefab->GetChildren();
@@ -403,15 +415,20 @@ namespace Editor::Inspector
 	// プレハブのコンポーネントの羅列・編集・追加
 	// エンティティインスペクタと同じ edit 関数を使う
 	//-----------------------------------------------------------------------------------------
-	void PrefabComponentsEdit(ECS::World* a_pWorld, Resource::Prefab* a_pPrefab)
+	void PrefabComponentsEdit(ECS::World* a_pWorld, Resource::Prefab* a_pPrefab, int a_nodeIndex)
 	{
 		if (!a_pWorld || !a_pPrefab) return;
+		if (!a_pPrefab->IsValidNode(a_nodeIndex)) return;
 
 		ECS::World* _pWorld = a_pWorld;
 		Resource::Prefab* _pPrefab = a_pPrefab;
 
+		// ノードを切り替えたとき、開いていたツリーの状態を別のノードへ持ち越さない
+		ImGui::PushID(a_nodeIndex);
+
 		// ---- 所持コンポーネントの羅列・編集 ----
-		const ECS::Signature& _sig = _pPrefab->GetSignature();
+		// 追加・削除はこの関数の終わりまで遅らせるので、参照のままで崩れない
+		const ECS::Signature& _sig = _pPrefab->GetSignature(a_nodeIndex);
 
 		ECS::CompEditContext _compEditContext = {};
 		_compEditContext.pWorld = _pWorld;
@@ -430,7 +447,7 @@ namespace Editor::Inspector
 			if (ImGui::TreeNodeEx(_metaData.name.c_str(), ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_Framed))
 			{
 				// コンポーネントごとの編集UI(エンティティインスペクタと同じ edit 関数を使う)
-				_compEditContext.pData = _pPrefab->RefData(_compTypeID);
+				_compEditContext.pData = _pPrefab->RefData(_compTypeID, a_nodeIndex);
 				auto _func = _pWorld->GetCompFunc(_compTypeID).edit;
 				if (_func && _compEditContext.pData)
 				{
@@ -448,10 +465,11 @@ namespace Editor::Inspector
 
 		if (_removeTypeID != ECS::Limits::INVALID_COMPONENTTYPEID)
 		{
-			_pPrefab->RemoveComponent(_removeTypeID);
+			_pPrefab->RemoveComponent(_removeTypeID, a_nodeIndex);
 		}
 
 		// ---- コンポーネントの追加 ----
+		ECS::ComponentTypeID _addTypeID = ECS::Limits::INVALID_COMPONENTTYPEID;
 		if (Engine::EditorField::ComboScope _combo{ "Add Component", "Select..." })
 		{
 			// 数が増えると探せなくなるので名前で絞り込めるようにする
@@ -473,11 +491,18 @@ namespace Editor::Inspector
 
 				if (ImGui::Selectable(_meta.name.c_str()))
 				{
-					_pPrefab->AddComponentDefault(_pWorld, _compTypeID);
+					_addTypeID = _compTypeID;
 				}
 
 				ImGui::PopID();
 			}
 		}
+
+		if (_addTypeID != ECS::Limits::INVALID_COMPONENTTYPEID)
+		{
+			_pPrefab->AddComponentDefault(_pWorld, _addTypeID, a_nodeIndex);
+		}
+
+		ImGui::PopID();
 	}
 }

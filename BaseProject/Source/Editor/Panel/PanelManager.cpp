@@ -19,7 +19,7 @@
 
 namespace Editor
 {
-	void PanelManager::Init(EditorCamera* a_pEditorCamera, EffectEditor* a_pEffectEditor, Profiler* a_pProfiler, ECS::EngineServices* a_pServices)
+	void PanelManager::Init(EditorCamera* a_pEditorCamera, EffectEditor* a_pEffectEditor, PrefabEditor* a_pPrefabEditor, Profiler* a_pProfiler, ECS::EngineServices* a_pServices)
 	{
 		RegisterPanel<RenderGraphResourceViewPanel>();
 		RegisterPanel<AssetDataBasePanel>();
@@ -35,6 +35,7 @@ namespace Editor
 
 		m_editContext.pEditorCamera = a_pEditorCamera;
 		m_editContext.pEffectEditor = a_pEffectEditor;
+		m_editContext.pPrefabEditor = a_pPrefabEditor;
 		m_editContext.pProfiler = a_pProfiler;
 		m_editContext.pServices = a_pServices;
 	}
