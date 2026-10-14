@@ -6,7 +6,8 @@
 #include "Application/Components/Effect/EffectAssetComponent.h"
 #include "Engine/Effect/EffectPlayer.h"
 #include "Application/Components/Effect/BoosterEffectComponent.h"
-#include "Application/Components/Weapon/GunStateComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/MuzzleComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/WeaponOverHeatComponent.h"
 
 #include "../../Utility/EffectSpawnHelper.h"
 
@@ -21,7 +22,8 @@ namespace App::System
 	// エフェクトにサウンドパーツが入っていれば、再生用の声もここで確保する。
 	// 鳴らす瞬間にインスタンスを作ると、その1フレームだけ音が遅れるため。
 	//
-	// ブーストのスパーク(BoosterEffectComponent)・銃のマズルフラッシュ(GunStateComponent)も
+	// ブーストのスパーク(BoosterEffectComponent)・銃口のマズルフラッシュ(MuzzleComponent)・
+	// オーバーヒートの演出(WeaponOverHeatComponent)も
 	// 同じ EffectAsset を指すので、ここで一緒に解決する。
 	// どちらも「その瞬間が来たら出すもの」なので進行状態は持たず、ハンドルを引くだけ。
 	// 踏み込んだ瞬間・撃った瞬間に読み込みが走らないよう、生成時に解決しておく。
@@ -143,9 +145,9 @@ namespace App::System
 		);
 
 		//--------------------------------------------------------------------------
-		// 銃のマズルフラッシュ : ハンドルを解決するだけ
+		// 銃口のマズルフラッシュ : ハンドルを解決するだけ
 		//--------------------------------------------------------------------------
-		a_world.PostDeserializeTask<Component::GunStateComponent>(
+		a_world.PostDeserializeTask<Component::MuzzleComponent>(
 			Engine::ECS::ESystemType::PostDeserialize,
 			"MuzzleEffectFixupSystem",
 			[]
@@ -154,7 +156,7 @@ namespace App::System
 				uint32_t a_count,
 				const Engine::ECS::SystemContext& a_ctx,
 				Component::PostDeserializeTag* /*a_tag*/,
-				Component::GunStateComponent* a_gunArray
+				Component::MuzzleComponent* a_muzzleArray
 				)
 			{
 				auto* _pResourceManager = a_ctx.pServices->pResourceManager;
@@ -162,16 +164,51 @@ namespace App::System
 
 				for (size_t _i = 0; _i < a_count; ++_i)
 				{
-					Component::GunStateComponent& _gunComp = a_gunArray[_i];
+					auto& _effect = a_muzzleArray[_i].muzzleEffect;
 
-					if (_gunComp.muzzleEffectGUID == Core::DEFAULT_GUID)
+					if (_effect.guid == Core::DEFAULT_GUID)
 					{
-						_gunComp.muzzleEffectHandle = {};
+						_effect.handle = {};
 						continue;
 					}
 
-					_pResourceManager->AcquireImmediate(_gunComp.muzzleEffectHandle, _gunComp.muzzleEffectGUID);
-					App::Utility::WarmupEffectParticles(*a_ctx.pServices, _gunComp.muzzleEffectHandle);
+					_pResourceManager->AcquireImmediate(_effect.handle, _effect.guid);
+					App::Utility::WarmupEffectParticles(*a_ctx.pServices, _effect.handle);
+				}
+			}
+		);
+
+		//--------------------------------------------------------------------------
+		// オーバーヒートの演出 : 出すのはその場で生成(WeaponOverHeatEffectSystem)なので、
+		// ここで読み込みとパーティクルの用意だけ済ませておく(上限に届いた瞬間に遅れないように)
+		//--------------------------------------------------------------------------
+		a_world.PostDeserializeTask<Component::WeaponOverHeatComponent>(
+			Engine::ECS::ESystemType::PostDeserialize,
+			"HeatEffectFixupSystem",
+			[]
+			(
+				Engine::ECS::Chunk* /*a_pChunk*/,
+				uint32_t a_count,
+				const Engine::ECS::SystemContext& a_ctx,
+				Component::PostDeserializeTag* /*a_tag*/,
+				Component::WeaponOverHeatComponent* a_heatArray
+				)
+			{
+				auto* _pResourceManager = a_ctx.pServices->pResourceManager;
+				if (!_pResourceManager) return;
+
+				for (size_t _i = 0; _i < a_count; ++_i)
+				{
+					auto& _effect = a_heatArray[_i].heatEffect;
+
+					if (_effect.guid == Core::DEFAULT_GUID)
+					{
+						_effect.handle = {};
+						continue;
+					}
+
+					_pResourceManager->AcquireImmediate(_effect.handle, _effect.guid);
+					App::Utility::WarmupEffectParticles(*a_ctx.pServices, _effect.handle);
 				}
 			}
 		);

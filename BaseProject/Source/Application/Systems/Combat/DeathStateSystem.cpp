@@ -73,7 +73,7 @@ namespace App::System
 		// [PreUpdate] 死んでいるあいだの攻撃入力を消す
 		//
 		// 攻撃入力は同じ PreUpdate 帯で武器の引き金(WeaponTriggerComponent)へ配られ、
-		// 銃(GunTriggerSystem)はそちらを読む。Update 帯で消していた頃は配った後だったので、
+		// 銃(撃ち方のシステム)はそちらを読む。Update 帯で消していた頃は配った後だったので、
 		// 死んでいる間も銃を撃ち続けていた。
 		// 入力を作る側(敵・ボス・近距離型)の後、配る側(AttachmentDispatch / SelfWeaponTrigger)の前で消す。
 		// 配る側はここが書いた ActionIntent を読むので、読み書きで自動的に後ろへ並ぶ

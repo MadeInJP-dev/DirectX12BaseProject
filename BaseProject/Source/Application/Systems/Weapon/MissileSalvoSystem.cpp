@@ -2,52 +2,35 @@
 
 #include "Application/ECS/World/APPWorld.h"
 #include "Engine/Option/OptionManager.h"
-#include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
-#include "Engine/Resource/Data/Prefab/Prefab.h"
-#include "Engine/Resource/Data/Model/Model.h"
 
 #include "Application/Components/Enemy/EnemyTag.h"
 #include "Application/Components/Camera/ProjMatComponent.h"
 #include "Application/Components/Combat/ActionIntentComponent.h"
 #include "Application/Components/Combat/AimResultComponent.h"
 #include "Application/Components/Attachment/AttachmentSlotsComponent.h"
-#include "Application/Components/Weapon/MissileLockComponent.h"
-#include "Application/Components/Weapon/GunStateComponent.h"
-#include "Application/Components/Render/ModelComponent.h"
+#include "Application/Components/Weapon/Shoulder/MissileLockComponent.h"
+#include "Application/Components/Weapon/Shoulder/MissileFireComponent.h"
 #include "Application/Components/Transform/WorldMatrixComponent.h"
 
 #include "Application/InstanceResource/SingletonEntityResource.h"
 
 #include "Application/Components/Boss/BossParamsComponent.h"
 
-#include "ProjectileSpawn.h"
-#include "MissileSalvo.h"
-#include "Application/Components/Physics/Collider.h"
-#include "Application/Components/Transform/HierarchyComponent.h"
 
 //==========================================================================================
 // MissileSalvoSystem
 //
 // ミサイルキー(ActionIntentComponent::isMissileHold)を
 //   押している間 … コンバットレティクルの円に入った敵を MissileLockComponent へ溜める
-//   離した瞬間   … 溜めた相手へ missileCount 発を割り振り、発射キューへ積む
-//   その後       … launchInterval 間隔で1発ずつ実際に生成する
-// という流れを1つのシステムで面倒を見る。
+//   離した瞬間   … 溜めた相手を、肩の武器(スロットの missile)の MissileFireComponent へ要求として渡す
+// 実際に撃つのは武器の側(MissileFireSystem)。何発を・どの間隔で撃つかも武器が持つ。
 //
 // ・PostUpdate に置く理由
 //     収集はスクリーン座標で行うので、カメラと敵の「今フレームの」ワールド行列が要る。
 //     WorldMatrixComponent を読むので CalcMatrixSystem /
 //     CommitHierarchyWorldMatrixSystem より自動的に後ろへ回る(LockOnTargetSystem と同じ)。
-//     発射位置もミサイルポッドの今フレームの行列から取るため、同じ帯にあるのが都合が良い。
-// ・収集と発射を分けなかったのは、両方が MissileLockComponent を書くため。
-//   システム順のグラフは RAW(片方が読む)しか辺にしないので、書き手同士は
-//   登録順頼みになってしまう。1システムに閉じておけば順序の心配が要らない。
-// ・弾のプレハブ・弾速・銃口ノードはミサイルポッド側の GunStateComponent を使う。
-//   ポッドは既に銃と同じ部品(GunState / Model / WorldMatrix)を持っているので、
-//   ミサイル専用に同じ設定をもう一組作らない。
-// ・実際に撃ち出すところ(キューの消化)は App::System::MissileSalvo へ寄せてある。
-//   ボス側(BossMissileSalvoSystem)と同じ処理なので、片方だけ直して食い違わないため。
-//   ここが持つのは「スクリーン座標で敵を溜める」プレイヤー固有の部分だけ。
+// ・溜められる数は肩の武器の発射数まで。武器が付いていない・撃っている最中・待ち時間中は溜めない
+//   (撃ち終わる前に溜め直せてしまうため)。
 // ・ボスは溜め方が違う(相手が最初からプレイヤー1体に決まっている)ので除外する。
 //==========================================================================================
 
@@ -126,12 +109,14 @@ namespace App::System
 					//  それだと HUD を置き忘れたシーンで判定が変わるので、こちらを正解にした)
 					_missile.reticleCenter = _defaultCenter;
 
-					// クールダウンを進める
-					if (_missile.cooldownTimer > 0.0f)
+					// 肩の武器。付いていなければ溜めも発射もしない
+					Component::MissileFireComponent* _pPodFire = nullptr;
+					const Engine::ECS::Entity _pod = _slots.missile.id;
+					if (_pod != Engine::ECS::Limits::INVALID_ENTITY && a_ctx.pWorld->IsAliveEntity(_pod))
 					{
-						_missile.cooldownTimer =
-							std::max(_missile.cooldownTimer - a_ctx.dt, 0.0f);
+						_pPodFire = a_ctx.pWorld->RefData<Component::MissileFireComponent>(_pod);
 					}
+					const bool _isPodReady = _pPodFire && _pPodFire->IsReady();
 
 					const Math::Matrix& _pm = _selfWorld.worldMat;
 					const Math::Vector3 _selfPos = { _pm._41, _pm._42, _pm._43 };
@@ -145,8 +130,7 @@ namespace App::System
 					// 押し離しの検出は入力そのもので見る。溜められるかどうか(_canCharge)を
 					// 混ぜると、クールダウンに入った次のフレームが「離した」扱いになってしまう
 					const bool _rawHold = _intent.isMissileHold;
-					const bool _canCharge =
-						!_missile.IsFiring() && !_missile.IsCoolDown() && _hasCamera;
+					const bool _canCharge = _isPodReady && _hasCamera;
 					const bool _isHold = _rawHold && _canCharge;
 
 					if (_isHold)
@@ -156,7 +140,7 @@ namespace App::System
 						// 判定の円 : 見た目の半径(reticleRadius)× 判定の倍率(reticleScale)
 						const Math::Vector2 _reticleCenter = _missile.reticleCenter;
 						const float _reticleRadius = _missile.GetActiveReticleRadius();
-						const int   _lockMax       = _missile.GetActiveMissileCount();
+						const int   _lockMax       = _pPodFire->GetActiveBurstNum();
 
 						//----------------------------------------------------------
 						// 消滅した敵をロックから外す(前へ詰める)
@@ -251,58 +235,34 @@ namespace App::System
 					}
 
 					//==============================================================
-					// 2. 離した瞬間 : 発射キューを作る
+					// 2. 離した瞬間 : 肩の武器へ要求を出す
 					//--------------------------------------------------------------
-					// ロックした相手へ順番に割り振る。敵の数が弾数に足りなければ
-					// 先頭から使い回すので、1体しか居なければ全弾がその1体へ向かう。
-					// 1つもロックできていない時は、既定では誘導なしで撃つ
+					// 溜めた相手を渡すだけ。何発をどの相手へ割り振るか(足りなければ使い回す)は
+					// 武器の側が決める。1つもロックできていない時は、既定では誘導なしで撃つ
 					// (requireLock を立てると撃たない)。
 					//==============================================================
 					const bool _released = _missile.wasHold && !_rawHold;
 					_missile.wasHold = _rawHold;
 
-					if (_released)
-					{
-						const int _fireCount = _missile.GetActiveMissileCount();
-						const bool _canFire =
-							!_missile.IsFiring() && !_missile.IsCoolDown() &&
-							(_fireCount > 0) && (!_missile.requireLock || _missile.lockCount > 0);
+					if (!_released) continue;
 
-						if (_canFire)
+					if (_isPodReady && (!_missile.requireLock || _missile.lockCount > 0))
+					{
+						auto& _req = _pPodFire->request;
+						const int _lockCount = std::clamp(_missile.lockCount, 0, Component::MissileLockComponent::MISSILE_MAX);
+						for (int _l = 0; _l < _lockCount; ++_l)
 						{
-							for (int _m = 0; _m < _fireCount; ++_m)
-							{
-								_missile.fireTargets[_m] = (_missile.lockCount > 0)
-									? _missile.locks[_m % _missile.lockCount]
-									: Engine::ECS::Limits::INVALID_ENTITY;
-							}
-
-							_missile.fireTotal  = _fireCount;
-							_missile.fireRemain = _fireCount;
-							_missile.fireTimer  = 0.0f;
-
-							// クールダウンは撃ち始めから数える
-							_missile.cooldownTimer = std::max(_missile.cooldown, 0.0f);
+							_req.targets[_l] = _missile.locks[_l];
 						}
+						_req.targetCount = _lockCount;
+						_req.targetOffsetY = _missile.targetOffsetY;
 
-						// 溜めたぶんは撃つ / 撃たないに関わらず捨てる
-						_missile.lockCount  = 0;
-						_missile.isCharging = false;
-					}
-
-					//==============================================================
-					// 3. 発射キューの消化
-					//--------------------------------------------------------------
-					// 撃ち出しはボスと共通なので App::System::MissileSalvo に任せる。
-					// ここで渡すのは「ロックした相手が居ない弾が飛ぶ向き」だけ。
-					//   狙点(カメラのレイ)があればそちら、無ければ自機の前方(+Z)。
-					//   相手が居る弾は、あちらがその相手への向きを基準に散らす。
-					//==============================================================
-					if (!_missile.IsFiring()) continue;
-
-					Math::Vector3 _aimDir = { _pm._31, _pm._32, _pm._33 };	// 左手系 +Z = 前方
-					if (a_ctx.pWorld->HasComponent<Component::AimResultComponent>(_self))
-					{
+						//----------------------------------------------------------
+						// ロックした相手が居ない弾が飛ぶ向き。
+						//   狙点(カメラのレイ)があればそちら、無ければ自機の前方(+Z)。
+						//   相手が居る弾は、武器がその相手への向きを基準に散らす。
+						//----------------------------------------------------------
+						Math::Vector3 _aimDir = { _pm._31, _pm._32, _pm._33 };	// 左手系 +Z = 前方
 						if (const auto* _pAim = a_ctx.pWorld->RefData<Component::AimResultComponent>(_self))
 						{
 							if (_pAim->isValid)
@@ -311,17 +271,20 @@ namespace App::System
 								if (_d.LengthSquared() > 1e-8f) _aimDir = _d;
 							}
 						}
+						_req.aimDir = _aimDir;
+						_req.isRequested = true;
 					}
 
-					App::System::MissileSalvo::ConsumeFireQueue(
-						a_ctx, _missile, _slots.missile.id, _aimDir);
+					// 溜めたぶんは撃つ / 撃たないに関わらず捨てる
+					_missile.lockCount  = 0;
+					_missile.isCharging = false;
 				}
 			},
 			Engine::ECS::Exclude<Component::BossParamsComponent>{}
 		)
-		// 絞り込みに使わない読み書き : カメラ・敵の一覧と位置・狙点、ポッドの銃設定(弾のハンドルを解決して書く)と発射元
-		.Reads<Component::ProjMatComponent, Component::WorldMatrixComponent, Component::EnemyTag, Component::AimResultComponent, Component::ModelComponent, Component::ColliderComponent, Component::HierarchyComponent>()
-		.Writes<Component::GunStateComponent>()
+		// 絞り込みに使わない読み書き : カメラ・敵の一覧と位置・狙点を読み、肩の武器へ要求を書く
+		.Reads<Component::ProjMatComponent, Component::WorldMatrixComponent, Component::EnemyTag, Component::AimResultComponent>()
+		.Writes<Component::MissileFireComponent>()
 		.ReadsResource<InstanceResource::SingletonEntityResource>();
 	}
 }

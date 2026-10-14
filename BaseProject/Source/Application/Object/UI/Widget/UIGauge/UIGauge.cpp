@@ -111,6 +111,7 @@ namespace App::Object
 			case EGaugeSource::BoostFuel:	a_outKind = InstanceResource::EHUDGaugeKind::BoostFuel;		return true;
 			case EGaugeSource::Overheat:	a_outKind = InstanceResource::EHUDGaugeKind::Overheat;		return true;
 			case EGaugeSource::ChargeDash:	a_outKind = InstanceResource::EHUDGaugeKind::ChargeDash;	return true;
+			case EGaugeSource::Magazine:	a_outKind = InstanceResource::EHUDGaugeKind::Magazine;		return true;
 
 			case EGaugeSource::Manual:
 			default:						return false;

@@ -30,12 +30,12 @@ namespace App::Component
 	//     BoostParamsComponent      … ブースト入力。RobotBoostSystem がそのまま推力に変える。
 	//     ActionIntent / AimTargetPos
 	//                         … 銃の発射入力と狙点。AttachmentDispatchSystem が武器の子
-	//                           エンティティへ配信し、GunTriggerSystem が撃つ。
+	//                           エンティティへ配信し、撃ち方のシステムが撃つ。
 	//   つまりボス用に増やしたのは「入力を作る側」だけで、動かす側は全部既存のもの。
 	//
 	// ・撃つ相手は TargetEntityComponent(SearchPlayerSystem が解決する)。
 	//   戦闘の開始/終了は距離ではなく命令で決めるので、発見距離は広めに取っておくこと
-	//   (弾の誘導先を引く GunProjectileSpawnSystem が isFind を見るため)。
+	//   (弾の誘導先を引く WeaponProjectileSpawnSystem が isFind を見るため)。
 	//==========================================================================================
 	struct BossParamsComponent
 	{

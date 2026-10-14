@@ -9,7 +9,7 @@
 #include "Application/Components/Physics/SphereCollider.h"
 #include "Application/Components/Physics/Collider.h"
 #include "Application/Components/Transform/LocalTransformComponent.h"
-#include "Application/Components/Weapon/ProjectileComponent.h"
+#include "Application/Components/Weapon/Projectile/ProjectileComponent.h"
 #include "Application/InstanceResource/HitEventResource.h"
 
 namespace App::System

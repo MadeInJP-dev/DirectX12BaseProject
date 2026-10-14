@@ -62,8 +62,9 @@ namespace App::Object
 		Manual,			// 外から SetValue で入れる(コンポーネントを見ない)
 		Health,			// HealthComponent      : currentHealth / maxHealth
 		BoostFuel,		// BoostStateComponent / BoostParamsComponent : currentFuel / maxFuel
-		Overheat,		// GunStateComponent    : heat / heatLimit
+		Overheat,		// WeaponOverHeatComponent : heat / limit
 		ChargeDash,		// ChargeDashComponent  : chargeTimer / chargeTime
+		Magazine,		// WeaponReloadComponent : 残弾 / 容量(リロード中は進み具合)。※ 保存値なので末尾に足すこと
 	};
 
 	/// <summary>

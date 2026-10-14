@@ -6,7 +6,7 @@ namespace App::Component
 	/// </summary>
 	struct HomingComponent
 	{
-		// 追う相手。発射した瞬間に GunProjectileSpawnSystem が埋める(保存しない)
+		// 追う相手。発射した瞬間に WeaponProjectileSpawnSystem / MissileFireSystem が埋める(保存しない)
 		Engine::ECS::Entity targetEntity = Engine::ECS::Limits::INVALID_ENTITY;
 		float turnSpeed = 0.0f;				// 旋回スピード : ラジアン/秒。0 以下なら誘導しない
 		float searchRange = 0.0f;			// ターゲットを探す最大距離。0 以下なら距離制限なし

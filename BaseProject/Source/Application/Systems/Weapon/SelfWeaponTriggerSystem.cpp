@@ -1,4 +1,4 @@
-#include "SelfWeaponTriggerSystem.h"
+﻿#include "SelfWeaponTriggerSystem.h"
 
 #include "Application/ECS/World/APPWorld.h"
 
@@ -14,7 +14,7 @@ namespace App::System
 	// 武器を子エンティティとして持つ場合は AttachmentDispatchSystem が同じことをする。
 	//
 	// このクエリ(ActionIntent と WeaponTrigger の両方を持つ)に引っかかるのは、
-	// 自分自身に GunStateComponent がある敵のようなキャラだけ。
+	// 自分自身に武器の部品(WeaponStateComponent と撃ち方)がある敵のようなキャラだけ。
 	// 武器エンティティ側は ActionIntentComponent を持たない(命令を出す側ではないので)ため、
 	// 配信された引き金をここで踏み消してしまうことはない。
 	//

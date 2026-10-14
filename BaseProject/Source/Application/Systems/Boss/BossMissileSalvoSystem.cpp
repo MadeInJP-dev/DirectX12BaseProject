@@ -1,19 +1,13 @@
-#include "BossMissileSalvoSystem.h"
+﻿#include "BossMissileSalvoSystem.h"
 
 #include "Application/ECS/World/APPWorld.h"
 
 #include "Application/Components/Boss/BossParamsComponent.h"
 #include "Application/Components/Combat/TargetEntityComponent.h"
 #include "Application/Components/Attachment/AttachmentSlotsComponent.h"
-#include "Application/Components/Weapon/MissileLockComponent.h"
+#include "Application/Components/Weapon/Shoulder/MissileLockComponent.h"
+#include "Application/Components/Weapon/Shoulder/MissileFireComponent.h"
 #include "Application/Components/Transform/WorldMatrixComponent.h"
-
-#include "Application/Systems/Weapon/MissileSalvo.h"
-#include "Application/Components/Render/ModelComponent.h"
-#include "Application/Components/Physics/Collider.h"
-#include "Application/Components/Transform/HierarchyComponent.h"
-#include "Application/Components/Enemy/EnemyTag.h"
-#include "Application/Components/Weapon/GunStateComponent.h"
 
 namespace App::System
 {
@@ -28,21 +22,18 @@ namespace App::System
 	//                 BossCombatIntentSystem が間隔で立てる要求(isMissileRequest)を受けて、
 	//                 全弾をその1体へ割り振る
 	//
-	// 撃ち出し(ポッドの GunStateComponent から弾/弾速/銃口を引き、散らして生成する)は
-	// まったく同じなので App::System::MissileSalvo::ConsumeFireQueue を共有する。
-	// 弾数・間隔・散らし角・クールダウンの設定も MissileLockComponent をそのまま使うので、
-	// ボス専用の設定項目は増えていない。
+	// 撃ち出しは肩の武器の側(MissileFireSystem)で、プレイヤーとまったく同じ。
+	// ここは要求を出すだけ。弾数・間隔・散らし角・待ち時間は肩の武器の MissileFireComponent、
+	// 狙う高さ(targetOffsetY)は MissileLockComponent を使うので、ボス専用の設定項目は無い。
 	//
 	// ・PostUpdate に置く理由
-	//     発射位置をミサイルポッドの「今フレームの」ワールド行列から取るため。
-	//     WorldMatrixComponent を読むので CalcMatrixSystem /
-	//     CommitHierarchyWorldMatrixSystem より自動的に後ろへ回る(プレイヤー側と同じ)。
+	//     相手の「今フレームの」位置から狙いの向きを作るため(プレイヤー側と同じ帯)。
 	//==========================================================================================
 	void BossMissileSalvoSystem::Init(App::ECS::APPWorld& a_world)
 	{
 		a_world.ActiveTask<
 			Component::BossCommandComponent,
-			Component::MissileLockComponent,
+			const Component::MissileLockComponent,
 			const Component::AttachmentSlotsComponent,
 			const Component::TargetEntityComponent,
 			const Component::WorldMatrixComponent>(
@@ -54,7 +45,7 @@ namespace App::System
 				const Engine::ECS::SystemContext& a_ctx,
 				Component::ActiveTag*                        /*a_tags*/,
 				Component::BossCommandComponent*             a_commandArray,
-				Component::MissileLockComponent*             a_missileArray,
+				const Component::MissileLockComponent*       a_missileArray,
 				const Component::AttachmentSlotsComponent*   a_slotsArray,
 				const Component::TargetEntityComponent*      a_targetArray,
 				const Component::WorldMatrixComponent*       a_worldMatArray
@@ -63,16 +54,10 @@ namespace App::System
 				for (size_t _i = 0; _i < a_count; ++_i)
 				{
 					Component::BossCommandComponent&           _command   = a_commandArray[_i];
-					Component::MissileLockComponent&           _missile   = a_missileArray[_i];
+					const Component::MissileLockComponent&     _missile   = a_missileArray[_i];
 					const Component::AttachmentSlotsComponent& _slots     = a_slotsArray[_i];
 					const Component::TargetEntityComponent&    _target    = a_targetArray[_i];
 					const Component::WorldMatrixComponent&     _selfWorld = a_worldMatArray[_i];
-
-					// クールダウンを進める
-					if (_missile.cooldownTimer > 0.0f)
-					{
-						_missile.cooldownTimer = std::max(_missile.cooldownTimer - a_ctx.dt, 0.0f);
-					}
 
 					const Math::Matrix& _selfMat = _selfWorld.worldMat;
 					const Math::Vector3 _selfPos = { _selfMat._41, _selfMat._42, _selfMat._43 };
@@ -98,58 +83,38 @@ namespace App::System
 					}
 
 					//==========================================================
-					// 発射キューを作る
+					// 肩の武器へ要求を出す
 					//----------------------------------------------------------
-					// 要求は成否に関わらず1回で消す。撃てない状況(発射中/クールダウン中)
+					// 命令は成否に関わらず1回で消す。撃てない状況(発射中/待ち時間中)
 					// のぶんを溜めておくと、明けた瞬間に立て続けに撃ってしまうため。
-					// 次の間隔でまた要求が立つので取りこぼしにはならない。
+					// 次の間隔でまた命令が立つので取りこぼしにはならない。
 					//==========================================================
-					if (_command.isMissileRequest)
-					{
-						_command.isMissileRequest = false;
+					if (!_command.isMissileRequest) continue;
+					_command.isMissileRequest = false;
 
-						const int _fireCount = _missile.GetActiveMissileCount();
-						const bool _canFire =
-							!_missile.IsFiring() && !_missile.IsCoolDown() &&
-							(_fireCount > 0) && _hasTarget;
+					if (!_hasTarget) continue;
 
-						if (_canFire)
-						{
-							// 相手は1体なので全弾が同じ的を追う。散らし角のぶんだけ
-							// いったん広がってから、HomingSystem が寄せてくる
-							for (int _m = 0; _m < _fireCount; ++_m)
-							{
-								_missile.fireTargets[_m] = _targetEntity;
-							}
+					const Engine::ECS::Entity _pod = _slots.missile.id;
+					if (_pod == Engine::ECS::Limits::INVALID_ENTITY || !a_ctx.pWorld->IsAliveEntity(_pod)) continue;
 
-							_missile.fireTotal  = _fireCount;
-							_missile.fireRemain = _fireCount;
-							_missile.fireTimer  = 0.0f;
+					auto* _pPodFire = a_ctx.pWorld->RefData<Component::MissileFireComponent>(_pod);
+					if (!_pPodFire || !_pPodFire->IsReady()) continue;
 
-							// クールダウンは撃ち始めから数える
-							_missile.cooldownTimer = std::max(_missile.cooldown, 0.0f);
-						}
-					}
-
-					//==========================================================
-					// 発射キューの消化(プレイヤーと共通)
-					//==========================================================
-					if (!_missile.IsFiring()) continue;
-
-					// 相手が消えた弾のための基準の向き。相手が居るならあちらが上書きする
-					Math::Vector3 _aimDir = _hasTarget
-						? (_targetPos - _selfPos)
-						: Math::Vector3(_selfMat._31, _selfMat._32, _selfMat._33);	// 左手系 +Z = 前方
-
-					App::System::MissileSalvo::ConsumeFireQueue(
-						a_ctx, _missile, _slots.missile.id, _aimDir);
+					// 相手は1体なので全弾が同じ的を追う。散らし角のぶんだけ
+					// いったん広がってから、HomingSystem が寄せてくる
+					auto& _req = _pPodFire->request;
+					_req.targets[0] = _targetEntity;
+					_req.targetCount = 1;
+					_req.targetOffsetY = _missile.targetOffsetY;
+					_req.aimDir = _targetPos - _selfPos;
+					_req.isRequested = true;
 				}
 			}
 		)
-		// 順序 : ポッドの銃設定(GunState)とミサイルの溜めの書き手同士(プレイヤーとボスで対象は重ならない)
+		// 順序 : 肩の武器への要求の書き手同士(プレイヤーとボスで対象は重ならない)
 		.After("MissileSalvoSystem")
-		// 絞り込みに使わない読み書き : ポッドの銃設定(弾のハンドルを解決して書く)と発射元、狙う相手の位置
-		.Reads<Component::ModelComponent, Component::ColliderComponent, Component::HierarchyComponent, Component::EnemyTag, Component::WorldMatrixComponent>()
-		.Writes<Component::GunStateComponent>();
+		// 絞り込みに使わない読み書き : 狙う相手の位置を読み、肩の武器へ要求を書く
+		.Reads<Component::WorldMatrixComponent>()
+		.Writes<Component::MissileFireComponent>();
 	}
 }

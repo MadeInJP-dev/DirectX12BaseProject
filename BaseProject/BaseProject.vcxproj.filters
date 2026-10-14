@@ -229,6 +229,18 @@
     <Filter Include="Source\Application\Components\Weapon">
       <UniqueIdentifier>{0e49cfca-bf08-4dbe-99c5-53b1069e1c23}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Components\Weapon\Hand">
+      <UniqueIdentifier>{6056c6d2-5942-4174-943c-919c238f4829}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Components\Weapon\Shoulder">
+      <UniqueIdentifier>{00925e40-0b63-4ccb-bdab-d402b0c01bb8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Components\Weapon\Projectile">
+      <UniqueIdentifier>{2f3974ef-574f-4a21-9033-65a048221964}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Components\Weapon\WeaponConfig">
+      <UniqueIdentifier>{e5fd6df2-9791-4eb3-a379-1b835c5984ee}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Application\Systems\Animation">
       <UniqueIdentifier>{d558cbee-cf1b-4a70-a7a7-1d8b1a1c178c}</UniqueIdentifier>
     </Filter>
@@ -1716,7 +1728,7 @@
     <ClCompile Include="Source\Application\Systems\Camera\CameraStartSystem.cpp">
       <Filter>Source\Application\Systems\Camera</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Systems\Weapon\GunStateStartSystem.cpp">
+    <ClCompile Include="Source\Application\Systems\Weapon\MuzzleStartSystem.cpp">
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Physics\RegisterPhysicsBodySystem.cpp">
@@ -1737,7 +1749,7 @@
     <ClCompile Include="Source\Application\Systems\Transform\HierarchyTransform.cpp">
       <Filter>Source\Application\Systems\Transform</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Systems\Weapon\MissileSalvo.cpp">
+    <ClCompile Include="Source\Application\Systems\Weapon\MissileFireSystem.cpp">
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Weapon\ProjectileSpawn.cpp">
@@ -2727,13 +2739,19 @@
     <ClCompile Include="Source\Application\Systems\Boid\PlatoonAxisSystem.cpp">
       <Filter>Source\Application\Systems\Boid</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Systems\Weapon\GunTriggerSystem.cpp">
+    <ClCompile Include="Source\Application\Systems\Weapon\WeaponFireModeSystem.cpp">
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Systems\Weapon\GunProjectileSpawnSystem.cpp">
+    <ClCompile Include="Source\Application\Systems\Weapon\WeaponProjectileSpawnSystem.cpp">
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Weapon\MuzzleFlashSystem.cpp">
+      <Filter>Source\Application\Systems\Weapon</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Weapon\WeaponLimitSystem.cpp">
+      <Filter>Source\Application\Systems\Weapon</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Weapon\WeaponMuzzleSystem.cpp">
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Animation\AnimatorFreeSystem.cpp">
@@ -2939,17 +2957,17 @@
     <ClInclude Include="Source\Application\Components\Weapon\WeaponTriggerComponent.h">
       <Filter>Source\Application\Components\Weapon</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Components\Weapon\GunStateComponent.h">
-      <Filter>Source\Application\Components\Weapon</Filter>
+    <ClInclude Include="Source\Application\Components\Weapon\Hand\WeaponStateComponent.h">
+      <Filter>Source\Application\Components\Weapon\Hand</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Components\Weapon\MissileLockComponent.h">
-      <Filter>Source\Application\Components\Weapon</Filter>
+    <ClInclude Include="Source\Application\Components\Weapon\Shoulder\MissileLockComponent.h">
+      <Filter>Source\Application\Components\Weapon\Shoulder</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Components\Weapon\HomingComponent.h">
-      <Filter>Source\Application\Components\Weapon</Filter>
+    <ClInclude Include="Source\Application\Components\Weapon\Projectile\HomingComponent.h">
+      <Filter>Source\Application\Components\Weapon\Projectile</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Components\Weapon\ProjectileComponent.h">
-      <Filter>Source\Application\Components\Weapon</Filter>
+    <ClInclude Include="Source\Application\Components\Weapon\Projectile\ProjectileComponent.h">
+      <Filter>Source\Application\Components\Weapon\Projectile</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Components\Physics\CapsuleCollider.h">
       <Filter>Source\Application\Components\Physics</Filter>
@@ -3047,8 +3065,8 @@
     <ClInclude Include="Source\Application\Components\Enemy\EnemyTag.h">
       <Filter>Source\Application\Components\Enemy</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Components\Weapon\MainGunTag.h">
-      <Filter>Source\Application\Components\Weapon</Filter>
+    <ClInclude Include="Source\Application\Components\Weapon\Shoulder\MissileStateComponent.h">
+      <Filter>Source\Application\Components\Weapon\Shoulder</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Components\Input\PlayerControllTag.h">
       <Filter>Source\Application\Components\Input</Filter>
@@ -3338,7 +3356,7 @@
     <ClInclude Include="Source\Application\Systems\Camera\CameraStartSystem.h">
       <Filter>Source\Application\Systems\Camera</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Systems\Weapon\GunStateStartSystem.h">
+    <ClInclude Include="Source\Application\Systems\Weapon\MuzzleStartSystem.h">
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Physics\RegisterPhysicsBodySystem.h">
@@ -3359,7 +3377,7 @@
     <ClInclude Include="Source\Application\Systems\Transform\HierarchyTransform.h">
       <Filter>Source\Application\Systems\Transform</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Systems\Weapon\MissileSalvo.h">
+    <ClInclude Include="Source\Application\Systems\Weapon\MissileFireSystem.h">
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Weapon\ProjectileSpawn.h">
@@ -4733,16 +4751,43 @@
     <ClInclude Include="Source\Application\Components\Movement\BoostStateComponent.h">
       <Filter>Source\Application\Components\Movement</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Components\Weapon\GunFireComponent.h">
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponFireComponent.h">
       <Filter>Source\Application\Components\Weapon</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Systems\Weapon\GunTriggerSystem.h">
+    <ClInclude Include="Source\Application\Systems\Weapon\WeaponFireModeSystem.h">
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Systems\Weapon\GunProjectileSpawnSystem.h">
+    <ClInclude Include="Source\Application\Systems\Weapon\WeaponProjectileSpawnSystem.h">
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Weapon\MuzzleFlashSystem.h">
+      <Filter>Source\Application\Systems\Weapon</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponConfig\MuzzleComponent.h">
+      <Filter>Source\Application\Components\Weapon\WeaponConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponConfig\AutoFireComponent.h">
+      <Filter>Source\Application\Components\Weapon\WeaponConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponConfig\BurstFireComponent.h">
+      <Filter>Source\Application\Components\Weapon\WeaponConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponConfig\SemiAutoFireComponent.h">
+      <Filter>Source\Application\Components\Weapon\WeaponConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponConfig\WeaponOverHeatComponent.h">
+      <Filter>Source\Application\Components\Weapon\WeaponConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponConfig\WeaponReloadComponent.h">
+      <Filter>Source\Application\Components\Weapon\WeaponConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Components\Weapon\Shoulder\MissileFireComponent.h">
+      <Filter>Source\Application\Components\Weapon\Shoulder</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Weapon\WeaponLimitSystem.h">
+      <Filter>Source\Application\Systems\Weapon</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Weapon\WeaponMuzzleSystem.h">
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Components\Effect\EffectRuntimeComponent.h">

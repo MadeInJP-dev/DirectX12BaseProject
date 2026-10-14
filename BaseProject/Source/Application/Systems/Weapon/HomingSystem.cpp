@@ -2,7 +2,7 @@
 
 #include "Application/ECS/World/APPWorld.h"
 
-#include "Application/Components/Weapon/HomingComponent.h"
+#include "Application/Components/Weapon/Projectile/HomingComponent.h"
 #include "Application/Components/Movement/DesiredVelocityComponent.h"
 #include "Application/Components/Transform/LocalTransformComponent.h"
 #include "Application/Components/Transform/WorldMatrixComponent.h"
@@ -13,7 +13,7 @@ namespace App::System
 	// HomingSystem
 	//
 	// HomingComponent を持つ投射物(誘導弾)を、targetEntity へ向けて曲げる。
-	// targetEntity は発射した瞬間に GunProjectileSpawnSystem が埋める(敵なら索敵で見つけた
+	// targetEntity は発射した瞬間に WeaponProjectileSpawnSystem / MissileFireSystem が埋める(敵なら索敵で見つけた
 	// エンティティ、プレイヤーなら狙点が当たっている相手)。
 	//
 	// ・速度ベクトルの「向き」だけを回し、大きさ(弾速)はそのまま保つ。

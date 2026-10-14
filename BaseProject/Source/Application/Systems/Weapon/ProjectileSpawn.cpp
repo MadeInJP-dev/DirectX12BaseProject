@@ -5,8 +5,8 @@
 #include "Application/Components/Transform/LocalTransformComponent.h"
 #include "Application/Components/Transform/WorldMatrixComponent.h"
 #include "Application/Components/Movement/DesiredVelocityComponent.h"
-#include "Application/Components/Weapon/HomingComponent.h"
-#include "Application/Components/Weapon/ProjectileComponent.h"
+#include "Application/Components/Weapon/Projectile/HomingComponent.h"
+#include "Application/Components/Weapon/Projectile/ProjectileComponent.h"
 #include "Application/Components/Transform/HierarchyComponent.h"
 #include "Application/Components/Physics/Collider.h"
 #include "Application/Components/Enemy/EnemyTag.h"
@@ -118,7 +118,8 @@ namespace App::System::ProjectileSpawn
 		const Math::Vector3&  a_pos,
 		const Math::Vector3&  a_velocity,
 		Engine::ECS::Entity       a_shooter,
-		Engine::ECS::Entity       a_homingTarget)
+		Engine::ECS::Entity       a_homingTarget,
+		float                     a_damage)
 	{
 		if (!a_pPrefab) return;
 
@@ -185,6 +186,9 @@ namespace App::System::ProjectileSpawn
 				Component::ProjectileComponent _proj = {};
 				std::memcpy(&_proj, _it->second.data(), sizeof(_proj));
 				_proj.shooterEntity = a_shooter;
+
+				// 威力は武器が決める(0 以下ならプレハブの値のまま)
+				if (a_damage > 0.0f) _proj.damage = a_damage;
 
 				// 連続判定の起点。銃口の位置から入れておかないと、
 				// 生成された最初のフレームの移動ぶんだけ判定が抜ける

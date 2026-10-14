@@ -1,12 +1,13 @@
-#include "HUDGatherSystem.h"
+﻿#include "HUDGatherSystem.h"
 
 #include "Application/ECS/World/APPWorld.h"
 
 #include "Application/Components/Input/PlayerControllTag.h"
 #include "Application/Components/Combat/HealthComponent.h"
 #include "Application/Components/Combat/LockOnTargetComponent.h"
-#include "Application/Components/Weapon/MissileLockComponent.h"
-#include "Application/Components/Weapon/GunStateComponent.h"
+#include "Application/Components/Weapon/Shoulder/MissileLockComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/WeaponOverHeatComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/WeaponReloadComponent.h"
 #include "Application/Components/Movement/BoostParamsComponent.h"
 #include "Application/Components/Movement/BoostStateComponent.h"
 #include "Application/Components/Movement/ChargeDashComponent.h"
@@ -56,13 +57,26 @@ namespace App::System
 				}
 			}
 
-			if (a_pWorld->HasComponent<Component::GunStateComponent>(a_entity))
+			if (a_pWorld->HasComponent<Component::WeaponOverHeatComponent>(a_entity))
 			{
 				// 熱は「溜まるほど満タン」。色のしきい値も溜まった側で読むことになるので、
 				// ゲージ側では危険色を残量の大きい側へ置くこと
-				if (const auto* _pGun = a_pWorld->RefData<Component::GunStateComponent>(a_entity))
+				if (const auto* _pHeat = a_pWorld->RefData<Component::WeaponOverHeatComponent>(a_entity))
 				{
-					a_hud.RefGauge(a_subject, EHUDGaugeKind::Overheat) = { _pGun->heat, _pGun->heatLimit, true };
+					a_hud.RefGauge(a_subject, EHUDGaugeKind::Overheat) = { _pHeat->runtimeData.heat, _pHeat->limit, true };
+				}
+			}
+
+			if (a_pWorld->HasComponent<Component::WeaponReloadComponent>(a_entity))
+			{
+				// 弾倉は「残弾 / 容量」。リロード中は進み具合で満ちていくように見せる
+				if (const auto* _pReload = a_pWorld->RefData<Component::WeaponReloadComponent>(a_entity))
+				{
+					const float _capacity = static_cast<float>(_pReload->magazineMaxCapacity);
+					const float _current = _pReload->runtimeData.isReload && _pReload->reloadTime > 0.0f
+						? _capacity * std::clamp(_pReload->runtimeData.reloadTimer / _pReload->reloadTime, 0.0f, 1.0f)
+						: static_cast<float>(_pReload->GetRemaining());
+					a_hud.RefGauge(a_subject, EHUDGaugeKind::Magazine) = { _current, _capacity, true };
 				}
 			}
 
@@ -108,7 +122,8 @@ namespace App::System
 				Component::HealthComponent,
 				Component::BoostParamsComponent,
 				Component::BoostStateComponent,
-				Component::GunStateComponent,
+				Component::WeaponOverHeatComponent,
+				Component::WeaponReloadComponent,
 				Component::ChargeDashComponent>{},
 			Engine::ECS::WriteList<>{},
 			[](const Engine::ECS::SystemContext& a_ctx)

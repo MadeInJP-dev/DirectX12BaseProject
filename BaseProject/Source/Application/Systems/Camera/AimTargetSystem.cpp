@@ -24,7 +24,7 @@ namespace App::System
 	//
 	// アクティブカメラの正面へレイを撃ち、その着弾点を
 	// 「カメラがフォーカスしている対象」の AimResultComponent へ書き込む。
-	// 銃はこの狙点へ向けて弾を飛ばす(GunTriggerSystem)。
+	// 銃はこの狙点へ向けて弾を飛ばす(WeaponMuzzleSystem)。
 	//
 	// ・Camera フェーズに置く理由
 	//     TPSSystem がカメラ姿勢を確定させた後に撃たないと、1フレーム前の向きで狙うことになる。

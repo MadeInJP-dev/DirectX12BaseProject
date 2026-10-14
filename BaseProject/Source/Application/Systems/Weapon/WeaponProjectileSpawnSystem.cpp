@@ -1,11 +1,11 @@
-#include "GunProjectileSpawnSystem.h"
+﻿#include "WeaponProjectileSpawnSystem.h"
 
 #include "Application/ECS/World/APPWorld.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 #include "Engine/Resource/Data/Prefab/Prefab.h"
 
-#include "Application/Components/Weapon/GunStateComponent.h"
-#include "Application/Components/Weapon/GunFireComponent.h"
+#include "Application/Components/Weapon/WeaponFireComponent.h"
+#include "Application/Components/Weapon/Hand/WeaponStateComponent.h"
 #include "Application/Components/Combat/AimResultComponent.h"
 #include "Application/Components/Combat/TargetEntityComponent.h"
 #include "Application/Components/Transform/HierarchyComponent.h"
@@ -17,17 +17,17 @@
 namespace App::System
 {
 	//==========================================================================================
-	// GunProjectileSpawnSystem
+	// WeaponProjectileSpawnSystem(旧 GunProjectileSpawnSystem)
 	//
-	// GunTriggerSystem が「撃った」と決めた銃(GunFireComponent::isFired)から、
-	// 設定されたプレハブを弾として出す。
+	// 撃ち方のシステムが「撃った」と決めた手持ちの武器(WeaponFireComponent::isFired)から、
+	// WeaponStateComponent の弾を、その初速と威力で出す。位置と向きは WeaponMuzzleSystem が埋めてある。
 	//
 	// ・生成はシステムの反復中に即時に行えない(アーキタイプが壊れる)ため、
 	//   World の遅延生成コマンドに積み、BeginFrame で生成する(ProjectileSpawn)。
 	//   予約はメインスレッドで積むものなので、このシステムはメインスレッドで回す。
 	// ・弾のプレハブが引けなかったフレームは isFired を下ろす。
 	//   銃口の光(MuzzleFlashSystem)は弾が出たときだけ出すため(この後に読む)。
-	// ・プレハブが HomingComponent を持っていた場合は、ここで「追う相手」を埋める。
+	// ・弾のプレハブが HomingComponent を持っていた場合は、ここで「追う相手」を埋める。
 	//   発射した後から相手を探すのではなく、撃った瞬間に撃った側が捉えている相手を
 	//   弾へ渡す形にしている(敵の索敵結果 = TargetEntityComponent がそのまま弾の的になる)。
 	//   実際に曲げるのは HomingSystem。
@@ -80,36 +80,43 @@ namespace App::System
 		}
 	}
 
-	void GunProjectileSpawnSystem::Init(App::ECS::APPWorld& a_world)
+	void WeaponProjectileSpawnSystem::Init(App::ECS::APPWorld& a_world)
 	{
-		a_world.ActiveTask<Component::GunStateComponent, Component::GunFireComponent>(
+		a_world.ActiveTask<Component::WeaponStateComponent, Component::WeaponFireComponent>(
 			Engine::ECS::ESystemType::Update,
-			"GunProjectileSpawnSystem",
+			"WeaponProjectileSpawnSystem",
 			[]
 			(
 				Engine::ECS::Chunk* a_pChunk,
 				uint32_t a_count,
 				const Engine::ECS::SystemContext& a_ctx,
 				Component::ActiveTag*,
-				Component::GunStateComponent* a_gunArray,
-				Component::GunFireComponent* a_fireArray
+				Component::WeaponStateComponent* a_stateArray,
+				Component::WeaponFireComponent* a_fireArray
 			)
 			{
 				for (uint32_t _i = 0; _i < a_count; ++_i)
 				{
-					Component::GunFireComponent& _fireComp = a_fireArray[_i];
+					Component::WeaponFireComponent& _fireComp = a_fireArray[_i];
 					if (!_fireComp.isFired) continue;
 
-					Component::GunStateComponent& _gun = a_gunArray[_i];
+					Component::WeaponStateComponent& _state = a_stateArray[_i];
+
+					// 弾が未設定なら撃たない(間隔と熱は撃ち方のシステムで進めてある)
+					if (_state.bulletPrefabGUID == Core::DEFAULT_GUID)
+					{
+						_fireComp.isFired = false;
+						continue;
+					}
 
 					// プレハブのハンドルを解決(未ロードならロード)。
-					// 取った参照は銃が消えるときに返す(GunStateComponent の解放フック)
+					// 取った参照は武器が消えるときに返す(WeaponStateComponent の解放フック)
 					auto& _rm = *a_ctx.pServices->pResourceManager;
-					if (!_rm.IsValid(_gun.bulletPrefabHandle))
+					if (!_rm.IsValid(_state.bulletPrefabHandle))
 					{
-						_rm.AcquireImmediate(_gun.bulletPrefabHandle, _gun.bulletPrefabGUID);
+						_rm.AcquireImmediate(_state.bulletPrefabHandle, _state.bulletPrefabGUID);
 					}
-					auto* _pPrefab = _rm.Ref(_gun.bulletPrefabHandle);
+					auto* _pPrefab = _rm.Ref(_state.bulletPrefabHandle);
 					if (!_pPrefab)
 					{
 						// 弾が出ないので、銃口も光らせない
@@ -127,14 +134,15 @@ namespace App::System
 						*a_ctx.pWorld,
 						_pPrefab,
 						_fireComp.spawnPos,
-						_fireComp.shootDir * _gun.speed,
+						_fireComp.shootDir * _state.bulletSpeed,
 						App::System::ProjectileSpawn::ResolveShooterEntity(*a_ctx.pWorld, _self),
-						ResolveHomingTarget(*a_ctx.pWorld, _self, _pAim));
+						ResolveHomingTarget(*a_ctx.pWorld, _self, _pAim),
+						_state.bulletAttack);
 				}
 			}
 		)
-		// 順序 : 発射判定の結果を読み、弾が出なければ印を下ろす(どちらも GunState / GunFire を書く)
-		.After("GunTriggerSystem")
+		// 順序 : 位置と向きが埋まった後に読み、弾が出なければ印を下ろす(どちらも WeaponFire を書く)
+		.After("WeaponMuzzleSystem")
 		// 絞り込みに使わない読み : 狙点・親を辿った索敵結果と発射元(ProjectileSpawn)
 		.Reads<Component::AimResultComponent, Component::TargetEntityComponent, Component::HierarchyComponent, Component::ColliderComponent, Component::EnemyTag>();
 	}

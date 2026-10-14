@@ -3,8 +3,8 @@
 #include "Application/ECS/World/APPWorld.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 
-#include "Application/Components/Weapon/GunStateComponent.h"
-#include "Application/Components/Weapon/GunFireComponent.h"
+#include "Application/Components/Weapon/WeaponFireComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/MuzzleComponent.h"
 #include "Application/Components/Transform/WorldMatrixComponent.h"
 #include "Application/Components/Effect/EffectAssetComponent.h"
 #include "Application/Components/Effect/EffectRuntimeComponent.h"
@@ -17,20 +17,20 @@ namespace App::System
 	//==========================================================================================
 	// MuzzleFlashSystem
 	//
-	// 撃った銃(GunFireComponent::isFired)の銃口へ、銃自身が持っている再生枠
+	// 撃った武器(WeaponFireComponent::isFired)の銃口へ、武器自身が持っている再生枠
 	// (EffectAssetComponent と、その実行中の値)を頭から再生し直す。
 	//
 	// ・エフェクト用のエンティティは出さない。出すとそのエンティティは
 	//   エフェクトが終わるまでワールドに残るので、移動しながら撃つと
-	//   撃った位置に取り残されて尾を引いて見える。(枠を持たせるのは GunStateStartSystem)
+	//   撃った位置に取り残されて尾を引いて見える。(枠を持たせるのは MuzzleStartSystem)
 	// ・置き方は毎発入れ直す。銃口ノードは変わらなくても、狙いの向きは撃つたびに変わるため。
 	// ・弾が出なかったフレーム(プレハブ未設定など)では光らない。
-	//   GunProjectileSpawnSystem が弾を出せなかったときに isFired を下ろすので、その後に読む。
+	//   WeaponProjectileSpawnSystem が弾を出せなかったときに isFired を下ろすので、その後に読む。
 	// ・エフェクトの Play を直接呼ぶのでメインスレッドで回す。
 	//==========================================================================================
 	void MuzzleFlashSystem::Init(App::ECS::APPWorld& a_world)
 	{
-		a_world.ActiveTask<const Component::GunStateComponent, const Component::GunFireComponent, const Component::WorldMatrixComponent,
+		a_world.ActiveTask<const Component::MuzzleComponent, const Component::WeaponFireComponent, const Component::WorldMatrixComponent,
 			const Component::EffectAssetComponent, Component::EffectRuntimeComponent, Component::EffectPlayRequestComponent, Component::EffectOverrideComponent>(
 			Engine::ECS::ESystemType::Update,
 			"MuzzleFlashSystem",
@@ -40,8 +40,8 @@ namespace App::System
 				uint32_t a_count,
 				const Engine::ECS::SystemContext& a_ctx,
 				Component::ActiveTag*,
-				const Component::GunStateComponent* a_gunArray,
-				const Component::GunFireComponent* a_fireArray,
+				const Component::MuzzleComponent* a_muzzleArray,
+				const Component::WeaponFireComponent* a_fireArray,
 				const Component::WorldMatrixComponent* a_worldMatArray,
 				const Component::EffectAssetComponent*,
 				Component::EffectRuntimeComponent* a_runtimeArray,
@@ -51,26 +51,26 @@ namespace App::System
 			{
 				for (uint32_t _i = 0; _i < a_count; ++_i)
 				{
-					const Component::GunFireComponent& _fireComp = a_fireArray[_i];
+					const Component::WeaponFireComponent& _fireComp = a_fireArray[_i];
 					if (!_fireComp.isFired) continue;
 
-					const Component::GunStateComponent& _gun = a_gunArray[_i];
-					if (_gun.muzzleEffectGUID == Core::DEFAULT_GUID) continue;
+					const Component::MuzzleComponent& _muzzle = a_muzzleArray[_i];
+					if (_muzzle.muzzleEffect.guid == Core::DEFAULT_GUID) continue;
 
 					Component::EffectRuntimeComponent& _runtime = a_runtimeArray[_i];
 					Component::EffectOverrideComponent& _override = a_overrideArray[_i];
 					auto* _pMuzzleEffect = a_ctx.pServices->pResourceManager->Ref(_runtime.effectHandle);
 					if (!_pMuzzleEffect) continue;
 
-					// 位置も向きも銃のローカルへ直して渡す。
-					// EffectDrawSystem がこの銃のワールド行列を掛けるので、
+					// 位置も向きも武器のローカルへ直して渡す。
+					// EffectDrawSystem がこの武器のワールド行列を掛けるので、
 					// ワールドのまま渡すと二重に掛かる
-					const Math::Matrix _gunInvMat = Math::Matrix(a_worldMatArray[_i].worldMat).Invert();
+					const Math::Matrix _weaponInvMat = Math::Matrix(a_worldMatArray[_i].worldMat).Invert();
 
-					_override.effectScale = _gun.muzzleEffectScale;
+					_override.effectScale = _muzzle.muzzleEffect.scale;
 					_override.isOverrideTransform = true;
 					_override.overridePosOffset = _fireComp.muzzleLocalPos;
-					_override.overrideEmitDir = Math::Vector3::TransformNormal(_fireComp.shootDir, _gunInvMat);
+					_override.overrideEmitDir = Math::Vector3::TransformNormal(_fireComp.shootDir, _weaponInvMat);
 
 					// 頭から出し直す(Play は中で Reset を呼ぶ)。
 					//

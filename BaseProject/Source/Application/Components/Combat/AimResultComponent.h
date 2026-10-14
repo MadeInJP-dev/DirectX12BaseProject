@@ -7,7 +7,7 @@ namespace App::Component
 	//
 	// 狙点の結果(ワールド座標の狙点・狙いの向き・当たった相手)。
 	// AimTargetSystem がカメラ正面へレイを飛ばし、その着弾点を書き込む。
-	// 銃はこの座標へ向けて弾を発射する(GunTriggerSystem)。
+	// 銃はこの座標へ向けて弾を発射する(WeaponMuzzleSystem)。
 	//
 	// ・銃側(子エンティティ)にも付けておくと、AttachmentDispatchSystem が親から狙点をコピーする。
 	// ・ボスは BossCombatIntentSystem が偏差撃ちの狙点を書く。

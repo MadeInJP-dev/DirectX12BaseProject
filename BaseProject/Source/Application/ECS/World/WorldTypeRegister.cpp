@@ -60,8 +60,17 @@
 #include "Application/Components/Enemy/EnemyTag.h"
 #include "Application/Components/Physics/CapsuleCollider.h"
 #include "Application/Components/Combat/ActionIntentComponent.h"
-#include "Application/Components/Weapon/GunStateComponent.h"
 #include "Application/Components/Weapon/WeaponTriggerComponent.h"
+#include "Application/Components/Weapon/WeaponFireComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/MuzzleComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/AutoFireComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/BurstFireComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/SemiAutoFireComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/WeaponOverHeatComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/WeaponReloadComponent.h"
+#include "Application/Components/Weapon/Hand/WeaponStateComponent.h"
+#include "Application/Components/Weapon/Shoulder/MissileStateComponent.h"
+#include "Application/Components/Weapon/Shoulder/MissileFireComponent.h"
 #include "Engine/ECS/Component/CollisionEvent.h"
 #include "Application/Components/Combat/ExplodeOnHitComponent.h"
 #include "Application/Components/Camera/CameraFocusTargetComponent.h"
@@ -72,9 +81,9 @@
 #include "Application/Components/Combat/LockOnTargetComponent.h"
 #include "Application/Components/Enemy/PatrolComponent.h"
 #include "Application/Components/Enemy/CloseCombatComponent.h"
-#include "Application/Components/Weapon/HomingComponent.h"
-#include "Application/Components/Weapon/ProjectileComponent.h"
-#include "Application/Components/Weapon/MissileLockComponent.h"
+#include "Application/Components/Weapon/Projectile/HomingComponent.h"
+#include "Application/Components/Weapon/Projectile/ProjectileComponent.h"
+#include "Application/Components/Weapon/Shoulder/MissileLockComponent.h"
 #include "Application/Components/Boss/BossParamsComponent.h"
 #include "Application/Components/Boid/BoidSteeringParamsComponent.h"
 #include "Application/Components/Boid/BoidLeaderComponent.h"
@@ -152,9 +161,12 @@
 #include "Application/Systems/Physics/CapsuleCollisionSystem.h"
 #include "Application/Systems/Physics/SphereCollisionSystem.h"
 #include "Application/Systems/Input/InputActionSystem.h"
-#include "Application/Systems/Weapon/GunTriggerSystem.h"
-#include "Application/Systems/Weapon/GunProjectileSpawnSystem.h"
+#include "Application/Systems/Weapon/WeaponLimitSystem.h"
+#include "Application/Systems/Weapon/WeaponFireModeSystem.h"
+#include "Application/Systems/Weapon/WeaponMuzzleSystem.h"
+#include "Application/Systems/Weapon/WeaponProjectileSpawnSystem.h"
 #include "Application/Systems/Weapon/MuzzleFlashSystem.h"
+#include "Application/Systems/Weapon/MissileFireSystem.h"
 #include "Application/Systems/Physics/CollisionEventClearSystem.h"
 #include "Application/Systems/Physics/HitDetectSystem.h"
 #include "Application/Systems/Combat/ExplodeOnHitSystem.h"
@@ -176,7 +188,7 @@
 #include "Application/Systems/Audio/BoostSoundSystem.h"
 #include "Application/Systems/Audio/SoundFreeSystem.h"
 #include "Application/Systems/Physics/PhysicsBodyFreeSystem.h"
-#include "Application/Systems/Weapon/GunStateStartSystem.h"
+#include "Application/Systems/Weapon/MuzzleStartSystem.h"
 #include "Application/Systems/Combat/HitEventClearSystem.h"
 #include "Application/Systems/Combat/DeathEventClearSystem.h"
 #include "Application/Systems/Enemy/EnemyShootIntentSystem.h"
@@ -296,11 +308,25 @@ namespace App::ECS
 		a_world.RegisterComponent<Component::CapsuleColliderComponent>("CapsuleColliderComponent");
 		a_world.RegisterComponent<Component::SphereColliderComponent>("SphereColliderComponent");
 		a_world.RegisterComponent<Component::ActionIntentComponent>("ActionIntentComponent");
-		a_world.RegisterComponent<Component::GunStateComponent>("GunStateComponent");
-		// このフレームの発射の結果(GunStateComponent の必須コンポーネント)
-		a_world.RegisterComponent<Component::GunFireComponent>("GunFireComponent");
+		//------------------------------------------------------------------
+		// 武器(Components/Weapon)
+		//------------------------------------------------------------------
 		// 武器が外から受け取る引き金。持ち主の命令と武器の挙動を分ける受け口
 		a_world.RegisterComponent<Component::WeaponTriggerComponent>("WeaponTriggerComponent");
+		// このフレームの発射の結果(撃ち方の必須コンポーネント)
+		a_world.RegisterComponent<Component::WeaponFireComponent>("WeaponFireComponent");
+		// 部品(WeaponConfig) : 銃口・撃ち方・熱・弾倉。手持ちにも肩にも付けられる
+		a_world.RegisterComponent<Component::MuzzleComponent>("MuzzleComponent");
+		a_world.RegisterComponent<Component::AutoFireComponent>("AutoFireComponent");
+		a_world.RegisterComponent<Component::BurstFireComponent>("BurstFireComponent");
+		a_world.RegisterComponent<Component::SemiAutoFireComponent>("SemiAutoFireComponent");
+		a_world.RegisterComponent<Component::WeaponOverHeatComponent>("WeaponOverHeatComponent");
+		a_world.RegisterComponent<Component::WeaponReloadComponent>("WeaponReloadComponent");
+		// 手に持つ武器(Hand) : 何を・どれくらいの速さと威力で撃つか
+		a_world.RegisterComponent<Component::WeaponStateComponent>("WeaponStateComponent");
+		// 肩の武器(Shoulder) : ミサイルのカタログと一斉射
+		a_world.RegisterComponent<Component::MissileStateComponent>("MissileStateComponent");
+		a_world.RegisterComponent<Component::MissileFireComponent>("MissileFireComponent");
 		a_world.RegisterComponent<Engine::ECS::CollisionEvent>("CollisionEvent");
 		a_world.RegisterComponent<Component::ExplodeOnHitComponent>("ExplodeOnHitComponent");
 		a_world.RegisterComponent<Component::CameraFocusTargetComponent>("CameraFocusTargetComponent");
@@ -316,7 +342,7 @@ namespace App::ECS
 		a_world.RegisterComponent<Component::TargetEntityComponent>("TargetEntityComponent");
 		// プレイヤーのレティクル内の敵とロック対象。HUDと旋回が読む
 		a_world.RegisterComponent<Component::LockOnTargetComponent>("LockOnTargetComponent");
-		// ミサイルの溜め撃ち。コンバットレティクル内の敵を溜めて一斉射する
+		// ミサイルの溜め(持ち主側)。コンバットレティクル内の敵を溜めて、肩の武器へ一斉射を要求する
 		a_world.RegisterComponent<Component::MissileLockComponent>("MissileLockComponent");
 		// 人型ボスの戦闘設定と機動状態。シーケンスからの戦闘開始命令もここに立つ
 		// ボスの設定(保存)と、思考の状態・命令(設定の必須コンポーネント)
@@ -477,8 +503,10 @@ namespace App::ECS
 		// それを書く CalcMatrix / CommitHierarchyWorldMatrix より後ろに回る
 		a_world.RegisterSystem<System::LockOnTargetSystem>();
 		a_world.RegisterSystem<System::MissileSalvoSystem>();
-		// ボスのミサイル。撃ち出しはプレイヤーと共通(MissileSalvo)で、溜め方だけが違う
+		// ボスのミサイル。溜め方だけが違い、要求を出す先(肩の武器)は同じ
 		a_world.RegisterSystem<System::BossMissileSalvoSystem>();
+		// 肩の武器が受けた一斉射の要求を撃ち出す(上の2つの後ろ)
+		a_world.RegisterSystem<System::MissileFireSystem>();
 		a_world.RegisterSystem<System::RobotBoostSystem>();
 		// チャージダッシュ。速度を書く仲間(重力・ブースト)より後に登録して、
 		// ダッシュ中はこちらの値が最後に残るようにする
@@ -507,9 +535,11 @@ namespace App::ECS
 		a_world.RegisterSystem<System::CapsuleCollisionSystem>();
 		a_world.RegisterSystem<System::SphereCollisionSystem>();
 		a_world.RegisterSystem<System::InputActionSystem>();
-		// 銃 : 発射判定(Job) → 弾の生成 → 銃口の光
-		a_world.RegisterSystem<System::GunTriggerSystem>();
-		a_world.RegisterSystem<System::GunProjectileSpawnSystem>();
+		// 手持ちの武器 : 熱と弾倉の進行 → 撃ち方ごとの発射判定(Job) → 銃口の位置と向き → 弾の生成 → 銃口の光
+		a_world.RegisterSystem<System::WeaponLimitSystem>();
+		a_world.RegisterSystem<System::WeaponFireModeSystem>();
+		a_world.RegisterSystem<System::WeaponMuzzleSystem>();
+		a_world.RegisterSystem<System::WeaponProjectileSpawnSystem>();
 		a_world.RegisterSystem<System::MuzzleFlashSystem>();
 		// 動くコライダーのボディを今の姿勢へ合わせる
 		a_world.RegisterSystem<System::SyncPhysicsBodySystem>();
@@ -533,7 +563,7 @@ namespace App::ECS
 		a_world.RegisterSystem<System::ScoreSystem>();
 		// 3Dサウンドの聞き手。鳴らす側より先に登録して、先にリスナーを更新させる
 		a_world.RegisterSystem<System::AudioListenerSystem>();
-		a_world.RegisterSystem<System::GunStateStartSystem>();
+		a_world.RegisterSystem<System::MuzzleStartSystem>();
 		// 群れの操舵 : 全員の写しを作ってから、チャンクを分けて操舵する
 		a_world.RegisterSystem<System::BoidSnapshotSystem>();
 		a_world.RegisterSystem<System::BoidSteeringSystem>();

@@ -220,7 +220,7 @@ RTTI : `dynamic_cast` / `typeid` の**実使用は 0**(コメント内の言及�
 | Medium | static メンバの `s_` 無し | 2 | `ComponentTypeSlot::id`, `::pOwner` | `s_id`, `s_pOwner` |
 | Medium | 独自略語(ルールの NG 例と同種) | 5 識別子 | `_rg`(RenderGraphCompiler), `_rt`(平行移動), `_resMgr`(8 ファイル), `m_useFlg`, `_cpDebDev` | `_compiler`, `_translation`, `_resourceManager`, `m_usage`, `_cpDebugDevice` |
 | Medium | クラスレイアウト | 13 | EffectEditor / AsyncGPUManager / SystemManager / ComponentMetaRegistry / ParticlesAsset / CopyPass / MonitorPass / IPanel(public メンバ変数) / FinalOutputPass(public メンバ変数) … | public 関数 → private 関数 → private 変数。シングルトンの `Instance()` を末尾の別 public に置く慣習は 8 クラスで一貫しているので据え置き候補 |
-| Medium | Component がメソッドを持つ | 8 | `GunStateComponent::HeatRatio()`, `MissileLockComponent::IsFiring()`, `ActionIntentComponent::IsAnyWeaponShoot()` … | 自分のフィールドだけを読む派生値で、他 Component への依存は無い。free function へ出すかを判断(ロジックとまでは言えない) |
+| Medium | Component がメソッドを持つ | 8 | `WeaponOverHeatComponent::HeatRatio()`, `MissileFireComponent::IsReady()`, `ActionIntentComponent::IsAnyWeaponShoot()` … | 自分のフィールドだけを読む派生値で、他 Component への依存は無い。free function へ出すかを判断(ロジックとまでは言えない) |
 | Medium | 遅延実行の命名が `Reserve` でない | 約 10 | `BaseObject::RequestDestroy()`(フラグを立てて後で破棄), `StateMachine::RequestChangeState`, `ParticleBufferManager::RequestEmit`, `MainEngine::RegisterDeferredResource` | ルール 1.5 の `Reserve*`。ただし `Request` は「取得 or 生成」(PSO / Shader / ResourceManager::RequestLoad)の意味でも使われており、語彙の整理が先 |
 | Medium | 大きい System | 1 | BossCombatIntentSystem.cpp(622 行) | 責務の分割を検討 |
 | Medium | RenderGraph : グラフ外でのステート遷移 | 1 | MonitorPass.cpp:110–112(エディターのプレビュー用テクスチャ) | グラフ外の持ち物なので自前遷移。**既存設計上の例外**として据え置き |

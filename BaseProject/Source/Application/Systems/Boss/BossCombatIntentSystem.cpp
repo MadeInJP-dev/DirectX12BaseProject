@@ -9,7 +9,7 @@
 #include "Application/Components/Movement/BoostParamsComponent.h"
 #include "Application/Components/Movement/BoostStateComponent.h"
 #include "Application/Components/Attachment/AttachmentSlotsComponent.h"
-#include "Application/Components/Weapon/GunStateComponent.h"
+#include "Application/Components/Weapon/Hand/WeaponStateComponent.h"
 #include "Application/Components/Movement/MoveIntentComponent.h"
 #include "Application/Components/Combat/ActionIntentComponent.h"
 #include "Application/Components/Transform/LocalTransformComponent.h"
@@ -33,7 +33,7 @@ namespace App::System
 	//                  / RobotBoostSystem(ブーストの向き) / CharacterMovementSystem(移動の基準軸)
 	//   MoveIntent   → CharacterMovementSystem(視点基準 → 目標速度)
 	//   BoostIntentComponent → RobotBoostSystem(推力)
-	//   ActionIntent → AttachmentDispatchSystem 経由で銃(子エンティティ)へ → GunTriggerSystem
+	//   ActionIntent → AttachmentDispatchSystem 経由で銃(子エンティティ)へ → 撃ち方のシステム(WeaponFireModeSystem)
 	//   AimTargetPos → 同上。銃はこの点へ向けて撃つ
 	// ボス用に増やしたのはこのシステムと BossMissileSalvoSystem の2つだけ。
 	//
@@ -354,7 +354,7 @@ namespace App::System
 					// 狙点(偏差撃ち)
 					//----------------------------------------------------------
 					// 弾が届くまでの時間だけ相手の未来位置を読む。
-					// 弾速は左手の武器(無ければ右手)の GunStateComponent から引く(弾ごとに変わるため)。
+					// 弾速は左手の武器(無ければ右手)の WeaponStateComponent から引く(武器ごとに変わるため)。
 					//==========================================================
 					Math::Vector3 _aimPos = _targetPos;
 					_aimPos.y += _boss.aimOffsetY;
@@ -368,10 +368,10 @@ namespace App::System
 						{
 							if (_bulletSpeed > 0.0f) return;
 							if (a_weapon == Engine::ECS::Limits::INVALID_ENTITY) return;
-							if (!a_ctx.pWorld->HasComponent<Component::GunStateComponent>(a_weapon)) return;
-							if (const auto* _pGun = a_ctx.pWorld->RefData<Component::GunStateComponent>(a_weapon))
+							if (!a_ctx.pWorld->HasComponent<Component::WeaponStateComponent>(a_weapon)) return;
+							if (const auto* _pWeapon = a_ctx.pWorld->RefData<Component::WeaponStateComponent>(a_weapon))
 							{
-								_bulletSpeed = _pGun->speed;
+								_bulletSpeed = _pWeapon->bulletSpeed;
 							}
 						};
 						_readSpeed(_slots.leftWeapon.id);
@@ -391,7 +391,7 @@ namespace App::System
 					else                   _aimDir = { 0.0f, 0.0f, 1.0f };
 
 					// AimTargetSystem(カメラのレイ)の代わりに自分で書く。
-					// これで AttachmentDispatchSystem が銃へ配り、GunTriggerSystem が狙点へ撃つ
+					// これで AttachmentDispatchSystem が銃へ配り、撃ち方のシステムが狙点へ撃つ
 					_aim.pos       = _aimPos;
 					_aim.dir       = _aimDir;
 					_aim.hitEntity = Engine::ECS::Limits::INVALID_ENTITY;
@@ -620,6 +620,6 @@ namespace App::System
 		// 順序 : 移動入力・発射入力の書き手同士(対象はボスだけで重ならない)。敵の行動決定の後に置く
 		.After({ "EnemyShootIntentSystem", "EnemyMoveIntentSystem", "CloseCombatIntentSystem" })
 		// 絞り込みに使わない読み : 相手の位置と速度、武器の弾速、自分の接地を RefData で読む
-		.Reads<Component::WorldMatrixComponent, Component::ActualVelocityComponent, Component::DesiredVelocityComponent, Component::GunStateComponent, Component::GroundStateComponent>();
+		.Reads<Component::WorldMatrixComponent, Component::ActualVelocityComponent, Component::DesiredVelocityComponent, Component::WeaponStateComponent, Component::GroundStateComponent>();
 	}
 }

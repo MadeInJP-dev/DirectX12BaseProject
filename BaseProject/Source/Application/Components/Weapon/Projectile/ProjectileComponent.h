@@ -7,12 +7,12 @@ namespace App::Component
 	/// </summary>
 	struct ProjectileComponent
 	{
-		// 撃った本体。発射の瞬間に GunProjectileSpawnSystem が埋める(保存しない)。
+		// 撃った本体。発射の瞬間に WeaponProjectileSpawnSystem / MissileFireSystem が埋める(保存しない)。
 		// 銃が子エンティティの場合でも、コライダーを持つ本体の方が入る。
 		// HitDetectSystem がこの相手を判定から除外する(自分の弾に当たらないように)
 		Engine::ECS::Entity shooterEntity = Engine::ECS::Limits::INVALID_ENTITY;
 		float speed = 0.0f;			// スピード
-		float damage = 0.0f;		// ヒット時ダメージ
+		float damage = 0.0f;		// ヒット時ダメージ。撃った武器の威力(WeaponState / MissileState)が 0 より大きければ上書きされる
 
 		//--------------------------------------------------------------------------------------
 		// 前フレームの位置(保存しない。発射時に発射位置で埋める)

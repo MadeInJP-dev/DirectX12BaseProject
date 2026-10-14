@@ -29,12 +29,12 @@ namespace App::Component
 
 		// 武器 : 左手・右手。プレイヤーは左クリックで左、右クリックで右を撃つ。
 		// スロットが指す先は「引き金の受け口(WeaponTriggerComponent)を持つ武器エンティティ」で、
-		// 撃てるかどうかや弾の設定は武器側の GunStateComponent が持つ
+		// 撃てるかどうかや弾の設定は武器側(Components/Weapon の Hand / WeaponConfig)が持つ
 		AttachmentSlot leftWeapon;
 		AttachmentSlot rightWeapon;
 
-		// ミサイル : 溜めて一斉射なので、引き金を配信するのではなく
-		// MissileSalvoSystem がこのスロットのポッドを直接撃たせる
+		// 肩の武器(ミサイル) : 溜めて一斉射なので、引き金を配信するのではなく
+		// MissileSalvoSystem がこのスロットの武器の MissileFireComponent へ要求を出す
 		AttachmentSlot missile;
 	};
 

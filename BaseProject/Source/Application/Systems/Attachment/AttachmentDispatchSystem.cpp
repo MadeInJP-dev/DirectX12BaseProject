@@ -18,7 +18,7 @@ namespace App::System
 	//
 	// ここが渡すのは「引き金を引いているか」と「どこを狙っているか」だけ。
 	// 撃てるかどうか(連射間隔・バースト・オーバーヒート)も、何をどう撃つか(弾・弾速・銃口)も
-	// 武器側の GunStateComponent が持ち、GunTriggerSystem が判断する。
+	// 武器側のコンポーネント(Hand / WeaponConfig)が持ち、撃ち方のシステム(WeaponFireModeSystem)が判断する。
 	// 持ち主は左右どちらの武器を使うかしか知らない。
 	//
 	// ※ ブースター(移動スラスター)の噴射制御は ThrusterEffectSystem が担当する。
@@ -90,8 +90,8 @@ namespace App::System
 
 					// missile スロットへは配信しない。ミサイルは「押している間に溜めて
 					// 離すと一斉射」なので、入力を子へ流すだけでは足りない。
-					// MissileSalvoSystem がプレイヤー側で溜めを持ち、発射のときだけ
-					// このスロットが指すポッドの GunStateComponent(弾・弾速・銃口)を読む
+					// MissileSalvoSystem がプレイヤー側で溜めを持ち、離したときに
+					// このスロットが指す肩の武器の MissileFireComponent へ要求を出す
 				}
 			}
 		)

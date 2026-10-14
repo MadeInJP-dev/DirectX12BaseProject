@@ -742,7 +742,7 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Application\Systems\Weapon\GunStateStartSystem.cpp">
+    <ClCompile Include="Source\Application\Systems\Weapon\MuzzleStartSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
@@ -902,7 +902,7 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Application\Systems\Weapon\MissileSalvo.cpp">
+    <ClCompile Include="Source\Application\Systems\Weapon\MissileFireSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
@@ -1684,17 +1684,27 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Application\Systems\Weapon\GunTriggerSystem.cpp">
+    <ClCompile Include="Source\Application\Systems\Weapon\WeaponFireModeSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Application\Systems\Weapon\GunProjectileSpawnSystem.cpp">
+    <ClCompile Include="Source\Application\Systems\Weapon\WeaponProjectileSpawnSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Weapon\MuzzleFlashSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Weapon\WeaponLimitSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Weapon\WeaponMuzzleSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
@@ -1759,9 +1769,9 @@
     <ClInclude Include="Source\Application\Components\Boid\SerchGroundComponent.h" />
     <ClInclude Include="Source\Application\Components\Combat\TargetEntityComponent.h" />
     <ClInclude Include="Source\Application\Components\Combat\LockOnTargetComponent.h" />
-    <ClInclude Include="Source\Application\Components\Weapon\MissileLockComponent.h" />
-    <ClInclude Include="Source\Application\Components\Weapon\HomingComponent.h" />
-    <ClInclude Include="Source\Application\Components\Weapon\ProjectileComponent.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\Shoulder\MissileLockComponent.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\Projectile\HomingComponent.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\Projectile\ProjectileComponent.h" />
     <ClInclude Include="Source\Application\Components\Camera\CameraParamComponent.h" />
     <ClInclude Include="Source\Application\Components\Camera\FocusParamComponent.h" />
     <ClInclude Include="Source\Application\Components\Camera\FollowTargetComponent.h" />
@@ -1809,7 +1819,7 @@
     <ClInclude Include="Source\Application\Components\Combat\ScoreTargetComponent.h" />
     <ClInclude Include="Source\Application\Components\Effect\BoosterEffectComponent.h" />
     <ClInclude Include="Source\Application\Components\Attachment\AttachmentSlotsComponent.h" />
-    <ClInclude Include="Source\Application\Components\Weapon\GunStateComponent.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\Hand\WeaponStateComponent.h" />
     <ClInclude Include="Source\Application\Components\Weapon\WeaponTriggerComponent.h" />
     <ClInclude Include="Source\Application\Components\Physics\CapsuleCollider.h" />
     <ClInclude Include="Source\Application\Components\Physics\Collider.h" />
@@ -1838,7 +1848,7 @@
     <ClInclude Include="Source\Application\Components\Camera\CameraControllTag.h" />
     <ClInclude Include="Source\Application\Components\Camera\CameraTag.h" />
     <ClInclude Include="Source\Application\Components\Enemy\EnemyTag.h" />
-    <ClInclude Include="Source\Application\Components\Weapon\MainGunTag.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\Shoulder\MissileStateComponent.h" />
     <ClInclude Include="Source\Application\Components\Input\PlayerControllTag.h" />
     <ClInclude Include="Source\Application\Components\Render\RayTag.h" />
     <ClInclude Include="Source\Application\Components\Core\PhaseTag\ActiveTag.h" />
@@ -1907,7 +1917,7 @@
     <ClInclude Include="Source\Application\Systems\Animation\AdditivePoseLinkSystem.h" />
     <ClInclude Include="Source\Application\Systems\Animation\AnimationModelStartSystem.h" />
     <ClInclude Include="Source\Application\Systems\Attachment\AttachmentNodeLinkSystem.h" />
-    <ClInclude Include="Source\Application\Systems\Weapon\GunStateStartSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Weapon\MuzzleStartSystem.h" />
     <ClInclude Include="Source\Application\Systems\Animation\AdditivePoseFreeSystem.h" />
     <ClInclude Include="Source\Application\Systems\Camera\CameraStartSystem.h" />
     <ClInclude Include="Source\Application\Systems\Physics\RegisterPhysicsBodySystem.h" />
@@ -1940,7 +1950,7 @@
     <ClInclude Include="Source\Application\Systems\Weapon\MissileSalvoSystem.h" />
     <ClInclude Include="Source\Application\Systems\Weapon\ProjectileSpawn.h" />
     <ClInclude Include="Source\Application\Systems\Transform\HierarchyTransform.h" />
-    <ClInclude Include="Source\Application\Systems\Weapon\MissileSalvo.h" />
+    <ClInclude Include="Source\Application\Systems\Weapon\MissileFireSystem.h" />
     <ClInclude Include="Source\Application\Systems\Boss\BossCombatIntentSystem.h" />
     <ClInclude Include="Source\Application\Systems\Boss\BossMissileSalvoSystem.h" />
     <ClInclude Include="Source\Application\Components\Boid\BoidLeaderComponent.h" />
@@ -2384,10 +2394,19 @@
     <ClInclude Include="Source\Application\Components\Movement\ActualVelocityComponent.h" />
     <ClInclude Include="Source\Application\Components\Movement\BoostIntentComponent.h" />
     <ClInclude Include="Source\Application\Components\Movement\BoostStateComponent.h" />
-    <ClInclude Include="Source\Application\Components\Weapon\GunFireComponent.h" />
-    <ClInclude Include="Source\Application\Systems\Weapon\GunTriggerSystem.h" />
-    <ClInclude Include="Source\Application\Systems\Weapon\GunProjectileSpawnSystem.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponFireComponent.h" />
+    <ClInclude Include="Source\Application\Systems\Weapon\WeaponFireModeSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Weapon\WeaponProjectileSpawnSystem.h" />
     <ClInclude Include="Source\Application\Systems\Weapon\MuzzleFlashSystem.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponConfig\MuzzleComponent.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponConfig\AutoFireComponent.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponConfig\BurstFireComponent.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponConfig\SemiAutoFireComponent.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponConfig\WeaponOverHeatComponent.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\WeaponConfig\WeaponReloadComponent.h" />
+    <ClInclude Include="Source\Application\Components\Weapon\Shoulder\MissileFireComponent.h" />
+    <ClInclude Include="Source\Application\Systems\Weapon\WeaponLimitSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Weapon\WeaponMuzzleSystem.h" />
     <ClInclude Include="Source\Application\Components\Effect\EffectRuntimeComponent.h" />
     <ClInclude Include="Source\Application\Components\Effect\EffectPlayRequestComponent.h" />
     <ClInclude Include="Source\Application\Components\Effect\EffectOverrideComponent.h" />

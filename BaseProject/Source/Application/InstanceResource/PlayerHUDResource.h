@@ -1,7 +1,7 @@
-#pragma once
+﻿#pragma once
 
 #include "Application/Components/Combat/LockOnTargetComponent.h"
-#include "Application/Components/Weapon/MissileLockComponent.h"
+#include "Application/Components/Weapon/Shoulder/MissileLockComponent.h"
 
 namespace App::InstanceResource
 {
@@ -45,8 +45,9 @@ namespace App::InstanceResource
 	{
 		Health,		// HealthComponent                          : currentHealth / maxHealth
 		BoostFuel,	// BoostStateComponent / BoostParamsComponent : currentFuel / maxFuel
-		Overheat,	// GunStateComponent                        : heat / heatLimit
+		Overheat,	// WeaponOverHeatComponent                  : heat / limit
 		ChargeDash,	// ChargeDashComponent                      : chargeTimer / chargeTime
+		Magazine,	// WeaponReloadComponent                    : 残弾 / 容量(リロード中は進み具合)
 
 		Count,
 	};
