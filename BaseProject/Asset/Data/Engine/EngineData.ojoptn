@@ -33,7 +33,7 @@
         "textureGUID": "eaa92474-cfe9-4399-bc6e-9078675e454b"
     },
     "DebugDrawOption": {
-        "drawWire": true
+        "drawWire": false
     },
     "GIOption": {
         "TAblendRate": 0.09000000357627869,
