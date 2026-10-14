@@ -145,9 +145,16 @@ namespace App::System
 		);
 
 		//--------------------------------------------------------------------------
-		// 銃口のマズルフラッシュ : ハンドルを解決するだけ
+		// 銃口のマズルフラッシュ : 再生枠へエフェクトを入れ、ハンドルを解決する
+		//
+		// 再生枠(EffectAssetComponent)は銃口の必須コンポーネントなので必ずある。
+		// 中身(どのエフェクトか)は銃口の設定から書く。書いた枠はこの後の
+		// EffectFixupSystem が解決するので、必ずあちらより先に回す(Before)。
+		//
+		// 枠が別のエフェクトを指していたら(別の用途で付けたもの)奪わない。
+		// 奪うと元の演出が止まるので、気付けるように知らせる
 		//--------------------------------------------------------------------------
-		a_world.PostDeserializeTask<Component::MuzzleComponent>(
+		a_world.PostDeserializeTask<Component::MuzzleComponent, Component::EffectAssetComponent>(
 			Engine::ECS::ESystemType::PostDeserialize,
 			"MuzzleEffectFixupSystem",
 			[]
@@ -156,7 +163,8 @@ namespace App::System
 				uint32_t a_count,
 				const Engine::ECS::SystemContext& a_ctx,
 				Component::PostDeserializeTag* /*a_tag*/,
-				Component::MuzzleComponent* a_muzzleArray
+				Component::MuzzleComponent* a_muzzleArray,
+				Component::EffectAssetComponent* a_slotArray
 				)
 			{
 				auto* _pResourceManager = a_ctx.pServices->pResourceManager;
@@ -165,6 +173,7 @@ namespace App::System
 				for (size_t _i = 0; _i < a_count; ++_i)
 				{
 					auto& _effect = a_muzzleArray[_i].muzzleEffect;
+					Component::EffectAssetComponent& _slot = a_slotArray[_i];
 
 					if (_effect.guid == Core::DEFAULT_GUID)
 					{
@@ -172,11 +181,26 @@ namespace App::System
 						continue;
 					}
 
+					if (_slot.effectGUID == Core::DEFAULT_GUID || _slot.effectGUID == _effect.guid)
+					{
+						_slot.effectGUID = _effect.guid;
+						_slot.playOnStart = false;		// 撃つまでは出さない(MuzzleFlashSystem が撃つたびに頭出しする)
+						_slot.destroyOnFinish = false;	// 枠は武器と一緒に消えるまで残す
+					}
+					else
+					{
+						ENGINE_WARNING(
+							"[Muzzle] EffectAssetComponent が別のエフェクトを指しているため"
+							"マズルフラッシュを設定できません");
+					}
+
 					_pResourceManager->AcquireImmediate(_effect.handle, _effect.guid);
 					App::Utility::WarmupEffectParticles(*a_ctx.pServices, _effect.handle);
 				}
 			}
-		);
+		)
+		// 順序 : 再生枠の中身を書いてから、エフェクトの解決(ハンドルと進行状態)へ渡す
+		.Before("EffectFixupSystem");
 
 		//--------------------------------------------------------------------------
 		// オーバーヒートの演出 : 出すのはその場で生成(WeaponOverHeatEffectSystem)なので、

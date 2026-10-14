@@ -6,7 +6,6 @@
 
 #include "Application/Components/Weapon/WeaponConfig/MuzzleComponent.h"
 #include "Application/Components/Render/ModelComponent.h"
-#include "Application/Components/Effect/EffectAssetComponent.h"
 
 namespace App::System
 {
@@ -27,45 +26,6 @@ namespace App::System
 				{
 					Component::MuzzleComponent& _muzzle = a_muzzleArray[_i];
 					const Engine::ECS::Entity _self = a_pChunk->entityData[_i];
-
-					//==============================================================
-					// マズルフラッシュの再生枠を武器自身へ持たせる
-					//--------------------------------------------------------------
-					// 撃つたびにエフェクト用のエンティティを生やすと、そのエンティティは
-					// エフェクトが終わるまでワールドに残る。移動しながら撃つと
-					// 撃った位置に取り残されて尾を引いて見える。
-					//
-					// 武器自身に枠を1つ持たせ、撃つたびに頭から再生し直す形にする
-					// (MuzzleFlashSystem が EffectPlayer::Play を直接呼ぶ)。
-					// 枠は EffectAssetComponent。進行も発生・描画もこれを見ているので、付けるだけで動く。
-					//==============================================================
-					if (_muzzle.muzzleEffect.guid != Core::DEFAULT_GUID)
-					{
-						if (a_ctx.pWorld->HasComponent<Component::EffectAssetComponent>(_self))
-						{
-							// すでに別の用途で付いている武器からは奪わない。
-							// 奪うと元の演出が止まるので、気付けるように知らせる
-							ENGINE_WARNING(
-								"[Muzzle] EffectAssetComponent を既に持っているため"
-								"マズルフラッシュを設定できません");
-						}
-						else
-						{
-							// 渡すのは設定だけ。ハンドル(自分のぶんの参照)は EffectFixupSystem が GUID から取る。
-							// 大きさは撃つたびに MuzzleFlashSystem が入れる
-							Component::EffectAssetComponent _effectComp = {};
-							_effectComp.effectGUID = _muzzle.muzzleEffect.guid;
-							_effectComp.playOnStart = false;		// 撃つまでは出さない
-							_effectComp.destroyOnFinish = false;	// 枠は武器と一緒に消えるまで残す
-
-							const auto _typeID = a_ctx.pWorld->GetCompTypeID<Component::EffectAssetComponent>();
-							if (_typeID != Engine::ECS::Limits::INVALID_COMPONENTTYPEID)
-							{
-								a_ctx.pWorld->ReserveAddComponent(
-									_typeID, _self, reinterpret_cast<uint8_t*>(&_effectComp));
-							}
-						}
-					}
 
 					//==============================================================
 					// 銃口ノードの番号を引く
@@ -98,7 +58,7 @@ namespace App::System
 				}
 			}
 		)
-		// 絞り込みに使わない読み : 自分のモデルと、マズルフラッシュの枠をもう持っているか
-		.Reads<Component::ModelComponent, Component::EffectAssetComponent>();
+		// 絞り込みに使わない読み : 自分のモデル
+		.Reads<Component::ModelComponent>();
 	}
 }

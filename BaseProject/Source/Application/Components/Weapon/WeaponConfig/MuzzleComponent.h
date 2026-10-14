@@ -5,6 +5,7 @@
 #include "Engine/Resource/Data/EffectAsset/EffectAsset.h"
 
 #include "Application/Editor/CompEditHelper/CompEditHelper.h"
+#include "Application/Components/Effect/EffectAssetComponent.h"
 
 namespace App::Component
 {
@@ -19,6 +20,8 @@ namespace App::Component
 	//   武器はアニメーションのノードに追従していて、ローカルの +Z が銃身の向きとは限らないため、
 	//   向きはモデルに合わせてここで決める。狙点がある武器は狙点へ向けて撃つ。
 	// ・ノードの番号は MuzzleStartSystem がハッシュから引く(保存しない)。
+	// ・マズルフラッシュの再生枠(EffectAssetComponent)は必須コンポーネントとして最初から付く。
+	//   中に入れるエフェクトは MuzzleEffectFixupSystem が muzzleEffect.guid から書く(EffectFixupSystem より先)。
 	//================================================================================
 	struct MuzzleComponent
 	{
@@ -30,8 +33,9 @@ namespace App::Component
 		// マズルフラッシュ
 		//
 		// 弾を1発撃つたびに、銃口へ単発のエフェクトを出す。
-		// 武器自身に再生枠(EffectAssetComponent)を持たせて頭から出し直すので、
+		// 武器自身の再生枠(EffectAssetComponent)を頭から出し直すので、
 		// Duration を入れた(出し切りで終わる)アセットを指定すること。
+		// Duration は1フレームより長くすること(短いと、時間を進めた時点で出す区間を過ぎていて一度も出ない)。
 		// 発砲音もこのエフェクトのサウンドパーツに入れておけば絵と音が揃う。
 		//------------------------------------------------------------------------
 		struct Effect
@@ -51,6 +55,17 @@ namespace App::Component
 template<>
 struct Engine::ECS::ComponentTraits<App::Component::MuzzleComponent>
 {
+	//--------------------------------------------------------------------------
+	// マズルフラッシュの再生枠は最初から付けておく
+	//
+	// 以前は武器が出てきた後(Start)に足していた。初期化へ戻されるのは動いている
+	// (ActiveTag を持つ)エンティティだけなので、Start の最中に足した枠は
+	// エフェクトの解決(EffectFixupSystem / PostDeserialize)を一度も通らず、
+	// ハンドルが空のままで何も出なかった。
+	// 生成と同時に付いていれば、最初の PostDeserialize で解決される
+	//--------------------------------------------------------------------------
+	using Requires = Engine::ECS::RequireComponents<App::Component::EffectAssetComponent>;
+
 	static void Release(void* a_pData, const Engine::ECS::EngineServices& a_services)
 	{
 		App::Component::MuzzleComponent& _comp = Engine::EditorField::RefValue<App::Component::MuzzleComponent>(a_pData);
