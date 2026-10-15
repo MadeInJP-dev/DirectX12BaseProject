@@ -61,6 +61,7 @@ namespace Engine::Resource
 		float GetAngularVelocityMin() const { return m_angularVelocityMin; }	// 板の回転速度の下限(度/秒)
 		float GetAngularVelocityMax() const { return m_angularVelocityMax; }	// 板の回転速度の上限(度/秒)
 		int GetSortOrder() const { return m_sortOrder; }						// 同じ重ね方どうしの描く順(小さいほど先 = 下)
+		float GetSoftDepth() const { return m_softDepth; }						// 奥の物との境目をぼかす幅(m)。0 でぼかさない
 
 		// ---- 編集用アクセサ : エディターから直接書き換えるためのもの ----
 		std::string& RefName() { return m_name; }
@@ -86,6 +87,7 @@ namespace Engine::Resource
 		float& RefAngularVelocityMin() { return m_angularVelocityMin; }
 		float& RefAngularVelocityMax() { return m_angularVelocityMax; }
 		int& RefSortOrder() { return m_sortOrder; }
+		float& RefSoftDepth() { return m_softDepth; }
 
 		// テクスチャの差し替え : GUIDとハンドルを同時に更新する
 		void SetTexture(const Core::GUID& a_guid, const ResourceRef<Texture>& a_handle)
@@ -202,6 +204,13 @@ namespace Engine::Resource
 		// 粒は深度を書かないので、後から描いたものが上に乗る。
 		// 同じ値なら名前順。重ね方そのものの順(半透明 → 加算)はこれより優先される
 		int m_sortOrder = 0;
+
+		// 奥にある物(地面・壁)との境目をぼかす幅(m)。0 でぼかさない。
+		// 粒は板なので、地面へ刺さると交わったところで絵がまっすぐ切れて見える。
+		// 板と奥の物の距離がこの幅より近いところほど薄くする(ソフトパーティクル)。
+		// 地面を這う霧や大きな煙のように、板が物へ刺さるものに使う。
+		// 既定は 0 なので、これを入れる前のアセットの見え方は変わらない
+		float m_softDepth = 0.0f;
 
 		// ---- ランタイム用データ ----
 		ResourceRef<Texture> m_texHandle;

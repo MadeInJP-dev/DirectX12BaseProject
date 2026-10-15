@@ -102,7 +102,7 @@ namespace App::Object
 		Engine::ResourceRef<Engine::Resource::Prefab> m_prefabRef = {};
 
 		// 付けた武器のプレハブ(取り付け口の種類ごと。RightHand / LeftHand / Shoulder)
-		static constexpr size_t WEAPON_MOUNT_COUNT = 3;
+		static constexpr size_t WEAPON_MOUNT_COUNT = 4;
 		std::array<Engine::ResourceRef<Engine::Resource::Prefab>, WEAPON_MOUNT_COUNT> m_weaponPrefabRefArray = {};
 
 		// 出したプレイヤーのルート。出していなければ INVALID

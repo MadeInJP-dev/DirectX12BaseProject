@@ -1,10 +1,10 @@
 {
     "AudioOption": {
-        "groupVolume0": 0.2879999876022339,
-        "groupVolume1": 0.2370000034570694,
-        "groupVolume2": 0.5569999814033508,
+        "groupVolume0": 0.5090000033378601,
+        "groupVolume1": 1.0,
+        "groupVolume2": 1.0,
         "groupVolume3": 1.0,
-        "masterVolume": 0.0
+        "masterVolume": 0.35600000619888306
     },
     "BloomOption": {
         "enable": true,

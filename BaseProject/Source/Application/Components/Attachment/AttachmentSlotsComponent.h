@@ -34,8 +34,10 @@ namespace App::Component
 		AttachmentSlot rightWeapon;
 
 		// 肩の武器(ミサイル) : 溜めて一斉射なので、引き金を配信するのではなく
-		// MissileSalvoSystem がこのスロットの武器の MissileFireComponent へ要求を出す
+		// MissileSalvoSystem がこのスロットの武器の MissileFireComponent へ要求を出す。
+		// missile が右肩(E)、leftMissile が左肩(Q)。missile の名前は保存の互換のため右肩のまま
 		AttachmentSlot missile;
+		AttachmentSlot leftMissile;
 	};
 
 	//==========================================================================================
@@ -52,6 +54,7 @@ namespace App::Component
 		a_func(a_slots.leftWeapon);
 		a_func(a_slots.rightWeapon);
 		a_func(a_slots.missile);
+		a_func(a_slots.leftMissile);
 	}
 }
 
@@ -70,6 +73,7 @@ struct Engine::ECS::ComponentTraits<App::Component::AttachmentSlotsComponent>
 		a_ar.Field("leftWeaponGUID",         _comp.leftWeapon.guid);
 		a_ar.Field("rightWeaponGUID",        _comp.rightWeapon.guid);
 		a_ar.Field("missileGUID",            _comp.missile.guid);
+		a_ar.Field("leftMissileGUID",        _comp.leftMissile.guid);
 	}
 
 	static void Edit(CompEditContext& a_context)
@@ -185,6 +189,7 @@ struct Engine::ECS::ComponentTraits<App::Component::AttachmentSlotsComponent>
 		Engine::EditorField::Header("Weapons");
 		_drawSlot("Left Weapon",  _comp.leftWeapon);
 		_drawSlot("Right Weapon", _comp.rightWeapon);
-		_drawSlot("Missile",      _comp.missile);
+		_drawSlot("R Missile",    _comp.missile);
+		_drawSlot("L Missile",    _comp.leftMissile);
 	}
 };

@@ -977,6 +977,16 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Effect\GroundDustEmitterSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Camera\SpeedLineSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Boid\BoidGroundEffectSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1974,6 +1984,10 @@
     <ClInclude Include="Source\Application\Systems\Boid\SwarmLeaderMoveSystem.h" />
     <ClInclude Include="Source\Application\Systems\Boid\BoidWaveSystem.h" />
     <ClInclude Include="Source\Application\Systems\Boid\SerchGroundSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Effect\GroundDustEmitterSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Camera\SpeedLineSystem.h" />
+    <ClInclude Include="Source\Application\Components\Effect\GroundDustEmitterComponent.h" />
+    <ClInclude Include="Source\Application\Components\Camera\SpeedLineComponent.h" />
     <ClInclude Include="Source\Application\Systems\Boid\BoidGroundEffectSystem.h" />
     <ClInclude Include="Source\Application\Systems\Boid\BoidContactDamageSystem.h" />
     <ClInclude Include="Source\Application\InstanceResource\SwarmContactDamageResource.h" />

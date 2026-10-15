@@ -131,6 +131,10 @@ namespace Editor::Inspector
 		Engine::EditorField::Field("SortOrder", a_pParticles->RefSortOrder(), 1.0f);
 		Engine::EditorField::Tooltip("同じ重ね方どうしの描く順。小さいほど先(下)。同じなら名前順");
 
+		// 奥の物との境目をぼかす幅。板が地面へ刺さったところで絵がまっすぐ切れるのを隠す
+		Engine::EditorField::Field("SoftDepth (m)", a_pParticles->RefSoftDepth(), 0.05f, 0.0f, 100.0f);
+		Engine::EditorField::Tooltip("奥の物(地面・壁)との距離がこの幅より近いところほど薄くする。0 でぼかさない");
+
 		Engine::EditorField::Line();
 
 		// ---- 板ポリの向き ----

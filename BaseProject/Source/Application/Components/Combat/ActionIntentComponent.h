@@ -21,8 +21,10 @@ namespace App::Component
 		bool isRightWeaponShoot = false;
 
 		// ミサイル : 押している間ターゲットを溜め、離した瞬間に一斉射する。
-		// 溜め/発射の面倒を見るのは MissileSalvoSystem
+		// 溜め/発射の面倒を見るのは MissileSalvoSystem。
+		// isMissileHold が右肩(プレイヤーは E)、isLeftMissileHold が左肩(Q)
 		bool isMissileHold = false;
+		bool isLeftMissileHold = false;
 
 		// どちらかの武器を撃とうとしているか。
 		// アニメーションの Shoot パラメータのように「撃っているか」だけが要る所で使う
@@ -39,8 +41,10 @@ struct Engine::ECS::ComponentTraits<App::Component::ActionIntentComponent>
 		auto _left = _comp.isLeftWeaponShoot;
 		auto _right = _comp.isRightWeaponShoot;
 		auto _missile = _comp.isMissileHold;
+		auto _leftMissile = _comp.isLeftMissileHold;
 		Engine::EditorField::Field("isLeftWeaponShoot", _left);
 		Engine::EditorField::Field("isRightWeaponShoot", _right);
 		Engine::EditorField::Field("isMissileHold", _missile);
+		Engine::EditorField::Field("isLeftMissileHold", _leftMissile);
 	}
 };

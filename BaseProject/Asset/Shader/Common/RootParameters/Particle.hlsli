@@ -52,7 +52,8 @@ struct ParticleDrawData
 	float	fadeInRatio;	// 寿命のうち頭で透明→不透明にする割合(0でなし)
 
 	float	fadeOutRatio;	// 寿命のうち末尾で不透明→透明にする割合(0でなし)
-	float3	pad;
+	float	softDepth;		// 奥の物との境目をぼかす幅(m。0でぼかさない)
+	float2	pad;
 
 	float4	startColor;		// RGBは1を超えてよい(超えたぶんにブルームが乗る)
 	float4	endColor;
@@ -104,6 +105,10 @@ struct EmitData
 	// このプールの命令の中で、この命令の粒が何番目から始まるか(前の命令までの emitCount の合計)。
 	// 1スレッド = 1粒 で回すときに、どの命令の何個目かを二分探索で引くのに使う
 	uint	emitStart;
+
+	// 発生位置を散らす箱の半分の大きさ(ローカル : X = 横、Y = 上、Z = 噴き出す向き)。
+	// 0 なら箱は使わず positionRadius だけ
+	float3	positionExtents;
 };
 
 // クォータニオン(xyzw)でベクトルを回す。

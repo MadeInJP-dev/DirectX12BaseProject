@@ -322,6 +322,7 @@ namespace App::System
 						_action.isLeftWeaponShoot  = false;
 						_action.isRightWeaponShoot = false;
 						_action.isMissileHold      = false;
+						_action.isLeftMissileHold = false;
 
 						_boost.isBoostIntent = false;
 						_boost.isBoostTriger = false;
@@ -590,6 +591,7 @@ namespace App::System
 					_action.isRightWeaponShoot = _shoot;
 					// ミサイルは溜め撃ちではなく間隔で撃つので、この入力は使わない
 					_action.isMissileHold      = false;
+					_action.isLeftMissileHold = false;
 
 					//==========================================================
 					// ミサイル : 間隔ごとに一斉射を要求する

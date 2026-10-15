@@ -12,6 +12,14 @@
 #include "Application/Components/Movement/BoostStateComponent.h"
 #include "Application/Components/Movement/ChargeDashComponent.h"
 #include "Application/Components/Attachment/AttachmentSlotsComponent.h"
+#include "Application/Components/Weapon/Shoulder/MissileFireComponent.h"
+#include "Application/Components/Movement/ActualVelocityComponent.h"
+#include "Application/Components/Movement/MovementParamsComponent.h"
+#include "Application/Components/Physics/GroundStateComponent.h"
+#include "Application/Components/Transform/WorldMatrixComponent.h"
+#include "Application/Components/Physics/Collider.h"
+
+#include "Engine/Physics/PhysicsWorld.h"
 
 #include "Application/InstanceResource/HitEventResource.h"
 #include "Application/InstanceResource/PlayerHUDResource.h"
@@ -20,6 +28,91 @@ namespace App::System
 {
 	namespace
 	{
+		// 高度を測るレイの長さ(m)。これより高いと地面が無いのと同じ扱い(最大のまま出す)
+		constexpr float ALTITUDE_RAY_MAX = 500.0f;
+
+		// レイの始点を足元からこれだけ上げる(m)。足元から打つと、立っているときは地表と重なって当たらない
+		constexpr float ALTITUDE_RAY_START_UP = 1.0f;
+
+		// m/s → km/h
+		constexpr float MPS_TO_KMPH = 3.6f;
+
+		//==================================================================================
+		// 操作している機体の高度と速さ
+		//----------------------------------------------------------------------------------
+		// 高度は真下の地面(StaticObject)までの距離。海抜ではなく対地高度にしてあるのは、
+		// 起伏のある地形で「あとどれだけで着地するか」が分かる方が操作に効くため。
+		//
+		// 速さは実速度の大きさを km/h で出す。最大は目安の最高速(チャージダッシュがあればその速さ、
+		// 無ければ移動速度)。ゲージの見え方を変えたいときは UIGauge の MaxOverride で上書きする。
+		// 接地中は上下の成分を見ない(地面へ押し付ける下向きの速度が残っていて、止まっていても数字が出るため)
+		//==================================================================================
+		void GatherFlight(
+			Engine::ECS::World* a_pWorld,
+			Engine::ECS::Entity a_player,
+			InstanceResource::PlayerHUDResource& a_hud)
+		{
+			using InstanceResource::EHUDGaugeKind;
+			using InstanceResource::EHUDSubject;
+
+			if (a_pWorld->HasComponent<Component::ActualVelocityComponent>(a_player))
+			{
+				if (const auto* _pVel = a_pWorld->RefData<Component::ActualVelocityComponent>(a_player))
+				{
+					float _maxSpeed = 0.0f;
+					if (a_pWorld->HasComponent<Component::ChargeDashComponent>(a_player))
+					{
+						if (const auto* _pDash = a_pWorld->RefData<Component::ChargeDashComponent>(a_player))
+						{
+							_maxSpeed = _pDash->dashSpeed;
+						}
+					}
+					if (_maxSpeed <= 0.0f && a_pWorld->HasComponent<Component::MovementParamsComponent>(a_player))
+					{
+						if (const auto* _pMove = a_pWorld->RefData<Component::MovementParamsComponent>(a_player))
+						{
+							_maxSpeed = _pMove->moveSpeed;
+						}
+					}
+
+					Math::Vector3 _velocity = Math::Vector3(_pVel->value);
+					if (a_pWorld->HasComponent<Component::GroundStateComponent>(a_player))
+					{
+						if (const auto* _pGround = a_pWorld->RefData<Component::GroundStateComponent>(a_player))
+						{
+							if (_pGround->isGround) _velocity.y = 0.0f;
+						}
+					}
+
+					a_hud.RefGauge(EHUDSubject::Player, EHUDGaugeKind::Speed) = {
+						_velocity.Length() * MPS_TO_KMPH, _maxSpeed * MPS_TO_KMPH, true };
+				}
+			}
+
+			if (a_pWorld->HasComponent<Component::WorldMatrixComponent>(a_player) &&
+				a_pWorld->HasResource<Engine::Physics::PhysicsWorld>())
+			{
+				if (const auto* _pWorldMat = a_pWorld->RefData<Component::WorldMatrixComponent>(a_player))
+				{
+					Math::Ray _ray;
+					_ray.origin = Math::Matrix(_pWorldMat->worldMat).Translation();
+					_ray.origin.y += ALTITUDE_RAY_START_UP;
+					_ray.direction = { 0.0f, -1.0f, 0.0f };
+					_ray.maxDistance = ALTITUDE_RAY_MAX + ALTITUDE_RAY_START_UP;
+
+					float _altitude = ALTITUDE_RAY_MAX;
+					Engine::Physics::RayHit _hit = {};
+					const auto& _physicsWorld = a_pWorld->GetResource<Engine::Physics::PhysicsWorld>();
+					if (_physicsWorld.CastRay(_ray, static_cast<uint32_t>(Component::ECollisionLayer::StaticObject), a_player, _hit))
+					{
+						_altitude = std::max(_hit.distance - ALTITUDE_RAY_START_UP, 0.0f);
+					}
+
+					a_hud.RefGauge(EHUDSubject::Player, EHUDGaugeKind::Altitude) = { _altitude, ALTITUDE_RAY_MAX, true };
+				}
+			}
+		}
+
 		//==================================================================================
 		// 1体ぶんのゲージの値を集める
 		//----------------------------------------------------------------------------------
@@ -87,6 +180,24 @@ namespace App::System
 					a_hud.RefGauge(a_subject, EHUDGaugeKind::ChargeDash) = { _pDash->chargeTimer, _pDash->chargeTime, true };
 				}
 			}
+
+			if (a_pWorld->HasComponent<Component::MissileFireComponent>(a_entity))
+			{
+				// 次を撃てるまでの溜まり具合。撃ち切ってから waitTime かけて満ちていき、満タンで撃てる。
+				// 一斉射の最中はまだ待ちが始まっていないので空にしておく
+				if (const auto* _pFire = a_pWorld->RefData<Component::MissileFireComponent>(a_entity))
+				{
+					const float _wait = std::max(_pFire->waitTime, 0.0f);
+					float _current = _wait;
+					if (_pFire->IsFiring())			_current = 0.0f;
+					else if (_pFire->IsWaiting())	_current = std::clamp(_wait - _pFire->runtimeData.waitTimer, 0.0f, _wait);
+
+					// 待ち時間の無い武器は常に満タン(最大が 0 だと空に見えるので 1 で割る)
+					a_hud.RefGauge(a_subject, EHUDGaugeKind::FireInterval) = (_wait > 0.0f)
+						? InstanceResource::HUDGaugeValue{ _current, _wait, true }
+						: InstanceResource::HUDGaugeValue{ _pFire->IsFiring() ? 0.0f : 1.0f, 1.0f, true };
+				}
+			}
 		}
 	}
 
@@ -124,7 +235,12 @@ namespace App::System
 				Component::BoostStateComponent,
 				Component::WeaponOverHeatComponent,
 				Component::WeaponReloadComponent,
-				Component::ChargeDashComponent>{},
+				Component::ChargeDashComponent,
+				Component::MissileFireComponent,
+				Component::ActualVelocityComponent,
+				Component::MovementParamsComponent,
+				Component::GroundStateComponent,
+				Component::WorldMatrixComponent>{},
 			Engine::ECS::WriteList<>{},
 			[](const Engine::ECS::SystemContext& a_ctx)
 			{
@@ -198,27 +314,33 @@ namespace App::System
 					{
 						// 出すのは見た目の円。判定はこれに reticleScale を掛けたもの
 						_hud.missileReticle = { Math::Vector2(_pMissile->reticleCenter), _pMissile->reticleRadius, true };
-						_hud.isMissileCharging = _pMissile->isCharging;
+						_hud.isMissileCharging = _pMissile->IsAnyCharging();
 
-						const int _count = std::clamp(
-							_pMissile->lockCount, 0, InstanceResource::PlayerHUDResource::MISSILE_LOCK_MAX);
-
-						for (int _i = 0; _i < _count; ++_i)
+						// 左右の肩で溜めた敵をまとめて並べる(枠を出すのは溜めている肩のぶんだけ)
+						int _count = 0;
+						for (const auto& _side : _pMissile->sides)
 						{
-							_hud.missileLockScreenPos[_i] = Math::Vector2(_pMissile->lockScreenPos[_i]);
+							if (!_side.isCharging) continue;
+							for (int _i = 0; _i < _side.lockCount; ++_i)
+							{
+								if (_count >= InstanceResource::PlayerHUDResource::MISSILE_LOCK_MAX) break;
+								_hud.missileLockScreenPos[_count++] = Math::Vector2(_side.lockScreenPos[_i]);
+							}
 						}
 						_hud.missileLockCount = _count;
 					}
 				}
 
 				//==================================================================
-				// ゲージ : プレイヤー / ロック中の敵 / 左右の武器
+				// ゲージ : プレイヤー / ロック中の敵 / 左右の武器 / 左右の肩の武器
 				//------------------------------------------------------------------
 				// 武器はアタッチメントスロットが指す別のエンティティ。
 				// 熱(オーバーヒート)は武器の側が持っているので、そこまで辿る
 				//==================================================================
 				Engine::ECS::Entity _rightWeapon = Engine::ECS::Limits::INVALID_ENTITY;
 				Engine::ECS::Entity _leftWeapon = Engine::ECS::Limits::INVALID_ENTITY;
+				Engine::ECS::Entity _rightShoulderWeapon = Engine::ECS::Limits::INVALID_ENTITY;
+				Engine::ECS::Entity _leftShoulderWeapon = Engine::ECS::Limits::INVALID_ENTITY;
 
 				if (_pWorld->HasComponent<Component::AttachmentSlotsComponent>(_player))
 				{
@@ -226,6 +348,8 @@ namespace App::System
 					{
 						_rightWeapon = _pSlots->rightWeapon.id;
 						_leftWeapon = _pSlots->leftWeapon.id;
+						_rightShoulderWeapon = _pSlots->missile.id;
+						_leftShoulderWeapon = _pSlots->leftMissile.id;
 					}
 				}
 
@@ -233,6 +357,11 @@ namespace App::System
 				GatherGauges(_pWorld, _lockedEnemy, _hud, InstanceResource::EHUDSubject::LockedEnemy);
 				GatherGauges(_pWorld, _rightWeapon, _hud, InstanceResource::EHUDSubject::RightWeapon);
 				GatherGauges(_pWorld, _leftWeapon, _hud, InstanceResource::EHUDSubject::LeftWeapon);
+				GatherGauges(_pWorld, _rightShoulderWeapon, _hud, InstanceResource::EHUDSubject::RightShoulderWeapon);
+				GatherGauges(_pWorld, _leftShoulderWeapon, _hud, InstanceResource::EHUDSubject::LeftShoulderWeapon);
+
+				// 高度と速さ(高度は真下へレイを打つ)
+				GatherFlight(_pWorld, _player, _hud);
 
 				//==================================================================
 				// 手応え : プレイヤーの弾が当たったか
@@ -262,6 +391,8 @@ namespace App::System
 		)
 		// ヒットの一覧を読む(積むのは当たり判定系、消すのは次フレームの HitEventClearSystem)
 		.ReadsResource<InstanceResource::HitEventResource>()
+		// 高度を測るレイを撃つ
+		.ReadsResource<Engine::Physics::PhysicsWorld>()
 		// 集めた答えの置き場
 		.WritesResource<InstanceResource::PlayerHUDResource>();
 	}

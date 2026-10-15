@@ -7,7 +7,8 @@ namespace App::Component
 	{
 		RightHand,	// 右手 : 手持ちの武器(右クリック)
 		LeftHand,	// 左手 : 手持ちの武器(左クリック)
-		Shoulder,	// 肩   : 肩の武器(ミサイル)
+		RightShoulder,	// 右肩 : 肩の武器(ミサイル。E)
+		LeftShoulder,	// 左肩 : 肩の武器(ミサイル。Q)。※ 保存値なので末尾に足すこと
 	};
 
 	//==========================================================================================
@@ -20,7 +21,7 @@ namespace App::Component
 	// ・手の位置(どのノードか)は機体ごとに違い、握り方のずれ(武器のローカル位置)は武器ごとに違う。
 	//   取り付け口を挟むと、機体と武器を別々のプレハブにしたまま組み合わせられる。
 	// ・付けた武器は、本体の AttachmentSlotsComponent の対応するスロットへ ID で入る
-	//   (RightHand → rightWeapon / LeftHand → leftWeapon / Shoulder → missile)。
+	//   (RightHand → rightWeapon / LeftHand → leftWeapon / RightShoulder → missile / LeftShoulder → leftMissile)。
 	//==========================================================================================
 	struct WeaponMountComponent
 	{

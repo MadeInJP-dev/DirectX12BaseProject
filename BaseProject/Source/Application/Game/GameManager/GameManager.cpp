@@ -267,6 +267,7 @@ namespace App::Game
 		a_ar.Field("defaultLoadoutRightHand", m_defaultLoadout.rightHandWeaponPrefabGUID);
 		a_ar.Field("defaultLoadoutLeftHand", m_defaultLoadout.leftHandWeaponPrefabGUID);
 		a_ar.Field("defaultLoadoutShoulder", m_defaultLoadout.shoulderWeaponPrefabGUID);
+		a_ar.Field("defaultLoadoutLeftShoulder", m_defaultLoadout.leftShoulderWeaponPrefabGUID);
 	}
 	//======================================================================================
 	// ゲーム設定の編集UI
@@ -307,7 +308,8 @@ namespace App::Game
 		Engine::EditorField::Tooltip("取り付け口(WeaponMountComponent)を持つ機体。未設定なら PlayerSpawner のプレハブをそのまま出す");
 		_isLoadoutChanged |= Engine::EditorField::AssetField(_services, "Right Hand", "Prefab", m_defaultLoadout.rightHandWeaponPrefabGUID);
 		_isLoadoutChanged |= Engine::EditorField::AssetField(_services, "Left Hand", "Prefab", m_defaultLoadout.leftHandWeaponPrefabGUID);
-		_isLoadoutChanged |= Engine::EditorField::AssetField(_services, "Shoulder", "Prefab", m_defaultLoadout.shoulderWeaponPrefabGUID);
+		_isLoadoutChanged |= Engine::EditorField::AssetField(_services, "Right Shoulder", "Prefab", m_defaultLoadout.shoulderWeaponPrefabGUID);
+		_isLoadoutChanged |= Engine::EditorField::AssetField(_services, "Left Shoulder", "Prefab", m_defaultLoadout.leftShoulderWeaponPrefabGUID);
 		Engine::EditorField::Tooltip("反映は次にゲームシーンを開いたとき(プレイヤーを出すのはシーンの始まり)");
 
 		if (_isLoadoutChanged) m_gameData.loadout = m_defaultLoadout;

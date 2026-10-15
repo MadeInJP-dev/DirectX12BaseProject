@@ -466,7 +466,8 @@ namespace Engine::Graphics::Pipeline
 		{
 		case EAccessType::SRV:			return Resource::ETextureUsage::SRV;
 		case EAccessType::UAV:			return Resource::ETextureUsage::UAV;
-		case EAccessType::DepthRead:	return Resource::ETextureUsage::DSV;
+		// 深度を読むパスは、DSV で深度テストしつつシェーダーからも引くことがある(粒のぼかし)
+		case EAccessType::DepthRead:	return Resource::ETextureUsage::DSV | Resource::ETextureUsage::SRV;
 		default:						return Resource::ETextureUsage::None;
 		}
 	}
@@ -479,7 +480,9 @@ namespace Engine::Graphics::Pipeline
 		case EAccessType::SRV:			return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		case EAccessType::RTV:			return D3D12_RESOURCE_STATE_RENDER_TARGET;
 		case EAccessType::UAV:			return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-		case EAccessType::DepthRead:	return D3D12_RESOURCE_STATE_DEPTH_READ;
+			// 読み取り専用の DSV で深度テストしながら、同じパスでシェーダーからも読めるようにする
+			// (どれも読み取りのステートなので同時に立ててよい)
+		case EAccessType::DepthRead:	return D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		case EAccessType::DepthWrite:	return D3D12_RESOURCE_STATE_DEPTH_WRITE;
 		case EAccessType::CopySrc:		return D3D12_RESOURCE_STATE_COPY_SOURCE;
 		case EAccessType::CopyDst:		return D3D12_RESOURCE_STATE_COPY_DEST;

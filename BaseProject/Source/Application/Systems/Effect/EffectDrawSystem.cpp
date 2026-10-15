@@ -294,6 +294,7 @@ namespace App::System
 							_emitData.baseScale      = _part.baseScale * _effectScale *
 								_pEffect->EvaluateParamScale(Engine::Resource::EEffectParamTarget::ParticleSize, _p, _pParams);
 							_emitData.positionRadius = _part.positionRadius * _effectScale;
+							_emitData.positionExtents = _part.positionExtents * _effectScale;
 							_emitData.directionAngle = DirectX::XMConvertToRadians(_part.directionAngle);
 							_emitData.emitShape      = static_cast<UINT>(_part.emitShape);
 							_emitData.emitterIndex   = _emitterIndex;

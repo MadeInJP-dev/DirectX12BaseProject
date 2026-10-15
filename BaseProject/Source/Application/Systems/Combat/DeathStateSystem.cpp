@@ -98,6 +98,7 @@ namespace App::System
 					_intent.isLeftWeaponShoot  = false;
 					_intent.isRightWeaponShoot = false;
 					_intent.isMissileHold      = false;
+					_intent.isLeftMissileHold = false;
 				}
 			}
 		)

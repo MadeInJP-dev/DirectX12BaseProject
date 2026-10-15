@@ -19,7 +19,9 @@ VSOutput VSMain(VSInput a_input)
 		// 寿命が切れている場合は処理をスキップ
 
 		_out.pos = float4(0, 0, 0, 0);
+		_out.uv = float2(0, 0);
 		_out.color = float4(1, 0, 0, 1);
+		_out.viewDepth = 0.0f;
 		return _out;
 	}
 
@@ -172,6 +174,9 @@ VSOutput VSMain(VSInput a_input)
 
 	// ワールド座標から射影空間へ変換
 	_out.pos = mul(float4(_worldPos, 1.0f), g_camera.viewProj);
+
+	// 奥の物との境目をぼかすための奥行き(PS で深度と比べる)
+	_out.viewDepth = mul(float4(_worldPos, 1.0f), g_camera.view).z;
 
 	// UV座標のパススルー
 	_out.uv = a_input.uv;

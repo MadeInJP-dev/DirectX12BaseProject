@@ -15,8 +15,10 @@ namespace Engine::Graphics::Pipeline
 	void ParticlePass::SetupSlots()
 	{
 		// 深度は読むだけ : 半透明なので書かず、手前のものには隠される。
-		// 単体で置いた構成も作れるよう任意にしてある
-		DeclareInput("Depth", EAccessType::DepthRead, EPassSlotType::Texture, false);
+		// 単体で置いた構成も作れるよう任意にしてある。
+		// PS からも SRV で読む(奥の物との境目をぼかす)ので、番号をルートパラメータ 4 へ張らせる。
+		// 繋がっていなければ無効値が届き、シェーダーはぼかしを飛ばす
+		DeclareInput("Depth", EAccessType::DepthRead, EPassSlotType::Texture, false, 4);
 
 		// 描き足す先 : 「前段が描いた絵の上に重ねる」という順序をこの線で表す
 		DeclareInput("Color", EAccessType::RTV, EPassSlotType::Texture, false);
@@ -174,6 +176,7 @@ namespace Engine::Graphics::Pipeline
 				_cbDraw.endSizeScale = a_particle.GetEndSizeScale();
 				_cbDraw.fadeInRatio  = a_particle.GetFadeInRatio();
 				_cbDraw.fadeOutRatio = a_particle.GetFadeOutRatio();
+				_cbDraw.softDepth    = a_particle.GetSoftDepth();
 				_cbDraw.startColor   = a_particle.GetStartColor();
 				_cbDraw.endColor     = a_particle.GetEndColor();
 

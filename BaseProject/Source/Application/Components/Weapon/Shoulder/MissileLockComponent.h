@@ -46,12 +46,28 @@ namespace App::Component
 		}
 
 		// ---- 収集結果(ランタイム。保存しない) ----
-		Engine::ECS::Entity locks[MISSILE_MAX]     = {};	// ロックした敵(重複なし)
-		Math::Vector2       lockScreenPos[MISSILE_MAX] = {};	// その敵のスクリーン座標(px)。HUD 用
-		int                 lockCount              = 0;
+		//
+		// 肩の左右で別々に溜めて撃つので、溜めの状態は肩ごとに持つ。
+		// 判定の円・距離・狙う高さは左右で同じものを使う
+		enum ESide : int
+		{
+			RightShoulder,	// 右肩(スロットの missile。プレイヤーは E)
+			LeftShoulder,	// 左肩(スロットの leftMissile。プレイヤーは Q)
+			SIDE_COUNT,
+		};
 
-		bool  isCharging    = false;	// 収集中(キーを押している)か
-		bool  wasHold       = false;	// 立ち下がり(離した瞬間)の検出用
+		struct Side
+		{
+			Engine::ECS::Entity locks[MISSILE_MAX]         = {};	// ロックした敵(重複なし)
+			Math::Vector2       lockScreenPos[MISSILE_MAX] = {};	// その敵のスクリーン座標(px)。HUD 用
+			int                 lockCount                  = 0;
+			bool  isCharging    = false;	// 収集中(キーを押している)か
+			bool  wasHold       = false;	// 立ち下がり(離した瞬間)の検出用
+		};
+		Side sides[SIDE_COUNT] = {};
+
+		// どちらかの肩で溜めているか
+		bool IsAnyCharging() const { return sides[RightShoulder].isCharging || sides[LeftShoulder].isCharging; }
 	};
 }
 
@@ -85,7 +101,12 @@ struct Engine::ECS::ComponentTraits<App::Component::MissileLockComponent>
 		Engine::EditorField::Line();
 		Engine::EditorField::Value("ReticleCenter", "%.0f, %.0f", _comp.reticleCenter.x, _comp.reticleCenter.y);
 		Engine::EditorField::Value("ActiveRadius", "%.0f px", _comp.GetActiveReticleRadius());
-		Engine::EditorField::Text("Charging : %s  Locks : %d", _comp.isCharging ? "yes" : "no", _comp.lockCount);
+		Engine::EditorField::Text("R Charging : %s  Locks : %d",
+			_comp.sides[App::Component::MissileLockComponent::RightShoulder].isCharging ? "yes" : "no",
+			_comp.sides[App::Component::MissileLockComponent::RightShoulder].lockCount);
+		Engine::EditorField::Text("L Charging : %s  Locks : %d",
+			_comp.sides[App::Component::MissileLockComponent::LeftShoulder].isCharging ? "yes" : "no",
+			_comp.sides[App::Component::MissileLockComponent::LeftShoulder].lockCount);
 
 		Engine::EditorField::HelpText("発射数・間隔・散らし角 : 肩の武器の MissileFireComponent");
 	}

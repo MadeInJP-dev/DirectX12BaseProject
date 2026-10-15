@@ -145,6 +145,12 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
 			float _radius = Random(_seed++) * _emitInfo.positionRadius;
 			float3 _localOffset = RandomDirection(_seed) * _radius;
 			_seed += 2;		// RandomDirection は内部で種を2つ消費する
+
+			// 箱の中へ散らす(地面を這う霧のように広くて薄い範囲)。
+			// 箱を使わない(0)ときも種は同じだけ進めて、後ろの乱数の並びを変えない
+			const float3 _boxRandom = float3(Random(_seed), Random(_seed + 1), Random(_seed + 2));
+			_seed += 3;
+			_localOffset += (_boxRandom * 2.0f - 1.0f) * _emitInfo.positionExtents;
 			_p.pos = mul(float4(_localOffset, 1.0f), _emitMat).xyz;
 
 			// 生存時間

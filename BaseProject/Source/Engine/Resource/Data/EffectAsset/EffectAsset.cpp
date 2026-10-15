@@ -113,6 +113,7 @@ namespace Engine::Resource
 		a_ar.Field("EmitShape", emitShape);
 		a_ar.Field("Trigger", timing.trigger);
 		a_ar.Field("SimulationSpace", simulationSpace);
+		a_ar.Field("PositionExtents", positionExtents);
 	}
 
 	bool EffectParticlePart::IsLocalSimulation(const ParticlesAsset* a_pParticle) const

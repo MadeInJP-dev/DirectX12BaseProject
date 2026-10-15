@@ -30,9 +30,10 @@ namespace App::System
 				bool _isLeftShoot = a_ctx.pServices->pInputManager->IsHold(App::Game::EGameAction::LWeaponAttack);
 				bool _isRightShoot = a_ctx.pServices->pInputManager->IsHold(App::Game::EGameAction::RWeaponAttack);
 
-				// ミサイル : 押している間が溜め、離した瞬間が発射(判定は MissileSalvoSystem)
-				// 溜めは今のところ肩の左右で分かれていないので、右肩のアクションで両方を動かす
+				// ミサイル : 押している間が溜め、離した瞬間が発射(判定は MissileSalvoSystem)。
+				// 右肩と左肩は別々に溜めて撃つ
 				bool _isMissile = a_ctx.pServices->pInputManager->IsHold(App::Game::EGameAction::RMissileLock);
+				bool _isLeftMissile = a_ctx.pServices->pInputManager->IsHold(App::Game::EGameAction::LMissileLock);
 
 				for (size_t _i = 0; _i < a_count; ++_i)
 				{
@@ -40,6 +41,7 @@ namespace App::System
 					_intent.isLeftWeaponShoot = _isLeftShoot;
 					_intent.isRightWeaponShoot = _isRightShoot;
 					_intent.isMissileHold = _isMissile;
+					_intent.isLeftMissileHold = _isLeftMissile;
 				}
 			}
 		);

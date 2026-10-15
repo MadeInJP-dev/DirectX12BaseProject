@@ -24,7 +24,8 @@ namespace App::Game
 		Core::GUID bodyPrefabGUID = {};				// 本体(取り付け口 WeaponMountComponent を持つ機体)
 		Core::GUID rightHandWeaponPrefabGUID = {};	// 右手の武器(手持ち : WeaponStateComponent)
 		Core::GUID leftHandWeaponPrefabGUID = {};	// 左手の武器(手持ち : WeaponStateComponent)
-		Core::GUID shoulderWeaponPrefabGUID = {};	// 肩の武器(MissileStateComponent)
+		Core::GUID shoulderWeaponPrefabGUID = {};	// 右肩の武器(MissileStateComponent)。E で撃つ
+		Core::GUID leftShoulderWeaponPrefabGUID = {};	// 左肩の武器(MissileStateComponent)。Q で撃つ
 
 		// 構成として使えるか(本体が決まっていれば使う。武器は空でもよい)
 		bool IsValid() const { return bodyPrefabGUID.IsValid(); }

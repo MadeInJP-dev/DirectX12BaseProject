@@ -1761,6 +1761,9 @@
     <ClCompile Include="Source\Application\Systems\Camera\CameraProjUpdateSystem.cpp">
       <Filter>Source\Application\Systems\Camera</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Camera\SpeedLineSystem.cpp">
+      <Filter>Source\Application\Systems\Camera</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Camera\RadialBlurSpeedSystem.cpp">
       <Filter>Source\Application\Systems\Camera</Filter>
     </ClCompile>
@@ -1823,6 +1826,9 @@
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Combat\ExplodeOnHitSystem.cpp">
       <Filter>Source\Application\Systems\Combat</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Effect\GroundDustEmitterSystem.cpp">
+      <Filter>Source\Application\Systems\Effect</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Effect\GroundImpulseEmitSystem.cpp">
       <Filter>Source\Application\Systems\Effect</Filter>
@@ -2900,6 +2906,9 @@
     <ClInclude Include="Source\Application\Components\Camera\FocusParamComponent.h">
       <Filter>Source\Application\Components\Camera</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Components\Camera\SpeedLineComponent.h">
+      <Filter>Source\Application\Components\Camera</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Components\Camera\RadialBlurComponent.h">
       <Filter>Source\Application\Components\Camera</Filter>
     </ClInclude>
@@ -2997,6 +3006,9 @@
       <Filter>Source\Application\Components\Effect</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Components\Effect\EffectComponent.h">
+      <Filter>Source\Application\Components\Effect</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Components\Effect\GroundDustEmitterComponent.h">
       <Filter>Source\Application\Components\Effect</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Components\Effect\GroundImpulseEmitterComponent.h">
@@ -3392,6 +3404,9 @@
     <ClInclude Include="Source\Application\Systems\Camera\CameraProjUpdateSystem.h">
       <Filter>Source\Application\Systems\Camera</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Camera\SpeedLineSystem.h">
+      <Filter>Source\Application\Systems\Camera</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Systems\Camera\RadialBlurSpeedSystem.h">
       <Filter>Source\Application\Systems\Camera</Filter>
     </ClInclude>
@@ -3454,6 +3469,9 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Combat\ExplodeOnHitSystem.h">
       <Filter>Source\Application\Systems\Combat</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Effect\GroundDustEmitterSystem.h">
+      <Filter>Source\Application\Systems\Effect</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Effect\GroundImpulseEmitSystem.h">
       <Filter>Source\Application\Systems\Effect</Filter>

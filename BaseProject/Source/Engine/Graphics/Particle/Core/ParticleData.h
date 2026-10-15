@@ -69,7 +69,7 @@ namespace Engine::Graphics::Particle
 	// フレームごとに全プールの命令をつなげて送る。足りなくなったら2のべき乗で伸ばし、
 	// 作り直した古いバッファは GPU が使い終わってから捨てる(めったに起きない)。
 	// 上限を超えたぶんはそのフレームでは出ない(アセットごとに1回だけ警告する)。
-	// 1件 144 バイトなので、上限まで伸びても 9MB ほど(+ フレームごとの転送用の区画)
+	// 1件 160 バイトなので、上限まで伸びても 10MB ほど(+ フレームごとの転送用の区画)
 	//======================================================================================
 	inline constexpr uint32_t EMIT_BUFFER_MIN_CAPACITY = 256;
 	inline constexpr uint32_t EMIT_BUFFER_MAX_CAPACITY = 65536;
@@ -204,9 +204,9 @@ namespace Engine::Graphics::Particle
 		float		fadeInRatio = 0.0f;		// 頭から不透明になるまでの割合(0でフェードインなし)
 
 		float		fadeOutRatio = 0.0f;	// 末尾で透明になるまでの割合(0でフェードアウトなし)
+		float		softDepth = 0.0f;		// 奥の物との境目をぼかす幅(m。0でぼかさない)
 		float		pad0 = 0.0f;
 		float		pad1 = 0.0f;
-		float		pad2 = 0.0f;
 
 		Math::Color	startColor = { 1.0f, 1.0f, 1.0f, 1.0f };	// 発生時の色
 		Math::Color	endColor = { 1.0f, 1.0f, 1.0f, 1.0f };		// 消える直前の色

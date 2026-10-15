@@ -17,6 +17,7 @@
 #include "Application/Components/Camera/CameraParamComponent.h"
 #include "Application/Components/Camera/FocusParamComponent.h"
 #include "Application/Components/Camera/RadialBlurComponent.h"
+#include "Application/Components/Camera/SpeedLineComponent.h"
 #include "Application/Components/Camera/FishEyeComponent.h"
 #include "Application/Components/Camera/ProjMatComponent.h"
 #include "Application/Components/Camera/FollowTargetComponent.h"
@@ -101,6 +102,7 @@
 #include "Application/Components/Boid/SwarmBurstComponent.h"
 #include "../../Components/Effect/GroundEffectTag.h"
 #include "Application/Components/Effect/GroundImpulseEmitterComponent.h"
+#include "Application/Components/Effect/GroundDustEmitterComponent.h"
 
 // システム関連
 #include "Application/Systems/Render/ModelFixupSystem.h"
@@ -124,6 +126,7 @@
 #include "Application/Systems/Camera/MainCameraSystem.h"
 #include "Application/Systems/Camera/CameraProjUpdateSystem.h"
 #include "Application/Systems/Camera/RadialBlurSpeedSystem.h"
+#include "Application/Systems/Camera/SpeedLineSystem.h"
 #include "Application/Systems/Camera/AimTargetSystem.h"
 #include "Application/Systems/Transform/CalcMatrixSystem.h"
 #include "Application/Systems/Transform/JointSwaySystem.h"
@@ -227,6 +230,7 @@
 #include "Application/Systems/Boid/SwarmBurstSystem.h"
 #include "../../Systems/Render/GroundEffectSetSystem.h"
 #include "Application/Systems/Effect/GroundImpulseEmitSystem.h"
+#include "Application/Systems/Effect/GroundDustEmitterSystem.h"
 #include "Application/Systems/UI/HUDGatherSystem.h"
 
 // リソース関係
@@ -267,6 +271,8 @@ namespace App::ECS
 		a_world.RegisterComponent<Component::ProjMatComponent>("ProjMatComponent");
 		a_world.RegisterComponent<Component::FocusParamComponent>("FocusParamComponent");
 		a_world.RegisterComponent<Component::RadialBlurComponent>("RadialBlurComponent");
+		// 速いときにカメラのまわりを流れる風の筋。量を書くのは SpeedLineSystem
+		a_world.RegisterComponent<Component::SpeedLineComponent>("SpeedLineComponent");
 		a_world.RegisterComponent<Component::FishEyeComponent>("FishEyeComponent");
 		a_world.RegisterComponent<Component::FollowTargetComponent>("FollowTargetComponent");
 		a_world.RegisterComponent<Component::DesiredVelocityComponent>("DesiredVelocityComponent");
@@ -413,6 +419,8 @@ namespace App::ECS
 		a_world.RegisterComponent<Component::GroundEffectTag>("GroundEffectTag");
 		// グラウンドフィールドへ衝撃を出す(テスト用)。出すのは GroundImpulseEmitSystem
 		a_world.RegisterComponent<Component::GroundImpulseEmitterComponent>("GroundImpulseEmitterComponent");
+		// 地面の近くを速く動く機体が地表へ炊く砂埃。炊くのは GroundDustEmitterSystem
+		a_world.RegisterComponent<Component::GroundDustEmitterComponent>("GroundDustEmitterComponent");
 		// 出来事(生まれた・死んだ・攻撃を受けた)→ エフェクトの対応表。出すのは EffectEventSystem
 		a_world.RegisterComponent<Component::EffectEventsComponent>("EffectEventsComponent");
 
@@ -496,6 +504,9 @@ namespace App::ECS
 		// スピードに応じたラジアルブラーの強さ。
 		// 画角と同じ speed01 を読むので、それを書く TPSSystem より後に回る
 		a_world.RegisterSystem<System::RadialBlurSpeedSystem>();
+		// スピードラインの量(カメラのエフェクトの params[0])。
+		// 画角・ブラーと同じ speed01 を読むので、それを書く TPSSystem より後に回る
+		a_world.RegisterSystem<System::SpeedLineSystem>();
 		// 映すカメラを1台選んで SingletonEntityResource へ置く。
 		// 使う側(狙点・ロックオン・描画のカメラ設定)より手前の帯(PreUpdate)で回る
 		a_world.RegisterSystem<System::MainCameraSystem>();
@@ -586,6 +597,8 @@ namespace App::ECS
 		a_world.RegisterSystem<System::SerchGroundSystem>();
 		// ワームの体(ボイド)から上下にレイを打ち、地表へ砂埃を炊く(設定は SwarmBossController)
 		a_world.RegisterSystem<System::BoidGroundEffectSystem>();
+		// 地面の近くを速く動く機体から真下へレイを打ち、地表へ砂埃を炊く(ボイドの砂埃と同じ作り)
+		a_world.RegisterSystem<System::GroundDustEmitterSystem>();
 		// エフェクトプレハブの破片を撒く(破片のハンドルは PostDeserialize で取る)
 		a_world.RegisterSystem<System::DebrisEmitterSystem>();
 		// 撒かれた破片を放物線で飛ばし、地面で跳ねて止める

@@ -198,7 +198,8 @@ namespace App::Object
 		{
 			{ Component::EWeaponMount::RightHand, a_loadout.rightHandWeaponPrefabGUID, _pSlots ? &_pSlots->rightWeapon : nullptr, false },
 			{ Component::EWeaponMount::LeftHand,  a_loadout.leftHandWeaponPrefabGUID,  _pSlots ? &_pSlots->leftWeapon  : nullptr, false },
-			{ Component::EWeaponMount::Shoulder,  a_loadout.shoulderWeaponPrefabGUID,  _pSlots ? &_pSlots->missile     : nullptr, true  },
+			{ Component::EWeaponMount::RightShoulder, a_loadout.shoulderWeaponPrefabGUID,     _pSlots ? &_pSlots->missile     : nullptr, true  },
+			{ Component::EWeaponMount::LeftShoulder,  a_loadout.leftShoulderWeaponPrefabGUID, _pSlots ? &_pSlots->leftMissile : nullptr, true  },
 		};
 
 		const Engine::ECS::ComponentTypeID _handTypeID = _world.GetCompTypeID<Component::WeaponStateComponent>();
@@ -353,7 +354,8 @@ namespace App::Object
 			Engine::EditorField::Value("Body", "%s", _assetDB.GetFileNameFromGUID(_pLoadout->bodyPrefabGUID).c_str());
 			Engine::EditorField::Value("Right Hand", "%s", _assetDB.GetFileNameFromGUID(_pLoadout->rightHandWeaponPrefabGUID).c_str());
 			Engine::EditorField::Value("Left Hand", "%s", _assetDB.GetFileNameFromGUID(_pLoadout->leftHandWeaponPrefabGUID).c_str());
-			Engine::EditorField::Value("Shoulder", "%s", _assetDB.GetFileNameFromGUID(_pLoadout->shoulderWeaponPrefabGUID).c_str());
+			Engine::EditorField::Value("Right Shoulder", "%s", _assetDB.GetFileNameFromGUID(_pLoadout->shoulderWeaponPrefabGUID).c_str());
+			Engine::EditorField::Value("Left Shoulder", "%s", _assetDB.GetFileNameFromGUID(_pLoadout->leftShoulderWeaponPrefabGUID).c_str());
 		}
 		else
 		{

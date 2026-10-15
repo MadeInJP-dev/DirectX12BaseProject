@@ -18,6 +18,8 @@ namespace App::Object
 		Left,	// 左端を固定して右から減る
 		Right,	// 右端を固定して左から減る
 		Center,	// 中央を固定して両側から減る(中央から外へ伸びる)
+		Bottom,	// 下端を固定して上から減る(縦のゲージ。縮めるのは高さ)
+		Top,	// 上端を固定して下から減る(縦のゲージ。縮めるのは高さ)
 	};
 
 	/// <summary>
@@ -47,6 +49,8 @@ namespace App::Object
 		LockedEnemy,		// プレイヤーがロックしている敵
 		PlayerRightWeapon,	// プレイヤーの右手武器(オーバーヒート用)
 		PlayerLeftWeapon,	// プレイヤーの左手武器(オーバーヒート用)
+		PlayerRightShoulderWeapon,	// プレイヤーの右肩の武器(次を撃てるまでの間隔用)
+		PlayerLeftShoulderWeapon,	// プレイヤーの左肩の武器(次を撃てるまでの間隔用)
 	};
 
 	/// <summary>
@@ -65,6 +69,9 @@ namespace App::Object
 		Overheat,		// WeaponOverHeatComponent : heat / limit
 		ChargeDash,		// ChargeDashComponent  : chargeTimer / chargeTime
 		Magazine,		// WeaponReloadComponent : 残弾 / 容量(リロード中は進み具合)。※ 保存値なので末尾に足すこと
+		Altitude,		// 真下の地面までの高さ(m)。Player のときだけ取れる
+		Speed,			// 実速度の速さ(km/h)。Player のときだけ取れる
+		FireInterval,	// MissileFireComponent : 次を撃てるまでの溜まり具合(満タンで撃てる)
 	};
 
 	/// <summary>
@@ -90,6 +97,7 @@ namespace App::Object
 	// ・伸び縮みは飾り1つの横幅で表す
 	//     選んだ飾り(番号で指す)の横幅へ残量を掛けて描く。
 	//     残す側の端をピボットにするので、そこを固定したまま反対側から削れていく。
+	//     Anchor を Bottom / Top にしたときだけ、横幅ではなく高さを縮める(縦のゲージ)。
 	//     縮めるのは大きさだけで、枠の太さや位置のずれには掛からない。
 	//
 	// ・枠・背景・下地は同じUIへ飾りとして並べる
@@ -172,6 +180,9 @@ namespace App::Object
 		// 中身の飾りのピボットを、伸び縮みの向きへ合わせる
 		void ApplyFillPivot();
 
+		// 縦に縮めるか(Anchor が Bottom / Top)
+		bool IsVerticalFill() const { return m_fillAnchor == EGaugeAnchor::Bottom || m_fillAnchor == EGaugeAnchor::Top; }
+
 		// 表示する文字列を作る
 		std::string MakeValueText() const;
 
@@ -228,6 +239,15 @@ namespace App::Object
 		/// 進行役(HomeSequence など)が握っている出し入れと取り合いにならないようにするため
 		/// </remarks>
 		bool m_isHideWhenNoValue = true;
+
+		/// <summary>
+		/// 最大値の上書き。0 以下なら見ている値の最大をそのまま使う
+		/// </summary>
+		/// <remarks>
+		/// 高度のように「どこまでを満タンとして見せたいか」が UI ごとに違う値向け。
+		/// 超えたぶんは満タンで止まる(数値はそのまま出る)
+		/// </remarks>
+		float m_maxOverride = 0.0f;
 
 		//-------------------------------------------------------------------
 		// 値(保存しない)

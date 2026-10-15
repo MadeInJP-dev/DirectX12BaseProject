@@ -34,6 +34,8 @@ namespace App::InstanceResource
 		LockedEnemy,	// プレイヤーがロックしている敵
 		RightWeapon,	// プレイヤーの右手武器
 		LeftWeapon,		// プレイヤーの左手武器
+		RightShoulderWeapon,	// プレイヤーの右肩の武器(ミサイル)
+		LeftShoulderWeapon,		// プレイヤーの左肩の武器(ミサイル)
 
 		Count,
 	};
@@ -48,6 +50,9 @@ namespace App::InstanceResource
 		Overheat,	// WeaponOverHeatComponent                  : heat / limit
 		ChargeDash,	// ChargeDashComponent                      : chargeTimer / chargeTime
 		Magazine,	// WeaponReloadComponent                    : 残弾 / 容量(リロード中は進み具合)
+		Altitude,	// 真下の地面までの高さ(m) / ALTITUDE_RAY_MAX。地面が無ければ最大のまま
+		Speed,		// ActualVelocityComponent の速さ(km/h) / 目安の最高速(km/h)
+		FireInterval,	// MissileFireComponent : 次を撃てるまでの溜まり具合(待ち時間の経過 / waitTime)。撃っている最中は 0
 
 		Count,
 	};
@@ -78,7 +83,8 @@ namespace App::InstanceResource
 	struct PlayerHUDResource
 	{
 		static constexpr int TARGET_MAX = Component::LockOnTargetComponent::TARGET_MAX;
-		static constexpr int MISSILE_LOCK_MAX = Component::MissileLockComponent::MISSILE_MAX;
+		// 左右の肩で別々に溜めるので、枠は両方の合計ぶん
+		static constexpr int MISSILE_LOCK_MAX = Component::MissileLockComponent::MISSILE_MAX * Component::MissileLockComponent::SIDE_COUNT;
 
 		static constexpr size_t SUBJECT_COUNT = static_cast<size_t>(EHUDSubject::Count);
 		static constexpr size_t GAUGE_KIND_COUNT = static_cast<size_t>(EHUDGaugeKind::Count);
@@ -107,8 +113,8 @@ namespace App::InstanceResource
 		// 見た目の円(reticleRadius)。実際に溜める判定は reticleScale を掛けたもの
 		HUDReticle missileReticle = {};
 
-		bool isMissileCharging = false;					// 溜めている最中か(キーを押している)
-		Math::Vector2 missileLockScreenPos[MISSILE_LOCK_MAX] = {};	// 溜めた敵のスクリーン座標(px)
+		bool isMissileCharging = false;					// どちらかの肩で溜めている最中か(キーを押している)
+		Math::Vector2 missileLockScreenPos[MISSILE_LOCK_MAX] = {};	// 溜めた敵のスクリーン座標(px)。左右の肩の合計
 		int missileLockCount = 0;
 
 		//----------------------------------------------------------------------------------

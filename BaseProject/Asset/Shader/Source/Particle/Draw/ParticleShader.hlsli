@@ -10,14 +10,16 @@
 //   0 : CBV(b0)         カメラ
 //   1 : SRVの番号     粒バッファ(更新パスの出力をそのまま読む) + 発生源の席 + 生存リスト
 //   2 : SRVの番号(t1) 絵
-//   3 : CBV(b1)         アセット単位の描画設定
+//   3 : CBV(b1)         アセット単位の描画設定(PS もぼかす幅を読む)
+//   4 : SRVの番号     深度(グラフが張る。奥の物との境目をぼかすのに使う)
 //==========================================================================================
 #define PARTICLE_ROOT_SIG \
 RS_FLAGS","\
 "CBV(b0, visibility = SHADER_VISIBILITY_ALL),"\
 "RootConstants(num32BitConstants=3, b100, visibility = SHADER_VISIBILITY_VERTEX),"\
 "RootConstants(num32BitConstants=1, b101, visibility = SHADER_VISIBILITY_PIXEL),"\
-"CBV(b1, visibility = SHADER_VISIBILITY_VERTEX),"\
+"CBV(b1, visibility = SHADER_VISIBILITY_ALL),"\
+"RootConstants(num32BitConstants=1, b102, visibility = SHADER_VISIBILITY_PIXEL),"\
 RS_STATIC_SAMPLER
 
 cbuffer CBCamera : register(b0)
@@ -53,6 +55,17 @@ cbuffer PassDescriptorIndex1 : register(b101)
 Texture2D Get_mainTex() { Texture2D _r = ResourceDescriptorHeap[g_mainTexIndex]; return _r; }
 #define g_mainTex Get_mainTex()
 
+// 深度の SRV の番号(グラフが張る)。深度が繋がっていないパイプラインでは無効値が来る
+cbuffer PassDescriptorIndex2 : register(b102)
+{
+	uint g_depthTexIndex;
+}
+
+#define PARTICLE_INVALID_DESCRIPTOR_INDEX 0xFFFFFFFFu
+
+Texture2D<float4> Get_depthTex() { Texture2D<float4> _r = ResourceDescriptorHeap[g_depthTexIndex]; return _r; }
+#define g_depthTex Get_depthTex()
+
 SamplerState g_samp : register(s0);
 
 // ヘルパー関数 : 上で宣言した g_camera を使うので、必ずこの位置で読むこと
@@ -74,4 +87,7 @@ struct VSOutput
 
 	float2 uv : TEXCOORD0;
 	float4 color : TEXCOORD1;
+
+	// 板のその点のビュー空間の奥行き(m)。奥の物との境目をぼかすのに使う
+	float viewDepth : TEXCOORD2;
 };

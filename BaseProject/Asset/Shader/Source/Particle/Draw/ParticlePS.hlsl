@@ -8,6 +8,25 @@ float4 PSMain(VSOutput a_input) : SV_TARGET
 	
 	_outColor = a_input.color * _texColor;
 
+	//------------------------------------------------------------------
+	// 奥の物との境目をぼかす(ソフトパーティクル)
+	//
+	// 板が地面へ刺さると、交わったところで絵がまっすぐ切れて見える。
+	// 板と奥の物の距離が softDepth より近いところほど薄くして、その線を消す。
+	// 何も描かれていない所(深度が far のまま)は比べる相手が無いのでそのまま
+	//------------------------------------------------------------------
+	if (g_draw.softDepth > 0.0f && g_depthTexIndex != PARTICLE_INVALID_DESCRIPTOR_INDEX)
+	{
+		const float _sceneDepth = g_depthTex.Load(int3(int2(a_input.pos.xy), 0)).r;
+		if (_sceneDepth < 1.0f)
+		{
+			// 深度からビュー空間の奥行きへ戻す(奥行きは xy に依らないので画面の中心で求めてよい)
+			const float4 _sceneView = mul(float4(0.0f, 0.0f, _sceneDepth, 1.0f), g_camera.invProj);
+			const float _sceneZ = _sceneView.z / _sceneView.w;
+			_outColor.a *= saturate((_sceneZ - a_input.viewDepth) / g_draw.softDepth);
+		}
+	}
+
 	// アルファ値がほぼ0ならピクセルを破棄して描画負荷を下げる
 	if (_outColor.a < 0.001f)
 	{

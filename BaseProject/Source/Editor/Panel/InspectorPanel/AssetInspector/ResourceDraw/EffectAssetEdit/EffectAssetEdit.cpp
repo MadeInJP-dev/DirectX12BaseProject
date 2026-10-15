@@ -167,6 +167,8 @@ namespace Editor::Inspector
 			Engine::EditorField::Field("MinScale", a_part.minScale, 0.01f, 0.0f);
 			Engine::EditorField::Field("MaxScale", a_part.maxScale, 0.01f, 0.0f);
 			Engine::EditorField::Field("PositionRadius", a_part.positionRadius, 0.05f, 0.0f);
+			Engine::EditorField::Field("PositionExtents", a_part.positionExtents, 0.05f, 0.0f);
+			Engine::EditorField::Tooltip("発生位置を散らす箱の半分の大きさ(X = 横、Y = 上、Z = EmitDir)。0 で箱なし");
 
 			// 円錐のときしか効かない値なので、それ以外では触らせない
 			ImGui::BeginDisabled(a_part.emitShape != Graphics::Particle::EParticleEmitShape::Cone);

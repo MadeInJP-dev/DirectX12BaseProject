@@ -96,6 +96,8 @@ namespace App::Object
 			case EGaugeTarget::LockedEnemy:			a_outSubject = InstanceResource::EHUDSubject::LockedEnemy;	return true;
 			case EGaugeTarget::PlayerRightWeapon:	a_outSubject = InstanceResource::EHUDSubject::RightWeapon;	return true;
 			case EGaugeTarget::PlayerLeftWeapon:	a_outSubject = InstanceResource::EHUDSubject::LeftWeapon;	return true;
+			case EGaugeTarget::PlayerRightShoulderWeapon:	a_outSubject = InstanceResource::EHUDSubject::RightShoulderWeapon;	return true;
+			case EGaugeTarget::PlayerLeftShoulderWeapon:	a_outSubject = InstanceResource::EHUDSubject::LeftShoulderWeapon;	return true;
 
 			case EGaugeTarget::Manual:
 			default:								return false;
@@ -112,6 +114,9 @@ namespace App::Object
 			case EGaugeSource::Overheat:	a_outKind = InstanceResource::EHUDGaugeKind::Overheat;		return true;
 			case EGaugeSource::ChargeDash:	a_outKind = InstanceResource::EHUDGaugeKind::ChargeDash;	return true;
 			case EGaugeSource::Magazine:	a_outKind = InstanceResource::EHUDGaugeKind::Magazine;		return true;
+			case EGaugeSource::Altitude:	a_outKind = InstanceResource::EHUDGaugeKind::Altitude;		return true;
+			case EGaugeSource::Speed:		a_outKind = InstanceResource::EHUDGaugeKind::Speed;			return true;
+			case EGaugeSource::FireInterval:	a_outKind = InstanceResource::EHUDGaugeKind::FireInterval;	return true;
 
 			case EGaugeSource::Manual:
 			default:						return false;
@@ -136,7 +141,7 @@ namespace App::Object
 		if (!_value.isValid) return false;
 
 		m_current = _value.current;
-		m_max = _value.max;
+		m_max = (m_maxOverride > 0.0f) ? m_maxOverride : _value.max;
 		return true;
 	}
 
@@ -149,19 +154,18 @@ namespace App::Object
 		if (_fillIndex < 0) return;
 
 		// 動かさない場所を固定する。
-		// 横幅に残量を掛けるだけなので、ピボットを置いた場所がそのまま
-		// 「減っても動かない点」になる
-		float _pivotX = 0.0f;
+		// 横幅(縦のゲージなら高さ)に残量を掛けるだけなので、ピボットを置いた場所がそのまま
+		// 「減っても動かない点」になる。縮めない側のピボットは触らない
 		switch (m_fillAnchor)
 		{
-		case EGaugeAnchor::Right:  _pivotX = 1.0f; break;	// 右端を固定 : 左から減る
-		case EGaugeAnchor::Center: _pivotX = 0.5f; break;	// 中央を固定 : 両側から減る
+		case EGaugeAnchor::Right:  m_decorationVec[_fillIndex].pivot.x = 1.0f; break;	// 右端を固定 : 左から減る
+		case EGaugeAnchor::Center: m_decorationVec[_fillIndex].pivot.x = 0.5f; break;	// 中央を固定 : 両側から減る
+		case EGaugeAnchor::Bottom: m_decorationVec[_fillIndex].pivot.y = 1.0f; break;	// 下端を固定 : 上から減る(下が +Y)
+		case EGaugeAnchor::Top:    m_decorationVec[_fillIndex].pivot.y = 0.0f; break;	// 上端を固定 : 下から減る
 
 		case EGaugeAnchor::Left:
-		default:                   _pivotX = 0.0f; break;	// 左端を固定 : 右から減る
+		default:                   m_decorationVec[_fillIndex].pivot.x = 0.0f; break;	// 左端を固定 : 右から減る
 		}
-
-		m_decorationVec[_fillIndex].pivot.x = _pivotX;
 	}
 
 	//======================================================================================
@@ -275,9 +279,9 @@ namespace App::Object
 		const float _ratio = GetRatio();
 		const int _fillIndex = FindDecorationIndexById(m_fillDecorationId);
 
-		// 中身へ掛ける差し替え : 横だけ縮めて、残量の色を乗せる
+		// 中身へ掛ける差し替え : 横だけ(縦のゲージなら縦だけ)縮めて、残量の色を乗せる
 		Decoration::DrawOverride _fillOverride = {};
-		_fillOverride.sizeScale = { _ratio, 1.0f };
+		_fillOverride.sizeScale = IsVerticalFill() ? Math::Vector2(1.0f, _ratio) : Math::Vector2(_ratio, 1.0f);
 		_fillOverride.tint = CalcGaugeColor(_ratio);
 
 		for (size_t _i = 0; _i < m_decorationVec.size(); ++_i)
@@ -358,6 +362,7 @@ namespace App::Object
 		{
 			a_ar.Field("FillDecorationId", m_fillDecorationId);
 			a_ar.Field("TextDecorationId", m_textDecorationId);
+			a_ar.Field("MaxOverride", m_maxOverride);
 		}
 
 		if (a_ar.IsLoading())
@@ -401,6 +406,9 @@ namespace App::Object
 			Engine::EditorField::Field("HideWhenNoValue", m_isHideWhenNoValue);
 			Engine::EditorField::Tooltip("値が取れないフレームは描かない(ロックしていない等)");
 
+			Engine::EditorField::Field("MaxOverride", m_maxOverride, 1.0f, 0.0f, 100000.0f);
+			Engine::EditorField::Tooltip("満タンとして見せる値。0 なら見ている値の最大をそのまま使う(高度など)");
+
 			// 今取れているかが分かるようにしておく
 			if (m_target == EGaugeTarget::Manual)
 			{
@@ -418,7 +426,7 @@ namespace App::Object
 		// 中身
 		//----------------------------------------------------------------------
 		DrawDecorationPicker("FillDecoration", m_fillDecorationId);
-		Engine::EditorField::Tooltip("横幅を縮める飾り。番号で指すので、名前を変えても外れない");
+		Engine::EditorField::Tooltip("横幅(Anchor が Bottom / Top なら高さ)を縮める飾り。番号で指すので、名前を変えても外れない");
 
 		// 指している飾りが本当にあるか、その場で分かるようにしておく
 		if (FindDecorationIndexById(m_fillDecorationId) < 0)
@@ -427,7 +435,7 @@ namespace App::Object
 		}
 
 		Engine::EditorField::Field("Anchor", m_fillAnchor);
-		Engine::EditorField::Tooltip("減っても動かない場所。Center は両側から均等に減る");
+		Engine::EditorField::Tooltip("減っても動かない場所。Center は両側から均等に減る。Bottom / Top は縦に縮む");
 
 		//----------------------------------------------------------------------
 		// 色

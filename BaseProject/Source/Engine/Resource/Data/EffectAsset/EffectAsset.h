@@ -199,6 +199,13 @@ namespace Engine::Resource
 		float positionRadius = 0.5f;	// 発生位置のばらつき半径
 		float directionAngle = 10.0f;	// 発生方向のばらつき(度)。Cone のときだけ効く
 
+		// 発生位置を箱の中へ散らす半分の大きさ(m)。0 なら箱は使わない(半径だけ)。
+		// 軸は発生の向き基準 : X = 横、Y = 上、Z = 噴き出す向き(EmitDir)。
+		// 地面を這う霧のように「広くて薄い」範囲へ出したいときに使う
+		// (半径は球なので、横に広げると同じだけ上下にも広がってしまう)。
+		// 半径と両方あるときは、箱の中の点からさらに半径ぶん散らす
+		Math::Vector3 positionExtents = { 0.0f, 0.0f, 0.0f };
+
 		// ---- 出したあと、どの座標系で回すか ----
 		EEffectSimulationSpace simulationSpace = EEffectSimulationSpace::Inherit;
 

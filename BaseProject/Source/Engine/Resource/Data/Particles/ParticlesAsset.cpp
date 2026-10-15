@@ -55,6 +55,9 @@ namespace Engine::Resource
 
 		// ---- 描く順 ----
 		a_ar.Field("m_sortOrder", m_sortOrder);
+
+		// ---- 奥の物との境目 ----
+		a_ar.Field("m_softDepth", m_softDepth);
 	}
 
 	//======================================================================================
@@ -91,6 +94,9 @@ namespace Engine::Resource
 
 		// 減衰が負だと加速して発散する
 		if (m_drag < 0.0f) m_drag = 0.0f;
+
+		// ぼかす幅が負だと境目の手前まで透明になる
+		if (m_softDepth < 0.0f) m_softDepth = 0.0f;
 
 		// テクスチャのハンドル取得
 		m_texHandle = a_resourceManager.LoadImmediate<Texture>(m_texGUID);
