@@ -14,6 +14,8 @@
 #include "Application/InstanceResource/WaveAnnounceResource.h"
 #include "Application/Components/Input/PlayerControllTag.h"
 #include "Application/InstanceResource/GameDataResource.h"
+#include "Application/Object/ObjectPicker.h"
+#include "SequenceActor.h"
 
 #include "Engine/Scene/SceneManager/SceneManager.h"
 
@@ -34,6 +36,10 @@
 // 出した次の瞬間に数えると 0 になり、全滅扱いで次のウェーブが即座に走ってしまう。
 // そのため一度でも生存を確認する(isConfirmed)まで全滅とみなさない。
 // 実体化に失敗した(プレハブが空など)場合に詰まらないよう、確認には時間切れを設けてある。
+//
+// シーンに直接置いたオブジェクト(SequenceActor)もウェーブに載せられる。
+// 読み込み直後に「呼ばれるまで出るな」と伝え、ウェーブが来たら呼び出し、
+// 生存数には相手の IsAlive を足す。プレハブで出したものと同じ流れで全滅判定に乗る。
 //==========================================================================================
 namespace App::Object
 {
@@ -64,6 +70,32 @@ namespace App::Object
 			// 左手系 +Z 前方なので Yaw = atan2(x, z)
 			const float _yaw = std::atan2(_flat.x, _flat.z);
 			return Math::Quaternion::CreateFromYawPitchRoll(_yaw, 0.0f, 0.0f);
+		}
+	}
+
+	//======================================================================================
+	// 読み込み直後 : ウェーブに載せたオブジェクトを待たせる
+	//--------------------------------------------------------------------------------------
+	// 初期化はフェーズごとに全員を回すので、ここ(PostDeserialize)は誰の Awake よりも前。
+	// 相手は Awake で出るのをやめ、このウェーブの Appear を待つ。
+	// 読み込みは全員を並べてから初期化を回すので、FindByGUID でもう引ける
+	//======================================================================================
+	void SceneSequence::PostDeserialize(Engine::GameObject::ObjectContext& a_context)
+	{
+		for (const Wave& _wave : m_waves)
+		{
+			for (const Core::GUID& _guid : _wave.actorGUIDs)
+			{
+				auto* _pActor = Picker::Find<SequenceActor>(a_context.pObjectManager, _guid);
+				if (!_pActor)
+				{
+					// 消したものを指したままなら知らせる(未設定は黙って飛ばす)
+					Picker::CheckFound<SequenceActor>(a_context.pObjectManager, _guid, "SceneSequence", "Wave Actor");
+					continue;
+				}
+
+				_pActor->HoldAppear();
+			}
 		}
 	}
 
@@ -368,6 +400,18 @@ namespace App::Object
 				}
 			}
 		);
+
+		// 呼び出したシーンのオブジェクト。生死の見方は相手に任せる
+		for (Wave& _wave : m_waves)
+		{
+			if (!_wave.isSpawned) continue;
+
+			for (const Core::GUID& _guid : _wave.actorGUIDs)
+			{
+				const auto* _pActor = Picker::Find<SequenceActor>(a_context.pObjectManager, _guid);
+				if (_pActor && _pActor->IsAlive()) ++_wave.aliveCount;
+			}
+		}
 	}
 
 	//======================================================================================
@@ -467,6 +511,13 @@ namespace App::Object
 				_params);
 
 			if (_isSpawned) ++_wave.spawnCount;
+		}
+
+		// シーンに置いたオブジェクトを呼び出す。出る位置は相手が持っている
+		for (const Core::GUID& _guid : _wave.actorGUIDs)
+		{
+			auto* _pActor = Picker::Find<SequenceActor>(a_context.pObjectManager, _guid);
+			if (_pActor && _pActor->Appear(a_context)) ++_wave.spawnCount;
 		}
 
 		//------------------------------------------------------------------
@@ -686,6 +737,17 @@ namespace App::Object
 					_pDebugDraw->DrawLine(_pos, _pos + _dir * (MARKER_SIZE * 2.0f), Engine::Color::BLUE);
 				}
 			}
+
+			// 呼び出すシーンのオブジェクト。位置は相手が持つので、ウェーブから線を引くだけ
+			for (const Core::GUID& _guid : _wave.actorGUIDs)
+			{
+				const auto* _pActor = Picker::Find<SequenceActor>(a_context.pObjectManager, _guid);
+				if (!_pActor) continue;
+
+				const Math::Vector3 _pos = _pActor->GetAppearPos();
+				_drawCross(_pos, MARKER_SIZE * 4.0f, _baseColor);
+				_pDebugDraw->DrawLine(_wave.pos, _pos, _baseColor);
+			}
 		}
 	}
 
@@ -836,6 +898,30 @@ namespace App::Object
 		// BGM
 		//----------------------------------------------------------------------
 		m_bgm.Archive(a_ar);
+
+		//----------------------------------------------------------------------
+		// ウェーブで呼び出すシーンのオブジェクト(ウェーブの番号順)
+		//
+		// ※ ウェーブの中ではなく末尾に置く。バイナリは順番に読むので、
+		//    途中へ足すと以前の .obscene の読み出しがずれる。
+		//    キーが無いシーンは呼び出すもの無しとして読み込まれる
+		//----------------------------------------------------------------------
+		size_t _actorWaveCount = m_waves.size();
+		if (a_ar.BeginArray("WaveActors", _actorWaveCount))
+		{
+			for (size_t _i = 0; _i < _actorWaveCount; ++_i)
+			{
+				if (!a_ar.BeginObject(_i)) continue;
+
+				// ウェーブより多く書かれていても、読み進めるために受け皿を用意する
+				std::vector<Core::GUID> _discard = {};
+				std::vector<Core::GUID>& _guidVec = (_i < m_waves.size()) ? m_waves[_i].actorGUIDs : _discard;
+				a_ar.GUIDVectorField("GUIDs", _guidVec);
+
+				a_ar.EndObject();
+			}
+			a_ar.EndArray();
+		}
 	}
 
 	//======================================================================================
@@ -996,6 +1082,11 @@ namespace App::Object
 					// 添え字がずれるのでギズモの対象は外す
 					ClearGizmoTarget();
 				}
+
+				// ---- 呼び出すシーンのオブジェクト ----
+				Engine::EditorField::Line();
+				Engine::EditorField::HelpText("シーンに置いたボスなど。このウェーブまで出てこない(載せた後は読み直すと効く)");
+				Picker::DrawList<SequenceActor>("Scene Actors", a_context.pObjectManager, _wave.actorGUIDs);
 
 				Engine::EditorField::Line();
 				if (Engine::EditorField::DeleteButton("Remove Wave")) _removeWaveIndex = static_cast<int>(_i);

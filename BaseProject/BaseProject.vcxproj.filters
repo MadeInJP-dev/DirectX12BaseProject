@@ -3233,6 +3233,9 @@
     <ClInclude Include="Source\Application\Object\Sequence\SceneSequence\SceneSequence.h">
       <Filter>Source\Application\Object\Sequence\SceneSequence</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Object\Sequence\SceneSequence\SequenceActor.h">
+      <Filter>Source\Application\Object\Sequence\SceneSequence</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Object\Sequence\TitleSequence\TitleSequence.h">
       <Filter>Source\Application\Object\Sequence\TitleSequence</Filter>
     </ClInclude>

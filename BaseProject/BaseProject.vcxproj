@@ -1904,6 +1904,7 @@
     <ClInclude Include="Source\Application\Object\UI\HUD\WaveAnnounceHUD\WaveAnnounceHUD.h" />
     <ClInclude Include="Source\Application\Object\UI\HUD\HitEffectHUD\HitEffectHUD.h" />
     <ClInclude Include="Source\Application\Object\Sequence\SceneSequence\SceneSequence.h" />
+    <ClInclude Include="Source\Application\Object\Sequence\SceneSequence\SequenceActor.h" />
     <ClInclude Include="Source\Application\Object\UI\UIBase.h" />
     <ClInclude Include="Source\Application\Object\UI\Core\UIAnchor.h" />
     <ClInclude Include="Source\Application\Object\UI\Core\UIInteraction.h" />

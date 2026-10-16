@@ -197,6 +197,9 @@ namespace App::Object
 	{}
 	void SwarmBossController::Awake(Engine::GameObject::ObjectContext& a_context)
 	{
+		// シーケンスのウェーブに載っていれば、呼ばれる(Appear)まで出さない
+		if (m_isHoldAppear) return;
+
 		// リーダー → 小隊長 → ボイドの順に生成
 		Spawn(a_context);
 	}
@@ -232,6 +235,7 @@ namespace App::Object
 
 		// 残りの生存数(HP代わり)。印を数え直すだけ
 		m_currentBoids = CountAliveBoids(a_context);
+		if (m_currentBoids > 0) m_isBodyCounted = true;
 	}
 
 	//======================================================================================
@@ -857,6 +861,7 @@ namespace App::Object
 		m_bodyDefenseRatio = 1.0f;
 		m_isDying          = false;
 		m_isBurst          = false;
+		m_isBodyCounted    = false;
 		m_waveSpeedScale   = 1.0f;
 
 		// 小隊長 → 各小隊長のボイド
@@ -1467,7 +1472,8 @@ namespace App::Object
 
 		// ここから下は実行中の状態なので表示のみ
 		Engine::EditorField::Header("実行中");
-		Engine::EditorField::Value("生成済み", "%s", m_isSpown ? "はい" : "いいえ");
+		Engine::EditorField::Value("生成済み", "%s%s", m_isSpown ? "はい" : "いいえ",
+			(!m_isSpown && m_isHoldAppear) ? " (シーケンスのウェーブ待ち)" : "");
 		if (!m_isSpown)
 		{
 			// 置いた直後はプレハブ未設定のまま Awake を通っているので、設定してから出せるようにする

@@ -35,6 +35,11 @@ namespace App::Object
 		// 出現させるエンティティ
 		std::vector<SpawnSettings> spawnEntities = {};
 
+		// 呼び出すシーンのオブジェクト(SequenceActor。保存する)。
+		// プレハブにできない大物(群れのボスなど)はシーンに直接置き、ここに載せる。
+		// 載せたものはこのウェーブが来るまで出てこない。出る位置は相手が持つ
+		std::vector<Core::GUID> actorGUIDs = {};
+
 		// ウェーブの基準位置(ワールド)。
 		// 各 SpawnSettings.pos はここからの相対座標なので、ここを動かせば
 		// そのウェーブの出現位置がまとめて動く。
@@ -48,8 +53,8 @@ namespace App::Object
 
 		// 現在の状態(保存しない。シーン開始時は既定値から始まる)
 		bool  isSpawned   = false;		// 出現処理を済ませたか
-		int   spawnCount  = 0;			// 出した数(生成コマンドを積めた数)
-		int   aliveCount  = 0;			// 生存数。毎フレーム SpawnerComponent を数え直す
+		int   spawnCount  = 0;			// 出した数(生成コマンドを積めた数 + 呼び出せたオブジェクトの数)
+		int   aliveCount  = 0;			// 生存数。毎フレーム SpawnerComponent と呼び出したオブジェクトを数え直す
 		bool  isConfirmed = false;		// 実体化を一度でも確認したか(遅延生成の1フレームずれ対策)
 		bool  isCleared   = false;		// 全滅したか
 		float spawnTime   = 0.0f;		// 出現させた時刻(シーン経過秒)
@@ -103,6 +108,8 @@ namespace App::Object
 	///     勝ち : プレイヤーが生きていて、全ウェーブを出し切って全滅させた
 	///   ボスも1つのウェーブとして出すので、ボスを倒せばそのウェーブが片付き、
 	///   それが最後のウェーブならそのまま勝ちになる(ボス専用の判定は要らない)。
+	///   シーンに直接置くボス(群れのボスなど)は、ウェーブの actorGUIDs に載せれば同じ扱いになる
+	///   (SequenceActor。読み込み直後に「呼ばれるまで出るな」と伝えておく)。
 	///   決着したら記録(スコア・タイム・結末)を GlobalGameContext へ移してから
 	///   リザルトシーンを読み込む。ワールドのリソースはシーンを切り替えると
 	///   作り直されるので、持っていきたいものはグローバル側へ置く。
@@ -110,6 +117,9 @@ namespace App::Object
 	class SceneSequence : public Engine::GameObject::BaseObject
 	{
 	public:
+
+		// 読み込み直後 : ウェーブに載せたシーンのオブジェクトへ、呼ばれるまで出ないよう伝える(Awake より前)
+		void PostDeserialize(Engine::GameObject::ObjectContext& a_context) override;
 
 		// 更新処理 : 経過時間を進め、条件を満たしたウェーブを出す
 		void Update(Engine::GameObject::ObjectContext& a_context) override;

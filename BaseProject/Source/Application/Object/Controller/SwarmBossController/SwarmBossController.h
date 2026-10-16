@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Engine/GameObject/BaseObject/BaseObject.h"
+#include "Application/Object/Sequence/SceneSequence/SequenceActor.h"
 
 #include "SwarmBossStates/StateMachine.h"
 
@@ -24,8 +24,10 @@ namespace App::Object
 	///   生存数はその印を数えるだけで、ボイドのIDは持ち歩かない。
 	/// ・出した一式には TransientTag が付く(BuildSpawnInstanceData)ので、シーンには保存されない。
 	///   生成後にシーンを保存しても、読み直したときに一式が重ならない。
+	/// ・SceneSequence のウェーブに載せると、そのウェーブが来るまで出ない(SequenceActor)。
+	///   載せていなければ今までどおり Awake で出る。
 	/// </remarks>
-	class SwarmBossController : public Engine::GameObject::BaseObject
+	class SwarmBossController final : public SequenceActor
 	{
 	public:
 		// ステートは調整値を読み込みで受けるので、Archive より前にここで登録しておく
@@ -57,6 +59,22 @@ namespace App::Object
 		// 毎フレーム印(SwarmBossBoidTag)を数え直した結果。
 		// 体力ゲージのように外から見たい側はここから引く(m_currentBoids を直接触らせない)
 		//------------------------------------------------------------------------------------------
+		//------------------------------------------------------------------------------------------
+		// シーケンスからの呼び出し(SequenceActor)
+		//------------------------------------------------------------------------------------------
+		void HoldAppear() override { m_isHoldAppear = true; }
+		bool Appear(Engine::GameObject::ObjectContext& a_context) override { return Spawn(a_context); }
+
+		// 出ていて、爆散しておらず、体(ボイド)が残っている。
+		// 出した直後は体の実体化を待つ間 0 体に見えるので、一度でも数えるまでは生きている扱い
+		bool IsAlive() const override
+		{
+			if (!m_isSpown || m_isBurst) return false;
+			return !m_isBodyCounted || m_currentBoids > 0;
+		}
+
+		Math::Vector3 GetAppearPos() const override { return m_spawnPos; }
+
 		uint32_t GetHealth() const { return m_currentBoids; }
 		uint32_t GetMaxHealth() const { return m_maxBoid; }
 		float GetHealthRate() const
@@ -154,6 +172,12 @@ namespace App::Object
 	private:
 		// 生成されたかどうか
 		bool m_isSpown = false;
+
+		// シーケンスに呼ばれるまで出さないか(保存しない。読み込みのたびにシーケンスが立てる)
+		bool m_isHoldAppear = false;
+
+		// 体(ボイド)を一度でも数えたか。出した直後の 0 体を倒された扱いにしないため
+		bool m_isBodyCounted = false;
 
 		//------------------------------------------------------------------------------------------
 		// ボスの構成要素
