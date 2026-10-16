@@ -1812,6 +1812,9 @@
     <ClCompile Include="Source\Application\Systems\Physics\SphereCollisionSystem.cpp">
       <Filter>Source\Application\Systems\Physics</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Physics\BoundaryClampSystem.cpp">
+      <Filter>Source\Application\Systems\Physics</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Animation\AdditivePoseSystem.cpp">
       <Filter>Source\Application\Systems\Animation</Filter>
     </ClCompile>
@@ -3191,6 +3194,9 @@
     <ClInclude Include="Source\Application\InstanceResource\UICursorResource.h">
       <Filter>Source\Application\InstanceResource</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\InstanceResource\BoundaryResource.h">
+      <Filter>Source\Application\InstanceResource</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\InstanceResource\WaveAnnounceResource.h">
       <Filter>Source\Application\InstanceResource</Filter>
     </ClInclude>
@@ -3465,6 +3471,9 @@
       <Filter>Source\Application\Systems\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Physics\SphereCollisionSystem.h">
+      <Filter>Source\Application\Systems\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Physics\BoundaryClampSystem.h">
       <Filter>Source\Application\Systems\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Animation\AdditivePoseSystem.h">

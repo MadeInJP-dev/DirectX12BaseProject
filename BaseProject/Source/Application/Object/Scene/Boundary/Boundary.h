@@ -51,9 +51,9 @@ namespace App::Object
 	/// 行ける範囲の境界 : 立方体の各面を、プレイヤーが近づいたときだけ見える壁として描く
 	/// </summary>
 	/// <remarks>
-	/// 当たり判定は持たない。外へ出さないのはシステム側の仕事で、
-	/// ここは範囲(中心と大きさ)を持って見た目を出すだけ。
-	/// 範囲の問い合わせ用に GetBounds / ClampInside を公開してある。
+	/// マップを囲う箱で、プレイヤーは内側から外へ出られない。
+	/// 当たり判定は持たず、範囲を BoundaryResource へ書き写して、
+	/// BoundaryClampSystem がプレイヤーの位置を範囲の内側へ挟む。
 	///
 	/// 回転は持たない(軸に沿った箱)。外へ出さない処理を単純な範囲の比較で済ませるため
 	/// </remarks>
@@ -61,7 +61,7 @@ namespace App::Object
 	{
 	public:
 
-		// 更新処理 : 画像のずらしと、走査線などの時間を進める
+		// 更新処理 : 範囲を書き写し、画像のずらしと走査線などの時間を進める
 		void Update(Engine::GameObject::ObjectContext& a_context) override;
 
 		// 描画処理 : 描く面を1枚ずつサブミッターへ積む
@@ -70,18 +70,21 @@ namespace App::Object
 		// 初期化 : 画像の読み込みを始める
 		void Awake(Engine::GameObject::ObjectContext& a_context) override;
 
+		// 初期化 : 最初のフレームの押し戻しに間に合うよう、範囲を書き写しておく
+		void Start(Engine::GameObject::ObjectContext& a_context) override;
+
+		// 解放処理 : 範囲を外す(押し戻しを止める)
+		void Release(Engine::GameObject::ObjectContext& a_context) override;
+
 		// アーカイブ
 		void Archive(Engine::Persistence::Archive& a_ar, Engine::GameObject::ObjectContext& a_context) override;
 
 		//=======================================================================
-		// 範囲の問い合わせ : 外へ出さない処理(システム側)が使う
+		// 範囲
 		//=======================================================================
 
 		// 範囲(ワールド・軸に沿った箱)
 		DirectX::BoundingBox GetBounds() const;
-
-		// 点を範囲の内側へ押し戻す。a_margin だけ内側を壁とみなす(体の半径など)
-		Math::Vector3 ClampInside(const Math::Vector3& a_pos, float a_margin = 0.0f) const;
 
 		const Math::Vector3& GetCenter() const { return m_center; }
 		const Math::Vector3& GetSize() const { return m_size; }
@@ -100,6 +103,9 @@ namespace App::Object
 		bool DrawGizmo(const Engine::GameObject::ObjectGizmoContext& a_ctx, Engine::GameObject::ObjectContext& a_context) override;
 
 	private:
+
+		// 範囲を BoundaryResource へ書き写す(押し戻すのは BoundaryClampSystem)
+		void WriteBoundaryResource(Engine::GameObject::ObjectContext& a_context) const;
 
 		// 画像を読み直す(GUID を差し替えたとき)
 		void RequestTexture(Engine::GameObject::ObjectContext& a_context);
@@ -120,6 +126,10 @@ namespace App::Object
 		//-------------------------------------------------------------------
 		Math::Vector3 m_center = {};							// 範囲の中心(ワールド)
 		Math::Vector3 m_size = { 200.0f, 100.0f, 200.0f };		// 範囲の大きさ(各軸の全長)
+
+		// 壁から内側へ空ける距離。プレイヤーの位置(足元)がこれより壁へ寄らない。
+		// 機体の半径くらいにしておくと、体が面にめり込まない
+		float m_wallMargin = 2.0f;
 
 		// 面ごとに描くか(EBoundaryFace の順)。床は地面に埋まるので既定で描かない
 		std::array<bool, static_cast<size_t>(EBoundaryFace::Count)> m_isDrawFace = { true, true, true, false, true, true };

@@ -164,6 +164,7 @@
 #include "Application/Systems/Render/RegisterAnimatedRayWorldSystem.h"
 #include "Application/Systems/Physics/CapsuleCollisionSystem.h"
 #include "Application/Systems/Physics/SphereCollisionSystem.h"
+#include "Application/Systems/Physics/BoundaryClampSystem.h"
 #include "Application/Systems/Input/InputActionSystem.h"
 #include "Application/Systems/Weapon/WeaponLimitSystem.h"
 #include "Application/Systems/Weapon/WeaponFireModeSystem.h"
@@ -247,6 +248,7 @@
 #include "Application/InstanceResource/SwarmMissileResource.h"
 #include "Application/InstanceResource/PlayerHUDResource.h"
 #include "Application/InstanceResource/UICursorResource.h"
+#include "Application/InstanceResource/BoundaryResource.h"
 #include "Engine/Graphics/Raytracing/DynamicRaytracingData.h"
 
 namespace App::ECS
@@ -548,6 +550,8 @@ namespace App::ECS
 		a_world.RegisterSystem<System::RegisterAnimatedRayWorldSystem>();
 		a_world.RegisterSystem<System::CapsuleCollisionSystem>();
 		a_world.RegisterSystem<System::SphereCollisionSystem>();
+		// プレイヤーを行ける範囲(Boundary)の内側へ挟む。押し出しの後ろ(タスク側の After で決めている)
+		a_world.RegisterSystem<System::BoundaryClampSystem>();
 		a_world.RegisterSystem<System::InputActionSystem>();
 		// 手持ちの武器 : 熱と弾倉の進行 → 撃ち方ごとの発射判定(Job) → 銃口の位置と向き → 弾の生成 → 銃口の光
 		a_world.RegisterSystem<System::WeaponLimitSystem>();
@@ -650,6 +654,8 @@ namespace App::ECS
 		a_world.AddResource<InstanceResource::PlayerHUDResource>();
 		// UI のカーソルの取り合い(書くのも読むのも UI。システムは触らない)
 		a_world.AddResource<InstanceResource::UICursorResource>();
+		// 行ける範囲(Boundary オブジェクトが書き、BoundaryClampSystem が読む)
+		a_world.AddResource<InstanceResource::BoundaryResource>();
 
 		// 初期化
 		a_world.RefResource<Engine::Pool::RangePool<Engine::Resource::BoneMatrix>>().Init(10000);

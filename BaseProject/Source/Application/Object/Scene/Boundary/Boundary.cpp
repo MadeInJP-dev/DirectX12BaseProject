@@ -9,6 +9,7 @@
 
 #include "Application/ECS/World/APPWorld.h"
 #include "Application/InstanceResource/SingletonEntityResource.h"
+#include "Application/InstanceResource/BoundaryResource.h"
 #include "Application/Components/Input/PlayerControllTag.h"
 #include "Application/Components/Transform/WorldMatrixComponent.h"
 
@@ -24,8 +25,9 @@
 //     面の各点とプレイヤーの距離で濃さが決まるので、近づいた辺りだけが丸く浮かび上がる。
 //     プレイヤーが居ないとき(エディターで置いているときなど)はメインカメラを基準にする。
 //
-// ・外へ出さない処理はここには無い
-//     当たり判定は付けず、システム側が GetBounds / ClampInside で範囲を引いて押し戻す。
+// ・プレイヤーは内側から外へ出られない
+//     当たり判定は付けず、範囲を BoundaryResource へ書き写すだけ。
+//     押し戻すのは BoundaryClampSystem(Physics 帯の押し出しの後ろ)。
 //==========================================================================================
 namespace App::Object
 {
@@ -56,13 +58,42 @@ namespace App::Object
 	}
 
 	//======================================================================================
-	// 更新 : 画像のずらしと、走査線などの時間を進める
+	// 初期化 : 範囲を書き写しておく
+	//
+	// GameObject の Update は ECS の全フェーズの後に走るので、
+	// Update で初めて書くと最初のフレームの押し戻し(Physics 帯)に間に合わない
+	//======================================================================================
+	void Boundary::Start(Engine::GameObject::ObjectContext& a_context)
+	{
+		WriteBoundaryResource(a_context);
+	}
+
+	//======================================================================================
+	// 解放 : 範囲を外す
+	//
+	// 残すと、境界を消したあとも見えない壁が残る
+	//======================================================================================
+	void Boundary::Release(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (a_context.pWorld && a_context.pWorld->HasResource<InstanceResource::BoundaryResource>())
+		{
+			a_context.pWorld->RefResource<InstanceResource::BoundaryResource>().Clear();
+		}
+
+		BaseObject::Release(a_context);
+	}
+
+	//======================================================================================
+	// 更新 : 範囲を書き写し、画像のずらしと走査線などの時間を進める
 	//
 	// 時間はオブジェクトが持って描画のたびに渡す。
 	// パスが持つと、カメラの数だけパスが回るぶん速く進んでしまう
 	//======================================================================================
 	void Boundary::Update(Engine::GameObject::ObjectContext& a_context)
 	{
+		// インスペクターで範囲を変えたら、次のフレームの押し戻しから効く
+		WriteBoundaryResource(a_context);
+
 		m_time += a_context.dt;
 
 		m_uvScroll.x = Wrap01(m_uvScroll.x + m_look.scrollSpeed.x * a_context.dt);
@@ -146,6 +177,9 @@ namespace App::Object
 		a_ar.Field("FlickeringSpeed", m_look.flickeringSpeed);
 		a_ar.Field("FlickeringStrength", m_look.flickeringStrength);
 
+		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
+		a_ar.Field("WallMargin", m_wallMargin);
+
 		// 読み込み時は画像の読み込みを始めさせる(届くまでは描かない)
 		if (a_ar.IsLoading())
 		{
@@ -161,23 +195,19 @@ namespace App::Object
 		return DirectX::BoundingBox(m_center, m_size * 0.5f);
 	}
 
-	// 各軸を範囲の内側へ挟む。
-	// 余白が範囲の半分より大きい軸は、中心へ寄せる(内側が無いので)
-	Math::Vector3 Boundary::ClampInside(const Math::Vector3& a_pos, float a_margin) const
+	//======================================================================================
+	// 範囲を BoundaryResource へ書き写す
+	//======================================================================================
+	void Boundary::WriteBoundaryResource(Engine::GameObject::ObjectContext& a_context) const
 	{
-		const Math::Vector3 _half = m_size * 0.5f;
+		if (!a_context.pWorld) return;
+		if (!a_context.pWorld->HasResource<InstanceResource::BoundaryResource>()) return;
 
-		auto _clampAxis = [a_margin](float a_value, float a_center, float a_halfLength)
-			{
-				const float _limit = std::max(a_halfLength - a_margin, 0.0f);
-				return std::clamp(a_value, a_center - _limit, a_center + _limit);
-			};
-
-		return {
-			_clampAxis(a_pos.x, m_center.x, _half.x),
-			_clampAxis(a_pos.y, m_center.y, _half.y),
-			_clampAxis(a_pos.z, m_center.z, _half.z),
-		};
+		auto& _res = a_context.pWorld->RefResource<InstanceResource::BoundaryResource>();
+		_res.center = m_center;
+		_res.halfSize = m_size * 0.5f;
+		_res.margin = std::max(m_wallMargin, 0.0f);
+		_res.isActive = true;
 	}
 
 	//======================================================================================
@@ -338,6 +368,9 @@ namespace App::Object
 			m_size.y = std::max(m_size.y, MIN_LENGTH);
 			m_size.z = std::max(m_size.z, MIN_LENGTH);
 		}
+
+		Engine::EditorField::Field("Wall Margin", m_wallMargin, 0.1f, 0.0f, 1000.0f);
+		Engine::EditorField::Tooltip("プレイヤーの位置(足元)を壁からこれだけ内側に留める。機体の半径くらいにすると体が面にめり込まない");
 
 		for (size_t _i = 0; _i < m_isDrawFace.size(); ++_i)
 		{

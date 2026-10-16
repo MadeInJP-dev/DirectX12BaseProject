@@ -847,6 +847,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Physics\BoundaryClampSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Animation\AdditivePoseSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1889,6 +1894,7 @@
     <ClInclude Include="Source\Application\InstanceResource\SingletonEntityResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\PlayerHUDResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\UICursorResource.h" />
+    <ClInclude Include="Source\Application\InstanceResource\BoundaryResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\HitEventResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\WormWaveResource.h" />
     <ClInclude Include="Source\Application\Object\UI\HUD\CombatReticleHUD\CombatReticleHUD.h" />
@@ -1962,6 +1968,7 @@
     <ClInclude Include="Source\Application\Systems\Physics\MovementIntegrationSystem.h" />
     <ClInclude Include="Source\Application\Systems\Physics\RayCollisionSystem.h" />
     <ClInclude Include="Source\Application\Systems\Physics\SphereCollisionSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Physics\BoundaryClampSystem.h" />
     <ClInclude Include="Source\Application\Systems\Animation\AdditivePoseSystem.h" />
     <ClInclude Include="Source\Application\Systems\Animation\LowerBodyTurnSystem.h" />
     <ClInclude Include="Source\Application\Systems\Animation\AnimationSystem.h" />
