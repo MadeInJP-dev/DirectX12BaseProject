@@ -637,6 +637,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\Scene\Boundary\Boundary.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Render\AnimationOptionalDraw.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -983,6 +988,11 @@
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Camera\SpeedLineSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\Sequence\GarageSequence\GarageSequence.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
@@ -1422,6 +1432,7 @@
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ToneMap\ToneMapPass\ToneMapPass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\UI\UIPass\UIPass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\DebugLinePass\DebugLinePass.cpp" />
+    <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\BoundaryPass\BoundaryPass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowTemporalAccumulationPass\ShadowTemporalAccumulationPass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowSpatialDenoisePass\ShadowSpatialDenoisePass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\GI\GITemporalAccumulationPass\GITemporalAccumulationPass.cpp" />
@@ -1747,6 +1758,7 @@
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\GPUSkiningSbumitDesc.h" />
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\ModelSubmitDesc.h" />
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\SpriteSubmitDesc.h" />
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\BoundarySubmitDesc.h" />
     <ClInclude Include="Source\Engine\Graphics\Frame\SceneView\SceneView.h" />
     <ClInclude Include="Source\Engine\Graphics\Device\RenderDevice.h" />
     <ClInclude Include="..\Library\Include\imgui-docking\imconfig.h" />
@@ -1905,6 +1917,7 @@
     <ClInclude Include="Source\Application\Object\Sequence\TitleSequence\TitleSequence.h" />
     <ClInclude Include="Source\Application\Object\Sequence\LoadingSequence\LoadingSequence.h" />
     <ClInclude Include="Source\Application\Object\Scene\AmbientDustObject\AmbientDustObject.h" />
+    <ClInclude Include="Source\Application\Object\Scene\Boundary\Boundary.h" />
     <ClInclude Include="Source\Application\Object\Scene\PlayerSpawner\PlayerSpawner.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\UIImage\UIImage.h" />
     <ClInclude Include="Source\Application\Systems\Render\AnimationOptionalDraw.h" />
@@ -1988,6 +2001,7 @@
     <ClInclude Include="Source\Application\Systems\Camera\SpeedLineSystem.h" />
     <ClInclude Include="Source\Application\Components\Effect\GroundDustEmitterComponent.h" />
     <ClInclude Include="Source\Application\Components\Camera\SpeedLineComponent.h" />
+    <ClInclude Include="Source\Application\Object\Sequence\GarageSequence\GarageSequence.h" />
     <ClInclude Include="Source\Application\Systems\Boid\BoidGroundEffectSystem.h" />
     <ClInclude Include="Source\Application\Systems\Boid\BoidContactDamageSystem.h" />
     <ClInclude Include="Source\Application\InstanceResource\SwarmContactDamageResource.h" />
@@ -2057,6 +2071,7 @@
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ToneMap\ToneMapPass\ToneMapPass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\UI\UIPass\UIPass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\DebugLinePass\DebugLinePass.h" />
+    <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\BoundaryPass\BoundaryPass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowTemporalAccumulationPass\ShadowTemporalAccumulationPass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowSpatialDenoisePass\ShadowSpatialDenoisePass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\GI\GITemporalAccumulationPass\GITemporalAccumulationPass.h" />
@@ -2285,6 +2300,7 @@
     <ClInclude Include="Source\Engine\Graphics\Frame\SceneView\GroundImpulse.h" />
     <ClInclude Include="Source\Engine\Graphics\Frame\SceneView\SceneFogData.h" />
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\UIData.h" />
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\BoundaryData.h" />
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\MeshDrawData.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\BloomOptionData.h" />
     <ClInclude Include="Source\Engine\Graphics\D3D12\InputLayout.h" />
@@ -2449,6 +2465,7 @@
     <None Include="Asset\Shader\Common\RootParameters\BonePalletData.hlsli" />
     <None Include="Asset\Shader\Common\RootParameters\CameraData.hlsli" />
     <None Include="Asset\Shader\Common\RootParameters\DebugLineData.hlsli" />
+    <None Include="Asset\Shader\Common\RootParameters\BoundaryData.hlsli" />
     <None Include="Asset\Shader\Common\RootParameters\DenoiseSetting.hlsli" />
     <None Include="Asset\Shader\Common\RootParameters\DoFOptionData.hlsli" />
     <None Include="Asset\Shader\Common\RootParameters\GaussianBlurSetting.hlsli" />
@@ -2479,6 +2496,7 @@
     <None Include="Asset\Shader\Source\Debug\DebugLine\DebugLineRoot.hlsli" />
     <None Include="Asset\Shader\Source\Geometry\MeshShader\MeshCommon.hlsli" />
     <None Include="Asset\Shader\Source\Particle\Draw\ParticleShader.hlsli" />
+    <None Include="Asset\Shader\Source\Geometry\Boundary\Boundary.hlsli" />
     <None Include="Asset\Shader\Common\RootSignatureLayout.hlsli" />
     <None Include="Asset\Shader\Source\UI\UI.hlsli" />
   </ItemGroup>
@@ -2904,6 +2922,36 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.6</ShaderModel>
     </FxCompile>
     <FxCompile Include="Asset\Shader\Source\Debug\DebugLine\DebugLineVS.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">VSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">VSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <FileType>Document</FileType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.6</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">6.6</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">6.6</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.6</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\Source\Geometry\Boundary\BoundaryPS.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">PSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">PSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <FileType>Document</FileType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.6</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">6.6</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">6.6</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.6</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\Source\Geometry\Boundary\BoundaryVS.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">VSMain</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">VSMain</EntryPointName>

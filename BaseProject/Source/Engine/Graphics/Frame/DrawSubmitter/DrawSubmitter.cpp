@@ -299,6 +299,38 @@ namespace Engine::Graphics
 		}
 	}
 
+	//------------------------------------------------------------------------------------------
+	// 境界面を1枚積む
+	//
+	// モデルと違ってパスごとのPSOも描画アイテムも作らない。
+	// 描くパスは BoundaryPass だけなので、面の情報をそのまま積んでおき、
+	// パスが1枚ずつ定数バッファへ詰めて描く
+	//------------------------------------------------------------------------------------------
+	void DrawSubmitter::SubmitBoundary(const BoundarySubmitDesc& a_desc)
+	{
+		// 画像が読めていなければ、そのフレームは描かない(白い板が出ないように)
+		const int _texIndex = GetSRVIndexFromTextureHandle(a_desc.texHandle);
+		if (_texIndex < 0) return;
+
+		BoundaryDrawData _data = {};
+		_data.worldMat = a_desc.worldMat;
+		_data.color = Math::DX::ToVector4(a_desc.color);
+		_data.revealPos = a_desc.revealPos;
+		_data.revealStartDistance = a_desc.revealStartDistance;
+		_data.revealEndDistance = a_desc.revealEndDistance;
+		_data.uvTiling = a_desc.uvTiling;
+		_data.uvScroll = a_desc.uvScroll;
+		_data.texIndex = static_cast<UINT>(_texIndex);
+		_data.time = a_desc.time;
+		_data.scanLineDensity = a_desc.scanLineDensity;
+		_data.opacityScanLine = a_desc.opacityScanLine;
+		_data.opacityNoise = a_desc.opacityNoise;
+		_data.flickeringSpeed = a_desc.flickeringSpeed;
+		_data.flickeringStrength = a_desc.flickeringStrength;
+
+		m_pDrawLists->AddBoundary(_data);
+	}
+
 	void DrawSubmitter::SubmitUI(const SpriteSubmitDesc& a_desc)
 	{
 		auto& _resourceManager = (*m_pResourceManager);

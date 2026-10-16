@@ -83,14 +83,12 @@ namespace App::Object
 				[this, _pObjectManager]() { SetMode(EHomeMode::MissionSelect, _pObjectManager); });
 		}
 
-		if (auto* _pWarehouse = Picker::Find<UIButton>(_pObjectManager, m_warehouseButtonGUID))
+		// ガレージ(押せるかどうかは ApplyVisible が設定値とシーンの有無を見て切り替える)
+		if (auto* _pGarage = Picker::Find<UIButton>(_pObjectManager, m_warehouseButtonGUID);
+			_pGarage && a_context.pServices && a_context.pServices->pSceneManager)
 		{
-			// 倉庫はまだ無い。押せる状態にされていても、知らせるだけで何もしない
-			// (押せるかどうかは ApplyVisible が設定値を見て切り替える)
-			_pWarehouse->SetOnClick([]()
-				{
-					ENGINE_LOG("[HomeSequence] 倉庫は準備中");
-				});
+			auto* _pSceneManager = a_context.pServices->pSceneManager;
+			_pGarage->SetOnClick([this, _pSceneManager]() { ReserveOpenGarage(*_pSceneManager); });
 		}
 
 		if (auto* _pBack = Picker::Find<UIButton>(_pObjectManager, m_backButtonGUID))
@@ -175,6 +173,23 @@ namespace App::Object
 	}
 
 	//======================================================================================
+	// ガレージのシーンへ切り替える
+	//======================================================================================
+	void HomeSequence::ReserveOpenGarage(Engine::Scene::SceneManager& a_sceneManager)
+	{
+		if (m_isLeaving) return;
+
+		if (!m_garageSceneGUID.IsValid())
+		{
+			ENGINE_WARNING("[HomeSequence] ガレージのシーンが設定されていません");
+			return;
+		}
+
+		m_isLeaving = true;
+		a_sceneManager.ReserveChangeScene(m_garageSceneGUID, Engine::Scene::ESceneChangeType::Replace);
+	}
+
+	//======================================================================================
 	// メニュー : ゲームを終了する
 	//--------------------------------------------------------------------------------------
 	// エディターが差し込まれているときは、アプリを閉じずにエディターへ戻るだけにする。
@@ -225,10 +240,10 @@ namespace App::Object
 		{
 			_pUI->SetVisible(_isHome);
 
-			// 倉庫の中身はまだ無い。既定では押せない状態(灰色)にしておく
+			// ガレージのシーンが無ければ押せない状態(灰色)にしておく
 			if (auto* _pButton = Core::TypeInfo::Cast<UIButton>(_pUI))
 			{
-				_pButton->SetInteractable(m_isWarehouseInteractable);
+				_pButton->SetInteractable(m_isWarehouseInteractable && m_garageSceneGUID.IsValid());
 			}
 		}
 
@@ -312,6 +327,7 @@ namespace App::Object
 			a_ar.GUIDField("QuitButtonGUID", m_quitButtonGUID);
 			a_ar.GUIDField("OptionSceneGUID", m_optionSceneGUID);
 			a_ar.GUIDField("TitleSceneGUID", m_titleSceneGUID);
+			a_ar.GUIDField("GarageSceneGUID", m_garageSceneGUID);
 		}
 
 		if (a_ar.IsLoading())
@@ -349,15 +365,17 @@ namespace App::Object
 		Engine::EditorField::Header("Buttons");
 
 		if (Picker::DrawCombo<UIButton>("MissionSelect", _pObjectManager, m_missionSelectButtonGUID)) m_isBound = false;
-		if (Picker::DrawCombo<UIButton>("Warehouse", _pObjectManager, m_warehouseButtonGUID))         m_isBound = false;
+		if (Picker::DrawCombo<UIButton>("Garage", _pObjectManager, m_warehouseButtonGUID))            m_isBound = false;
 		if (Picker::DrawCombo<UIButton>("Back", _pObjectManager, m_backButtonGUID))                   m_isBound = false;
 
-		if (Engine::EditorField::Field("WarehouseInteractable", m_isWarehouseInteractable))
+		if (Engine::EditorField::Field("GarageInteractable", m_isWarehouseInteractable))
 		{
 			// その場で見た目へ反映する
 			ApplyVisible(_pObjectManager);
 		}
-		Engine::EditorField::Tooltip("倉庫はまだ中身が無いので、押しても何も起きない");
+		Engine::EditorField::Tooltip("ガレージのシーンが未設定なら、立っていても押せない");
+		Engine::EditorField::AssetField(*a_context.pServices, "Scene", "GarageScene", m_garageSceneGUID);
+		Engine::EditorField::Tooltip("GARAGE を押したときに切り替えるシーン");
 
 		//----------------------------------------------------------------------
 		// 左上のメニュー(SideMenu の中のボタン)

@@ -2,6 +2,7 @@
 #include "Engine/Graphics/Frame/DrawList/DrawCommand.h"
 #include "Engine/Graphics/Frame/DrawList/MeshDrawData.h"
 #include "Engine/Graphics/Frame/DrawList/UIData.h"
+#include "Engine/Graphics/Frame/DrawList/BoundaryData.h"
 #include "Engine/Graphics/Raytracing/DynamicRaytracingData.h"
 
 namespace Engine::Graphics
@@ -82,6 +83,12 @@ namespace Engine::Graphics
 		const std::vector<UIData>& GetUIDataVec() const { return m_uiDrawItemVec; }
 
 		//--------------------------------------------------------------------------------------------
+		// 境界面 : 面1枚ずつ積む。描くのは BoundaryPass
+		//--------------------------------------------------------------------------------------------
+		void AddBoundary(const BoundaryDrawData& a_data);
+		const std::vector<BoundaryDrawData>& GetBoundaryDataVec() const { return m_boundaryDrawDataVec; }
+
+		//--------------------------------------------------------------------------------------------
 		// GPUスキニング
 		//--------------------------------------------------------------------------------------------
 		void AddSkinning(const SkinningDispatchItem& a_item);
@@ -121,6 +128,9 @@ namespace Engine::Graphics
 
 		// UI用アイテム配列
 		std::vector<UIData> m_uiDrawItemVec = {};
+
+		// 境界面の配列(面1枚ずつ)
+		std::vector<BoundaryDrawData> m_boundaryDrawDataVec = {};
 
 		// GPUスキニング配列
 		std::vector<SkinningDispatchItem> m_skinningDispatchItemVec = {};

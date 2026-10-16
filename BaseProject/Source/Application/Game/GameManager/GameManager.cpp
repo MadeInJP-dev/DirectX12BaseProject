@@ -33,10 +33,12 @@
 #include "Application/Object/Sequence/TitleSequence/TitleSequence.h"
 #include "Application/Object/Sequence/LoadingSequence/LoadingSequence.h"
 #include "Application/Object/Sequence/HomeSequence/HomeSequence.h"
+#include "Application/Object/Sequence/GarageSequence/GarageSequence.h"
 #include "Application/Object/Sequence/PauseSequence/PauseSequence.h"
 #include "Application/Object/Sequence/MissionSelect/MissionSelect.h"
 #include "../../Object/Scene/AmbientDustObject/AmbientDustObject.h"
 #include "../../Object/Scene/PlayerSpawner/PlayerSpawner.h"
+#include "Application/Object/Scene/Boundary/Boundary.h"
 #include "Application/Object/Sequence/SceneSequence/SceneSequence.h"
 #include "Application/Object/Controller/SwarmBossController/SwarmBossController.h"
 
@@ -130,6 +132,8 @@ namespace App::Game
 			_objRegistry.RegisterType<App::Object::LoadingSequence>("LoadingSequence");			// ロード画面の進行役。読み込みの進み具合をゲージへ流す
 			_objRegistry.RegisterType<App::Object::PlayerSpawner>("PlayerSpawner");				// プレイヤーのスポナー。シーンの始まりにプレハブから出し、カメラの追従先へつなぐ
 			_objRegistry.RegisterType<App::Object::OptionHUD>("OptionHUD");						// 設定画面。専用シーンに置き、開く側が Push する。パネル(ゲーム・グラフィック・サウンド・入力)を抱え、選んだ1つをスクロールして出す
+			_objRegistry.RegisterType<App::Object::GarageSequence>("GarageSequence");			// ガレージの進行役。取り付け口から引き出し線を出し、寄って武器を付け替える(出撃構成を書き換える)
+			_objRegistry.RegisterType<App::Object::Boundary>("Boundary");						// 行ける範囲の境界。近づいた面だけが見えてくる壁を描く(外へ出さないのはシステム側)
 			_objRegistry.RegisterType<App::Object::SideMenu>("SideMenu");						// カーソルを乗せると開く横のメニュー(ホームの左上)。開閉だけを持ち、中のボタンは進行役が差し込む
 		}
 

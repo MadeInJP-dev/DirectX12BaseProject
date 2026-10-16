@@ -5,6 +5,7 @@
 #include "Engine/Graphics/Frame/DrawSubmitter/Descs/GPUSkiningSbumitDesc.h"
 #include "Engine/Graphics/Frame/DrawSubmitter/Descs/ModelSubmitDesc.h"
 #include "Engine/Graphics/Frame/DrawSubmitter/Descs/SpriteSubmitDesc.h"
+#include "Engine/Graphics/Frame/DrawSubmitter/Descs/BoundarySubmitDesc.h"
 
 namespace Engine::ECS
 {
@@ -90,6 +91,13 @@ namespace Engine::Graphics
 		/// </summary>
 		/// <param name="a_desc">登録の要求(必須項目は GroundModelSubmitDesc を参照)</param>
 		void SubmitGroundModel(const GroundModelSubmitDesc& a_desc);
+
+		/// <summary>
+		/// 境界面を1枚描く命令 : 即時実行ではなく、コマンドとしてためたのちに BoundaryPass が描く。
+		/// 立方体の境界なら面の数だけ呼ぶこと(1回 = 板ポリ1枚)
+		/// </summary>
+		/// <param name="a_desc">描画の要求(必須項目は BoundarySubmitDesc を参照)</param>
+		void SubmitBoundary(const BoundarySubmitDesc& a_desc);
 
 		//--------------------------------------------------------------------------------------------
 		// 描画コマンド : UI

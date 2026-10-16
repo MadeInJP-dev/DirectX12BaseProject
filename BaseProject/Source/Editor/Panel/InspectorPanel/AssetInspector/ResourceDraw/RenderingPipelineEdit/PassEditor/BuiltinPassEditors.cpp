@@ -24,6 +24,7 @@
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/Geometry/GBufferPass/GBufferPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/Geometry/ParticlePass/ParticlePass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/Geometry/DebugLinePass/DebugLinePass.h"
+#include "Engine/Graphics/RenderingPipeline/RenderingPasses/Geometry/BoundaryPass/BoundaryPass.h"
 
 // ---- Lighting ----
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/Lighting/DeferredLightingPass/DeferredLightingPass.h"
@@ -791,6 +792,7 @@ namespace Editor::Inspector
 		a_registry.Register<GBufferPass, GBufferEditor>();
 		a_registry.Register<ParticlePass, NoteOnlyEditor<ParticlePass>>(std::initializer_list<const char*>{ "発生と更新は GraphicsEngine 側で毎フレーム1回走ります", "このパスは描画だけを担当します" });
 		a_registry.Register<DebugLinePass, NoteOnlyEditor<DebugLinePass>>(std::initializer_list<const char*>{ "当たり判定やレイのデバッグ線を描きます" });
+		a_registry.Register<BoundaryPass, NoteOnlyEditor<BoundaryPass>>(std::initializer_list<const char*>{ "行ける範囲の境界面を描きます", "面の画像や見え方は Boundary オブジェクト側で設定します" });
 
 		// ---- Lighting ----
 		a_registry.Register<DeferredLightingPass, DeferredLightingEditor>();

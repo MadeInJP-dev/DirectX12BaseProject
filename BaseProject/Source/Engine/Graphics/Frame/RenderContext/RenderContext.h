@@ -208,6 +208,10 @@ namespace Engine::Graphics
 		void BindUIBuffer(UINT a_rootIndex, UINT a_startInstance = 0);
 		void DrawUI(UINT a_rootIndex);
 
+		// 境界面 : 積まれた面を1枚ずつ、a_rootIndex の定数バッファへ詰めて描く。
+		// 板ポリは VS が SV_VertexID で組む(頂点バッファは張らない)。トポロジは呼ぶ側が設定すること
+		void DrawBoundary(UINT a_rootIndex);
+
 		void DrawQueueDispatchMesh(uint8_t a_passIndex);
 
 		//--------------------------------------------------------------------------------------------

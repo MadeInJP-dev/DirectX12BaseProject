@@ -2,7 +2,10 @@
 
 #include "Engine/GameObject/BaseObject/BaseObject.h"
 
+#include "Application/Components/Attachment/WeaponMountComponent.h"
+
 namespace App::Game { struct PlayerLoadout; }
+namespace App::Component { struct AttachmentSlot; }
 
 namespace App::Object
 {
@@ -31,8 +34,13 @@ namespace App::Object
 	//   本体のアタッチメントのスロット(rightWeapon / leftWeapon / missile)へ ID で入れる。
 	// ・構成の本体が未設定なら、自分のプレハブ(武器込みの一体物)をそのまま出す
 	//   (出撃構成を持たない起動のしかたでも、ゲームシーンを単体で試せるように)。
+	//
+	// 見せるだけの出し方(ガレージ)
+	// ・IsControllable を切ると、出したあと操作の印(PlayerControllTag)を外す。入力では動かない。
+	// ・取り付け口の武器はあとから付け替えられる(ReplaceWeapon)。付け替えるのは出した機体の武器だけで、
+	//   出撃構成(GlobalGameContext::loadout)は呼んだ側が書き換える。
 	//======================================================================================
-	class PlayerSpawner : public Engine::GameObject::BaseObject
+	class PlayerSpawner final : public Engine::GameObject::BaseObject
 	{
 	public:
 
@@ -60,6 +68,33 @@ namespace App::Object
 			const Engine::GameObject::ObjectGizmoContext& a_ctx,
 			Engine::GameObject::ObjectContext& a_context) override;
 
+		//=======================================================================
+		// 出した機体(ガレージなど、外から見せたり付け替えたりする用)
+		//=======================================================================
+
+		// 出したプレイヤーのルート。出していなければ INVALID
+		Engine::ECS::Entity GetPlayerEntity() const { return m_playerEntity; }
+
+		// 取り付け口のエンティティ。その口が無い機体・出していなければ INVALID
+		Engine::ECS::Entity GetMountEntity(Component::EWeaponMount a_mount) const;
+
+		// 取り付け口に付いている武器。付いていなければ INVALID
+		Engine::ECS::Entity GetWeaponEntity(Component::EWeaponMount a_mount) const;
+
+		/// <summary>
+		/// 取り付け口の武器を付け替える
+		/// </summary>
+		/// <param name="a_prefabGUID">付ける武器のプレハブ。空なら外すだけ</param>
+		/// <returns>付けられた(空なら外せた)ら true</returns>
+		/// <remarks>
+		/// 今の武器は解放予約して、新しい武器をその場で子として出す(GameObject の更新から呼ぶこと)。
+		/// 出撃構成は書き換えない
+		/// </remarks>
+		bool ReplaceWeapon(
+			Engine::GameObject::ObjectContext& a_context,
+			Component::EWeaponMount a_mount,
+			const Core::GUID& a_prefabGUID);
+
 	private:
 
 		// プレハブからプレイヤーを出す。出せたら true
@@ -77,6 +112,15 @@ namespace App::Object
 			Engine::GameObject::ObjectContext& a_context,
 			const Game::PlayerLoadout& a_loadout,
 			const std::vector<Engine::ECS::Entity>& a_bodyEntityVec);
+
+		// 武器を1つ取り付け口へ付け、スロットへつなぐ。付けた武器を返す(付けられなければ INVALID)
+		Engine::ECS::Entity AttachWeapon(
+			Engine::GameObject::ObjectContext& a_context,
+			Component::EWeaponMount a_mount,
+			const Core::GUID& a_prefabGUID);
+
+		// 取り付け口に対応する本体のスロット。本体が居なければ nullptr
+		Component::AttachmentSlot* RefMountSlot(Engine::ECS::World& a_world, Component::EWeaponMount a_mount) const;
 
 		// カメラの追従先を出したプレイヤーへ付ける
 		void LinkCamera(Engine::GameObject::ObjectContext& a_context);
@@ -96,14 +140,27 @@ namespace App::Object
 		// 追従させるカメラ(エンティティの GUID)。未設定ならカメラは触らない
 		Core::GUID    m_cameraGUID = Core::DEFAULT_GUID;
 
+		// 入力で動かすか。切ると出したあと PlayerControllTag を外す(ガレージで見せるだけの機体)
+		bool          m_isControllable = true;
+
 		//-------------------------------------------------------------------
 		// 状態(保存しない)
 		//-------------------------------------------------------------------
 		Engine::ResourceRef<Engine::Resource::Prefab> m_prefabRef = {};
 
-		// 付けた武器のプレハブ(取り付け口の種類ごと。RightHand / LeftHand / Shoulder)
+		// 付けた武器のプレハブ・取り付け口・付けた武器(取り付け口の種類ごと。EWeaponMount の順)
 		static constexpr size_t WEAPON_MOUNT_COUNT = 4;
+
+		// 0 は有効なエンティティ番号なので、未設定は INVALID で埋めておく
+		static std::array<Engine::ECS::Entity, WEAPON_MOUNT_COUNT> MakeInvalidEntityArray()
+		{
+			std::array<Engine::ECS::Entity, WEAPON_MOUNT_COUNT> _array = {};
+			_array.fill(Engine::ECS::Limits::INVALID_ENTITY);
+			return _array;
+		}
 		std::array<Engine::ResourceRef<Engine::Resource::Prefab>, WEAPON_MOUNT_COUNT> m_weaponPrefabRefArray = {};
+		std::array<Engine::ECS::Entity, WEAPON_MOUNT_COUNT> m_mountEntityArray = MakeInvalidEntityArray();
+		std::array<Engine::ECS::Entity, WEAPON_MOUNT_COUNT> m_weaponEntityArray = MakeInvalidEntityArray();
 
 		// 出したプレイヤーのルート。出していなければ INVALID
 		Engine::ECS::Entity m_playerEntity = Engine::ECS::Limits::INVALID_ENTITY;

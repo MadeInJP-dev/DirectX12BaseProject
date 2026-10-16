@@ -21,6 +21,7 @@ namespace Engine::Graphics
 		ClearAndReserve(m_lightWeightDrawItemVec, 10000);
 		ClearAndReserve(m_drawInstanceIndexVec, 10000);
 		ClearAndReserve(m_uiDrawItemVec, 10000);
+		ClearAndReserve(m_boundaryDrawDataVec, 64);
 		ClearAndReserve(m_dynamicRayRequestVec, 1000);
 		ClearAndReserve(m_skinningDispatchItemVec, 1000);
 
@@ -159,6 +160,14 @@ namespace Engine::Graphics
 	void DrawLists::AddUI(const UIData& a_data)
 	{
 		m_uiDrawItemVec.push_back(a_data);
+	}
+
+	//==========================================================================================
+	// 境界面
+	//==========================================================================================
+	void DrawLists::AddBoundary(const BoundaryDrawData& a_data)
+	{
+		m_boundaryDrawDataVec.push_back(a_data);
 	}
 
 	void DrawLists::SortUIByLayer()

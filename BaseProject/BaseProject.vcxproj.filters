@@ -451,6 +451,9 @@
     <Filter Include="Asset\Shader\Source\Geometry\GBuffer">
       <UniqueIdentifier>{d49743f0-585d-5974-91f9-3ec1bb09dad8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Asset\Shader\Source\Geometry\Boundary">
+      <UniqueIdentifier>{d36f5981-a27e-4bf1-8fc5-183b9a2b9a7a}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Asset\Shader\Source\Geometry\MeshShader">
       <UniqueIdentifier>{799510a2-25f5-5e51-af42-f8f0d2493edc}</UniqueIdentifier>
     </Filter>
@@ -598,11 +601,17 @@
     <Filter Include="Source\Application\Object\Scene\AmbientDustObject">
       <UniqueIdentifier>{c0de0020-1111-4222-8333-0000c0de0020}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Object\Scene\Boundary">
+      <UniqueIdentifier>{b3827752-6b41-4bbf-adf5-6c1f81eb6064}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Application\Object\Scene\PlayerSpawner">
       <UniqueIdentifier>{c0de0f21-1111-4222-8333-0000c0de0f21}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Application\Object\Sequence">
       <UniqueIdentifier>{6f2d9c15-3a84-4f0b-8f57-1d2a4b6c9e30}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Object\Sequence\GarageSequence">
+      <UniqueIdentifier>{2f04de7f-b3be-4d11-a482-c33c61f8882e}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Application\Object\Sequence\HomeSequence">
       <UniqueIdentifier>{8e7fbc0c-8408-410f-bea0-e67969f04b8c}</UniqueIdentifier>
@@ -1240,6 +1249,9 @@
     <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\DebugLinePass">
       <UniqueIdentifier>{5ee06653-b50a-4ad3-92f1-bc2c57ef4bb4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\BoundaryPass">
+      <UniqueIdentifier>{b7b17e37-37c2-4e80-be83-b9325acba6cf}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowTemporalAccumulationPass">
       <UniqueIdentifier>{fbcf48ba-0a17-4f66-86b2-b77853d6cc8b}</UniqueIdentifier>
     </Filter>
@@ -1545,8 +1557,14 @@
     <ClCompile Include="Source\Application\Object\Scene\AmbientDustObject\AmbientDustObject.cpp">
       <Filter>Source\Application\Object\Scene\AmbientDustObject</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\Scene\Boundary\Boundary.cpp">
+      <Filter>Source\Application\Object\Scene\Boundary</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Application\Object\Scene\PlayerSpawner\PlayerSpawner.cpp">
       <Filter>Source\Application\Object\Scene\PlayerSpawner</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\Sequence\GarageSequence\GarageSequence.cpp">
+      <Filter>Source\Application\Object\Sequence\GarageSequence</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\Sequence\HomeSequence\HomeSequence.cpp">
       <Filter>Source\Application\Object\Sequence\HomeSequence</Filter>
@@ -2535,6 +2553,9 @@
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\DebugLinePass\DebugLinePass.cpp">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\DebugLinePass</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\BoundaryPass\BoundaryPass.cpp">
+      <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\BoundaryPass</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowTemporalAccumulationPass\ShadowTemporalAccumulationPass.cpp">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowTemporalAccumulationPass</Filter>
     </ClCompile>
@@ -2820,6 +2841,9 @@
       <Filter>Source\Engine\Graphics\Frame\DrawSubmitter\Descs</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\SpriteSubmitDesc.h">
+      <Filter>Source\Engine\Graphics\Frame\DrawSubmitter\Descs</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawSubmitter\Descs\BoundarySubmitDesc.h">
       <Filter>Source\Engine\Graphics\Frame\DrawSubmitter\Descs</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\Frame\SceneView\SceneView.h">
@@ -3179,8 +3203,14 @@
     <ClInclude Include="Source\Application\Object\Scene\AmbientDustObject\AmbientDustObject.h">
       <Filter>Source\Application\Object\Scene\AmbientDustObject</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Object\Scene\Boundary\Boundary.h">
+      <Filter>Source\Application\Object\Scene\Boundary</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Object\Scene\PlayerSpawner\PlayerSpawner.h">
       <Filter>Source\Application\Object\Scene\PlayerSpawner</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\Sequence\GarageSequence\GarageSequence.h">
+      <Filter>Source\Application\Object\Sequence\GarageSequence</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\Sequence\HomeSequence\HomeSequence.h">
       <Filter>Source\Application\Object\Sequence\HomeSequence</Filter>
@@ -4442,6 +4472,9 @@
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\DebugLinePass\DebugLinePass.h">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\DebugLinePass</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\BoundaryPass\BoundaryPass.h">
+      <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\BoundaryPass</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowTemporalAccumulationPass\ShadowTemporalAccumulationPass.h">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowTemporalAccumulationPass</Filter>
     </ClInclude>
@@ -4865,6 +4898,9 @@
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\UIData.h">
       <Filter>Source\Engine\Graphics\Frame\DrawList</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\BoundaryData.h">
+      <Filter>Source\Engine\Graphics\Frame\DrawList</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\MeshDrawData.h">
       <Filter>Source\Engine\Graphics\Frame\DrawList</Filter>
     </ClInclude>
@@ -4896,6 +4932,12 @@
     </FxCompile>
     <FxCompile Include="Asset\Shader\Source\Debug\DebugLine\DebugLineVS.hlsl">
       <Filter>Asset\Shader\Source\Debug\DebugLine</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\Source\Geometry\Boundary\BoundaryPS.hlsl">
+      <Filter>Asset\Shader\Source\Geometry\Boundary</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\Source\Geometry\Boundary\BoundaryVS.hlsl">
+      <Filter>Asset\Shader\Source\Geometry\Boundary</Filter>
     </FxCompile>
     <FxCompile Include="Asset\Shader\Source\Geometry\Skinning\Skinning.hlsl">
       <Filter>Asset\Shader\Source\Geometry\Skinning</Filter>
@@ -5034,6 +5076,9 @@
     <None Include="Asset\Shader\Common\RootParameters\DebugLineData.hlsli">
       <Filter>Asset\Shader\Common\RootParameters</Filter>
     </None>
+    <None Include="Asset\Shader\Common\RootParameters\BoundaryData.hlsli">
+      <Filter>Asset\Shader\Common\RootParameters</Filter>
+    </None>
     <None Include="Asset\Shader\Common\RootParameters\DenoiseSetting.hlsli">
       <Filter>Asset\Shader\Common\RootParameters</Filter>
     </None>
@@ -5099,6 +5144,9 @@
     </None>
     <None Include="Asset\Shader\Source\Debug\DebugLine\DebugLineRoot.hlsli">
       <Filter>Asset\Shader\Source\Debug\DebugLine</Filter>
+    </None>
+    <None Include="Asset\Shader\Source\Geometry\Boundary\Boundary.hlsli">
+      <Filter>Asset\Shader\Source\Geometry\Boundary</Filter>
     </None>
     <None Include="Asset\Shader\Source\Geometry\GBuffer\MeshGBufferPS.hlsl">
       <Filter>Asset\Shader\Source\Geometry\GBuffer</Filter>

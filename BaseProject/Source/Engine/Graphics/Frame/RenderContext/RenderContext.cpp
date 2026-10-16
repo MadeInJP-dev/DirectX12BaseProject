@@ -457,6 +457,26 @@ namespace Engine::Graphics
 		}
 	}
 
+	//------------------------------------------------------------------
+	// 境界面を1枚ずつ描く
+	//
+	// 面の情報は定数バッファで渡し、板ポリは VS が SV_VertexID から組む(6頂点)。
+	// 頂点バッファを張らないので、PSO は空の入力レイアウトで作っておくこと
+	//------------------------------------------------------------------
+	void RenderContext::DrawBoundary(UINT a_rootIndex)
+	{
+		if (!m_pDrawLists) return;
+		const auto& _boundaryVec = m_pDrawLists->GetBoundaryDataVec();
+		if (_boundaryVec.empty()) return;
+
+		constexpr UINT QUAD_VERTEX_COUNT = 6;	// 三角形2枚
+		for (const auto& _data : _boundaryVec)
+		{
+			GraphicsBindRootCBV(static_cast<int>(a_rootIndex), _data);
+			m_pCmdList->DrawInstanced(QUAD_VERTEX_COUNT, 1, 0, 0);
+		}
+	}
+
 	void RenderContext::DrawQueueDispatchMesh(uint8_t a_passIndex)
 	{
 		// 直前に張ったPSOの番号。

@@ -14,6 +14,7 @@
 #include "Engine/Resource/Data/Prefab/Prefab.h"
 
 #include "Application/Components/Movement/LookAngleComponent.h"
+#include "Application/Components/Input/PlayerControllTag.h"
 #include "Application/Components/Camera/FollowTargetComponent.h"
 #include "Application/Components/Attachment/AttachmentSlotsComponent.h"
 #include "Application/Components/Attachment/WeaponMountComponent.h"
@@ -127,6 +128,12 @@ namespace App::Object
 		// 出撃構成の武器を取り付け口へ
 		if (_pLoadout) AttachLoadoutWeapons(a_context, *_pLoadout, _bodyEntityVec);
 
+		// 見せるだけの機体は入力で動かさない(外れるのは次のフレームの頭)
+		if (!m_isControllable && _world.HasComponent<Component::PlayerControllTag>(m_playerEntity))
+		{
+			_world.ReserveRemoveComponent(_world.GetCompTypeID<Component::PlayerControllTag>(), m_playerEntity);
+		}
+
 		LinkCamera(a_context);
 		return true;
 	}
@@ -166,11 +173,10 @@ namespace App::Object
 		const std::vector<Engine::ECS::Entity>& a_bodyEntityVec)
 	{
 		auto& _world = *a_context.pWorld;
-		auto& _rm = *a_context.pServices->pResourceManager;
 
-		// 取り付け口の種類 → 取り付け口のエンティティ
-		std::array<Engine::ECS::Entity, WEAPON_MOUNT_COUNT> _mountEntityArray = {};
-		_mountEntityArray.fill(Engine::ECS::Limits::INVALID_ENTITY);
+		// 取り付け口の種類 → 取り付け口のエンティティ(あとから付け替えるときにも使うので覚えておく)
+		m_mountEntityArray.fill(Engine::ECS::Limits::INVALID_ENTITY);
+		m_weaponEntityArray.fill(Engine::ECS::Limits::INVALID_ENTITY);
 
 		for (const Engine::ECS::Entity _entity : a_bodyEntityVec)
 		{
@@ -178,11 +184,10 @@ namespace App::Object
 			if (!_pMount) continue;
 
 			const size_t _index = static_cast<size_t>(_pMount->mount);
-			if (_index < WEAPON_MOUNT_COUNT) _mountEntityArray[_index] = _entity;
+			if (_index < WEAPON_MOUNT_COUNT) m_mountEntityArray[_index] = _entity;
 		}
 
-		auto* _pSlots = _world.RefData<Component::AttachmentSlotsComponent>(m_playerEntity);
-		if (!_pSlots)
+		if (!_world.HasComponent<Component::AttachmentSlotsComponent>(m_playerEntity))
 		{
 			ENGINE_WARNING("PlayerSpawner : 本体が AttachmentSlotsComponent を持たないので、武器を撃てるようにつなげません");
 		}
@@ -191,64 +196,154 @@ namespace App::Object
 		{
 			Component::EWeaponMount mount;
 			Core::GUID prefabGUID;
-			Component::AttachmentSlot* pSlot;
-			bool isShoulder;
 		};
 		const MountTarget _targetArray[] =
 		{
-			{ Component::EWeaponMount::RightHand, a_loadout.rightHandWeaponPrefabGUID, _pSlots ? &_pSlots->rightWeapon : nullptr, false },
-			{ Component::EWeaponMount::LeftHand,  a_loadout.leftHandWeaponPrefabGUID,  _pSlots ? &_pSlots->leftWeapon  : nullptr, false },
-			{ Component::EWeaponMount::RightShoulder, a_loadout.shoulderWeaponPrefabGUID,     _pSlots ? &_pSlots->missile     : nullptr, true  },
-			{ Component::EWeaponMount::LeftShoulder,  a_loadout.leftShoulderWeaponPrefabGUID, _pSlots ? &_pSlots->leftMissile : nullptr, true  },
+			{ Component::EWeaponMount::RightHand,     a_loadout.rightHandWeaponPrefabGUID },
+			{ Component::EWeaponMount::LeftHand,      a_loadout.leftHandWeaponPrefabGUID },
+			{ Component::EWeaponMount::RightShoulder, a_loadout.shoulderWeaponPrefabGUID },
+			{ Component::EWeaponMount::LeftShoulder,  a_loadout.leftShoulderWeaponPrefabGUID },
 		};
-
-		const Engine::ECS::ComponentTypeID _handTypeID = _world.GetCompTypeID<Component::WeaponStateComponent>();
-		const Engine::ECS::ComponentTypeID _shoulderTypeID = _world.GetCompTypeID<Component::MissileStateComponent>();
 
 		for (const MountTarget& _target : _targetArray)
 		{
 			if (!_target.prefabGUID.IsValid()) continue;
-
-			const size_t _index = static_cast<size_t>(_target.mount);
-			const Engine::ECS::Entity _mountEntity = _mountEntityArray[_index];
-			if (_mountEntity == Engine::ECS::Limits::INVALID_ENTITY)
-			{
-				ENGINE_WARNING("PlayerSpawner : 本体に取り付け口がありません(%u)。武器を付けません", static_cast<uint32_t>(_target.mount));
-				continue;
-			}
-
-			m_weaponPrefabRefArray[_index] = _rm.LoadImmediate<Engine::Resource::Prefab>(_target.prefabGUID);
-			const auto* _pWeaponPrefab = _rm.Get(m_weaponPrefabRefArray[_index]);
-			if (!_pWeaponPrefab || _pWeaponPrefab->GetSignature().none())
-			{
-				ENGINE_WARNING("PlayerSpawner : 武器のプレハブを読めませんでした : %s", _target.prefabGUID.String().c_str());
-				continue;
-			}
-
-			// 取り付け口と武器の種類が合っているか
-			const Engine::ECS::ComponentTypeID _needTypeID = _target.isShoulder ? _shoulderTypeID : _handTypeID;
-			if (!_pWeaponPrefab->Has(_needTypeID))
-			{
-				ENGINE_WARNING("PlayerSpawner : 取り付け口と武器の種類が合いません(%s には %s が要ります) : %s",
-					_target.isShoulder ? "肩" : "手",
-					_target.isShoulder ? "MissileStateComponent" : "WeaponStateComponent",
-					_target.prefabGUID.String().c_str());
-				continue;
-			}
-
-			const Engine::ECS::Entity _weapon = App::Utility::CreateChildInstanceNow(_world, *_pWeaponPrefab, _mountEntity);
-			if (_weapon == Engine::ECS::Limits::INVALID_ENTITY)
-			{
-				ENGINE_WARNING("PlayerSpawner : 武器のエンティティを作れませんでした : %s", _target.prefabGUID.String().c_str());
-				continue;
-			}
-
-			if (_target.pSlot)
-			{
-				_target.pSlot->id = _weapon;
-				_target.pSlot->guid = Core::DEFAULT_GUID;
-			}
+			AttachWeapon(a_context, _target.mount, _target.prefabGUID);
 		}
+	}
+
+	//--------------------------------------------------------------------------------------
+	// 武器を1つ付ける
+	//
+	// 取り付け口と武器の種類が合わないもの(手に肩の武器など)は付けない。
+	// 手持ちの武器は WeaponStateComponent、肩の武器は MissileStateComponent を持つかで見分ける。
+	// 付けた武器は本体のスロットへ ID で入れる(武器は GUID を持たないので ID でしかつながらない)。
+	// スロットの GUID は空にしておく。残っていると AttachmentSlotLinkSystem が
+	// GUID から引き直して、入れた ID を消してしまう。
+	//--------------------------------------------------------------------------------------
+	Engine::ECS::Entity PlayerSpawner::AttachWeapon(
+		Engine::GameObject::ObjectContext& a_context,
+		Component::EWeaponMount a_mount,
+		const Core::GUID& a_prefabGUID)
+	{
+		auto& _world = *a_context.pWorld;
+		auto& _rm = *a_context.pServices->pResourceManager;
+
+		const size_t _index = static_cast<size_t>(a_mount);
+		if (_index >= WEAPON_MOUNT_COUNT) return Engine::ECS::Limits::INVALID_ENTITY;
+
+		const Engine::ECS::Entity _mountEntity = m_mountEntityArray[_index];
+		if (_mountEntity == Engine::ECS::Limits::INVALID_ENTITY || !_world.IsAliveEntity(_mountEntity))
+		{
+			ENGINE_WARNING("PlayerSpawner : 本体に取り付け口がありません(%u)。武器を付けません", static_cast<uint32_t>(a_mount));
+			return Engine::ECS::Limits::INVALID_ENTITY;
+		}
+
+		m_weaponPrefabRefArray[_index] = _rm.LoadImmediate<Engine::Resource::Prefab>(a_prefabGUID);
+		const auto* _pWeaponPrefab = _rm.Get(m_weaponPrefabRefArray[_index]);
+		if (!_pWeaponPrefab || _pWeaponPrefab->GetSignature().none())
+		{
+			ENGINE_WARNING("PlayerSpawner : 武器のプレハブを読めませんでした : %s", a_prefabGUID.String().c_str());
+			return Engine::ECS::Limits::INVALID_ENTITY;
+		}
+
+		// 取り付け口と武器の種類が合っているか
+		const bool _isShoulder =
+			(a_mount == Component::EWeaponMount::RightShoulder || a_mount == Component::EWeaponMount::LeftShoulder);
+		const Engine::ECS::ComponentTypeID _needTypeID = _isShoulder
+			? _world.GetCompTypeID<Component::MissileStateComponent>()
+			: _world.GetCompTypeID<Component::WeaponStateComponent>();
+		if (!_pWeaponPrefab->Has(_needTypeID))
+		{
+			ENGINE_WARNING("PlayerSpawner : 取り付け口と武器の種類が合いません(%s には %s が要ります) : %s",
+				_isShoulder ? "肩" : "手",
+				_isShoulder ? "MissileStateComponent" : "WeaponStateComponent",
+				a_prefabGUID.String().c_str());
+			return Engine::ECS::Limits::INVALID_ENTITY;
+		}
+
+		const Engine::ECS::Entity _weapon = App::Utility::CreateChildInstanceNow(_world, *_pWeaponPrefab, _mountEntity);
+		if (_weapon == Engine::ECS::Limits::INVALID_ENTITY)
+		{
+			ENGINE_WARNING("PlayerSpawner : 武器のエンティティを作れませんでした : %s", a_prefabGUID.String().c_str());
+			return Engine::ECS::Limits::INVALID_ENTITY;
+		}
+
+		// スロットは作った後に引く(作る途中で本体のデータが動いても古い場所を指さないように)
+		if (Component::AttachmentSlot* _pSlot = RefMountSlot(_world, a_mount))
+		{
+			_pSlot->id = _weapon;
+			_pSlot->guid = Core::DEFAULT_GUID;
+		}
+
+		m_weaponEntityArray[_index] = _weapon;
+		return _weapon;
+	}
+
+	//======================================================================================
+	// 出した機体の取り付け口と武器
+	//======================================================================================
+	Engine::ECS::Entity PlayerSpawner::GetMountEntity(Component::EWeaponMount a_mount) const
+	{
+		const size_t _index = static_cast<size_t>(a_mount);
+		return (_index < WEAPON_MOUNT_COUNT) ? m_mountEntityArray[_index] : Engine::ECS::Limits::INVALID_ENTITY;
+	}
+
+	Engine::ECS::Entity PlayerSpawner::GetWeaponEntity(Component::EWeaponMount a_mount) const
+	{
+		const size_t _index = static_cast<size_t>(a_mount);
+		return (_index < WEAPON_MOUNT_COUNT) ? m_weaponEntityArray[_index] : Engine::ECS::Limits::INVALID_ENTITY;
+	}
+
+	Component::AttachmentSlot* PlayerSpawner::RefMountSlot(Engine::ECS::World& a_world, Component::EWeaponMount a_mount) const
+	{
+		if (!a_world.IsAliveEntity(m_playerEntity)) return nullptr;
+
+		auto* _pSlots = a_world.RefData<Component::AttachmentSlotsComponent>(m_playerEntity);
+		if (!_pSlots) return nullptr;
+
+		switch (a_mount)
+		{
+		case Component::EWeaponMount::RightHand:		return &_pSlots->rightWeapon;
+		case Component::EWeaponMount::LeftHand:			return &_pSlots->leftWeapon;
+		case Component::EWeaponMount::RightShoulder:	return &_pSlots->missile;
+		case Component::EWeaponMount::LeftShoulder:		return &_pSlots->leftMissile;
+		default:										return nullptr;
+		}
+	}
+
+	//======================================================================================
+	// 付け替え : 今の武器を解放予約して、新しい武器をその場で付ける
+	//======================================================================================
+	bool PlayerSpawner::ReplaceWeapon(
+		Engine::GameObject::ObjectContext& a_context,
+		Component::EWeaponMount a_mount,
+		const Core::GUID& a_prefabGUID)
+	{
+		if (!a_context.pWorld || !a_context.pServices || !a_context.pServices->pResourceManager) return false;
+
+		auto& _world = *a_context.pWorld;
+		const size_t _index = static_cast<size_t>(a_mount);
+		if (_index >= WEAPON_MOUNT_COUNT) return false;
+		if (!_world.IsAliveEntity(m_playerEntity)) return false;
+
+		// 今の武器を外す(消えるのは次のフレームの頭)
+		const Engine::ECS::Entity _old = m_weaponEntityArray[_index];
+		if (_old != Engine::ECS::Limits::INVALID_ENTITY && _world.IsAliveEntity(_old))
+		{
+			_world.ReserveReleaseEntity(_old);
+		}
+		m_weaponEntityArray[_index] = Engine::ECS::Limits::INVALID_ENTITY;
+
+		if (Component::AttachmentSlot* _pSlot = RefMountSlot(_world, a_mount))
+		{
+			_pSlot->id = Engine::ECS::Limits::INVALID_ENTITY;
+			_pSlot->guid = Core::DEFAULT_GUID;
+		}
+
+		if (!a_prefabGUID.IsValid()) return true;
+
+		return AttachWeapon(a_context, a_mount, a_prefabGUID) != Engine::ECS::Limits::INVALID_ENTITY;
 	}
 
 	//======================================================================================
@@ -331,6 +426,13 @@ namespace App::Object
 		a_ar.Field("Pos", m_pos);
 		a_ar.Field("Yaw", m_yaw);
 		a_ar.GUIDField("CameraGUID", m_cameraGUID);
+
+		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
+		// 区切りを持たない古い .ob* には無いので読まない
+		if (!a_ar.IsLegacyLayout())
+		{
+			a_ar.Field("IsControllable", m_isControllable);
+		}
 	}
 
 	//======================================================================================
@@ -361,6 +463,9 @@ namespace App::Object
 		{
 			Engine::EditorField::HelpText("出撃構成が無いので、上のプレハブ(武器込みの一体物)を出す");
 		}
+
+		Engine::EditorField::Field("Controllable", m_isControllable);
+		Engine::EditorField::Tooltip("切ると入力で動かない(ガレージで見せるだけの機体)。反映はシーンを開き直したとき");
 
 		Engine::EditorField::Field("Position", m_pos, 0.1f);
 		Engine::EditorField::Field("Yaw (deg)", m_yaw, 0.5f);
