@@ -95,14 +95,16 @@ namespace App::System
 					if (const auto* _pRadial = a_ctx.pWorld->RefData<Component::RadialBlurComponent>(_camera))
 					{
 						Engine::Graphics::RadialBlurOptionCB _radialCB = {};
-						_radialCB.blurCenter	= { _pRadial->blurCenter.x, _pRadial->blurCenter.y };
-						// 速度から作った量 + 常時掛かる量。
-						// 速度ぶんを書いているのは RadialBlurSpeedSystem(Camera帯)
+						// 中心は震え(RadialBlurShakeSystem)のぶんずらす
+						const Math::Vector2 _center = _pRadial->GetCenter();
+						_radialCB.blurCenter	= { _center.x, _center.y };
+						// 速度から作った量 + 常時掛かる量 + 震えのぶん。
+						// 速度ぶんを書いているのは RadialBlurSpeedSystem、震えは RadialBlurShakeSystem(どちらも Camera帯)
 						_radialCB.strength		= _pRadial->GetStrength();
 						_radialCB.sampleCount	= _pRadial->sampleCount;
 						_radialCB.radius		= _pRadial->radius;
 						_radialCB.falloff		= _pRadial->falloff;
-						_radialCB.enable		= _pRadial->enable ? 1 : 0;
+						_radialCB.enable		= _pRadial->IsActive() ? 1 : 0;
 						_pGE->RefSceneView()->SetRadialBlurData(_radialCB);
 					}
 				}

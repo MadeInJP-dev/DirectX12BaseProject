@@ -73,8 +73,23 @@ namespace App::Component
 		// 速さから作った今の引きずり量。RadialBlurSpeedSystem が毎フレーム書く
 		float currentStrength		= 0.0f;
 
-		// 実際にシェーダーへ送る引きずり量
-		float GetStrength() const { return baseStrength + currentStrength; }
+		// 震え(ボスの咆哮など)で足す引きずり量と、中心のずれ(UV)。
+		// RadialBlurShakeSystem が RadialBlurShakeResource から毎フレーム書く
+		float shakeStrength			= 0.0f;
+		Math::Vector2 shakeCenterOffset = { 0.0f, 0.0f };
+		float shakeTime				= 0.0f;	// 揺れの位相を進める時計(秒)
+
+		// 震えているか。震えている間は enable が false でも掛ける
+		bool IsShaking() const { return shakeStrength > 0.0f; }
+
+		// シェーダーへ送るか
+		bool IsActive() const { return enable || IsShaking(); }
+
+		// 実際にシェーダーへ送る引きずり量。切っているカメラは震えのぶんだけ
+		float GetStrength() const { return (enable ? baseStrength + currentStrength : 0.0f) + shakeStrength; }
+
+		// 実際にシェーダーへ送る中心(UV)
+		Math::Vector2 GetCenter() const { return blurCenter + shakeCenterOffset; }
 	};
 }
 
@@ -120,6 +135,7 @@ struct Engine::ECS::ComponentTraits<App::Component::RadialBlurComponent>
 		// システムが毎フレーム上書きするので表示のみ
 		Engine::EditorField::Line();
 		Engine::EditorField::Value("CurrentStrength", "%.3f", _comp.currentStrength);
+		Engine::EditorField::Value("ShakeStrength", "%.3f", _comp.shakeStrength);
 		Engine::EditorField::Value("SendStrength", "%.3f", _comp.GetStrength());
 	}
 };

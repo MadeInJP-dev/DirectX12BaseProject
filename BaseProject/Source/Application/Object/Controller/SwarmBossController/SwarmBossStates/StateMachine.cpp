@@ -7,6 +7,7 @@
 #include "CoilAttack/CoilAttack.h"
 #include "Reorganize/Reorganize.h"
 #include "Death/Death.h"
+#include "Emerge/Emerge.h"
 
 namespace App::Object
 {
@@ -29,6 +30,7 @@ namespace App::Object
 			case ESwarmBossState::CoilAttack: _name = "巻き付き";             break;
 			case ESwarmBossState::Reorganize: _name = "小隊長の整理";         break;
 			case ESwarmBossState::Death:      _name = "死亡";                 break;
+			case ESwarmBossState::Emerge:     _name = "出現";                 break;
 			default:                          break;
 			}
 			return std::string(_name) + " (" + std::string(magic_enum::enum_name(a_state)) + ")";
@@ -48,8 +50,10 @@ namespace App::Object
 		m_upStates.emplace(ESwarmBossState::CoilAttack, std::make_unique<SwarmBossCoilAttackState>());
 		m_upStates.emplace(ESwarmBossState::Reorganize, std::make_unique<SwarmBossReorganizeState>());
 		m_upStates.emplace(ESwarmBossState::Death, std::make_unique<SwarmBossDeathState>());
+		m_upStates.emplace(ESwarmBossState::Emerge, std::make_unique<SwarmBossEmergeState>());
 
 		// 最初の行動。1フレーム目の PreUpdate で入る
+		// (地面から出す設定なら、コントローラーが生成のときに出現へ切り替え直す)
 		ReserveChangeState(ESwarmBossState::RandomWalk);
 	}
 
@@ -105,8 +109,16 @@ namespace App::Object
 	{
 		for (auto& [_state, _upState] : m_upStates)
 		{
+			// 後から足したものは ArchiveAppended で末尾に書く(既存のバイナリの読み順を崩さない)
+			if (_state == ESwarmBossState::Emerge) continue;
 			if (_upState) _upState->Archive(a_ar);
 		}
+	}
+
+	void SwarmBossStateMachine::ArchiveAppended(Engine::Persistence::Archive& a_ar)
+	{
+		auto _it = m_upStates.find(ESwarmBossState::Emerge);
+		if (_it != m_upStates.end() && _it->second) _it->second->Archive(a_ar);
 	}
 
 	void SwarmBossStateMachine::DrawInspector()

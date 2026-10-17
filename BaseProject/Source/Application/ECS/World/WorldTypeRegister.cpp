@@ -128,6 +128,7 @@
 #include "Application/Systems/Camera/MainCameraSystem.h"
 #include "Application/Systems/Camera/CameraProjUpdateSystem.h"
 #include "Application/Systems/Camera/RadialBlurSpeedSystem.h"
+#include "Application/Systems/Camera/RadialBlurShakeSystem.h"
 #include "Application/Systems/Camera/SpeedLineSystem.h"
 #include "Application/Systems/Camera/AimTargetSystem.h"
 #include "Application/Systems/Transform/CalcMatrixSystem.h"
@@ -253,6 +254,7 @@
 #include "Application/InstanceResource/PlayerHUDResource.h"
 #include "Application/InstanceResource/UICursorResource.h"
 #include "Application/InstanceResource/BoundaryResource.h"
+#include "Application/InstanceResource/RadialBlurShakeResource.h"
 #include "Engine/Graphics/Raytracing/DynamicRaytracingData.h"
 
 namespace App::ECS
@@ -516,6 +518,8 @@ namespace App::ECS
 		// スピードに応じたラジアルブラーの強さ。
 		// 画角と同じ speed01 を読むので、それを書く TPSSystem より後に回る
 		a_world.RegisterSystem<System::RadialBlurSpeedSystem>();
+		// ボスの咆哮などで画面のラジアルブラーを震わせる(速度ぶんとは別に持ち、送るときに足す)
+		a_world.RegisterSystem<System::RadialBlurShakeSystem>();
 		// スピードラインの量(カメラのエフェクトの params[0])。
 		// 画角・ブラーと同じ speed01 を読むので、それを書く TPSSystem より後に回る
 		a_world.RegisterSystem<System::SpeedLineSystem>();
@@ -666,6 +670,8 @@ namespace App::ECS
 		a_world.AddResource<InstanceResource::UICursorResource>();
 		// 行ける範囲(Boundary オブジェクトが書き、BoundaryClampSystem が読む)
 		a_world.AddResource<InstanceResource::BoundaryResource>();
+		// 画面のラジアルブラーの震え(ボスの咆哮が書き、RadialBlurShakeSystem が読む)
+		a_world.AddResource<InstanceResource::RadialBlurShakeResource>();
 
 		// 初期化
 		a_world.RefResource<Engine::Pool::RangePool<Engine::Resource::BoneMatrix>>().Init(10000);

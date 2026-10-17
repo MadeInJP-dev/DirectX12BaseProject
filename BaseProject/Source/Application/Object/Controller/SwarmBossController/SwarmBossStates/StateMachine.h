@@ -15,6 +15,7 @@ namespace App::Object
 		CoilAttack,			// プレイヤーを中心に体を円状に巻き、地面と上を行き来しながら、各小隊長がボイドを切り離して自爆ミサイルにする
 		Reorganize,			// 体力が一定量減るたびに、球体状にぐるぐるまとまって小隊長を整理する(その間は無敵)。抽選には入らない
 		Death,				// 体力が一定値を切ったら、地上の高いところで球体状にまとまり、ウェーブを速めていって最後に爆散する。抜けない
+		Emerge,				// 出現 : 地面の下から一直線に上空へ飛び出し、とぐろを巻きながら鳴く。出した直後だけ。抽選には入らない
 	};
 
 	class SwarmBossStateMachine
@@ -49,6 +50,10 @@ namespace App::Object
 		//------------------------------------------------------------------------------------------
 		void Archive(Engine::Persistence::Archive& a_ar);
 		void DrawInspector();
+
+		// 後から足したステートの調整値。バイナリは書いた順に読むので、Archive の並びへ混ぜず、
+		// 持ち主の保存値の末尾(区切りの中)でこちらを呼ぶ
+		void ArchiveAppended(Engine::Persistence::Archive& a_ar);
 
 	private:
 

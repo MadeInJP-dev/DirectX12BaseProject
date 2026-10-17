@@ -7,6 +7,7 @@
 #include "Engine/Resource/Data/EffectAsset/EffectAsset.h"
 #include "Engine/Resource/Data/EffectPrefab/EffectPrefab.h"
 #include "Engine/EditorField/EditorField.h"	// コンポーネントの Traits が使うので先に置く
+#include "Engine/Audio/AudioManager.h"
 
 // App
 #include "../../../ECS/World/APPWorld.h"
@@ -46,6 +47,7 @@
 #include "Application/Components/Combat/DefenseRatioComponent.h"
 #include "Application/Components/Boid/SwarmBurstComponent.h"
 #include "Application/Components/Movement/ActualVelocityComponent.h"
+#include "../../../InstanceResource/RadialBlurShakeResource.h"
 
 namespace App::Object
 {
@@ -93,6 +95,27 @@ namespace App::Object
 			{
 				if (_part.IsValid() && _part.timing.duration <= 0.0f) return false;
 			}
+			return true;
+		}
+
+		//----------------------------------------------------------------------
+		// 操作しているプレイヤーの位置(ワールド)。見つからなければ false
+		//----------------------------------------------------------------------
+		bool FindPlayerPos(Engine::ECS::World& a_world, Math::Vector3& a_outPos)
+		{
+			Engine::ECS::Entity _player = Engine::ECS::Limits::INVALID_ENTITY;
+			a_world.ForEach<const Component::ActiveTag, const Component::PlayerControllTag>(
+				[&](Engine::ECS::Chunk* a_pChunk, uint32_t a_count, const Component::ActiveTag*, const Component::PlayerControllTag*)
+				{
+					if (_player != Engine::ECS::Limits::INVALID_ENTITY || a_count == 0) return;
+					_player = a_pChunk->entityData[0];
+				}
+			);
+			if (_player == Engine::ECS::Limits::INVALID_ENTITY) return false;
+			if (!a_world.HasComponent<Component::LocalTransformComponent>(_player)) return false;
+
+			// プレイヤーは親を持たないので、ローカル座標がそのままワールド座標
+			a_outPos = a_world.RefData<Component::LocalTransformComponent>(_player)->pos;
 			return true;
 		}
 
@@ -205,6 +228,20 @@ namespace App::Object
 	}
 	void SwarmBossController::Start(Engine::GameObject::ObjectContext& /*a_context*/)
 	{}
+	void SwarmBossController::Release(Engine::GameObject::ObjectContext& a_context)
+	{
+		SequenceActor::Release(a_context);
+
+		// サウンドインスタンスのプールはアプリ寿命なので、借りた側が必ず返す
+		ReleaseRoarSound(a_context);
+
+		// 鳴いている最中に消えても、画面の震えが残らないようにする
+		m_roarWeight = 0.0f;
+		if (a_context.pWorld && a_context.pWorld->HasResource<InstanceResource::RadialBlurShakeResource>())
+		{
+			a_context.pWorld->RefResource<InstanceResource::RadialBlurShakeResource>().Clear();
+		}
+	}
 	void SwarmBossController::Update(Engine::GameObject::ObjectContext& a_context)
 	{
 		if (!m_isSpown || !a_context.pWorld) return;
@@ -232,6 +269,10 @@ namespace App::Object
 
 		// 体当たりのダメージ(触れたかを見るのは BoidContactDamageSystem)
 		UpdateContactDamage(a_context);
+
+		// 咆哮の画面の震え(震わせるのは RadialBlurShakeSystem)。爆散した後は行動が回らないので止める
+		if (m_isBurst) m_roarWeight = 0.0f;
+		UpdateRoarBlur(a_context);
 
 		// 残りの生存数(HP代わり)。印を数え直すだけ
 		m_currentBoids = CountAliveBoids(a_context);
@@ -280,6 +321,65 @@ namespace App::Object
 		{
 			BurstBody(a_context, _stateContext.burst);
 		}
+
+		// 咆哮 : 鳴き声は頼まれた瞬間に鳴らし、画面の震えは強さを覚えておく(書くのは UpdateRoarBlur)
+		if (_stateContext.isRequestRoar)
+		{
+			PlayRoar(a_context);
+		}
+		m_roarWeight = std::clamp(_stateContext.roarWeight, 0.0f, 1.0f);
+	}
+
+	//======================================================================================
+	// 咆哮 : 鳴き声
+	//--------------------------------------------------------------------------------------
+	// 初めて鳴くときに借りて、以降は同じものを頭から鳴らし直す。返すのは Release
+	//======================================================================================
+	void SwarmBossController::PlayRoar(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (m_roarSoundGUID == Core::DEFAULT_GUID) return;
+		if (!a_context.pServices || !a_context.pServices->pAudioManager) return;
+		auto& _audio = *a_context.pServices->pAudioManager;
+
+		// 画面に出す音なので 2D で借りる(定位を付けない)
+		if (!_audio.RefInstance(m_roarSoundHandle))
+		{
+			m_roarSoundHandle = _audio.CreateSoundInstance(m_roarSoundGUID, false);
+		}
+
+		if (auto* _pInstance = _audio.RefInstance(m_roarSoundHandle))
+		{
+			_pInstance->Stop();
+			_pInstance->SetVolume(m_roarVolume);
+			_pInstance->Play(false);
+		}
+	}
+
+	void SwarmBossController::ReleaseRoarSound(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (a_context.pServices && a_context.pServices->pAudioManager)
+		{
+			a_context.pServices->pAudioManager->ReleaseSoundInstance(m_roarSoundHandle);
+		}
+		m_roarSoundHandle = {};
+	}
+
+	//======================================================================================
+	// 咆哮 : 画面の震え
+	//--------------------------------------------------------------------------------------
+	// 頼まれていない間も 0 を書く(書きっぱなしにすると震えが残る)
+	//======================================================================================
+	void SwarmBossController::UpdateRoarBlur(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (!a_context.pWorld) return;
+		if (!a_context.pWorld->HasResource<InstanceResource::RadialBlurShakeResource>()) return;
+
+		auto& _res = a_context.pWorld->RefResource<InstanceResource::RadialBlurShakeResource>();
+		_res.weight         = m_roarWeight;
+		_res.strength       = m_roarBlurStrength;
+		_res.strengthJitter = m_roarBlurStrengthJitter;
+		_res.centerJitter   = m_roarBlurCenterJitter;
+		_res.frequency      = m_roarBlurFrequency;
 	}
 
 	//======================================================================================
@@ -848,6 +948,16 @@ namespace App::Object
 		if (m_isSpown) return true;
 		if (!a_context.pWorld || !a_context.pServices || !a_context.pServices->pResourceManager) return false;
 
+		// 体を向ける Yaw。地面から出すときはプレイヤーの方へ向ける
+		// (列は向きの真後ろへ埋めるので、飛び出した柱がプレイヤーの側へ少し傾く)
+		m_spawnYaw = 0.0f;
+		Math::Vector3 _playerPos = {};
+		if (m_isEmergeOnSpawn && FindPlayerPos(*a_context.pWorld, _playerPos))
+		{
+			float _pitch = 0.0f;
+			Component::MakeLookAngleFromDir(Math::Vector3(_playerPos.x - m_spawnPos.x, 0.0f, _playerPos.z - m_spawnPos.z), m_spawnYaw, _pitch);
+		}
+
 		// リーダーが居なければ何も出さない。
 		// 置いた直後(プレハブ未設定)もここを通るので、止めずに警告だけ出す
 		if (!CreateLeader(a_context)) return false;
@@ -863,6 +973,13 @@ namespace App::Object
 		m_isBurst          = false;
 		m_isBodyCounted    = false;
 		m_waveSpeedScale   = 1.0f;
+		m_roarWeight       = 0.0f;
+
+		// 地面から出すなら、最初の行動を出現にする(切り替わるのは最初の行動の更新)
+		if (m_isEmergeOnSpawn)
+		{
+			m_stateMachine.ReserveChangeState(ESwarmBossState::Emerge);
+		}
 
 		// 小隊長 → 各小隊長のボイド
 		return CreatePlatoonLeaders(a_context);
@@ -880,9 +997,11 @@ namespace App::Object
 			return false;
 		}
 
-		// プレハブのインスタンス取得(位置はここで入る)
+		// プレハブのインスタンス取得(位置はここで入る)。
+		// 地面から出すときは、生成位置の真下へ埋めておく
 		App::Utility::SpawnParams _params = {};
 		_params.pos = m_spawnPos;
+		if (m_isEmergeOnSpawn) _params.pos.y -= std::max(m_emergeDepth, 0.0f);
 
 		std::vector<Engine::Resource::PrefabInstanceData> _instanceVec = {};
 		if (!App::Utility::BuildSpawnInstanceData(_world, *_pPrefab, _params, _instanceVec))
@@ -908,9 +1027,16 @@ namespace App::Object
 		// 小隊長を並べる向き(PLATOON_LINE_DIR)と揃えてある。
 		// 上下も体ごと向かせる(空を泳ぐので、人型のように上体だけでは向かない)
 		EditRootComponent<Component::LookAngleComponent>(_world, _instanceVec,
-			[](Component::LookAngleComponent& a_comp)
+			[this](Component::LookAngleComponent& a_comp)
 			{
 				a_comp.isApplyPitchToBody = true;
+
+				// 地面から出すときは真上(上限まで)を向いた姿勢から始める
+				if (m_isEmergeOnSpawn)
+				{
+					a_comp.Yaw   = m_spawnYaw;
+					a_comp.Pitch = a_comp.maxPitch;
+				}
 			}
 		);
 
@@ -947,6 +1073,18 @@ namespace App::Object
 		// 一列に並べるので、一つ前の相手とその位置を持ち回る
 		Engine::ECS::Entity _preLeader = m_leaderEntity;
 		Math::Vector3 _prePos = m_spawnPos;
+		if (_world.HasComponent<Component::LocalTransformComponent>(m_leaderEntity))
+		{
+			_prePos = _world.RefData<Component::LocalTransformComponent>(m_leaderEntity)->pos;
+		}
+
+		// 並べる向き。地面から出すときはリーダーが向いている向き(ほぼ真上)の真後ろ = 地中へ縦一列。
+		// 小隊長は前の相手の真後ろを追うので、同じ向きに並べておけば出した直後に列が動かない
+		Math::Vector3 _lineDir = PLATOON_LINE_DIR;
+		if (m_isEmergeOnSpawn && _world.HasComponent<Component::LookAngleComponent>(m_leaderEntity))
+		{
+			_lineDir = -Component::MakeLookForward(*_world.RefData<Component::LookAngleComponent>(m_leaderEntity));
+		}
 
 		// ワーム上の1次元位置。頭(リーダー)を0として、間隔を足し上げていく。
 		// 体が曲がっても値は変わらない(伸ばした一本の紐の上での距離)
@@ -980,7 +1118,7 @@ namespace App::Object
 				});
 
 			// 一つ前の相手の後ろへ間隔ぶん下げて置く
-			const Math::Vector3 _pos = _prePos + PLATOON_LINE_DIR * _distance;
+			const Math::Vector3 _pos = _prePos + _lineDir * _distance;
 			EditRootComponent<Component::LocalTransformComponent>(_world, _instanceVec,
 				[&](Component::LocalTransformComponent& a_comp)
 				{
@@ -996,9 +1134,16 @@ namespace App::Object
 			// 前の相手の後ろを狙うのに前方が要る(LookAngle から作る)。
 			// 上下も体ごと向く(列が潜っても機体の向きが進路と揃う)
 			EditRootComponent<Component::LookAngleComponent>(_world, _instanceVec,
-				[](Component::LookAngleComponent& a_comp)
+				[this](Component::LookAngleComponent& a_comp)
 				{
 					a_comp.isApplyPitchToBody = true;
+
+					// 地面から出すときはリーダーと同じく上を向いた姿勢から
+					if (m_isEmergeOnSpawn)
+					{
+						a_comp.Yaw   = m_spawnYaw;
+						a_comp.Pitch = a_comp.maxPitch;
+					}
 				}
 			);
 
@@ -1330,6 +1475,24 @@ namespace App::Object
 				? a_context.pServices->pResourceManager->RequestLoad<Engine::Resource::EffectAsset>(m_groundEffectGUID)
 				: Engine::ResourceRef<Engine::Resource::EffectAsset>{};
 		}
+
+		// ---- 出現と咆哮(後から足したもの) ----
+		// バイナリは書いた順に読むので、区切りを付けて末尾に置く。
+		// 区切りの無い古い .obscene ではここを読まず、既定値のまま残る。足すときはこの区切りの末尾へ
+		Engine::Persistence::ArchiveSection _section(a_ar, "SwarmBossEmerge");
+		a_ar.Field("IsEmergeOnSpawn", m_isEmergeOnSpawn);
+		a_ar.Field("EmergeDepth", m_emergeDepth);
+		m_stateMachine.ArchiveAppended(a_ar);
+
+		a_ar.GUIDField("RoarSoundGUID", m_roarSoundGUID);
+		a_ar.Field("RoarVolume", m_roarVolume);
+		a_ar.Field("RoarBlurStrength", m_roarBlurStrength);
+		a_ar.Field("RoarBlurStrengthJitter", m_roarBlurStrengthJitter);
+		a_ar.Field("RoarBlurCenterJitter", m_roarBlurCenterJitter);
+		a_ar.Field("RoarBlurFrequency", m_roarBlurFrequency);
+
+		// 鳴き声が差し替わっているかもしれないので、次に鳴くときに借り直す
+		if (a_ar.IsLoading()) ReleaseRoarSound(a_context);
 	}
 
 	//======================================================================================
@@ -1343,6 +1506,13 @@ namespace App::Object
 		Engine::EditorField::Header("リーダー");
 		Engine::EditorField::AssetField(_services, "リーダーのプレハブ", "Prefab", m_leaderPrefabGUID);
 		Engine::EditorField::Field("生成位置", m_spawnPos, 0.1f);
+		Engine::EditorField::Field("地面から出す", m_isEmergeOnSpawn);
+		Engine::EditorField::Tooltip("生成位置の真下へ縦一列に埋めて出し、出現の行動(真上へ飛び出してとぐろを巻き、鳴く)から始める");
+		if (m_isEmergeOnSpawn)
+		{
+			Engine::EditorField::Field("頭を埋める深さ", m_emergeDepth, 0.5f, 0.0f);
+			Engine::EditorField::Tooltip("生成位置からの深さ。体はさらにその下へ並ぶ(体の長さぶん)");
+		}
 
 		Engine::EditorField::Header("小隊長");
 		Engine::EditorField::AssetField(_services, "小隊長のプレハブ", "Prefab", m_platoonPrefabGUID);
@@ -1407,6 +1577,29 @@ namespace App::Object
 		Engine::EditorField::Field("爆散のエフェクトの大きさ", m_burstEffectScale, 0.1f, 0.0f);
 		Engine::EditorField::Value("死亡中", "%s%s", m_isDying ? "はい" : "いいえ", m_isBurst ? " (爆散済み)" : "");
 		Engine::EditorField::Value("ウェーブの倍率", "x %.2f", m_waveSpeedScale);
+
+		Engine::EditorField::Header("咆哮");
+		if (Engine::EditorField::AssetField(_services, "鳴き声", "Sound", m_roarSoundGUID))
+		{
+			// 差し替えたら次に鳴くときに借り直す
+			ReleaseRoarSound(a_context);
+		}
+		if (m_roarSoundGUID == Core::DEFAULT_GUID)
+		{
+			Engine::EditorField::HelpText("(未設定 : 鳴き声は出ない)");
+		}
+		Engine::EditorField::Field("鳴き声の音量", m_roarVolume, 0.01f, 0.0f);
+		Engine::EditorField::Field("震えの引きずり量", m_roarBlurStrength, 0.005f, 0.0f, 1.0f);
+		Engine::EditorField::Tooltip("画面のラジアルブラーへ足す量(UV単位)。カメラのブラーを切っていても掛かる");
+		Engine::EditorField::Field("引きずり量の揺れ幅", m_roarBlurStrengthJitter, 0.01f, 0.0f, 1.0f);
+		Engine::EditorField::Field("中心の揺れ幅", m_roarBlurCenterJitter, 0.001f, 0.0f, 0.5f);
+		Engine::EditorField::Field("揺れの速さ", m_roarBlurFrequency, 0.1f, 0.0f);
+		Engine::EditorField::Tooltip("回/秒");
+		Engine::EditorField::Value("震えの強さ", "%.2f", m_roarWeight);
+		if (Engine::EditorField::Button("鳴き声を試す"))
+		{
+			PlayRoar(a_context);
+		}
 
 		Engine::EditorField::Header("リーダーの行動");
 		m_stateMachine.DrawInspector();

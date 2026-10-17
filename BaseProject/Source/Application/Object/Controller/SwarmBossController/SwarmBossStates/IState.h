@@ -58,6 +58,10 @@ namespace App::Object
 		float bodyDefenseRatio   = 1.0f;	// 体(ボイド)の防御比率。1 : そのまま食らう / 0 : 無敵
 		float waveSpeedScale     = 1.0f;	// 発光のウェーブを速める倍率(速さに掛け、出す間隔を割る)
 		SwarmBossBurstRequest burst = {};	// 体を爆散させてほしい(死亡の最後)
+
+		// 咆哮(鳴き声と、画面のラジアルブラーの震え)。鳴らす音とブラーの調整値はコントローラーが持つ
+		bool isRequestRoar = false;			// 鳴き声を鳴らしてほしい(鳴き始めの1フレームだけ立てる)
+		float roarWeight   = 0.0f;			// 画面を震わせる強さ(0〜1。鳴いている間、毎フレーム頼む)
 	};
 
 	class IState

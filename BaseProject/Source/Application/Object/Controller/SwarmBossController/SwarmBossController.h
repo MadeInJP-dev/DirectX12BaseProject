@@ -26,6 +26,8 @@ namespace App::Object
 	///   生成後にシーンを保存しても、読み直したときに一式が重ならない。
 	/// ・SceneSequence のウェーブに載せると、そのウェーブが来るまで出ない(SequenceActor)。
 	///   載せていなければ今までどおり Awake で出る。
+	/// ・地面から出す設定(m_isEmergeOnSpawn)なら、生成位置の真下へ縦一列に埋めて出し、
+	///   出現の行動(Emerge)から始める。真上へ飛び出して、とぐろを巻きながら鳴く。
 	/// </remarks>
 	class SwarmBossController final : public SequenceActor
 	{
@@ -39,6 +41,9 @@ namespace App::Object
 		void PostDeserialize(Engine::GameObject::ObjectContext& a_context) override;
 		void Awake(Engine::GameObject::ObjectContext& a_context) override;
 		void Start(Engine::GameObject::ObjectContext& a_context) override;
+
+		// 借りた鳴き声を返し、画面の震えを止める
+		void Release(Engine::GameObject::ObjectContext& a_context) override;
 
 		//------------------------------------------------------------------------------------------
 		// 更新
@@ -169,6 +174,18 @@ namespace App::Object
 		// 触れたかを見てダメージを積むのは BoidContactDamageSystem
 		void UpdateContactDamage(Engine::GameObject::ObjectContext& a_context);
 
+		//------------------------------------------------------------------------------------------
+		// 咆哮(鳴き声と画面の震え)
+		//------------------------------------------------------------------------------------------
+		// 鳴き声を鳴らす。行動が頼んできたとき(isRequestRoar)に呼ぶ
+		void PlayRoar(Engine::GameObject::ObjectContext& a_context);
+
+		// 借りている鳴き声を返す(鳴っていれば止まる)
+		void ReleaseRoarSound(Engine::GameObject::ObjectContext& a_context);
+
+		// 画面の震えの強さと調整値を RadialBlurShakeResource へ書く。震わせるのは RadialBlurShakeSystem
+		void UpdateRoarBlur(Engine::GameObject::ObjectContext& a_context);
+
 	private:
 		// 生成されたかどうか
 		bool m_isSpown = false;
@@ -187,6 +204,15 @@ namespace App::Object
 		Engine::ResourceRef<Engine::Resource::Prefab> m_leaderPrefabHandle;	// ランタイム用
 		Engine::ECS::Entity m_leaderEntity = Engine::ECS::Limits::INVALID_ENTITY;
 		Math::Vector3 m_spawnPos = {};										// リーダーの生成位置(ワールド)
+
+		// 地面から出す : 生成位置から m_emergeDepth 下に頭を置き、体をその下へ縦一列に埋める。
+		// 列は真下ではなく、体が向いている向き(Pitch は上限まで上げ、Yaw はプレイヤーの方)の真後ろ。
+		// 小隊長は「前の相手の真後ろ」を追うので、真下にすると上限の傾きのぶん最初に横へずれるため
+		bool m_isEmergeOnSpawn = true;		// 地面から出すか(false なら今までどおり生成位置に横一列で出す)
+		float m_emergeDepth    = 60.0f;		// 生成位置から頭を埋める深さ(m)
+
+		// ---- 実行中の状態(保存しない) ----
+		float m_spawnYaw = 0.0f;			// 生成したときに向けた Yaw(度)
 
 		// 構成する小隊長 : 基本的にリーダーに追従する処理はECS側
 		// 並びはリーダーの後ろ(-Z)へ一列。間隔は小隊長プレハブの PlatoonLeaderComponent.distance
@@ -345,5 +371,26 @@ namespace App::Object
 		float m_burrowEffectTimer = 0.0f;		// 次に炊けるまでの残り時間(秒)
 		bool m_isLeaderGroundKnown = false;		// 地面との関係を1度でも見たか(最初のフレームで炊かないため)
 		bool m_wasLeaderUnderGround = false;	// 前に見たときに地中だったか
+
+		//------------------------------------------------------------------------------------------
+		// 咆哮(出現の行動などが頼む)
+		//
+		// 鳴き声は画面に出す音として 2D で鳴らす(どこに居ても同じ大きさで聞こえる)。
+		// 画面の震えは RadialBlurShakeResource へ強さと調整値を書くだけで、
+		// カメラのラジアルブラーへ足すのは RadialBlurShakeSystem。
+		// 調整値はここ、いつ・どれだけ鳴くかは行動が持つ。
+		//------------------------------------------------------------------------------------------
+		// 鳴き声(Sound)。既定は Asset/Sound/Boss/VoidWorm_Roar(環境/gen_worm_roar.py で作ったもの)
+		Core::GUID m_roarSoundGUID = Core::GUID("ce80f545-bef9-4dde-a491-18edc25cea0d");
+		float m_roarVolume = 1.0f;					// 鳴き声の音量(1 で 100%)
+
+		float m_roarBlurStrength       = 0.15f;		// 震えの引きずり量(UV単位。強さ 1 のとき)
+		float m_roarBlurStrengthJitter = 0.6f;		// 引きずり量の揺れ幅(引きずり量に対する割合。0〜1)
+		float m_roarBlurCenterJitter   = 0.02f;		// ブラーの中心を揺らす幅(UV単位)
+		float m_roarBlurFrequency      = 18.0f;		// 揺れの速さ(回/秒)
+
+		// ---- 実行中の状態(保存しない) ----
+		Engine::Handle<Engine::Resource::SoundInstance> m_roarSoundHandle = {};	// 借りている鳴き声
+		float m_roarWeight = 0.0f;				// 行動から頼まれている震えの強さ(0〜1)
 	};
 }

@@ -432,6 +432,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Emerge\Emerge.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Common\BallMotion.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -793,6 +798,11 @@
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Camera\RadialBlurSpeedSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Camera\RadialBlurShakeSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
@@ -1828,6 +1838,7 @@
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\DiveAttack\DiveAttack.h" />
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\CoilAttack\CoilAttack.h" />
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Reorganize\Reorganize.h" />
+    <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Emerge\Emerge.h" />
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Common\BallMotion.h" />
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Death\Death.h" />
     <ClInclude Include="Source\Application\Systems\Boid\SwarmBurstSystem.h" />
@@ -1909,6 +1920,7 @@
     <ClInclude Include="Source\Application\InstanceResource\BoundaryResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\HitEventResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\WormWaveResource.h" />
+    <ClInclude Include="Source\Application\InstanceResource\RadialBlurShakeResource.h" />
     <ClInclude Include="Source\Application\Object\UI\HUD\CombatReticleHUD\CombatReticleHUD.h" />
     <ClInclude Include="Source\Application\Object\UI\HUD\TargetBoxHUD\TargetBoxHUD.h" />
     <ClInclude Include="Source\Application\Object\UI\HUD\AimReticleHUD\AimReticleHUD.h" />
@@ -1971,6 +1983,7 @@
     <ClInclude Include="Source\Application\Systems\Camera\TPSSystem.h" />
     <ClInclude Include="Source\Application\Systems\Camera\CameraProjUpdateSystem.h" />
     <ClInclude Include="Source\Application\Systems\Camera\RadialBlurSpeedSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Camera\RadialBlurShakeSystem.h" />
     <ClInclude Include="Source\Application\Systems\Camera\MainCameraSystem.h" />
     <ClInclude Include="Source\Application\Systems\UI\HUDGatherSystem.h" />
     <ClInclude Include="Source\Application\Systems\Input\InputActionSystem.h" />

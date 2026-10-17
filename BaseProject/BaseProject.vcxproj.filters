@@ -1435,6 +1435,9 @@
     <Filter Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Reorganize">
       <UniqueIdentifier>{f239ee07-b5af-4fec-8b95-059800e6042b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Emerge">
+      <UniqueIdentifier>{da36be6e-a30f-4886-9907-7e9f709bc961}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Common">
       <UniqueIdentifier>{6c89760e-064a-4537-89ba-aede324b4bd0}</UniqueIdentifier>
     </Filter>
@@ -1783,6 +1786,9 @@
       <Filter>Source\Application\Systems\Camera</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Camera\RadialBlurSpeedSystem.cpp">
+      <Filter>Source\Application\Systems\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Camera\RadialBlurShakeSystem.cpp">
       <Filter>Source\Application\Systems\Camera</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Camera\TPSSystem.cpp">
@@ -2757,6 +2763,9 @@
     <ClCompile Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Reorganize\Reorganize.cpp">
       <Filter>Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Reorganize</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Emerge\Emerge.cpp">
+      <Filter>Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Emerge</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Common\BallMotion.cpp">
       <Filter>Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Common</Filter>
     </ClCompile>
@@ -3191,6 +3200,9 @@
     <ClInclude Include="Source\Application\InstanceResource\WormWaveResource.h">
       <Filter>Source\Application\InstanceResource</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\InstanceResource\RadialBlurShakeResource.h">
+      <Filter>Source\Application\InstanceResource</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\InstanceResource\HitEventResource.h">
       <Filter>Source\Application\InstanceResource</Filter>
     </ClInclude>
@@ -3459,6 +3471,9 @@
       <Filter>Source\Application\Systems\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Camera\RadialBlurSpeedSystem.h">
+      <Filter>Source\Application\Systems\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Camera\RadialBlurShakeSystem.h">
       <Filter>Source\Application\Systems\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Camera\TPSSystem.h">
@@ -4765,6 +4780,9 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Reorganize\Reorganize.h">
       <Filter>Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Reorganize</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Emerge\Emerge.h">
+      <Filter>Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Emerge</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Common\BallMotion.h">
       <Filter>Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Common</Filter>
