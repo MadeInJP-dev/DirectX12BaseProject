@@ -186,6 +186,13 @@ namespace App::Object
 		// 画面の震えの強さと調整値を RadialBlurShakeResource へ書く。震わせるのは RadialBlurShakeSystem
 		void UpdateRoarBlur(Engine::GameObject::ObjectContext& a_context);
 
+		//------------------------------------------------------------------------------------------
+		// 胴回りの回転(突進・ダイブ)
+		//------------------------------------------------------------------------------------------
+		// 行動から頼まれた強さへ回転を加減速し、小隊長ごとの角度と輪の半径を
+		// PlatoonSpinComponent へ書く(小隊長への命令)。ボイドを輪の上へ向かわせるのは FollowLeaderSystem
+		void UpdateBodySpin(Engine::GameObject::ObjectContext& a_context, float a_requestRate);
+
 	private:
 		// 生成されたかどうか
 		bool m_isSpown = false;
@@ -392,5 +399,27 @@ namespace App::Object
 		// ---- 実行中の状態(保存しない) ----
 		Engine::Handle<Engine::Resource::SoundInstance> m_roarSoundHandle = {};	// 借りている鳴き声
 		float m_roarWeight = 0.0f;				// 行動から頼まれている震えの強さ(0〜1)
+
+		//------------------------------------------------------------------------------------------
+		// 胴回りの回転(突進・ダイブが頼む)
+		//
+		// ボイドを、所属している小隊長を起点に、進む向きを軸にした輪の上で回す。
+		// 頼まれている間は回転を m_spinAcceleration で最高速まで上げていき(だんだん速くなる)、
+		// 頼まれなくなったら m_spinDeceleration で緩めながら輪を畳む。
+		// 小隊長ごとに角度を m_spinTwist ずつずらすので、体全体ではねじれた螺旋に見える
+		//------------------------------------------------------------------------------------------
+		float m_spinMaxSpeed     = 9.0f;	// 回転の最高速(ラジアン/秒)
+		float m_spinAcceleration = 4.0f;	// 回転を上げる速さ(ラジアン/秒^2)
+		float m_spinDeceleration = 6.0f;	// 回転を緩める速さ(ラジアン/秒^2)
+		float m_spinRadius       = 10.0f;	// 輪の半径(m。ボイドごとに 0.6〜1 倍へばらける)
+		float m_spinRadiusRate   = 2.0f;	// 輪を広げる / 畳む速さ(1/秒。1 秒で半径の何倍ぶん動くか)
+		float m_spinTwist        = 0.35f;	// 小隊長1つごとの角度のずれ(ラジアン)
+
+		// ---- 実行中の状態(保存しない) ----
+		float m_spinSpeed       = 0.0f;		// 今の回転の速さ(ラジアン/秒)
+		float m_spinAngle       = 0.0f;		// 今の角度(ラジアン。頭の小隊長の角度)
+		float m_spinRadiusRatio = 0.0f;		// 輪の広がり(0〜1。半径に掛ける)
+		float m_spinRequestRate = 0.0f;		// 行動から頼まれている強さ(表示用)
+		bool m_isSpinWritten    = false;	// 回っている値を小隊長へ書いたか(止まったら 0 を一度だけ書く)
 	};
 }

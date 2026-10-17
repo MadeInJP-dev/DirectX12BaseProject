@@ -92,6 +92,7 @@
 #include "Application/Components/Boid/BoidSteeringParamsComponent.h"
 #include "Application/Components/Boid/BoidLeaderComponent.h"
 #include "Application/Components/Boid/PlatoonLeaderComponent.h"
+#include "Application/Components/Boid/PlatoonSpinComponent.h"
 #include "Application/Components/Boid/BoidSpownerComponent.h"
 #include "Application/Components/Boid/SwarmBossBoidTag.h"
 #include "Application/Components/Boid/SerchGroundComponent.h"
@@ -399,6 +400,7 @@ namespace App::ECS
 		a_world.RegisterComponent<Component::BoidLeaderComponent>("BoidLeaderComponent");
 		// リーダーに連なる小隊長。一つ前の相手は SwarmBossController が生成時に書き込む
 		a_world.RegisterComponent<Component::PlatoonLeaderComponent>("PlatoonLeaderComponent");
+		a_world.RegisterComponent<Component::PlatoonSpinComponent>("PlatoonSpinComponent");
 		// 自分の周りに出すボイドの設定(数は出す側が決める)
 		a_world.RegisterComponent<Component::BoidSpownerComponent>("BoidSpownerComponent");
 		// 群れのボスの体を作っているボイドの印。数がそのままボスの体力

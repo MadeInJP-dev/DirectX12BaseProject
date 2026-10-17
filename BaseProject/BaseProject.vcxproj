@@ -1809,6 +1809,7 @@
     <ClInclude Include="Source\Application\Components\Camera\CameraDeadZoneComponent.h" />
     <ClInclude Include="Source\Application\Components\Boid\BoidSpownerComponent.h" />
     <ClInclude Include="Source\Application\Components\Boid\PlatoonLeaderComponent.h" />
+    <ClInclude Include="Source\Application\Components\Boid\PlatoonSpinComponent.h" />
     <ClInclude Include="Source\Application\Components\Boss\SwarmBossWave.h" />
     <ClInclude Include="Source\Application\Components\Boid\WarmGroundEffectComponent.h" />
     <ClInclude Include="Source\Application\Components\Boid\BoidWaveStateComponent.h" />

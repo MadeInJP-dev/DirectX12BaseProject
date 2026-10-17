@@ -107,18 +107,25 @@ namespace App::Object
 
 	void SwarmBossStateMachine::Archive(Engine::Persistence::Archive& a_ar)
 	{
+		// ※ 並びは unordered_map の順。ここへ足すと既存のバイナリの読み順が崩れるので、
+		//    後から足す調整値は ArchiveAppended へ書く
 		for (auto& [_state, _upState] : m_upStates)
 		{
-			// 後から足したものは ArchiveAppended で末尾に書く(既存のバイナリの読み順を崩さない)
-			if (_state == ESwarmBossState::Emerge) continue;
 			if (_upState) _upState->Archive(a_ar);
 		}
 	}
 
 	void SwarmBossStateMachine::ArchiveAppended(Engine::Persistence::Archive& a_ar)
 	{
-		auto _it = m_upStates.find(ESwarmBossState::Emerge);
-		if (_it != m_upStates.end() && _it->second) _it->second->Archive(a_ar);
+		// 列挙の順で回し、ステートごとに区切る(どれかのステートに足しても、ほかの読み出しがずれない)
+		for (const ESwarmBossState _state : magic_enum::enum_values<ESwarmBossState>())
+		{
+			auto _it = m_upStates.find(_state);
+			if (_it == m_upStates.end() || !_it->second) continue;
+
+			Engine::Persistence::ArchiveSection _section(a_ar, magic_enum::enum_name(_state));
+			_it->second->ArchiveAppended(a_ar);
+		}
 	}
 
 	void SwarmBossStateMachine::DrawInspector()

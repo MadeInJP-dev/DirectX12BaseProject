@@ -51,8 +51,8 @@ namespace App::Object
 		void Archive(Engine::Persistence::Archive& a_ar);
 		void DrawInspector();
 
-		// 後から足したステートの調整値。バイナリは書いた順に読むので、Archive の並びへ混ぜず、
-		// 持ち主の保存値の末尾(区切りの中)でこちらを呼ぶ
+		// 後から足した調整値(IState::ArchiveAppended)。バイナリは書いた順に読むので、Archive の並びへ混ぜず、
+		// 持ち主の保存値の末尾(区切りの中)でこちらを呼ぶ。並びは列挙の順で、ステートごとに区切る
 		void ArchiveAppended(Engine::Persistence::Archive& a_ar);
 
 	private:

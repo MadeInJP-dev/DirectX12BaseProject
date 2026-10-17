@@ -16,6 +16,8 @@ namespace App::Object
 	///   プレイヤーが後ろに回ったら曲げない(Uターンして追い続けないように)。
 	/// ・速さは移動入力の長さで上げる(SwarmLeaderMoveSystem は 入力 × moveSpeed)。
 	///   小隊長はリーダーの platoonSpeedScale 倍なので、それを超えると列が千切れる。
+	/// ・溜めと突進の間は、体のボイドを小隊長の胴回りで回すよう頼む(bodySpinRate = m_spinRate)。
+	///   回転はコントローラーがだんだん上げていくので、溜めで回り始めて突進で速くなる。
 	/// ・プレイヤーが見つからなければ何もせず徘徊へ戻る
 	/// </remarks>
 	class SwarmBossChargeState : public IState
@@ -26,6 +28,7 @@ namespace App::Object
 		void Exit(SwarmBossStateContext& a_context) override;
 
 		void Archive(Engine::Persistence::Archive& a_ar) override;
+		void ArchiveAppended(Engine::Persistence::Archive& a_ar) override;
 		void DrawInspector() override;
 
 	private:
@@ -55,6 +58,7 @@ namespace App::Object
 		float m_overshootDistance = 80.0f;	// プレイヤーをこの距離だけ通り過ぎたら突進をやめる
 		float m_recoverTime       = 2.0f;	// 余韻の長さ(秒)
 		float m_recoverThrottle   = 0.6f;	// 余韻中の移動入力の強さ(0〜1)
+		float m_spinRate          = 1.0f;	// 溜めと突進の間の胴回りの回転の強さ(0〜1。最高速に対する割合。0 で回さない)
 
 		//------------------------------------------------------------------------------------------
 		// 実行中の状態(保存しない)

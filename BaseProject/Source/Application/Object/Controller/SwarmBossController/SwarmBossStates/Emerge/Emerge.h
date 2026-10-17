@@ -33,7 +33,8 @@ namespace App::Object
 		void Update(SwarmBossStateContext& a_context) override;
 		void Exit(SwarmBossStateContext& a_context) override;
 
-		void Archive(Engine::Persistence::Archive& a_ar) override;
+		// 後から足したステートなので、調整値はすべて ArchiveAppended へ書く
+		void ArchiveAppended(Engine::Persistence::Archive& a_ar) override;
 		void DrawInspector() override;
 
 	private:

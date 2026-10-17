@@ -221,7 +221,7 @@ namespace App::Object
 		}
 	}
 
-	void SwarmBossEmergeState::Archive(Engine::Persistence::Archive& a_ar)
+	void SwarmBossEmergeState::ArchiveAppended(Engine::Persistence::Archive& a_ar)
 	{
 		// ステートの調整値は同じ階層に並ぶので、名前の頭に Emerge を付けて区別する
 		a_ar.Field("EmergeRiseSpeedScale", m_riseSpeedScale);

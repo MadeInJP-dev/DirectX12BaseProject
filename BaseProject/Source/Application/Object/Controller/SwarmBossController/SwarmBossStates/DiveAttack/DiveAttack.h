@@ -8,7 +8,7 @@ namespace App::Object
 	/// ダイブ : プレイヤーから離れて高く上がり、放物線(二次関数)を描いてプレイヤーへ急降下する
 	/// </summary>
 	/// <remarks>
-	/// 流れ : 離れる(Rise) → 狙う(Hover) → 急降下(Dive) → 余韻(Recover) → 徘徊へ
+	/// 流れ : 離れる(Rise) → 狙う(Hover) → 急降下(Dive) → 潜る(Burrow) → 余韻(Recover) → 徘徊へ
 	///
 	/// ・離れる先はプレイヤーから見て今の自分側へ m_launchDistance、高さ m_launchHeight の点。
 	/// ・狙う間はゆっくりプレイヤーへ寄る(向きを変えるのは SwarmLookSystem なので、体がプレイヤーを向く)。
@@ -19,8 +19,12 @@ namespace App::Object
 	/// ・曲線は「曲線上を進む目標点」を追う形でなぞる(目標点の進む向き + ずれを詰める分)。
 	///   速さは移動入力の長さで上げる(SwarmLeaderMoveSystem は 入力 × moveSpeed)。
 	///   小隊長はリーダーの platoonSpeedScale 倍なので、それを超えると列が千切れる。
-	/// ・終点に着いたら突進と同じく、同じ向きへ惰性で少し進んでから徘徊へ戻る
-	///   (ボイドは地形をすり抜けるので、そのまま地面へ突っ込んでもよい)。
+	/// ・終点(プレイヤーが居た所)を通り過ぎたら、進んでいた向きのまま地面へ突っ込み、
+	///   地表から m_burrowDepth の深さまで潜る(地面との関係はリーダーの SerchGroundComponent)。
+	///   体はリーダーの軌跡をなぞるので、頭に続いて体も地中へ入っていく。
+	///   潜ったら、その深さを保ったまま同じ向きへ少し進んでから徘徊へ戻る(余韻)。
+	/// ・狙う・急降下・潜る間は、体のボイドを小隊長の胴回りで回すよう頼む(bodySpinRate = m_spinRate)。
+	///   回転はコントローラーがだんだん上げていくので、狙いで回り始めて急降下で速くなる。
 	/// ・プレイヤーが居なければ(急降下より前なら)何もせず徘徊へ戻る。
 	/// </remarks>
 	class SwarmBossDiveAttackState : public IState
@@ -31,6 +35,7 @@ namespace App::Object
 		void Exit(SwarmBossStateContext& a_context) override;
 
 		void Archive(Engine::Persistence::Archive& a_ar) override;
+		void ArchiveAppended(Engine::Persistence::Archive& a_ar) override;
 		void DrawInspector() override;
 
 	private:
@@ -39,7 +44,8 @@ namespace App::Object
 			Rise,		// 離れる : プレイヤーから離れて高く上がる
 			Hover,		// 狙う : ゆっくりプレイヤーへ向く
 			Dive,		// 急降下 : 放物線をなぞってプレイヤーへ
-			Recover,	// 余韻 : 惰性で進んでから徘徊へ
+			Burrow,		// 潜る : 通り過ぎた勢いのまま地面へ突っ込む
+			Recover,	// 余韻 : 潜った深さのまま進んでから徘徊へ
 			End,		// 切り替え要求済み(次のフレームで抜ける)
 		};
 
@@ -77,9 +83,18 @@ namespace App::Object
 		float m_followGain      = 4.0f;		// 曲線からのずれを詰める強さ(1/秒)
 		float m_diveMaxTime     = 5.0f;		// 急降下の最長時間(秒)
 
+		// 潜る(プレイヤーを通り過ぎた後)
+		float m_burrowDepth     = 30.0f;	// 地表からこの深さまで潜る(体が地表から出ないように)
+		float m_burrowForward   = 30.0f;	// 潜りながら進む量(水平。大きいほど浅い角度で突っ込む)
+		float m_depthTolerance  = 5.0f;		// 狙いの深さからこの範囲に入ったら余韻へ
+		float m_burrowMaxTime   = 5.0f;		// 潜る最長時間(秒)
+
 		// 余韻
 		float m_recoverTime     = 1.5f;		// 余韻の長さ(秒)
 		float m_recoverThrottle = 0.6f;		// 余韻中の移動入力の強さ(0〜1)
+
+		// 胴回りの回転
+		float m_spinRate        = 1.0f;		// 狙う・急降下・潜る間の回転の強さ(0〜1。最高速に対する割合。0 で回さない)
 
 		//------------------------------------------------------------------------------------------
 		// 実行中の状態(保存しない)
@@ -95,6 +110,11 @@ namespace App::Object
 		Math::Vector3 m_curveEnd     = {};
 		float m_curveT = 0.0f;
 
-		Math::Vector3 m_moveDir = {};			// 最後に進んでいた向き(余韻で使う。単位ベクトル)
+		Math::Vector3 m_moveDir = {};			// 最後に進んでいた向き(潜る・余韻で使う。単位ベクトル)
+
+		float m_groundHeight = 0.0f;			// 最後に見た地表の高さ
+		float m_depth = 0.0f;					// 地表からの深さ(地上なら負)
+		bool m_isGroundFound = false;			// 今フレーム地面が見つかっているか
+		bool m_isUnderGround = false;			// 地中に居るか
 	};
 }

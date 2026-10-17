@@ -36,6 +36,7 @@
 #include "Application/Components/Movement/MoveIntentComponent.h"
 #include "Application/Components/Boid/BoidLeaderComponent.h"
 #include "Application/Components/Boid/PlatoonLeaderComponent.h"
+#include "Application/Components/Boid/PlatoonSpinComponent.h"
 #include "Application/Components/Boid/BoidSpownerComponent.h"
 #include "Application/Components/Boid/SerchGroundComponent.h"
 #include "../../../InstanceResource/WormWaveResource.h"
@@ -328,6 +329,75 @@ namespace App::Object
 			PlayRoar(a_context);
 		}
 		m_roarWeight = std::clamp(_stateContext.roarWeight, 0.0f, 1.0f);
+
+		// 胴回りの回転(頼まない行動は既定の 0 = 緩めて畳む)
+		UpdateBodySpin(a_context, _stateContext.bodySpinRate);
+	}
+
+	//======================================================================================
+	// 胴回りの回転
+	//--------------------------------------------------------------------------------------
+	// 速さは目標(最高速 × 頼まれた強さ)へ加速度で寄せる。上げるときは m_spinAcceleration、
+	// 下げるときは m_spinDeceleration。上げるのが遅いほど「だんだん速くなる」感じが出る。
+	// 輪の広がりは、頼まれていれば 1 へ、頼まれていなければ回転が止まるにつれて 0 へ寄せる
+	// (回ったまま急に輪が消えないように)。
+	//
+	// 小隊長への書き込みは 100 体ぶんだけなので毎フレーム行う。止まりきったら 0 を一度書いて以降は書かない
+	//======================================================================================
+	void SwarmBossController::UpdateBodySpin(Engine::GameObject::ObjectContext& a_context, float a_requestRate)
+	{
+		const float _dt = a_context.dt;
+		m_spinRequestRate = std::clamp(a_requestRate, 0.0f, 1.0f);
+
+		//----------------------------------------------------------------------
+		// 速さ : 目標へ加速度で寄せる
+		//----------------------------------------------------------------------
+		const float _goalSpeed = std::max(m_spinMaxSpeed, 0.0f) * m_spinRequestRate;
+		if (m_spinSpeed < _goalSpeed)
+		{
+			m_spinSpeed = std::min(m_spinSpeed + std::max(m_spinAcceleration, 0.0f) * _dt, _goalSpeed);
+		}
+		else
+		{
+			m_spinSpeed = std::max(m_spinSpeed - std::max(m_spinDeceleration, 0.0f) * _dt, _goalSpeed);
+		}
+
+		m_spinAngle += m_spinSpeed * _dt;
+		m_spinAngle  = std::remainder(m_spinAngle, DirectX::XM_2PI);	// 長く回っても精度が落ちないように畳む
+
+		//----------------------------------------------------------------------
+		// 輪の広がり : 頼まれていれば広げ、やめたら回転が落ちるのに合わせて畳む
+		//----------------------------------------------------------------------
+		float _goalRatio = (m_spinRequestRate > 0.0f) ? 1.0f : 0.0f;
+		if (_goalRatio <= 0.0f && m_spinMaxSpeed > 0.0f)
+		{
+			// 緩めている最中は、速さの割合までしか畳まない
+			_goalRatio = std::clamp(m_spinSpeed / m_spinMaxSpeed, 0.0f, 1.0f);
+		}
+		const float _step = std::max(m_spinRadiusRate, 0.0f) * _dt;
+		m_spinRadiusRatio += std::clamp(_goalRatio - m_spinRadiusRatio, -_step, _step);
+
+		//----------------------------------------------------------------------
+		// 小隊長へ命令を書く
+		//----------------------------------------------------------------------
+		const bool _isSpinning = (m_spinRadiusRatio > 0.0f);
+		if (!_isSpinning && !m_isSpinWritten) return;
+		m_isSpinWritten = _isSpinning;
+
+		if (!a_context.pWorld) return;
+		auto& _world = *a_context.pWorld;
+
+		const float _radius = std::max(m_spinRadius, 0.0f) * m_spinRadiusRatio;
+		for (size_t _i = 0; _i < m_platoonLeaderEntities.size(); ++_i)
+		{
+			const Engine::ECS::Entity _platoon = m_platoonLeaderEntities[_i];
+			if (!_world.IsAliveEntity(_platoon)) continue;
+			if (!_world.HasComponent<Component::PlatoonSpinComponent>(_platoon)) continue;
+
+			auto* _pSpin = _world.RefData<Component::PlatoonSpinComponent>(_platoon);
+			_pSpin->angle  = m_spinAngle + m_spinTwist * static_cast<float>(_i);
+			_pSpin->radius = _radius;
+		}
 	}
 
 	//======================================================================================
@@ -974,6 +1044,10 @@ namespace App::Object
 		m_isBodyCounted    = false;
 		m_waveSpeedScale   = 1.0f;
 		m_roarWeight       = 0.0f;
+		m_spinSpeed        = 0.0f;
+		m_spinAngle        = 0.0f;
+		m_spinRadiusRatio  = 0.0f;
+		m_isSpinWritten    = false;
 
 		// 地面から出すなら、最初の行動を出現にする(切り替わるのは最初の行動の更新)
 		if (m_isEmergeOnSpawn)
@@ -1130,6 +1204,9 @@ namespace App::Object
 			// 速さはリーダーより速くしておく(同じだと離された分を詰められない)
 			ApplyMoveSpeed(_world, _instanceVec, m_leaderSpeed * m_platoonSpeedScale);
 			EnsureRootComponent<Component::DesiredVelocityComponent>(_world, _instanceVec);
+
+			// 胴回りの回転の命令の受け皿(書くのは UpdateBodySpin、読むのは FollowLeaderSystem)
+			EnsureRootComponent<Component::PlatoonSpinComponent>(_world, _instanceVec);
 
 			// 前の相手の後ろを狙うのに前方が要る(LookAngle から作る)。
 			// 上下も体ごと向く(列が潜っても機体の向きが進路と揃う)
@@ -1476,20 +1553,44 @@ namespace App::Object
 				: Engine::ResourceRef<Engine::Resource::EffectAsset>{};
 		}
 
-		// ---- 出現と咆哮(後から足したもの) ----
-		// バイナリは書いた順に読むので、区切りを付けて末尾に置く。
-		// 区切りの無い古い .obscene ではここを読まず、既定値のまま残る。足すときはこの区切りの末尾へ
-		Engine::Persistence::ArchiveSection _section(a_ar, "SwarmBossEmerge");
-		a_ar.Field("IsEmergeOnSpawn", m_isEmergeOnSpawn);
-		a_ar.Field("EmergeDepth", m_emergeDepth);
-		m_stateMachine.ArchiveAppended(a_ar);
+		//----------------------------------------------------------------------
+		// ここから下は後から足したもの。
+		// バイナリは書いた順に読むので、区切りを付けて末尾に置く(足すときは末尾へ新しい区切りで)。
+		// 区切りを持たない古い .obscene では読まず、既定値のまま残す
+		//----------------------------------------------------------------------
+		if (!a_ar.IsLegacyLayout())
+		{
+			// ---- 出現と咆哮 ----
+			{
+				Engine::Persistence::ArchiveSection _section(a_ar, "SwarmBossEmerge");
+				a_ar.Field("IsEmergeOnSpawn", m_isEmergeOnSpawn);
+				a_ar.Field("EmergeDepth", m_emergeDepth);
 
-		a_ar.GUIDField("RoarSoundGUID", m_roarSoundGUID);
-		a_ar.Field("RoarVolume", m_roarVolume);
-		a_ar.Field("RoarBlurStrength", m_roarBlurStrength);
-		a_ar.Field("RoarBlurStrengthJitter", m_roarBlurStrengthJitter);
-		a_ar.Field("RoarBlurCenterJitter", m_roarBlurCenterJitter);
-		a_ar.Field("RoarBlurFrequency", m_roarBlurFrequency);
+				a_ar.GUIDField("RoarSoundGUID", m_roarSoundGUID);
+				a_ar.Field("RoarVolume", m_roarVolume);
+				a_ar.Field("RoarBlurStrength", m_roarBlurStrength);
+				a_ar.Field("RoarBlurStrengthJitter", m_roarBlurStrengthJitter);
+				a_ar.Field("RoarBlurCenterJitter", m_roarBlurCenterJitter);
+				a_ar.Field("RoarBlurFrequency", m_roarBlurFrequency);
+			}
+
+			// ---- 胴回りの回転 ----
+			{
+				Engine::Persistence::ArchiveSection _section(a_ar, "SwarmBossSpin");
+				a_ar.Field("SpinMaxSpeed", m_spinMaxSpeed);
+				a_ar.Field("SpinAcceleration", m_spinAcceleration);
+				a_ar.Field("SpinDeceleration", m_spinDeceleration);
+				a_ar.Field("SpinRadius", m_spinRadius);
+				a_ar.Field("SpinRadiusRate", m_spinRadiusRate);
+				a_ar.Field("SpinTwist", m_spinTwist);
+			}
+
+			// ---- 行動(後から足した調整値。中はステートごとに区切る) ----
+			{
+				Engine::Persistence::ArchiveSection _section(a_ar, "SwarmBossStates");
+				m_stateMachine.ArchiveAppended(a_ar);
+			}
+		}
 
 		// 鳴き声が差し替わっているかもしれないので、次に鳴くときに借り直す
 		if (a_ar.IsLoading()) ReleaseRoarSound(a_context);
@@ -1600,6 +1701,23 @@ namespace App::Object
 		{
 			PlayRoar(a_context);
 		}
+
+		Engine::EditorField::Header("胴回りの回転(突進・ダイブ)");
+		Engine::EditorField::Field("回転の最高速", m_spinMaxSpeed, 0.1f, 0.0f);
+		Engine::EditorField::Tooltip("ラジアン/秒(6.28 で 1 秒に 1 周)。速すぎるとボイドが追い付けず、輪が崩れる");
+		Engine::EditorField::Field("回転を上げる速さ", m_spinAcceleration, 0.1f, 0.0f);
+		Engine::EditorField::Tooltip("ラジアン/秒^2。小さいほど、だんだん速くなっていく");
+		Engine::EditorField::Field("回転を緩める速さ", m_spinDeceleration, 0.1f, 0.0f);
+		Engine::EditorField::Field("輪の半径", m_spinRadius, 0.1f, 0.0f);
+		Engine::EditorField::Tooltip("小隊長からの距離(m)。ボイドごとに 0.6〜1 倍へばらける");
+		Engine::EditorField::Field("輪を広げる速さ", m_spinRadiusRate, 0.05f, 0.0f);
+		Engine::EditorField::Field("小隊長ごとの角度のずれ", m_spinTwist, 0.01f);
+		Engine::EditorField::Tooltip("ラジアン。体全体がねじれた螺旋に見える(0 で全員が揃って回る)");
+		if (m_spinMaxSpeed > 0.0f && m_spinAcceleration > 0.0f)
+		{
+			Engine::EditorField::HelpText("最高速まで %.1f 秒(1 秒に %.2f 周)", m_spinMaxSpeed / m_spinAcceleration, m_spinMaxSpeed / DirectX::XM_2PI);
+		}
+		Engine::EditorField::Value("回転", "%.2f rad/s (頼まれた強さ %.2f / 輪の広がり %.2f)", m_spinSpeed, m_spinRequestRate, m_spinRadiusRatio);
 
 		Engine::EditorField::Header("リーダーの行動");
 		m_stateMachine.DrawInspector();

@@ -4661,6 +4661,9 @@
     <ClInclude Include="Source\Application\Components\Boid\PlatoonLeaderComponent.h">
       <Filter>Source\Application\Components\Boid</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Components\Boid\PlatoonSpinComponent.h">
+      <Filter>Source\Application\Components\Boid</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossController.h">
       <Filter>Source\Application\Object\Controller\SwarmBossController</Filter>
     </ClInclude>

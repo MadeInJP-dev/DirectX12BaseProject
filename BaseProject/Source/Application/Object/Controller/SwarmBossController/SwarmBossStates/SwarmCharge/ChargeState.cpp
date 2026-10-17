@@ -105,6 +105,9 @@ namespace App::Object
 		{
 			_intent = _toPlayerDir * std::clamp(m_windupThrottle, 0.0f, 1.0f);
 
+			// 溜めの間に回り始める
+			a_context.bodySpinRate = m_spinRate;
+
 			if (m_phaseTime >= m_windupTime)
 			{
 				m_chargeDir = _toPlayerDir;
@@ -127,6 +130,9 @@ namespace App::Object
 			}
 
 			_intent = m_chargeDir * std::max(m_chargeSpeedScale, 0.0f);
+
+			// 突っ込んでいる間も回し続ける(コントローラーが最高速まで上げていく)
+			a_context.bodySpinRate = m_spinRate;
 
 			// 通り過ぎて十分離れたか、時間切れで終わり
 			const bool _isPassed = !_isPlayerAhead && _distToPlayer >= m_overshootDistance;
@@ -215,6 +221,11 @@ namespace App::Object
 		a_ar.Field("ChargeRecoverThrottle", m_recoverThrottle);
 	}
 
+	void SwarmBossChargeState::ArchiveAppended(Engine::Persistence::Archive& a_ar)
+	{
+		a_ar.Field("ChargeSpinRate", m_spinRate);
+	}
+
 	void SwarmBossChargeState::DrawInspector()
 	{
 		Engine::EditorField::Field("溜めの長さ", m_windupTime, 0.05f, 0.0f);
@@ -226,6 +237,8 @@ namespace App::Object
 		Engine::EditorField::Field("余韻の長さ", m_recoverTime, 0.05f, 0.0f);
 		Engine::EditorField::Field("余韻中の移動入力の強さ", m_recoverThrottle, 0.01f, 0.0f, 1.0f);
 		Engine::EditorField::Tooltip("小隊長の倍率を超える速さにすると列が千切れる");
+		Engine::EditorField::Field("胴回りの回転の強さ", m_spinRate, 0.01f, 0.0f, 1.0f);
+		Engine::EditorField::Tooltip("溜めと突進の間、ボイドを小隊長の胴回りで回す(最高速に対する割合。0 で回さない)");
 
 		// 実行中の状態は表示のみ
 		Engine::EditorField::Value("フェーズ", "%s (%.1f 秒)", std::string(magic_enum::enum_name(m_phase)).c_str(), m_phaseTime);

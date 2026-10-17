@@ -62,6 +62,10 @@ namespace App::Object
 		// 咆哮(鳴き声と、画面のラジアルブラーの震え)。鳴らす音とブラーの調整値はコントローラーが持つ
 		bool isRequestRoar = false;			// 鳴き声を鳴らしてほしい(鳴き始めの1フレームだけ立てる)
 		float roarWeight   = 0.0f;			// 画面を震わせる強さ(0〜1。鳴いている間、毎フレーム頼む)
+
+		// 体のボイドを、所属する小隊長を起点に胴回りで回す(突進・ダイブ)。
+		// 頼んでいる間はコントローラーが回転を最高速まで上げていき、やめると緩めて輪を畳む
+		float bodySpinRate = 0.0f;			// 回転の強さ(0〜1。最高速に対する割合。毎フレーム頼む)
 	};
 
 	class IState
@@ -78,5 +82,10 @@ namespace App::Object
 		//------------------------------------------------------------------------------------------
 		virtual void Archive(Engine::Persistence::Archive& /*a_ar*/) {}
 		virtual void DrawInspector() {}
+
+		// 後から足した調整値。バイナリは書いた順に読むので、Archive へ混ぜずにこちらへ書く。
+		// ステートごとに区切り(ステートの名前)で囲んで、持ち主の保存値の末尾で呼ばれる。
+		// 足すときはここの末尾へ
+		virtual void ArchiveAppended(Engine::Persistence::Archive& /*a_ar*/) {}
 	};
 }

@@ -17,6 +17,7 @@
 #include "Application/Components/Movement/MoveIntentComponent.h"
 #include "Application/Components/Movement/MovementParamsComponent.h"
 #include "Application/Components/Input/PlayerControllTag.h"
+#include "Application/Components/Boid/SerchGroundComponent.h"
 
 namespace App::Object
 {
@@ -107,9 +108,30 @@ namespace App::Object
 			return;
 		}
 
+		// 地面との関係(SerchGroundSystem が書いた結果)。潜るのに使う
+		m_isGroundFound = false;
+		m_isUnderGround = false;
+		if (_world.HasComponent<Component::SerchGroundComponent>(_leader))
+		{
+			const Component::SerchGroundComponent& _ground = *_world.RefData<Component::SerchGroundComponent>(_leader);
+			m_isGroundFound = _ground.isFoundGround != 0;
+			m_isUnderGround = _ground.isUnderGround != 0;
+			if (m_isGroundFound)
+			{
+				m_groundHeight = _ground.groundHeight;
+				m_depth        = m_groundHeight - _pos.y;
+			}
+		}
+
 		m_phaseTime += _dt;
 
 		Math::Vector3 _intent = Math::Vector3(0.0f, 0.0f, 0.0f);
+
+		// 狙う・急降下・潜る間は、体のボイドを胴回りで回す(回転を上げていくのはコントローラー)
+		if (m_phase == EPhase::Hover || m_phase == EPhase::Dive || m_phase == EPhase::Burrow)
+		{
+			a_context.bodySpinRate = m_spinRate;
+		}
 
 		switch (m_phase)
 		{
@@ -199,8 +221,45 @@ namespace App::Object
 				}
 			}
 
-			// 終点まで行った(か時間切れ)なら、その向きのまま余韻へ
+			// 終点(プレイヤーが居た所)を通り過ぎた(か時間切れ)なら、その勢いのまま地面へ
 			if (m_curveT >= 1.0f || m_phaseTime >= m_diveMaxTime)
+			{
+				ChangePhase(EPhase::Burrow);
+			}
+			break;
+		}
+
+		//--------------------------------------------------------------
+		// 潜る : 進んでいた向き(水平)へ少し進みながら、地表から決まった深さまで突っ込む。
+		// 速さは急降下のまま(勢いを落とさずに地面へ入る)
+		//--------------------------------------------------------------
+		case EPhase::Burrow:
+		{
+			const float _speedScale = std::max(m_diveSpeedScale, 0.0f);
+			const Math::Vector3 _forwardXZ = ScaledDir(Math::Vector3(m_moveDir.x, 0.0f, m_moveDir.z), 1.0f);
+
+			if (m_isGroundFound)
+			{
+				const float _targetY = m_groundHeight - m_burrowDepth;
+				const Math::Vector3 _target =
+					_pos + _forwardXZ * std::max(m_burrowForward, 0.0f) + Math::Vector3(0.0f, _targetY - _pos.y, 0.0f);
+				_intent = ScaledDir(_target - _pos, _speedScale);
+			}
+			else
+			{
+				// レイの届く範囲に地面が無い(まだ高い)。見つかるまで斜め下へ
+				_intent = ScaledDir(_forwardXZ * 0.3f + Math::Vector3::Down(), _speedScale);
+			}
+
+			if (_intent.LengthSquared() > 1e-6f)
+			{
+				m_moveDir = _intent;
+				m_moveDir.Normalize();
+			}
+
+			// 地中で狙いの深さに入ったら(か時間切れで)、その深さのまま進む余韻へ
+			const bool _isReachedDepth = m_isUnderGround && m_depth >= m_burrowDepth - m_depthTolerance;
+			if (_isReachedDepth || m_phaseTime >= m_burrowMaxTime)
 			{
 				ChangePhase(EPhase::Recover);
 			}
@@ -208,11 +267,16 @@ namespace App::Object
 		}
 
 		//--------------------------------------------------------------
-		// 余韻 : 同じ向きへ惰性で進んでから徘徊へ戻る
+		// 余韻 : 潜った深さを保ったまま、同じ向き(水平)へ進んでから徘徊へ戻る。
+		// 頭が止まると体が地表から出たまま残るので、その間に体を地中へ引き込む
 		//--------------------------------------------------------------
 		case EPhase::Recover:
 		{
-			_intent = m_moveDir * std::clamp(m_recoverThrottle, 0.0f, 1.0f);
+			const Math::Vector3 _forwardXZ = ScaledDir(Math::Vector3(m_moveDir.x, 0.0f, m_moveDir.z), 1.0f);
+			Math::Vector3 _target = _pos + _forwardXZ * std::max(m_burrowForward, 1.0f);
+			if (m_isGroundFound) _target.y = m_groundHeight - m_burrowDepth;
+
+			_intent = ScaledDir(_target - _pos, std::clamp(m_recoverThrottle, 0.0f, 1.0f));
 
 			if (m_phaseTime >= m_recoverTime)
 			{
@@ -299,6 +363,15 @@ namespace App::Object
 		a_ar.Field("DiveAttackRecoverThrottle", m_recoverThrottle);
 	}
 
+	void SwarmBossDiveAttackState::ArchiveAppended(Engine::Persistence::Archive& a_ar)
+	{
+		a_ar.Field("DiveAttackBurrowDepth", m_burrowDepth);
+		a_ar.Field("DiveAttackBurrowForward", m_burrowForward);
+		a_ar.Field("DiveAttackDepthTolerance", m_depthTolerance);
+		a_ar.Field("DiveAttackBurrowMaxTime", m_burrowMaxTime);
+		a_ar.Field("DiveAttackSpinRate", m_spinRate);
+	}
+
 	void SwarmBossDiveAttackState::DrawInspector()
 	{
 		Engine::EditorField::Field("離れる距離", m_launchDistance, 0.5f, 0.0f);
@@ -312,14 +385,24 @@ namespace App::Object
 		Engine::EditorField::Field("急降下の速さの倍率", m_diveSpeedScale, 0.05f, 0.0f);
 		Engine::EditorField::Field("ずれを詰める強さ", m_followGain, 0.05f, 0.0f);
 		Engine::EditorField::Field("急降下の最長時間", m_diveMaxTime, 0.1f, 0.0f);
+		Engine::EditorField::Field("潜る深さ", m_burrowDepth, 0.5f, 0.0f);
+		Engine::EditorField::Tooltip("プレイヤーを通り過ぎた後、地表からこの深さまで潜る");
+		Engine::EditorField::Field("潜りながら進む量", m_burrowForward, 0.5f, 0.0f);
+		Engine::EditorField::Tooltip("水平の距離。大きいほど浅い角度で地面へ突っ込む");
+		Engine::EditorField::Field("深さの許容範囲", m_depthTolerance, 0.1f, 0.0f);
+		Engine::EditorField::Field("潜る最長時間", m_burrowMaxTime, 0.1f, 0.0f);
 		Engine::EditorField::Field("余韻の長さ", m_recoverTime, 0.05f, 0.0f);
+		Engine::EditorField::Tooltip("潜った深さのまま進む長さ");
 		Engine::EditorField::Field("余韻中の移動入力の強さ", m_recoverThrottle, 0.01f, 0.0f, 1.0f);
 		Engine::EditorField::Tooltip("小隊長の倍率を超える速さにすると列が千切れる");
+		Engine::EditorField::Field("胴回りの回転の強さ", m_spinRate, 0.01f, 0.0f, 1.0f);
+		Engine::EditorField::Tooltip("狙う・急降下・潜る間、ボイドを小隊長の胴回りで回す(最高速に対する割合。0 で回さない)");
 
 		// 実行中の状態は表示のみ
 		Engine::EditorField::Value("フェーズ", "%s (%.1f 秒)", std::string(magic_enum::enum_name(m_phase)).c_str(), m_phaseTime);
 		Engine::EditorField::Value("プレイヤーの位置", "%.1f, %.1f, %.1f", m_playerPos.x, m_playerPos.y, m_playerPos.z);
 		Engine::EditorField::Value("離れる先", "%.1f, %.1f, %.1f", m_launchPos.x, m_launchPos.y, m_launchPos.z);
 		Engine::EditorField::Value("曲線上の位置 t", "%.2f", m_curveT);
+		Engine::EditorField::Value("地表の高さ", "%.1f (深さ %.1f, %s)", m_groundHeight, m_depth, m_isUnderGround ? "地中" : "地上");
 	}
 }
