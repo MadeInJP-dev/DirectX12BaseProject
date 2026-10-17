@@ -49,6 +49,8 @@
 #include "Application/Components/Boid/SwarmBurstComponent.h"
 #include "Application/Components/Movement/ActualVelocityComponent.h"
 #include "../../../InstanceResource/RadialBlurShakeResource.h"
+#include "Application/Components/Effect/EffectAssetComponent.h"
+#include "Application/Object/SequenceBgm.h"
 
 namespace App::Object
 {
@@ -234,7 +236,16 @@ namespace App::Object
 		SequenceActor::Release(a_context);
 
 		// サウンドインスタンスのプールはアプリ寿命なので、借りた側が必ず返す
-		ReleaseRoarSound(a_context);
+		ReleaseCrySounds(a_context);
+		ReleaseFlightSounds(a_context);
+
+		// BGM の絞りは全体で1つなので、絞ったまま消えると次のシーンの BGM まで小さくなる
+		if (m_isBgmDucked)
+		{
+			SequenceBgm::SetGlobalDuck(1.0f);
+			m_isBgmDucked = false;
+		}
+		m_bgmDuck = 1.0f;
 
 		// 鳴いている最中に消えても、画面の震えが残らないようにする
 		m_roarWeight = 0.0f;
@@ -274,6 +285,13 @@ namespace App::Object
 		// 咆哮の画面の震え(震わせるのは RadialBlurShakeSystem)。爆散した後は行動が回らないので止める
 		if (m_isBurst) m_roarWeight = 0.0f;
 		UpdateRoarBlur(a_context);
+
+		// BGM の絞り(爆散した後も、死亡で下げた値のまま)
+		UpdateBgmDuck();
+
+		// 飛んでいるときのエフェクトと飛行音
+		UpdateFlightEffect(a_context);
+		UpdateFlightSound(a_context);
 
 		// 残りの生存数(HP代わり)。印を数え直すだけ
 		m_currentBoids = CountAliveBoids(a_context);
@@ -323,12 +341,14 @@ namespace App::Object
 			BurstBody(a_context, _stateContext.burst);
 		}
 
-		// 咆哮 : 鳴き声は頼まれた瞬間に鳴らし、画面の震えは強さを覚えておく(書くのは UpdateRoarBlur)
-		if (_stateContext.isRequestRoar)
+		// 鳴き声は頼まれた瞬間に鳴らし、画面の震えと BGM の倍率は覚えておく
+		// (書くのは UpdateRoarBlur / UpdateBgmDuck)
+		if (_stateContext.cry != ESwarmBossCry::None)
 		{
-			PlayRoar(a_context);
+			PlayCry(a_context, _stateContext.cry);
 		}
 		m_roarWeight = std::clamp(_stateContext.roarWeight, 0.0f, 1.0f);
+		m_bgmDuck    = std::clamp(_stateContext.bgmDuck, 0.0f, 1.0f);
 
 		// 胴回りの回転(頼まない行動は既定の 0 = 緩めて畳む)
 		UpdateBodySpin(a_context, _stateContext.bodySpinRate);
@@ -401,37 +421,222 @@ namespace App::Object
 	}
 
 	//======================================================================================
-	// 咆哮 : 鳴き声
+	// 鳴き声
 	//--------------------------------------------------------------------------------------
-	// 初めて鳴くときに借りて、以降は同じものを頭から鳴らし直す。返すのは Release
+	// 種類ごとに1つ借りて、以降は同じものを頭から鳴らし直す。返すのは Release。
+	// 大きな体のボスの声なので、どこに居ても同じ大きさで聞こえるよう 2D で鳴らす
 	//======================================================================================
-	void SwarmBossController::PlayRoar(Engine::GameObject::ObjectContext& a_context)
+	void SwarmBossController::PlayCry(Engine::GameObject::ObjectContext& a_context, ESwarmBossCry a_cry)
 	{
-		if (m_roarSoundGUID == Core::DEFAULT_GUID) return;
 		if (!a_context.pServices || !a_context.pServices->pAudioManager) return;
 		auto& _audio = *a_context.pServices->pAudioManager;
 
-		// 画面に出す音なので 2D で借りる(定位を付けない)
-		if (!_audio.RefInstance(m_roarSoundHandle))
+		const Core::GUID* _pGUID = nullptr;
+		float _volume = 1.0f;
+		Engine::Handle<Engine::Resource::SoundInstance>* _pHandle = nullptr;
+		switch (a_cry)
 		{
-			m_roarSoundHandle = _audio.CreateSoundInstance(m_roarSoundGUID, false);
+		case ESwarmBossCry::Roar:   _pGUID = &m_roarSoundGUID;      _volume = m_roarVolume;      _pHandle = &m_roarSoundHandle;      break;
+		case ESwarmBossCry::Attack: _pGUID = &m_attackCrySoundGUID; _volume = m_attackCryVolume; _pHandle = &m_attackCrySoundHandle; break;
+		case ESwarmBossCry::Death:  _pGUID = &m_deathCrySoundGUID;  _volume = m_deathCryVolume;  _pHandle = &m_deathCrySoundHandle;  break;
+		default: return;
+		}
+		if (*_pGUID == Core::DEFAULT_GUID) return;
+
+		if (!_audio.RefInstance(*_pHandle))
+		{
+			*_pHandle = _audio.CreateSoundInstance(*_pGUID, false);
 		}
 
-		if (auto* _pInstance = _audio.RefInstance(m_roarSoundHandle))
+		if (auto* _pInstance = _audio.RefInstance(*_pHandle))
 		{
 			_pInstance->Stop();
-			_pInstance->SetVolume(m_roarVolume);
+			_pInstance->SetVolume(_volume);
 			_pInstance->Play(false);
+		}
+
+		// 断末魔は攻撃の鳴き声と重ならないよう、鳴っていれば止める
+		if (a_cry == ESwarmBossCry::Death)
+		{
+			if (auto* _pAttack = _audio.RefInstance(m_attackCrySoundHandle)) _pAttack->Stop();
 		}
 	}
 
-	void SwarmBossController::ReleaseRoarSound(Engine::GameObject::ObjectContext& a_context)
+	void SwarmBossController::ReleaseCrySounds(Engine::GameObject::ObjectContext& a_context)
 	{
 		if (a_context.pServices && a_context.pServices->pAudioManager)
 		{
-			a_context.pServices->pAudioManager->ReleaseSoundInstance(m_roarSoundHandle);
+			auto& _audio = *a_context.pServices->pAudioManager;
+			_audio.ReleaseSoundInstance(m_roarSoundHandle);
+			_audio.ReleaseSoundInstance(m_attackCrySoundHandle);
+			_audio.ReleaseSoundInstance(m_deathCrySoundHandle);
 		}
-		m_roarSoundHandle = {};
+		m_roarSoundHandle      = {};
+		m_attackCrySoundHandle = {};
+		m_deathCrySoundHandle  = {};
+	}
+
+	//======================================================================================
+	// BGM の絞り
+	//--------------------------------------------------------------------------------------
+	// 絞りはシーケンスの BGM 全体で1つ(SequenceBgm::SetGlobalDuck)。
+	// ポーズも同じ絞りを使い、閉じるときに 1 へ戻すので、絞っている間は毎フレーム送り直す
+	// (同じ値なら向こうで何もしない)。戻すのは頼まれなくなったときと Release
+	//======================================================================================
+	void SwarmBossController::UpdateBgmDuck()
+	{
+		if (m_bgmDuck < 1.0f)
+		{
+			SequenceBgm::SetGlobalDuck(m_bgmDuck);
+			m_isBgmDucked = true;
+		}
+		else if (m_isBgmDucked)
+		{
+			SequenceBgm::SetGlobalDuck(1.0f);
+			m_isBgmDucked = false;
+		}
+	}
+
+	//======================================================================================
+	// 飛んでいるか
+	//--------------------------------------------------------------------------------------
+	// 地面との関係は SerchGroundSystem が書く。レイ(上下 200m)が地面に届かないときは、
+	// 生成位置(地表あたり)より上なら空高く、下なら地中深くとみなす
+	//======================================================================================
+	bool SwarmBossController::IsPlatoonFlying(Engine::ECS::World& a_world, Engine::ECS::Entity a_platoon) const
+	{
+		if (!a_world.HasComponent<Component::SerchGroundComponent>(a_platoon)) return true;
+
+		const Component::SerchGroundComponent& _ground = *a_world.RefData<Component::SerchGroundComponent>(a_platoon);
+		if (_ground.isFoundGround) return _ground.isUnderGround == 0;
+
+		if (!a_world.HasComponent<Component::LocalTransformComponent>(a_platoon)) return true;
+		return a_world.RefData<Component::LocalTransformComponent>(a_platoon)->pos.y >= m_spawnPos.y;
+	}
+
+	//======================================================================================
+	// 飛んでいるときのエフェクト
+	//--------------------------------------------------------------------------------------
+	// エフェクトは生成のときに付けてある(CreatePlatoonLeaders)。ここは再生の入り切りだけ。
+	// 止めても出した粒は寿命まで残るので、潜った瞬間にパッと消えたりはしない
+	//======================================================================================
+	void SwarmBossController::UpdateFlightEffect(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (!a_context.pWorld) return;
+		auto& _world = *a_context.pWorld;
+
+		for (const Engine::ECS::Entity _platoon : m_platoonLeaderEntities)
+		{
+			if (!_world.IsAliveEntity(_platoon)) continue;
+			if (!_world.HasComponent<Component::EffectPlayRequestComponent>(_platoon)) continue;
+
+			_world.RefData<Component::EffectPlayRequestComponent>(_platoon)->isPlay = IsPlatoonFlying(_world, _platoon);
+		}
+	}
+
+	//======================================================================================
+	// 飛行音
+	//--------------------------------------------------------------------------------------
+	// 鳴らす場所は、今の小隊長の並びから頭〜尾へ均等に選ぶ(整理で数が減っても選び直す)。
+	// 音量は地上なら m_flightSoundVolume、地中ならその m_flightSoundUnderRatio 倍へなだらかに寄せる。
+	// 爆散して小隊長が居なくなったら 0 へ下げていき、消えきったら返す
+	//======================================================================================
+	void SwarmBossController::UpdateFlightSound(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (!a_context.pWorld || !a_context.pServices || !a_context.pServices->pAudioManager) return;
+		auto& _world = *a_context.pWorld;
+		auto& _audio = *a_context.pServices->pAudioManager;
+
+		const size_t _platoonCount = m_platoonLeaderEntities.size();
+
+		//----------------------------------------------------------------------
+		// 借りる(鳴らす場所の数が変わったら借り直す)
+		//----------------------------------------------------------------------
+		const size_t _emitterCount = (m_flightSoundGUID == Core::DEFAULT_GUID) ? 0 : m_flightSoundEmitterCount;
+		if (m_flightSoundHandles.size() != _emitterCount)
+		{
+			ReleaseFlightSounds(a_context);
+		}
+		if (m_flightSoundHandles.empty() && _emitterCount > 0 && _platoonCount > 0 && !m_isBurst && !m_isFlightSoundFailed)
+		{
+			m_flightSoundHandles.resize(_emitterCount);
+			m_flightSoundVolumes.assign(_emitterCount, 0.0f);
+			for (size_t _k = 0; _k < _emitterCount; ++_k)
+			{
+				m_flightSoundHandles[_k] = _audio.CreateSoundInstance(m_flightSoundGUID, true);
+				auto* _pInstance = _audio.RefInstance(m_flightSoundHandles[_k]);
+				if (!_pInstance)
+				{
+					m_isFlightSoundFailed = true;
+					continue;
+				}
+
+				// 0 から上げていく(いきなり鳴り出さない)
+				_pInstance->SetCurveDistanceScaler(std::max(m_flightSoundDistanceScaler, 0.01f));
+				_pInstance->SetVolume(0.0f);
+				_pInstance->Play3D(m_spawnPos, true);
+				_pInstance->SetVolume(0.0f);	// Play3D の後に入れ直す(鳴らし直しで音量が戻るため)
+			}
+		}
+		if (m_flightSoundHandles.empty()) return;
+
+		//----------------------------------------------------------------------
+		// 場所と音量
+		//----------------------------------------------------------------------
+		const float _step = std::max(m_flightSoundFadeRate, 0.0f) * a_context.dt;
+		bool _isAnySounding = false;
+		for (size_t _k = 0; _k < m_flightSoundHandles.size(); ++_k)
+		{
+			auto* _pInstance = _audio.RefInstance(m_flightSoundHandles[_k]);
+			if (!_pInstance) continue;
+
+			float _target = 0.0f;
+			if (_platoonCount > 0)
+			{
+				// 頭から尾へ均等に選ぶ(1か所なら真ん中)
+				const size_t _count = m_flightSoundHandles.size();
+				const size_t _index = (_count <= 1)
+					? _platoonCount / 2
+					: (_k * (_platoonCount - 1) + (_count - 1) / 2) / (_count - 1);
+
+				const Engine::ECS::Entity _platoon = m_platoonLeaderEntities[std::min(_index, _platoonCount - 1)];
+				if (_world.IsAliveEntity(_platoon) && _world.HasComponent<Component::LocalTransformComponent>(_platoon))
+				{
+					_pInstance->SetPos(_world.RefData<Component::LocalTransformComponent>(_platoon)->pos);
+
+					_target = std::max(m_flightSoundVolume, 0.0f);
+					if (!IsPlatoonFlying(_world, _platoon)) _target *= std::clamp(m_flightSoundUnderRatio, 0.0f, 1.0f);
+				}
+			}
+
+			float& _volume = m_flightSoundVolumes[_k];
+			const float _next = _volume + std::clamp(_target - _volume, -_step, _step);
+			if (_next != _volume)
+			{
+				_volume = _next;
+				_pInstance->SetVolume(_volume);
+			}
+			if (_volume > 0.001f) _isAnySounding = true;
+		}
+
+		// 爆散した後、消えきったら返す
+		if (m_isBurst && !_isAnySounding)
+		{
+			ReleaseFlightSounds(a_context);
+		}
+	}
+
+	void SwarmBossController::ReleaseFlightSounds(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (a_context.pServices && a_context.pServices->pAudioManager)
+		{
+			for (const auto& _handle : m_flightSoundHandles)
+			{
+				a_context.pServices->pAudioManager->ReleaseSoundInstance(_handle);
+			}
+		}
+		m_flightSoundHandles.clear();
+		m_flightSoundVolumes.clear();
 	}
 
 	//======================================================================================
@@ -1048,6 +1253,7 @@ namespace App::Object
 		m_spinAngle        = 0.0f;
 		m_spinRadiusRatio  = 0.0f;
 		m_isSpinWritten    = false;
+		m_isFlightSoundFailed = false;
 
 		// 地面から出すなら、最初の行動を出現にする(切り替わるのは最初の行動の更新)
 		if (m_isEmergeOnSpawn)
@@ -1207,6 +1413,22 @@ namespace App::Object
 
 			// 胴回りの回転の命令の受け皿(書くのは UpdateBodySpin、読むのは FollowLeaderSystem)
 			EnsureRootComponent<Component::PlatoonSpinComponent>(_world, _instanceVec);
+
+			// 地面との関係(飛んでいるかを見る。レイを打つのは SerchGroundSystem)
+			EnsureRootComponent<Component::SerchGroundComponent>(_world, _instanceVec);
+
+			// 飛んでいるときのエフェクト。間引いて付け、再生の入り切りは UpdateFlightEffect
+			if (m_flightEffectGUID != Core::DEFAULT_GUID && (_i % std::max(m_flightEffectStride, 1u)) == 0)
+			{
+				EditRootComponent<Component::EffectAssetComponent>(_world, _instanceVec,
+					[this](Component::EffectAssetComponent& a_comp)
+					{
+						a_comp.effectGUID      = m_flightEffectGUID;
+						a_comp.playOnStart     = false;
+						a_comp.destroyOnFinish = false;
+					}
+				);
+			}
 
 			// 前の相手の後ろを狙うのに前方が要る(LookAngle から作る)。
 			// 上下も体ごと向く(列が潜っても機体の向きが進路と揃う)
@@ -1585,6 +1807,28 @@ namespace App::Object
 				a_ar.Field("SpinTwist", m_spinTwist);
 			}
 
+			// ---- 攻撃の鳴き声と断末魔 ----
+			{
+				Engine::Persistence::ArchiveSection _section(a_ar, "SwarmBossCry");
+				a_ar.GUIDField("AttackCrySoundGUID", m_attackCrySoundGUID);
+				a_ar.Field("AttackCryVolume", m_attackCryVolume);
+				a_ar.GUIDField("DeathCrySoundGUID", m_deathCrySoundGUID);
+				a_ar.Field("DeathCryVolume", m_deathCryVolume);
+			}
+
+			// ---- 飛んでいるときのエフェクトと飛行音 ----
+			{
+				Engine::Persistence::ArchiveSection _section(a_ar, "SwarmBossFlight");
+				a_ar.GUIDField("FlightEffectGUID", m_flightEffectGUID);
+				a_ar.Field("FlightEffectStride", m_flightEffectStride);
+				a_ar.GUIDField("FlightSoundGUID", m_flightSoundGUID);
+				a_ar.Field("FlightSoundEmitterCount", m_flightSoundEmitterCount);
+				a_ar.Field("FlightSoundVolume", m_flightSoundVolume);
+				a_ar.Field("FlightSoundUnderRatio", m_flightSoundUnderRatio);
+				a_ar.Field("FlightSoundDistanceScaler", m_flightSoundDistanceScaler);
+				a_ar.Field("FlightSoundFadeRate", m_flightSoundFadeRate);
+			}
+
 			// ---- 行動(後から足した調整値。中はステートごとに区切る) ----
 			{
 				Engine::Persistence::ArchiveSection _section(a_ar, "SwarmBossStates");
@@ -1593,7 +1837,12 @@ namespace App::Object
 		}
 
 		// 鳴き声が差し替わっているかもしれないので、次に鳴くときに借り直す
-		if (a_ar.IsLoading()) ReleaseRoarSound(a_context);
+		if (a_ar.IsLoading())
+		{
+			ReleaseCrySounds(a_context);
+			ReleaseFlightSounds(a_context);
+			m_isFlightSoundFailed = false;
+		}
 	}
 
 	//======================================================================================
@@ -1680,16 +1929,25 @@ namespace App::Object
 		Engine::EditorField::Value("ウェーブの倍率", "x %.2f", m_waveSpeedScale);
 
 		Engine::EditorField::Header("咆哮");
-		if (Engine::EditorField::AssetField(_services, "鳴き声", "Sound", m_roarSoundGUID))
+		if (Engine::EditorField::AssetField(_services, "咆哮(出現)", "Sound", m_roarSoundGUID))
 		{
 			// 差し替えたら次に鳴くときに借り直す
-			ReleaseRoarSound(a_context);
+			ReleaseCrySounds(a_context);
 		}
-		if (m_roarSoundGUID == Core::DEFAULT_GUID)
+		Engine::EditorField::Field("咆哮の音量", m_roarVolume, 0.01f, 0.0f);
+		if (Engine::EditorField::AssetField(_services, "攻撃の鳴き声", "Sound", m_attackCrySoundGUID))
 		{
-			Engine::EditorField::HelpText("(未設定 : 鳴き声は出ない)");
+			ReleaseCrySounds(a_context);
 		}
-		Engine::EditorField::Field("鳴き声の音量", m_roarVolume, 0.01f, 0.0f);
+		Engine::EditorField::Tooltip("突進・アッパー・ダイブ・巻き付きの始まりに鳴く(画面は震わせない)");
+		Engine::EditorField::Field("攻撃の鳴き声の音量", m_attackCryVolume, 0.01f, 0.0f);
+		if (Engine::EditorField::AssetField(_services, "断末魔(死亡)", "Sound", m_deathCrySoundGUID))
+		{
+			ReleaseCrySounds(a_context);
+		}
+		Engine::EditorField::Field("断末魔の音量", m_deathCryVolume, 0.01f, 0.0f);
+		Engine::EditorField::HelpText("未設定の鳴き声は鳴らない");
+		Engine::EditorField::Line();
 		Engine::EditorField::Field("震えの引きずり量", m_roarBlurStrength, 0.005f, 0.0f, 1.0f);
 		Engine::EditorField::Tooltip("画面のラジアルブラーへ足す量(UV単位)。カメラのブラーを切っていても掛かる");
 		Engine::EditorField::Field("引きずり量の揺れ幅", m_roarBlurStrengthJitter, 0.01f, 0.0f, 1.0f);
@@ -1697,10 +1955,31 @@ namespace App::Object
 		Engine::EditorField::Field("揺れの速さ", m_roarBlurFrequency, 0.1f, 0.0f);
 		Engine::EditorField::Tooltip("回/秒");
 		Engine::EditorField::Value("震えの強さ", "%.2f", m_roarWeight);
-		if (Engine::EditorField::Button("鳴き声を試す"))
+		Engine::EditorField::Value("BGM の倍率", "x %.2f%s", m_bgmDuck, m_isBgmDucked ? " (絞り中)" : "");
+		if (Engine::EditorField::Button("咆哮を試す")) PlayCry(a_context, ESwarmBossCry::Roar);
+		Engine::EditorField::SameLine();
+		if (Engine::EditorField::Button("攻撃の鳴き声を試す")) PlayCry(a_context, ESwarmBossCry::Attack);
+		Engine::EditorField::SameLine();
+		if (Engine::EditorField::Button("断末魔を試す")) PlayCry(a_context, ESwarmBossCry::Death);
+
+		Engine::EditorField::Header("飛んでいるときのエフェクトと飛行音");
+		Engine::EditorField::AssetField(_services, "エフェクト", "EffectAsset", m_flightEffectGUID);
+		Engine::EditorField::Tooltip("地上に出ている小隊長から出す、出しっぱなしのエフェクト。生成のときに付けるので、差し替えは次の生成から");
+		Engine::EditorField::Field("エフェクトを付ける間隔", m_flightEffectStride);
+		Engine::EditorField::Tooltip("何体おきの小隊長に付けるか(1 で全員)。多いほど重い");
+		if (Engine::EditorField::AssetField(_services, "飛行音", "Sound", m_flightSoundGUID))
 		{
-			PlayRoar(a_context);
+			ReleaseFlightSounds(a_context);
+			m_isFlightSoundFailed = false;
 		}
+		Engine::EditorField::Field("飛行音を鳴らす場所の数", m_flightSoundEmitterCount);
+		Engine::EditorField::Tooltip("頭から尾へ均等に選んだ小隊長の位置で、ループする音を 3D で鳴らす");
+		Engine::EditorField::Field("飛行音の音量", m_flightSoundVolume, 0.01f, 0.0f);
+		Engine::EditorField::Field("地中での音量の倍率", m_flightSoundUnderRatio, 0.01f, 0.0f, 1.0f);
+		Engine::EditorField::Field("飛行音の届く広さ", m_flightSoundDistanceScaler, 0.5f, 0.01f);
+		Engine::EditorField::Tooltip("距離による減衰の倍率。大きいほど遠くまで聞こえる(次に借り直したときから)");
+		Engine::EditorField::Field("音量を寄せる速さ", m_flightSoundFadeRate, 0.05f, 0.0f);
+		Engine::EditorField::Value("鳴らしている場所", "%u%s", static_cast<uint32_t>(m_flightSoundHandles.size()), m_isFlightSoundFailed ? " (借りられなかった)" : "");
 
 		Engine::EditorField::Header("胴回りの回転(突進・ダイブ)");
 		Engine::EditorField::Field("回転の最高速", m_spinMaxSpeed, 0.1f, 0.0f);

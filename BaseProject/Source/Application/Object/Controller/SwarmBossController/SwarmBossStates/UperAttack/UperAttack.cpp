@@ -170,10 +170,11 @@ namespace App::Object
 			const Math::Vector3 _target = Math::Vector3(m_playerPos.x, _targetY, m_playerPos.z);
 			_intent = ScaledDir(_target - _pos, std::max(m_approachSpeedScale, 0.0f));
 
-			// 真下に来たか、時間切れならその場で突き上げる
+			// 真下に来たか、時間切れならその場で突き上げる。突き上げの瞬間に鳴く
 			if (_distXZ <= m_underDistance || m_phaseTime >= m_approachMaxTime)
 			{
 				ChangePhase(EPhase::Uper);
+				a_context.cry = ESwarmBossCry::Attack;
 			}
 			break;
 		}

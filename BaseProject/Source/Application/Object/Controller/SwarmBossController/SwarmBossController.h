@@ -28,6 +28,8 @@ namespace App::Object
 	///   載せていなければ今までどおり Awake で出る。
 	/// ・地面から出す設定(m_isEmergeOnSpawn)なら、生成位置の真下へ縦一列に埋めて出し、
 	///   出現の行動(Emerge)から始める。真上へ飛び出して、とぐろを巻きながら鳴く。
+	/// ・飛んでいる(地上に出ている)小隊長からは、チリと金属のこすれる火花のエフェクトを出す。
+	///   飛行音はボイドごとには付けず、体に沿って数か所の小隊長から 3D で鳴らす。
 	/// </remarks>
 	class SwarmBossController final : public SequenceActor
 	{
@@ -175,16 +177,35 @@ namespace App::Object
 		void UpdateContactDamage(Engine::GameObject::ObjectContext& a_context);
 
 		//------------------------------------------------------------------------------------------
-		// 咆哮(鳴き声と画面の震え)
+		// 鳴き声と画面の震え・BGM の絞り
 		//------------------------------------------------------------------------------------------
-		// 鳴き声を鳴らす。行動が頼んできたとき(isRequestRoar)に呼ぶ
-		void PlayRoar(Engine::GameObject::ObjectContext& a_context);
+		// 鳴き声を鳴らす。行動が頼んできたとき(cry)に呼ぶ
+		void PlayCry(Engine::GameObject::ObjectContext& a_context, ESwarmBossCry a_cry);
 
-		// 借りている鳴き声を返す(鳴っていれば止まる)
-		void ReleaseRoarSound(Engine::GameObject::ObjectContext& a_context);
+		// 借りている鳴き声を全部返す(鳴っていれば止まる)
+		void ReleaseCrySounds(Engine::GameObject::ObjectContext& a_context);
 
 		// 画面の震えの強さと調整値を RadialBlurShakeResource へ書く。震わせるのは RadialBlurShakeSystem
 		void UpdateRoarBlur(Engine::GameObject::ObjectContext& a_context);
+
+		// 行動から頼まれた BGM の倍率を、シーケンスの BGM 全体の絞りへ送る。
+		// 絞っている間は毎フレーム送り直す(ポーズを閉じると 1 へ戻されるため)
+		void UpdateBgmDuck();
+
+		//------------------------------------------------------------------------------------------
+		// 飛んでいるときのエフェクトと飛行音
+		//------------------------------------------------------------------------------------------
+		// 小隊長が地上に出ているか(地面が見つからないときは生成位置より上なら飛んでいるとみなす)
+		bool IsPlatoonFlying(Engine::ECS::World& a_world, Engine::ECS::Entity a_platoon) const;
+
+		// 飛んでいる小隊長のエフェクトだけを再生させる(エフェクトは生成時に小隊長へ付けてある)
+		void UpdateFlightEffect(Engine::GameObject::ObjectContext& a_context);
+
+		// 体に沿って数か所の小隊長の位置で、飛行音を 3D で鳴らす。地中では小さくする
+		void UpdateFlightSound(Engine::GameObject::ObjectContext& a_context);
+
+		// 借りている飛行音を全部返す
+		void ReleaseFlightSounds(Engine::GameObject::ObjectContext& a_context);
 
 		//------------------------------------------------------------------------------------------
 		// 胴回りの回転(突進・ダイブ)
@@ -387,7 +408,7 @@ namespace App::Object
 		// カメラのラジアルブラーへ足すのは RadialBlurShakeSystem。
 		// 調整値はここ、いつ・どれだけ鳴くかは行動が持つ。
 		//------------------------------------------------------------------------------------------
-		// 鳴き声(Sound)。既定は Asset/Sound/Boss/VoidWorm_Roar(環境/gen_worm_roar.py で作ったもの)
+		// 鳴き声(Sound)。既定は Asset/Sound/Boss/VoidWorm_Roar(環境/gen_worm_sounds.py で作ったもの)
 		Core::GUID m_roarSoundGUID = Core::GUID("ce80f545-bef9-4dde-a491-18edc25cea0d");
 		float m_roarVolume = 1.0f;					// 鳴き声の音量(1 で 100%)
 
@@ -396,9 +417,52 @@ namespace App::Object
 		float m_roarBlurCenterJitter   = 0.02f;		// ブラーの中心を揺らす幅(UV単位)
 		float m_roarBlurFrequency      = 18.0f;		// 揺れの速さ(回/秒)
 
+		// 攻撃の鳴き声(各攻撃の始まり。画面は震わせない)。既定は Asset/Sound/Boss/VoidWorm_AttackCry
+		Core::GUID m_attackCrySoundGUID = Core::GUID("35fddedf-a55b-47d0-b905-3857f5d57037");
+		float m_attackCryVolume = 0.8f;
+
+		// 断末魔(死亡。震わせるかどうかは死亡の行動が決める)。既定は Asset/Sound/Boss/VoidWorm_DeathCry
+		Core::GUID m_deathCrySoundGUID = Core::GUID("9e91f135-56fb-4d6a-9404-71e4e02a6ec2");
+		float m_deathCryVolume = 1.0f;
+
 		// ---- 実行中の状態(保存しない) ----
-		Engine::Handle<Engine::Resource::SoundInstance> m_roarSoundHandle = {};	// 借りている鳴き声
+		Engine::Handle<Engine::Resource::SoundInstance> m_roarSoundHandle = {};		// 借りている咆哮
+		Engine::Handle<Engine::Resource::SoundInstance> m_attackCrySoundHandle = {};	// 借りている攻撃の鳴き声
+		Engine::Handle<Engine::Resource::SoundInstance> m_deathCrySoundHandle = {};	// 借りている断末魔
 		float m_roarWeight = 0.0f;				// 行動から頼まれている震えの強さ(0〜1)
+		float m_bgmDuck = 1.0f;					// 行動から頼まれている BGM の倍率(爆散した後も最後の値のまま)
+		bool m_isBgmDucked = false;				// BGM を絞っているか(消えるときに 1 へ戻す)
+
+		//------------------------------------------------------------------------------------------
+		// 飛んでいるときのエフェクト
+		//
+		// 生成のときに小隊長へ EffectAssetComponent を付けておき、地上に出ている間だけ再生させる。
+		// 小隊長が多いと重いので m_flightEffectStride 体おきに付ける。
+		// 地面との関係を見るため、小隊長には SerchGroundComponent も付ける
+		//------------------------------------------------------------------------------------------
+		// 出しっぱなしのエフェクト(EffectAsset)。既定は Asset/Effect/Worm/Worm_FlightGrit
+		Core::GUID m_flightEffectGUID = Core::GUID("5b70e3aa-ee18-4e1c-b2ed-279aaa5ff9ef");
+		uint32_t m_flightEffectStride = 2;		// 何体おきの小隊長に付けるか(1 で全員。生成のときに決まる)
+
+		//------------------------------------------------------------------------------------------
+		// 飛行音
+		//
+		// ボイドや小隊長ごとには鳴らさない(数百の音が重なって潰れるうえ重い)。
+		// 体に沿って均等に選んだ m_flightSoundEmitterCount 体の小隊長の位置で、ループする音を 3D で鳴らす。
+		// 地中に居る小隊長の音は m_flightSoundUnderRatio 倍に絞る
+		//------------------------------------------------------------------------------------------
+		// ループさせる音。既定は Asset/Sound/Boss/VoidWorm_Flight
+		Core::GUID m_flightSoundGUID = Core::GUID("1aa55060-e330-47c4-9861-6087e2d11f64");
+		uint32_t m_flightSoundEmitterCount = 3;	// 鳴らす場所の数(頭から尾へ均等に選ぶ)
+		float m_flightSoundVolume = 0.7f;		// 地上に出ているときの音量
+		float m_flightSoundUnderRatio = 0.35f;	// 地中に居るときの音量の倍率
+		float m_flightSoundDistanceScaler = 40.0f;	// 距離による減衰の倍率(大きいほど遠くまで聞こえる)
+		float m_flightSoundFadeRate = 2.0f;		// 音量を寄せる速さ(1/秒。地上と地中の切り替わりをなだらかに)
+
+		// ---- 実行中の状態(保存しない) ----
+		std::vector<Engine::Handle<Engine::Resource::SoundInstance>> m_flightSoundHandles = {};	// 借りている飛行音
+		std::vector<float> m_flightSoundVolumes = {};	// 今鳴らしている音量(場所ごと)
+		bool m_isFlightSoundFailed = false;		// 借りられなかった(毎フレーム借り直さないための印)
 
 		//------------------------------------------------------------------------------------------
 		// 胴回りの回転(突進・ダイブが頼む)

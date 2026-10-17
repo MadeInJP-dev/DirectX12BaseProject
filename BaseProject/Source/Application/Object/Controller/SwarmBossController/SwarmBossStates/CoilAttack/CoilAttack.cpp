@@ -176,6 +176,9 @@ namespace App::Object
 				// 巻き始めてから切り離しを始めるまでの時間。以降は間隔ごと
 				m_launchTimer = std::max(m_launchStartDelay, 0.0f);
 
+				// 巻き始めた瞬間に鳴く
+				a_context.cry = ESwarmBossCry::Attack;
+
 				ChangePhase(EPhase::Coil);
 			}
 			break;

@@ -19,6 +19,12 @@ namespace App::Object
 		m_phase          = EPhase::Gather;
 		m_phaseTime      = 0.0f;
 		m_waveSpeedScale = 1.0f;
+		m_elapsed        = 0.0f;
+		m_shakeWeight    = 0.0f;
+		m_bgmScale       = 1.0f;
+
+		// 断末魔(画面の震えは Update で頼み続ける)
+		a_context.cry = ESwarmBossCry::Death;
 
 		// 中心は地表から決まった高さ
 		m_ball.Begin(a_context, std::max(m_centerHeight, 0.0f));
@@ -26,9 +32,24 @@ namespace App::Object
 
 	void SwarmBossDeathState::Update(SwarmBossStateContext& a_context)
 	{
-		if (m_phase == EPhase::Burst) return;
 		if (!a_context.pObject || !a_context.pObject->pWorld) return;
 		const float _dt = a_context.pObject->dt;
+
+		//--------------------------------------------------------------
+		// 断末魔の震えと BGM の絞り(爆散した後も続ける)
+		//--------------------------------------------------------------
+		m_elapsed += _dt;
+
+		const float _in  = (m_cryShakeFadeIn > 0.0f) ? std::clamp(m_elapsed / m_cryShakeFadeIn, 0.0f, 1.0f) : 1.0f;
+		const float _out = (m_cryShakeFadeOut > 0.0f) ? std::clamp((m_cryShakeTime - m_elapsed) / m_cryShakeFadeOut, 0.0f, 1.0f) : 1.0f;
+		m_shakeWeight = (m_elapsed < m_cryShakeTime) ? std::min(_in, _out) : 0.0f;
+		a_context.roarWeight = m_shakeWeight;
+
+		const float _bgmT = (m_bgmFadeTime > 0.0f) ? std::clamp(m_elapsed / m_bgmFadeTime, 0.0f, 1.0f) : 1.0f;
+		m_bgmScale = std::lerp(1.0f, std::clamp(m_bgmDuck, 0.0f, 1.0f), _bgmT);
+		a_context.bgmDuck = m_bgmScale;
+
+		if (m_phase == EPhase::Burst) return;
 
 		m_phaseTime += _dt;
 
@@ -93,6 +114,15 @@ namespace App::Object
 		a_ar.Field("DeathBurstIntensity", m_burst.intensity);
 	}
 
+	void SwarmBossDeathState::ArchiveAppended(Engine::Persistence::Archive& a_ar)
+	{
+		a_ar.Field("DeathCryShakeTime", m_cryShakeTime);
+		a_ar.Field("DeathCryShakeFadeIn", m_cryShakeFadeIn);
+		a_ar.Field("DeathCryShakeFadeOut", m_cryShakeFadeOut);
+		a_ar.Field("DeathBgmDuck", m_bgmDuck);
+		a_ar.Field("DeathBgmFadeTime", m_bgmFadeTime);
+	}
+
 	void SwarmBossDeathState::DrawInspector()
 	{
 		m_ball.DrawInspector();
@@ -116,8 +146,18 @@ namespace App::Object
 		Engine::EditorField::ColorField("爆散 : 発光色", m_burst.color);
 		Engine::EditorField::Field("爆散 : 発光の強さ", m_burst.intensity, 0.1f, 0.0f);
 
+		Engine::EditorField::Line();
+		Engine::EditorField::Field("断末魔で震わせる長さ", m_cryShakeTime, 0.1f, 0.0f);
+		Engine::EditorField::Tooltip("入った瞬間から。鳴き声の長さに合わせる");
+		Engine::EditorField::Field("震えの立ち上がり", m_cryShakeFadeIn, 0.01f, 0.0f);
+		Engine::EditorField::Field("震えの収まり", m_cryShakeFadeOut, 0.01f, 0.0f);
+		Engine::EditorField::Field("BGM を下げる倍率", m_bgmDuck, 0.01f, 0.0f, 1.0f);
+		Engine::EditorField::Tooltip("BGM の音量に掛ける。0 で消える / 1 で下げない。爆散した後も下げたまま");
+		Engine::EditorField::Field("BGM を下げきるまでの時間", m_bgmFadeTime, 0.1f, 0.0f);
+
 		// 実行中の状態は表示のみ
 		Engine::EditorField::Value("フェーズ", "%s (%.1f 秒)", std::string(magic_enum::enum_name(m_phase)).c_str(), m_phaseTime);
 		Engine::EditorField::Value("ウェーブの倍率", "x %.2f", m_waveSpeedScale);
+		Engine::EditorField::Value("震え / BGM", "%.2f / x %.2f", m_shakeWeight, m_bgmScale);
 	}
 }

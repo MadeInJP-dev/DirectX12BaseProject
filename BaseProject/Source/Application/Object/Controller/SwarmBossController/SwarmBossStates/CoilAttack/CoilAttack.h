@@ -24,6 +24,7 @@ namespace App::Object
 	///   ボスの体力が1減る(体を削って撃つ攻撃)。
 	/// ・速さは移動入力の長さで上げる(SwarmLeaderMoveSystem は 入力 × moveSpeed)。
 	///   小隊長はリーダーの platoonSpeedScale 倍なので、それを超えると列が千切れる。
+	/// ・巻き始めた瞬間に攻撃の鳴き声を頼む(画面は震わせない)。
 	/// ・プレイヤーが居なければ何もせず徘徊へ戻る。
 	/// </remarks>
 	class SwarmBossCoilAttackState : public IState

@@ -139,7 +139,7 @@ namespace App::Object
 			if (_roarTime >= 0.0f && !m_isRoared)
 			{
 				m_isRoared = true;
-				a_context.isRequestRoar = true;
+				a_context.cry = ESwarmBossCry::Roar;
 			}
 			if (_roarTime >= 0.0f && _roarTime < m_roarTime)
 			{

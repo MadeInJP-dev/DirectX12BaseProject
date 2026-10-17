@@ -151,9 +151,11 @@ namespace App::Object
 			const Math::Vector3 _toLaunch = m_launchPos - _pos;
 			_intent = ScaledDir(_toLaunch, std::clamp(m_riseThrottle, 0.0f, 1.0f));
 
+			// 狙いに入る瞬間に鳴く(これから降ってくる合図)
 			if (_toLaunch.Length() <= m_arriveDistance || m_phaseTime >= m_riseMaxTime)
 			{
 				ChangePhase(EPhase::Hover);
+				a_context.cry = ESwarmBossCry::Attack;
 			}
 			break;
 		}

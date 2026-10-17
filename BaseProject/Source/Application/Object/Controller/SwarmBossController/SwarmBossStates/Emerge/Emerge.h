@@ -18,7 +18,7 @@ namespace App::Object
 	/// ・とぐろは、飛び出した柱を輪の縁に置いた水平の輪(半径 m_coilRadius)の上を回りながら、
 	///   m_coilDescendSpeed で少しずつ下がっていく螺旋。体はリーダーの軌跡をなぞるので、
 	///   柱の上に輪が積み重なる形になる。目標点の追い方は巻き付き(CoilAttack)と同じ。
-	/// ・巻き始めて m_roarDelay 秒たったら鳴く。鳴き始めに鳴き声を頼み(isRequestRoar)、
+	/// ・巻き始めて m_roarDelay 秒たったら鳴く。鳴き始めに咆哮を頼み(cry = Roar)、
 	///   m_roarTime 秒の間は画面を震わせる強さ(roarWeight)を頼み続ける。
 	///   立ち上がり m_roarFadeIn 秒・終わり m_roarFadeOut 秒でなだらかにする。
 	///   鳴いている間は発光のウェーブも m_roarWaveSpeedScale 倍に速める。

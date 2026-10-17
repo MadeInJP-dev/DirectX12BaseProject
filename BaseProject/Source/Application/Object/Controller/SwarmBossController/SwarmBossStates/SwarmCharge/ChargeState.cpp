@@ -58,11 +58,14 @@ namespace App::Object
 		}
 	}
 
-	void SwarmBossChargeState::Enter(SwarmBossStateContext& /*a_context*/)
+	void SwarmBossChargeState::Enter(SwarmBossStateContext& a_context)
 	{
 		m_phase     = EPhase::Windup;
 		m_phaseTime = 0.0f;
 		m_chargeDir = Math::Vector3(0.0f, 0.0f, 0.0f);
+
+		// 溜めに入った瞬間に鳴く(突っ込んでくる合図)
+		a_context.cry = ESwarmBossCry::Attack;
 	}
 
 	void SwarmBossChargeState::Update(SwarmBossStateContext& a_context)

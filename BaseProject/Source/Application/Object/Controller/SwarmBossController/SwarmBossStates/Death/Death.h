@@ -22,6 +22,9 @@ namespace App::Object
 	///   しばらくして1体ずつ落とす(死亡エフェクトが出る)のはコントローラーと SwarmBurstSystem。
 	///   落ちたぶんだけボスの体力が減り、最後に 0 になる。
 	/// ・まとまっている間は体(ボイド)の防御比率を m_defenseRatio(既定 0 = 無敵)にするよう頼む。
+	/// ・入った瞬間に断末魔を頼み、m_cryShakeTime 秒の間は画面を震わせる(roarWeight)。
+	/// ・BGM は入ってから m_bgmFadeTime 秒かけて m_bgmDuck 倍まで下げていく(bgmDuck)。
+	///   爆散した後も下げたまま(戻すのはコントローラーが消えるとき)。
 	/// </remarks>
 	class SwarmBossDeathState : public IState
 	{
@@ -31,6 +34,7 @@ namespace App::Object
 		void Exit(SwarmBossStateContext& a_context) override;
 
 		void Archive(Engine::Persistence::Archive& a_ar) override;
+		void ArchiveAppended(Engine::Persistence::Archive& a_ar) override;
 		void DrawInspector() override;
 
 	private:
@@ -54,11 +58,21 @@ namespace App::Object
 
 		SwarmBossBurstRequest m_burst = {};		// 爆散の調整値(依頼にそのまま写す)
 
+		// 断末魔と BGM
+		float m_cryShakeTime      = 6.0f;		// 断末魔で画面を震わせる長さ(秒)
+		float m_cryShakeFadeIn    = 0.3f;		// 震えが立ち上がるまでの時間(秒)
+		float m_cryShakeFadeOut   = 2.0f;		// 震えが収まるまでの時間(秒。震わせる長さの内側)
+		float m_bgmDuck           = 0.15f;		// BGM をここまで下げる(音量の倍率。1 で下げない)
+		float m_bgmFadeTime       = 6.0f;		// BGM を下げきるまでの時間(秒)
+
 		//------------------------------------------------------------------------------------------
 		// 実行中の状態(保存しない)
 		//------------------------------------------------------------------------------------------
 		EPhase m_phase = EPhase::Gather;
 		float m_phaseTime = 0.0f;				// 今のフェーズに入ってからの経過時間(秒)
 		float m_waveSpeedScale = 1.0f;			// 今頼んでいるウェーブの倍率(表示用)
+		float m_elapsed = 0.0f;					// 入ってからの経過時間(秒。爆散した後も数える)
+		float m_shakeWeight = 0.0f;				// 今頼んでいる震えの強さ(表示用)
+		float m_bgmScale = 1.0f;				// 今頼んでいる BGM の倍率(表示用)
 	};
 }
