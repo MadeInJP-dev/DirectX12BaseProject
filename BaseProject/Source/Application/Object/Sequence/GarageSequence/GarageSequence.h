@@ -17,6 +17,30 @@ namespace App::Object
 	};
 
 	/// <summary>
+	/// 武器の性能(一覧で選んでいる武器の横に出す)。プレハブの中身から引く
+	/// </summary>
+	struct GarageWeaponStats
+	{
+		static constexpr size_t ROW_COUNT = 5;	// 出す項目の数
+
+		bool isValid = false;
+		std::string mode = "";					// 撃ち方("FULL AUTO" など)
+		// 項目ごとの値(棒の長さの元)と、出す文字。並びは手と肩で別(GarageSequence::GetStatLabel)
+		std::array<float, ROW_COUNT> valueArray = {};
+		std::array<std::string, ROW_COUNT> textArray = {};
+	};
+
+	/// <summary>
+	/// 構えの1本ぶん(ガレージの機体に足すポーズ)。中身は StancePoseComponent へ流し込む
+	/// </summary>
+	struct GarageStanceBone
+	{
+		std::string nodeName = "";		// 回すノードの名前
+		Math::Vector3 rotationDeg = {};	// モデル空間の回転(度)。X → Y → Z の順
+		Math::Vector3 offset = {};		// 回した後にずらす量(モデル空間・m)
+	};
+
+	/// <summary>
 	/// 武器の一覧の1件(ガレージで選べる武器)
 	/// </summary>
 	struct GarageWeaponEntry
@@ -30,6 +54,7 @@ namespace App::Object
 		bool isHand = false;
 		bool isShoulder = false;
 		Engine::ResourceRef<Engine::Resource::Prefab> prefabRef = {};
+		GarageWeaponStats stats = {};
 	};
 
 	//======================================================================================
@@ -46,6 +71,11 @@ namespace App::Object
 	//   見た目はシーン側で直せる。中身はここが飾りへ流し込む : 画像は "Icon"、名前は "Name"、
 	//   取り付け口の名前は "Slot"(箱)/ 一覧の見出しは "Title"、今付いている印は "Bg" の色。
 	// ・全体の箱と、寄りの一覧はそれぞれ UIPanel にまとめ、そのパネルの表示を切り替える。
+	// ・寄りでは性能の板(UI 1枚)に、カーソルが乗っている武器(乗っていなければ今付いている武器)の
+	//   性能を出す。飾り : "StatName"(武器名)/ "StatMode"(撃ち方)/ 項目ごとに
+	//   "StatLabel0〜4"(項目名)/ "StatValue0〜4"(値)/ "StatBarBg0〜4"(棒の枠。この幅が満タン)/
+	//   "StatBar0〜4"(棒。一覧の中の一番よい値を満タンにした長さ)/ "StatEquip0〜4"(今付いている武器の長さ)。
+	// ・機体には構え(仁王立ちで銃を構える)を StancePoseComponent で足す。角度はここで持つ。
 	// ・引き出し線は飾りではなく、ここが毎フレーム描く(端が機体の動きについていくため)。
 	// ・カメラはシーンのカメラ(エンティティの GUID)を直接動かす。全体の構図は読み込んだときの位置と向き。
 	// ・機体は入力で動かないよう、PlayerSpawner の Controllable を切って置くこと。
@@ -108,6 +138,9 @@ namespace App::Object
 		// 箱に今付いている武器を出す
 		void RefreshBoxes(Engine::GameObject::ObjectContext& a_context);
 
+		// 性能の板に、カーソルが乗っている武器(無ければ今付いている武器)を出す
+		void RefreshStats(Engine::GameObject::ObjectContext& a_context);
+
 		// 一覧に、寄っている取り付け口へ付けられる武器を並べる
 		void RefreshList(Engine::GameObject::ObjectContext& a_context);
 
@@ -115,6 +148,35 @@ namespace App::Object
 		void SetDecorationImage(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_uiGUID, const char* a_decoName, const Core::GUID& a_texGUID);
 		void SetDecorationText(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_uiGUID, const char* a_decoName, const std::string& a_text);
 		void SetDecorationAlpha(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_uiGUID, const char* a_decoName, float a_alpha);
+
+		// 棒の飾り(a_barName)を、枠の飾り(a_bgName)の幅に対する割合の長さにする。左端は枠に揃える
+		void SetDecorationBar(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_uiGUID, const std::string& a_barName, const std::string& a_bgName, float a_ratio);
+
+		//-------------------------------------------------------------------
+		// 性能
+		//-------------------------------------------------------------------
+
+		// プレハブの中身から性能を引く
+		static GarageWeaponStats BuildStats(Engine::GameObject::ObjectContext& a_context, const GarageWeaponEntry& a_entry);
+
+		// 一覧の中で一番よい値(棒の満タン)を、手と肩で別に出し直す
+		void RebuildStatMax();
+
+		// 項目名。手と肩で並びが違う
+		static const char* GetStatLabel(bool a_isShoulder, size_t a_row);
+
+		// 値が小さいほどよい項目か(肩の再装填)
+		static bool IsLowerBetterStat(bool a_isShoulder, size_t a_row);
+
+		// 棒の長さ(0〜1)
+		float CalcStatRatio(bool a_isShoulder, size_t a_row, float a_value) const;
+
+		//-------------------------------------------------------------------
+		// 構え
+		//-------------------------------------------------------------------
+
+		// 出した機体に構え(StancePoseComponent)を付け、中身を書き直す
+		void UpdateStance(Engine::GameObject::ObjectContext& a_context);
 
 		//-------------------------------------------------------------------
 		// 出撃構成
@@ -170,6 +232,13 @@ namespace App::Object
 		// 選べる武器
 		std::vector<GarageWeaponEntry> m_catalogVec = {};
 
+		// 性能の板(UI 1枚。寄りの一覧のパネルの下に置くと、寄りのときだけ出る)
+		Core::GUID m_statPanelGUID = {};
+
+		// 構え(仁王立ちで銃を構える)。機体の StancePoseComponent へ流し込む
+		bool m_isStanceEnabled = true;
+		std::vector<GarageStanceBone> m_stanceBoneVec = {};
+
 		// 寄りの構図
 		float m_zoomDistance = 9.0f;		// 取り付け口からカメラまで(m)
 		float m_zoomScreenShift = 0.45f;	// 武器を画面中央から右へずらす量(画面の半分の幅に対する割合)
@@ -208,6 +277,17 @@ namespace App::Object
 
 		// 箱の中身を出し直すか(付け替えた・読み込んだ)
 		bool m_isBoxDirty = true;
+
+		// 性能の板に今出している武器(m_catalogVec の添え字)。SIZE_MAX なら何も出していない
+		size_t m_statEntryIndex = SIZE_MAX;
+		Core::GUID m_statEquipped = {};		// そのときに付いていた武器(付け替えたら出し直す)
+
+		// 棒の満タン(一覧の中で一番よい値)。[0] が手、[1] が肩
+		std::array<std::array<float, GarageWeaponStats::ROW_COUNT>, 2> m_statMaxArray = {};
+		std::array<std::array<float, GarageWeaponStats::ROW_COUNT>, 2> m_statMinArray = {};
+
+		// 構えを付けるのを頼んだ機体(付くのは次のフレームの頭)
+		Engine::ECS::Entity m_stanceRequestedEntity = Engine::ECS::Limits::INVALID_ENTITY;
 
 		//-------------------------------------------------------------------
 		// BGM

@@ -862,6 +862,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Animation\StancePoseSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Animation\AnimationSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1874,6 +1879,7 @@
     <ClInclude Include="Source\Application\Components\Animation\AnimatorComponent.h" />
     <ClInclude Include="Source\Application\Components\Animation\UpperAnimatorComponent.h" />
     <ClInclude Include="Source\Application\Components\Animation\LowerBodyTurnComponent.h" />
+    <ClInclude Include="Source\Application\Components\Animation\StancePoseComponent.h" />
     <ClInclude Include="Source\Application\Components\Render\ModelComponent.h" />
     <ClInclude Include="Source\Application\Components\Render\EmissiveOverrideComponent.h" />
     <ClInclude Include="Source\Application\Components\Animation\NodePoseComponent.h" />
@@ -1978,6 +1984,7 @@
     <ClInclude Include="Source\Application\Systems\Physics\BoundaryClampSystem.h" />
     <ClInclude Include="Source\Application\Systems\Animation\AdditivePoseSystem.h" />
     <ClInclude Include="Source\Application\Systems\Animation\LowerBodyTurnSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Animation\StancePoseSystem.h" />
     <ClInclude Include="Source\Application\Systems\Animation\AnimationSystem.h" />
     <ClInclude Include="Source\Application\Systems\Animation\CalcNodeSystem.h" />
     <ClInclude Include="Source\Application\Systems\Transform\FollowAnimationNodeSystem.h" />

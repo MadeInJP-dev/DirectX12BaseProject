@@ -179,6 +179,7 @@ namespace App::Object
 
 		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
 		a_ar.Field("WallMargin", m_wallMargin);
+		a_ar.Field("IsClampPlayer", m_isClampPlayer);
 
 		// 読み込み時は画像の読み込みを始めさせる(届くまでは描かない)
 		if (a_ar.IsLoading())
@@ -204,6 +205,14 @@ namespace App::Object
 		if (!a_context.pWorld->HasResource<InstanceResource::BoundaryResource>()) return;
 
 		auto& _res = a_context.pWorld->RefResource<InstanceResource::BoundaryResource>();
+
+		// 見た目だけの壁(背景)なら押し戻さない。途中で切り替えたときのために外しておく
+		if (!m_isClampPlayer)
+		{
+			if (_res.isActive) _res.Clear();
+			return;
+		}
+
 		_res.center = m_center;
 		_res.halfSize = m_size * 0.5f;
 		_res.margin = std::max(m_wallMargin, 0.0f);
@@ -369,6 +378,8 @@ namespace App::Object
 			m_size.z = std::max(m_size.z, MIN_LENGTH);
 		}
 
+		Engine::EditorField::Field("Clamp Player", m_isClampPlayer);
+		Engine::EditorField::Tooltip("プレイヤーを範囲の内側へ押し戻すか。切ると見た目だけの壁(背景)になる");
 		Engine::EditorField::Field("Wall Margin", m_wallMargin, 0.1f, 0.0f, 1000.0f);
 		Engine::EditorField::Tooltip("プレイヤーの位置(足元)を壁からこれだけ内側に留める。機体の半径くらいにすると体が面にめり込まない");
 

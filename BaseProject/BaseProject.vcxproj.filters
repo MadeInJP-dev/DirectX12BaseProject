@@ -1821,6 +1821,9 @@
     <ClCompile Include="Source\Application\Systems\Animation\LowerBodyTurnSystem.cpp">
       <Filter>Source\Application\Systems\Animation</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Animation\StancePoseSystem.cpp">
+      <Filter>Source\Application\Systems\Animation</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Animation\AnimationSystem.cpp">
       <Filter>Source\Application\Systems\Animation</Filter>
     </ClCompile>
@@ -3086,6 +3089,9 @@
     <ClInclude Include="Source\Application\Components\Animation\LowerBodyTurnComponent.h">
       <Filter>Source\Application\Components\Animation</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Components\Animation\StancePoseComponent.h">
+      <Filter>Source\Application\Components\Animation</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Components\Audio\AudioListenerComponent.h">
       <Filter>Source\Application\Components\Audio</Filter>
     </ClInclude>
@@ -3489,6 +3495,9 @@
       <Filter>Source\Application\Systems\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Animation\LowerBodyTurnSystem.h">
+      <Filter>Source\Application\Systems\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Animation\StancePoseSystem.h">
       <Filter>Source\Application\Systems\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Animation\AnimationSystem.h">

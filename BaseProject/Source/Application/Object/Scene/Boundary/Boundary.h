@@ -55,7 +55,11 @@ namespace App::Object
 	/// 当たり判定は持たず、範囲を BoundaryResource へ書き写して、
 	/// BoundaryClampSystem がプレイヤーの位置を範囲の内側へ挟む。
 	///
-	/// 回転は持たない(軸に沿った箱)。外へ出さない処理を単純な範囲の比較で済ませるため
+	/// 回転は持たない(軸に沿った箱)。外へ出さない処理を単純な範囲の比較で済ませるため。
+	///
+	/// 背景として使うこともできる(ガレージの電子空間など)。
+	/// 押し戻しを切り(m_isClampPlayer)、見え始めの距離を一番濃い距離以下にすれば、
+	/// どこから見ても常に見える壁になる
 	/// </remarks>
 	class Boundary : public Engine::GameObject::BaseObject
 	{
@@ -130,6 +134,9 @@ namespace App::Object
 		// 壁から内側へ空ける距離。プレイヤーの位置(足元)がこれより壁へ寄らない。
 		// 機体の半径くらいにしておくと、体が面にめり込まない
 		float m_wallMargin = 2.0f;
+
+		// プレイヤーを範囲の内側へ押し戻すか。切ると見た目だけの壁(背景)になる
+		bool m_isClampPlayer = true;
 
 		// 面ごとに描くか(EBoundaryFace の順)。床は地面に埋まるので既定で描かない
 		std::array<bool, static_cast<size_t>(EBoundaryFace::Count)> m_isDrawFace = { true, true, true, false, true, true };

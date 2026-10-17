@@ -27,6 +27,15 @@
 #include "Application/Components/Camera/FocusParamComponent.h"
 #include "Application/Components/Weapon/Hand/WeaponStateComponent.h"
 #include "Application/Components/Weapon/Shoulder/MissileStateComponent.h"
+#include "Application/Components/Weapon/Shoulder/MissileFireComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/AutoFireComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/BurstFireComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/SemiAutoFireComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/WeaponOverHeatComponent.h"
+#include "Application/Components/Weapon/WeaponConfig/WeaponReloadComponent.h"
+#include "Application/Components/Weapon/Projectile/ProjectileComponent.h"
+#include "Application/Components/Animation/StancePoseComponent.h"
+#include "Application/Components/Movement/LookAngleComponent.h"
 #include "Application/InstanceResource/GameDataResource.h"
 
 //==========================================================================================
@@ -53,6 +62,63 @@ namespace App::Object
 
 		constexpr float BG_ALPHA_NORMAL = 0.15f;	// 下地の濃さ : ふつう
 		constexpr float BG_ALPHA_EQUIPPED = 0.45f;	// 下地の濃さ : 今付いている
+
+		// 性能の板の飾り(項目ごとのものは後ろに番号を付ける)
+		constexpr const char* DECO_STAT_NAME = "StatName";		// 武器の名前
+		constexpr const char* DECO_STAT_MODE = "StatMode";		// 撃ち方
+		constexpr const char* DECO_STAT_LABEL = "StatLabel";	// 項目名
+		constexpr const char* DECO_STAT_VALUE = "StatValue";	// 値
+		constexpr const char* DECO_STAT_BAR_BG = "StatBarBg";	// 棒の枠(この幅が満タン)
+		constexpr const char* DECO_STAT_BAR = "StatBar";		// 棒
+		constexpr const char* DECO_STAT_EQUIP = "StatEquip";	// 今付いている武器の棒
+
+		constexpr float STAT_BAR_MIN_RATIO = 0.06f;	// 一番低い値でも棒が見えるように
+		constexpr float STAT_NO_LIMIT = -1.0f;		// 上限の無い値(熱も弾倉も無い)。棒は満タン
+
+		// 項目の飾りの名前
+		std::string StatDecoName(const char* a_base, size_t a_row)
+		{
+			return std::string(a_base) + std::to_string(a_row);
+		}
+
+		// 数値を文字にする
+		std::string FormatStat(const char* a_format, float a_value)
+		{
+			char _buf[64] = {};
+			std::snprintf(_buf, sizeof(_buf), a_format, a_value);
+			return _buf;
+		}
+
+		// プレハブのルートが持つコンポーネントの中身。持っていなければ nullptr
+		template<typename T>
+		const T* FindPrefabData(Engine::ECS::World& a_world, const Engine::Resource::Prefab& a_prefab)
+		{
+			const Engine::ECS::ComponentTypeID _typeID = a_world.GetCompTypeID<T>();
+			if (_typeID == Engine::ECS::Limits::INVALID_COMPONENTTYPEID) return nullptr;
+
+			const auto& _dataMap = a_prefab.GetDataMap();
+			const auto _it = _dataMap.find(_typeID);
+			if (_it == _dataMap.end() || _it->second.size() < sizeof(T)) return nullptr;
+			return reinterpret_cast<const T*>(_it->second.data());
+		}
+
+		//----------------------------------------------------------------------------------
+		// 構えの既定 : 仁王立ちで、両手の銃を体の前へ構える(LightTacticalMech に合わせた値)
+		//----------------------------------------------------------------------------------
+		std::vector<GarageStanceBone> MakeDefaultStance()
+		{
+			// モデル空間は X = 機体の右、Y = 上、Z = 前。
+			// 腕は元のクリップ(DefaultState)が前腕を正面へ出した構えなので、脚だけを足す
+			return {
+				// 腿を外へ開いて浮いた分だけ腰を落とす(足裏が地面から離れないように)
+				{ "pelvis",		{ 0.0f, 0.0f, 0.0f },	{ 0.0f, -0.06f, 0.0f } },
+				// 脚を開いて踏ん張る(腿を外へ、足首で戻して足裏を地面と平らにする)
+				{ "thigh_l",	{ 0.0f, 0.0f, -12.0f },	{} },
+				{ "thigh_r",	{ 0.0f, 0.0f, 12.0f },	{} },
+				{ "foot_l",		{ 0.0f, 0.0f, 12.0f },	{} },
+				{ "foot_r",		{ 0.0f, 0.0f, -12.0f },	{} },
+			};
+		}
 
 		// 指数減衰の補間係数
 		float DampFactor(float a_rate, float a_dt)
@@ -108,9 +174,13 @@ namespace App::Object
 			{
 				ENGINE_WARNING("[GarageSequence] 手にも肩にも付けられない武器が一覧にあります : %s", _entry.name.c_str());
 			}
+
+			_entry.stats = BuildStats(a_context, _entry);
 		}
+		RebuildStatMax();
 
 		m_isBoxDirty = true;
+		m_statEntryIndex = SIZE_MAX;
 	}
 
 	//======================================================================================
@@ -137,6 +207,8 @@ namespace App::Object
 		}
 
 		UpdateCamera(a_context);
+		UpdateStance(a_context);
+		RefreshStats(a_context);
 
 		m_bgm.Update(a_context);
 	}
@@ -201,6 +273,7 @@ namespace App::Object
 	{
 		m_mode = EGarageMode::Zoom;
 		m_zoomMount = a_mount;
+		m_statEntryIndex = SIZE_MAX;	// 性能の板を出し直す
 		RefreshList(a_context);
 		ApplyVisible(a_context);
 	}
@@ -356,6 +429,65 @@ namespace App::Object
 	}
 
 	//======================================================================================
+	// 性能の板に、カーソルが乗っている武器(無ければ今付いている武器)を出す
+	//--------------------------------------------------------------------------------------
+	// 棒は一覧の中で一番よい値を満タンにした長さ。今付いている武器の長さも薄く重ねて、
+	// 乗せた武器と見比べられるようにする。出している武器が変わったときだけ書き直す
+	//======================================================================================
+	void GarageSequence::RefreshStats(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (m_mode != EGarageMode::Zoom) return;
+		if (!m_statPanelGUID.IsValid()) return;
+
+		// カーソルが乗っている一覧の項目
+		size_t _entryIndex = SIZE_MAX;
+		for (size_t _i = 0; _i < m_listItemGUIDVec.size() && _i < m_listEntryIndexVec.size(); ++_i)
+		{
+			const auto* _pItem = Picker::Find<UIBase>(a_context.pObjectManager, m_listItemGUIDVec[_i]);
+			if (_pItem && _pItem->IsHovered())
+			{
+				_entryIndex = m_listEntryIndexVec[_i];
+				break;
+			}
+		}
+
+		// 今付いている武器
+		const Core::GUID _equipped = GetLoadoutWeapon(a_context, m_zoomMount);
+		size_t _equippedIndex = SIZE_MAX;
+		for (size_t _i = 0; _i < m_catalogVec.size(); ++_i)
+		{
+			if (_equipped.IsValid() && m_catalogVec[_i].prefabGUID == _equipped) { _equippedIndex = _i; break; }
+		}
+		if (_entryIndex == SIZE_MAX) _entryIndex = _equippedIndex;
+
+		if (_entryIndex == m_statEntryIndex && _equipped == m_statEquipped) return;
+		m_statEntryIndex = _entryIndex;
+		m_statEquipped = _equipped;
+
+		const GarageWeaponEntry* _pEntry = (_entryIndex < m_catalogVec.size()) ? &m_catalogVec[_entryIndex] : nullptr;
+		const GarageWeaponEntry* _pEquipped = (_equippedIndex < m_catalogVec.size()) ? &m_catalogVec[_equippedIndex] : nullptr;
+		const bool _isShoulder = IsShoulderMount(m_zoomMount);
+
+		const bool _isValid = _pEntry && _pEntry->stats.isValid;
+		const bool _hasEquipped = _pEquipped && _pEquipped->stats.isValid;
+		SetDecorationText(a_context, m_statPanelGUID, DECO_STAT_NAME, _pEntry ? _pEntry->name : "EMPTY");
+		SetDecorationText(a_context, m_statPanelGUID, DECO_STAT_MODE, _isValid ? _pEntry->stats.mode : "");
+
+		for (size_t _row = 0; _row < GarageWeaponStats::ROW_COUNT; ++_row)
+		{
+			const std::string _bgName = StatDecoName(DECO_STAT_BAR_BG, _row);
+			SetDecorationText(a_context, m_statPanelGUID, StatDecoName(DECO_STAT_LABEL, _row).c_str(), GetStatLabel(_isShoulder, _row));
+			SetDecorationText(a_context, m_statPanelGUID, StatDecoName(DECO_STAT_VALUE, _row).c_str(), _isValid ? _pEntry->stats.textArray[_row] : "---");
+			SetDecorationBar(a_context, m_statPanelGUID, StatDecoName(DECO_STAT_BAR, _row), _bgName,
+				_isValid ? CalcStatRatio(_isShoulder, _row, _pEntry->stats.valueArray[_row]) : 0.0f);
+
+			// 今付いている武器の長さ(乗せた武器が付いている武器なら重なる)
+			SetDecorationBar(a_context, m_statPanelGUID, StatDecoName(DECO_STAT_EQUIP, _row), _bgName,
+				_hasEquipped ? CalcStatRatio(_isShoulder, _row, _pEquipped->stats.valueArray[_row]) : 0.0f);
+		}
+	}
+
+	//======================================================================================
 	// 飾りへ流し込む
 	//======================================================================================
 	void GarageSequence::SetDecorationImage(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_uiGUID, const char* a_decoName, const Core::GUID& a_texGUID)
@@ -396,6 +528,247 @@ namespace App::Object
 		if (!_pUI) return;
 
 		if (Decoration::Decoration* _pDeco = _pUI->FindDecoration(a_decoName)) _pDeco->color.a = a_alpha;
+	}
+
+	void GarageSequence::SetDecorationBar(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_uiGUID, const std::string& a_barName, const std::string& a_bgName, float a_ratio)
+	{
+		auto* _pUI = Picker::Find<UIBase>(a_context.pObjectManager, a_uiGUID);
+		if (!_pUI) return;
+
+		Decoration::Decoration* _pBar = _pUI->FindDecoration(a_barName);
+		const Decoration::Decoration* _pBg = _pUI->FindDecoration(a_bgName);
+		if (!_pBar || !_pBg) return;
+
+		// 枠の左端から、割合の長さだけ伸ばす(どちらのピボットでも左端が揃うように置く)
+		const float _width = _pBg->pixelSize.x * std::clamp(a_ratio, 0.0f, 1.0f);
+		const float _left = _pBg->offsetPos.x - _pBg->pixelSize.x * _pBg->pivot.x;
+		_pBar->pixelSize.x = _width;
+		_pBar->offsetPos.x = _left + _width * _pBar->pivot.x;
+		_pBar->isVisible = (_width > 0.5f);
+	}
+
+	//======================================================================================
+	// 性能 : プレハブの中身から引く
+	//--------------------------------------------------------------------------------------
+	// 手 : 攻撃力 / 毎秒の発射数 / 毎秒のダメージ / 弾速 / 熱(弾倉)が尽きるまでの発射数
+	// 肩 : 1発の攻撃力 / 一斉射の数 / 一斉射のダメージ / 弾速 / 次の一斉射までの時間
+	//======================================================================================
+	GarageWeaponStats GarageSequence::BuildStats(Engine::GameObject::ObjectContext& a_context, const GarageWeaponEntry& a_entry)
+	{
+		GarageWeaponStats _stats = {};
+		if (!a_context.pWorld || !a_context.pServices || !a_context.pServices->pResourceManager) return _stats;
+
+		auto& _world = *a_context.pWorld;
+		auto& _rm = *a_context.pServices->pResourceManager;
+		const auto* _pPrefab = _rm.Get(a_entry.prefabRef);
+		if (!_pPrefab) return _stats;
+
+		if (a_entry.isShoulder && !a_entry.isHand)
+		{
+			//----------------------------------------------------------------------
+			// 肩(ミサイル)
+			//----------------------------------------------------------------------
+			const auto* _pState = FindPrefabData<Component::MissileStateComponent>(_world, *_pPrefab);
+			const auto* _pFire = FindPrefabData<Component::MissileFireComponent>(_world, *_pPrefab);
+			if (!_pState || !_pFire) return _stats;
+
+			const float _attack = _pState->missileAttack;
+			const float _count = static_cast<float>(_pFire->GetActiveBurstNum());
+			const float _cycle = (_pFire->isBurst ? _pFire->burstTime * (std::max)(_count - 1.0f, 0.0f) : 0.0f) + _pFire->waitTime;
+
+			_stats.mode = "HOMING MISSILE";
+			_stats.valueArray = { _attack, _count, _attack * _count, _pState->missileSpeed, _cycle };
+			_stats.textArray = {
+				FormatStat("%.0f", _attack),
+				FormatStat("%.0f", _count),
+				FormatStat("%.0f", _attack * _count),
+				FormatStat("%.0f MPS", _pState->missileSpeed),
+				FormatStat("%.2f SEC", _cycle),
+			};
+			_stats.isValid = true;
+			return _stats;
+		}
+
+		//--------------------------------------------------------------------------
+		// 手
+		//--------------------------------------------------------------------------
+		const auto* _pState = FindPrefabData<Component::WeaponStateComponent>(_world, *_pPrefab);
+		if (!_pState) return _stats;
+
+		// 攻撃力 : 0 以下なら弾のプレハブの値(WeaponProjectileSpawnSystem と同じ)
+		float _attack = _pState->bulletAttack;
+		if (!(_attack > 0.0f) && _pState->bulletPrefabGUID.IsValid())
+		{
+			const auto _bulletRef = _rm.LoadImmediate<Engine::Resource::Prefab>(_pState->bulletPrefabGUID);
+			if (const auto* _pBullet = _rm.Get(_bulletRef))
+			{
+				if (const auto* _pProjectile = FindPrefabData<Component::ProjectileComponent>(_world, *_pBullet))
+				{
+					_attack = _pProjectile->damage;
+				}
+			}
+		}
+
+		// 毎秒の発射数と撃ち方
+		float _rate = 0.0f;
+		if (const auto* _pAuto = FindPrefabData<Component::AutoFireComponent>(_world, *_pPrefab))
+		{
+			_rate = _pAuto->fireRate;
+			_stats.mode = "FULL AUTO";
+		}
+		else if (const auto* _pBurst = FindPrefabData<Component::BurstFireComponent>(_world, *_pPrefab))
+		{
+			// 1バースト = 間隔 (発数 - 1) 回 + 撃ち切ってからの待ち
+			const float _num = static_cast<float>(_pBurst->burstNum);
+			const float _cycle = _pBurst->burstTime * (std::max)(_num - 1.0f, 0.0f) + _pBurst->waitTime;
+			_rate = (_cycle > 0.0f) ? _num / _cycle : 0.0f;
+			_stats.mode = std::to_string(_pBurst->burstNum) + "-ROUND BURST";
+		}
+		else if (const auto* _pSemi = FindPrefabData<Component::SemiAutoFireComponent>(_world, *_pPrefab))
+		{
+			_rate = (_pSemi->waitTime > 0.0f) ? 1.0f / _pSemi->waitTime : 0.0f;
+			_stats.mode = "SEMI AUTO";
+		}
+
+		// 熱(弾倉)が尽きるまでの発射数。どちらも無ければ上限なし
+		float _sustain = STAT_NO_LIMIT;
+		std::string _sustainText = "NO LIMIT";
+		if (const auto* _pHeat = FindPrefabData<Component::WeaponOverHeatComponent>(_world, *_pPrefab))
+		{
+			if (_pHeat->perShot > 0.0f)
+			{
+				_sustain = std::ceil(_pHeat->limit / _pHeat->perShot);
+				_sustainText = FormatStat("%.0f RDS", _sustain);
+			}
+		}
+		else if (const auto* _pReload = FindPrefabData<Component::WeaponReloadComponent>(_world, *_pPrefab))
+		{
+			_sustain = static_cast<float>(_pReload->magazineMaxCapacity);
+			_sustainText = FormatStat("%.0f RDS", _sustain);
+		}
+
+		_stats.valueArray = { _attack, _rate, _attack * _rate, _pState->bulletSpeed, _sustain };
+		_stats.textArray = {
+			FormatStat("%.0f", _attack),
+			FormatStat("%.1f RPS", _rate),
+			FormatStat("%.0f", _attack * _rate),
+			FormatStat("%.0f MPS", _pState->bulletSpeed),
+			_sustainText,
+		};
+		_stats.isValid = true;
+		return _stats;
+	}
+
+	void GarageSequence::RebuildStatMax()
+	{
+		for (size_t _kind = 0; _kind < 2; ++_kind)
+		{
+			m_statMaxArray[_kind].fill(0.0f);
+			m_statMinArray[_kind].fill(FLT_MAX);
+		}
+
+		for (const GarageWeaponEntry& _entry : m_catalogVec)
+		{
+			if (!_entry.stats.isValid) continue;
+			const size_t _kind = (_entry.isShoulder && !_entry.isHand) ? 1 : 0;
+			for (size_t _row = 0; _row < GarageWeaponStats::ROW_COUNT; ++_row)
+			{
+				const float _value = _entry.stats.valueArray[_row];
+				if (_value < 0.0f) continue;	// 上限なし
+				m_statMaxArray[_kind][_row] = (std::max)(m_statMaxArray[_kind][_row], _value);
+				m_statMinArray[_kind][_row] = (std::min)(m_statMinArray[_kind][_row], _value);
+			}
+		}
+	}
+
+	const char* GarageSequence::GetStatLabel(bool a_isShoulder, size_t a_row)
+	{
+		static constexpr const char* HAND_LABELS[GarageWeaponStats::ROW_COUNT] = { "ATTACK", "FIRE RATE", "DPS", "BULLET SPEED", "SUSTAIN" };
+		static constexpr const char* SHOULDER_LABELS[GarageWeaponStats::ROW_COUNT] = { "ATTACK", "MISSILES", "SALVO DAMAGE", "MISSILE SPEED", "RELOAD" };
+		if (a_row >= GarageWeaponStats::ROW_COUNT) return "";
+		return a_isShoulder ? SHOULDER_LABELS[a_row] : HAND_LABELS[a_row];
+	}
+
+	bool GarageSequence::IsLowerBetterStat(bool a_isShoulder, size_t a_row)
+	{
+		return a_isShoulder && a_row == 4;	// 肩の再装填
+	}
+
+	float GarageSequence::CalcStatRatio(bool a_isShoulder, size_t a_row, float a_value) const
+	{
+		if (a_row >= GarageWeaponStats::ROW_COUNT) return 0.0f;
+		if (a_value < 0.0f) return 1.0f;	// 上限なし
+
+		const size_t _kind = a_isShoulder ? 1 : 0;
+		float _ratio = 0.0f;
+		if (IsLowerBetterStat(a_isShoulder, a_row))
+		{
+			// 小さいほどよい : 一番小さい値を満タンにする
+			const float _min = m_statMinArray[_kind][a_row];
+			_ratio = (a_value > 0.0f && _min < FLT_MAX) ? _min / a_value : 1.0f;
+		}
+		else
+		{
+			const float _max = m_statMaxArray[_kind][a_row];
+			_ratio = (_max > 0.0f) ? a_value / _max : 0.0f;
+		}
+		return std::clamp(_ratio, STAT_BAR_MIN_RATIO, 1.0f);
+	}
+
+	//======================================================================================
+	// 構え : 出した機体に StancePoseComponent を付け、中身を書き直す
+	//--------------------------------------------------------------------------------------
+	// 付けるのは予約なので、付くのは次のフレームの頭。付いたら毎フレーム中身を書き直す
+	// (インスペクターで角度をいじると、その場で見た目に出る)。
+	// 機体は TransientTag 付きなので、付けたものがシーンへ保存されることはない
+	//======================================================================================
+	void GarageSequence::UpdateStance(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (!a_context.pWorld) return;
+		auto& _world = *a_context.pWorld;
+
+		const auto* _pSpawner = Picker::Find<PlayerSpawner>(a_context.pObjectManager, m_spawnerGUID);
+		if (!_pSpawner) return;
+
+		const Engine::ECS::Entity _player = _pSpawner->GetPlayerEntity();
+		if (_player == Engine::ECS::Limits::INVALID_ENTITY || !_world.IsAliveEntity(_player)) return;
+
+		// 視線を機体の正面へ合わせる。
+		// 入力で動かさない機体は視線(LookAngle)が 0 のまま残り、機体の向きとの差の分だけ
+		// 加算ポーズ(AdditivePoseSystem)が上半身をねじってしまうため
+		if (_world.HasComponent<Component::LookAngleComponent>(_player) && _world.HasComponent<Component::LocalTransformComponent>(_player))
+		{
+			const auto* _pTrans = _world.RefData<Component::LocalTransformComponent>(_player);
+			auto* _pLook = _world.RefData<Component::LookAngleComponent>(_player);
+			const Math::Vector3 _forward = _pTrans ? Math::Matrix::CreateFromQuaternion(_pTrans->quat).Forward() : Math::Vector3();
+			if (_pLook && (_forward.x * _forward.x + _forward.z * _forward.z) > 1e-6f)
+			{
+				_pLook->Yaw = DirectX::XMConvertToDegrees(std::atan2(_forward.x, _forward.z));
+				_pLook->Pitch = 0.0f;
+			}
+		}
+
+		if (!_world.HasComponent<Component::StancePoseComponent>(_player))
+		{
+			if (!m_isStanceEnabled || m_stanceBoneVec.empty()) return;
+			if (m_stanceRequestedEntity == _player) return;
+
+			_world.ReserveAddComponent(_world.GetCompTypeID<Component::StancePoseComponent>(), _player);
+			m_stanceRequestedEntity = _player;
+			return;
+		}
+
+		auto* _pStance = _world.RefData<Component::StancePoseComponent>(_player);
+		if (!_pStance) return;
+
+		_pStance->weight = m_isStanceEnabled ? 1.0f : 0.0f;
+		_pStance->boneCount = static_cast<uint32_t>((std::min)(m_stanceBoneVec.size(), static_cast<size_t>(Component::StancePoseComponent::BONE_MAX)));
+		for (uint32_t _i = 0; _i < _pStance->boneCount; ++_i)
+		{
+			_pStance->boneArray[_i].nodeHash = Core::String::ToHash(m_stanceBoneVec[_i].nodeName);
+			_pStance->boneArray[_i].rotationDeg = m_stanceBoneVec[_i].rotationDeg;
+			_pStance->boneArray[_i].offset = m_stanceBoneVec[_i].offset;
+		}
 	}
 
 	//======================================================================================
@@ -711,12 +1084,40 @@ namespace App::Object
 
 		m_bgm.Archive(a_ar);
 
+		//----------------------------------------------------------------------
+		// 性能の板・構え(後から足したもの。バイナリは順番読みなので末尾へ足す)
+		//----------------------------------------------------------------------
+		a_ar.GUIDField("StatPanelGUID", m_statPanelGUID);
+		a_ar.Field("IsStanceEnabled", m_isStanceEnabled);
+
+		size_t _stanceCount = m_stanceBoneVec.size();
+		if (a_ar.BeginArray("Stance", _stanceCount))
+		{
+			m_stanceBoneVec.resize(_stanceCount);
+			for (size_t _i = 0; _i < _stanceCount; ++_i)
+			{
+				if (!a_ar.BeginObject(_i)) continue;
+				a_ar.StringField("Node", m_stanceBoneVec[_i].nodeName);
+				a_ar.Field("RotationDeg", m_stanceBoneVec[_i].rotationDeg);
+				a_ar.Field("Offset", m_stanceBoneVec[_i].offset);
+				a_ar.EndObject();
+			}
+			a_ar.EndArray();
+		}
+		else if (a_ar.IsLoading())
+		{
+			// 構えを持たない古いシーンは既定の構えにする
+			m_stanceBoneVec = MakeDefaultStance();
+		}
+
 		if (a_ar.IsLoading())
 		{
 			// 指し先が変わったので差し込み直す。開くのは全体から
 			m_isBound = false;
 			m_mode = EGarageMode::Overview;
 			m_isBoxDirty = true;
+			m_statEntryIndex = SIZE_MAX;
+			m_stanceRequestedEntity = Engine::ECS::Limits::INVALID_ENTITY;
 		}
 	}
 
@@ -769,6 +1170,8 @@ namespace App::Object
 		Picker::DrawCombo<UIBase>("ListTitle", _pObjectManager, m_listTitleGUID);
 		Engine::EditorField::Value("List Items", "%zu", m_listItemGUIDVec.size());
 		Engine::EditorField::HelpText("飾りの名前 : Icon(画像) / Name(武器名) / Slot(箱の取り付け口) / Title(一覧の見出し) / Bg(下地)");
+		if (Picker::DrawCombo<UIBase>("StatPanel", _pObjectManager, m_statPanelGUID)) m_statEntryIndex = SIZE_MAX;
+		Engine::EditorField::HelpText("性能の板の飾り : StatName / StatMode / StatLabel0〜4 / StatValue0〜4 / StatBarBg0〜4(満タンの幅)/ StatBar0〜4 / StatEquip0〜4");
 
 		Engine::EditorField::Header("Catalog");
 		int _removeIndex = -1;
@@ -798,6 +1201,25 @@ namespace App::Object
 		Engine::EditorField::Field("CameraRate", m_cameraRate, 0.1f, 0.0f, 60.0f);
 		if (Engine::EditorField::Button("Recapture Overview")) m_isCameraCaptured = false;
 		Engine::EditorField::Tooltip("今のカメラの位置と向きを、全体の構図として覚え直す");
+
+		Engine::EditorField::Header("Stance");
+		Engine::EditorField::Field("Enabled", m_isStanceEnabled);
+		Engine::EditorField::Tooltip("機体に構え(仁王立ちで銃を構える)を足すか");
+		int _removeStance = -1;
+		for (size_t _i = 0; _i < m_stanceBoneVec.size(); ++_i)
+		{
+			Engine::EditorField::IDScope _id(static_cast<int>(1000 + _i));
+			GarageStanceBone& _bone = m_stanceBoneVec[_i];
+			Engine::EditorField::Field("Node", _bone.nodeName);
+			Engine::EditorField::Field("Rotation (deg)", _bone.rotationDeg, 0.5f, -180.0f, 180.0f);
+			Engine::EditorField::Field("Offset (m)", _bone.offset, 0.005f);
+			if (Engine::EditorField::DeleteSmallButton("Remove")) _removeStance = static_cast<int>(_i);
+		}
+		if (_removeStance >= 0) m_stanceBoneVec.erase(m_stanceBoneVec.begin() + _removeStance);
+		if (m_stanceBoneVec.size() < Component::StancePoseComponent::BONE_MAX && Engine::EditorField::CreateButton("Add Bone")) m_stanceBoneVec.push_back({});
+		Engine::EditorField::SameLine();
+		if (Engine::EditorField::Button("Reset Default")) m_stanceBoneVec = MakeDefaultStance();
+		Engine::EditorField::HelpText("回転はモデル空間(X → Y → Z)。上から順に掛ける(親を先に)");
 
 		Engine::EditorField::Header("Line");
 		Engine::EditorField::Field("LineWidth", m_lineWidth, 0.1f, 0.5f, 20.0f);

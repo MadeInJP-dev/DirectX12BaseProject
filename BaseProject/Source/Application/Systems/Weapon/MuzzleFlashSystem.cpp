@@ -11,6 +11,7 @@
 #include "Engine/Effect/EffectPlayer.h"
 #include "Application/Components/Effect/EffectPlayRequestComponent.h"
 #include "Application/Components/Effect/EffectOverrideComponent.h"
+#include "Engine/Graphics/Particle/GPU/EmitterSlotPool/EmitterSlotPool.h"
 
 namespace App::System
 {
@@ -62,15 +63,19 @@ namespace App::System
 					auto* _pMuzzleEffect = a_ctx.pServices->pResourceManager->Ref(_runtime.effectHandle);
 					if (!_pMuzzleEffect) continue;
 
-					// 位置も向きも武器のローカルへ直して渡す。
-					// EffectDrawSystem がこの武器のワールド行列を掛けるので、
-					// ワールドのまま渡すと二重に掛かる
-					const Math::Matrix _weaponInvMat = Math::Matrix(a_worldMatArray[_i].worldMat).Invert();
+					// 位置も向きも「武器の行列から拡縮を落とした座標系」へ直して渡す。
+					//
+					// EffectDrawSystem はパーティクルの置き場に持ち主の拡縮を掛けない
+					// (拡縮を落とした行列 StripScale を掛ける)。武器ローカルの銃口位置をそのまま渡すと、
+					// 機体ごと拡大している(3倍など)ときに銃口までの距離が縮み、持ち手の辺りから光っていた。
+					// 銃口のワールド位置(WeaponMuzzleSystem が spawnPos に入れた値)から引き直せば、拡縮があっても一致する
+					const Math::Matrix _weaponRTInvMat =
+						Engine::Graphics::Particle::EmitterSlotPool::StripScale(Math::Matrix(a_worldMatArray[_i].worldMat)).Invert();
 
 					_override.effectScale = _muzzle.muzzleEffect.scale;
 					_override.isOverrideTransform = true;
-					_override.overridePosOffset = _fireComp.muzzleLocalPos;
-					_override.overrideEmitDir = Math::Vector3::TransformNormal(_fireComp.shootDir, _weaponInvMat);
+					_override.overridePosOffset = Math::Vector3::Transform(_fireComp.spawnPos, _weaponRTInvMat);
+					_override.overrideEmitDir = Math::Vector3::TransformNormal(_fireComp.shootDir, _weaponRTInvMat);
 
 					// 頭から出し直す(Play は中で Reset を呼ぶ)。
 					//

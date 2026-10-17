@@ -38,6 +38,7 @@
 #include "Application/Components/Animation/AnimatorComponent.h"
 #include "Application/Components/Animation/UpperAnimatorComponent.h"
 #include "Application/Components/Animation/LowerBodyTurnComponent.h"
+#include "Application/Components/Animation/StancePoseComponent.h"
 #include "Application/Components/Animation/SkeletonPoseComponent.h"
 #include "Application/Components/Animation/NodePoseComponent.h"
 #include "Application/Components/Render/UIComponent.h"
@@ -185,6 +186,7 @@
 #include "Application/Systems/Animation/AdditivePoseLinkSystem.h"
 #include "Application/Systems/Animation/AdditivePoseSystem.h"
 #include "Application/Systems/Animation/LowerBodyTurnSystem.h"
+#include "Application/Systems/Animation/StancePoseSystem.h"
 #include "Application/Systems/Animation/AdditivePoseFreeSystem.h"
 #include "Application/Systems/Enemy/SearchPlayerSystem.h"
 #include "Application/Systems/Movement/FaceTargetSystem.h"
@@ -295,6 +297,8 @@ namespace App::ECS
 		a_world.RegisterComponent<Component::UpperAnimatorComponent>("UpperAnimatorComponent");
 		// 腰から下だけを進行方向へ向ける(戦車のような脚)
 		a_world.RegisterComponent<Component::LowerBodyTurnComponent>("LowerBodyTurnComponent");
+		// クリップで組んだポーズの上から決まった構えを足す(ガレージの仁王立ちなど)
+		a_world.RegisterComponent<Component::StancePoseComponent>("StancePoseComponent");
 		a_world.RegisterComponent<Component::SkeletonPoseComponent>("SkeletonPoseComponent");
 		a_world.RegisterComponent<Component::NodePoseComponent>("NodePoseComponent");
 		a_world.RegisterComponent<Component::UIComponent>("UIComponent");
@@ -498,6 +502,7 @@ namespace App::ECS
 		// CalcNodeSystem が local→world を組む前に加算する必要がある
 		a_world.RegisterSystem<System::AdditivePoseSystem>();
 		a_world.RegisterSystem<System::LowerBodyTurnSystem>();
+		a_world.RegisterSystem<System::StancePoseSystem>();
 		a_world.RegisterSystem<System::CalcNodeSystem>();
 		a_world.RegisterSystem<System::SkinningSystem>();
 		a_world.RegisterSystem<System::PositionIntegrationSystem>();
