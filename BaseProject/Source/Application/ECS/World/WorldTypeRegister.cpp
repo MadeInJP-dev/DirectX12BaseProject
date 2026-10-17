@@ -84,6 +84,7 @@
 #include "Application/Components/Enemy/PatrolComponent.h"
 #include "Application/Components/Enemy/CloseCombatComponent.h"
 #include "Application/Components/Weapon/Projectile/HomingComponent.h"
+#include "Application/Components/Weapon/Projectile/AlignToVelocityComponent.h"
 #include "Application/Components/Weapon/Projectile/ProjectileComponent.h"
 #include "Application/Components/Weapon/Shoulder/MissileLockComponent.h"
 #include "Application/Components/Boss/BossParamsComponent.h"
@@ -200,6 +201,7 @@
 #include "Application/Systems/Enemy/CloseCombatIntentSystem.h"
 #include "Application/Systems/Boss/BossCombatIntentSystem.h"
 #include "Application/Systems/Weapon/HomingSystem.h"
+#include "Application/Systems/Weapon/AlignToVelocitySystem.h"
 #include "Application/Systems/Audio/AudioListenerSystem.h"
 #include "Application/Components/Audio/AudioListenerComponent.h"
 #include "Application/Components/Combat/HealthComponent.h"
@@ -372,6 +374,7 @@ namespace App::ECS
 		a_world.RegisterComponent<Component::EffectOverrideComponent>("EffectOverrideComponent");
 		a_world.RegisterComponent<Component::LifeTimeComponent>("LifeTimeComponent");
 		a_world.RegisterComponent<Component::HomingComponent>("HomingComponent");
+		a_world.RegisterComponent<Component::AlignToVelocityComponent>("AlignToVelocityComponent");
 		a_world.RegisterComponent<Component::ProjectileComponent>("ProjectileComponent");
 		// ※ 追加はここから下(末尾)へ。途中に挿すとコンポーネントのタイプIDがずれて
 		//    保存済みのプレハブ・シーンが全部壊れる
@@ -457,6 +460,8 @@ namespace App::ECS
 		a_world.RegisterSystem<System::BossCombatIntentSystem>();
 		// 誘導弾の進行方向決め。速度を書くだけなので Physics の積分より前に置く
 		a_world.RegisterSystem<System::HomingSystem>();
+		// 細長い弾の見た目を進む向きへ合わせる(誘導で曲がった後の速度を読む)
+		a_world.RegisterSystem<System::AlignToVelocitySystem>();
 		a_world.RegisterSystem<System::EnemyMoveIntentSystem>();
 		// 近距離型の敵の撃つ/動くのリズム。
 		// EnemyMoveIntentSystem が書いた移動入力を攻撃圏の中だけ上書きするので、

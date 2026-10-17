@@ -1905,6 +1905,9 @@
     <ClCompile Include="Source\Application\Systems\Weapon\HomingSystem.cpp">
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Weapon\AlignToVelocitySystem.cpp">
+      <Filter>Source\Application\Systems\Weapon</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Camera\MainCameraSystem.cpp">
       <Filter>Source\Application\Systems\Camera</Filter>
     </ClCompile>
@@ -3005,6 +3008,9 @@
     <ClInclude Include="Source\Application\Components\Weapon\Projectile\HomingComponent.h">
       <Filter>Source\Application\Components\Weapon\Projectile</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Components\Weapon\Projectile\AlignToVelocityComponent.h">
+      <Filter>Source\Application\Components\Weapon\Projectile</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Components\Weapon\Projectile\ProjectileComponent.h">
       <Filter>Source\Application\Components\Weapon\Projectile</Filter>
     </ClInclude>
@@ -3567,6 +3573,9 @@
       <Filter>Source\Application\Systems\Combat</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Weapon\HomingSystem.h">
+      <Filter>Source\Application\Systems\Weapon</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Weapon\AlignToVelocitySystem.h">
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Camera\MainCameraSystem.h">
