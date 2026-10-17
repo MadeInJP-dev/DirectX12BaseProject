@@ -956,7 +956,8 @@ namespace Engine::EditorField
 		auto& _assetDB = *a_services.pAssetDatabase;
 
 		// 現在の選択 : ハンドルを持たない前提なのでGUIDから名前を引く
-		const auto* _pCurrentProp = _assetDB.GetAssetProperty(a_currentGUID);
+		// 未設定のときは引かない : インスペクターが毎フレーム描くので、引くたびにログが出る
+		const auto* _pCurrentProp = a_currentGUID.IsValid() ? _assetDB.GetAssetProperty(a_currentGUID) : nullptr;
 		std::string _preview = "None";
 		if (_pCurrentProp)
 		{

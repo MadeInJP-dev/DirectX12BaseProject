@@ -721,7 +721,11 @@ namespace Engine::Resource
 			return &_it->second;
 		}
 
-		ENGINE_LOG("アセットが見つかりませんでした : %s",a_guid.String().c_str());
+		// 空の GUID は「未設定」なので探し損ねではない(エディターが毎フレーム引くと流れ続ける)
+		if (a_guid.IsValid())
+		{
+			ENGINE_LOG("アセットが見つかりませんでした : %s",a_guid.String().c_str());
+		}
 		return nullptr;
 	}
 
