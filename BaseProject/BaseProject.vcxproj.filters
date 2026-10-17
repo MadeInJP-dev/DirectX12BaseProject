@@ -1890,6 +1890,9 @@
     <ClCompile Include="Source\Application\Systems\Audio\BoostSoundSystem.cpp">
       <Filter>Source\Application\Systems\Audio</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Audio\ChargeDashSoundSystem.cpp">
+      <Filter>Source\Application\Systems\Audio</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Boss\BossCombatIntentSystem.cpp">
       <Filter>Source\Application\Systems\Boss</Filter>
     </ClCompile>
@@ -3104,6 +3107,9 @@
     <ClInclude Include="Source\Application\Components\Audio\AudioListenerComponent.h">
       <Filter>Source\Application\Components\Audio</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Components\Audio\ChargeDashSoundComponent.h">
+      <Filter>Source\Application\Components\Audio</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Components\Render\ModelComponent.h">
       <Filter>Source\Application\Components\Render</Filter>
     </ClInclude>
@@ -3573,6 +3579,9 @@
       <Filter>Source\Application\Systems\Attachment</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Audio\BoostSoundSystem.h">
+      <Filter>Source\Application\Systems\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Audio\ChargeDashSoundSystem.h">
       <Filter>Source\Application\Systems\Audio</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Boss\BossCombatIntentSystem.h">

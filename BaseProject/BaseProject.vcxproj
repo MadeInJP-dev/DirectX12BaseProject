@@ -1082,6 +1082,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Audio\ChargeDashSoundSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Effect\ThrusterEffectSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -2050,6 +2055,7 @@
     <ClInclude Include="Source\Application\Components\Combat\HealthComponent.h" />
     <ClInclude Include="Source\Application\Systems\Audio\AudioListenerSystem.h" />
     <ClInclude Include="Source\Application\Components\Audio\AudioListenerComponent.h" />
+    <ClInclude Include="Source\Application\Components\Audio\ChargeDashSoundComponent.h" />
     <ClInclude Include="Source\Application\Systems\Animation\SkinningSystem.h" />
     <ClInclude Include="Source\Application\Systems\Physics\CollisionEventClearSystem.h" />
     <ClInclude Include="Source\Application\Systems\Combat\HitEventClearSystem.h" />
@@ -2057,6 +2063,7 @@
     <ClInclude Include="Source\Application\Systems\Attachment\AttachmentDispatchSystem.h" />
     <ClInclude Include="Source\Application\Systems\Weapon\SelfWeaponTriggerSystem.h" />
     <ClInclude Include="Source\Application\Systems\Audio\BoostSoundSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Audio\ChargeDashSoundSystem.h" />
     <ClInclude Include="Source\Application\Systems\Effect\ThrusterEffectSystem.h" />
     <ClInclude Include="Source\Application\Systems\Transform\UpdateHierarchyDepthSystem.h" />
     <ClInclude Include="Source\Application\Systems\Movement\GravitySystem.h" />

@@ -196,6 +196,7 @@
 #include "Application/Systems/Movement/LookAroundSystem.h"
 #include "Application/Systems/Enemy/EnemyMovementSystem.h"
 #include "Application/Systems/Audio/BoostSoundSystem.h"
+#include "Application/Systems/Audio/ChargeDashSoundSystem.h"
 #include "Application/Systems/Audio/SoundFreeSystem.h"
 #include "Application/Systems/Physics/PhysicsBodyFreeSystem.h"
 #include "Application/Systems/Weapon/MuzzleStartSystem.h"
@@ -208,6 +209,7 @@
 #include "Application/Systems/Weapon/AlignToVelocitySystem.h"
 #include "Application/Systems/Audio/AudioListenerSystem.h"
 #include "Application/Components/Audio/AudioListenerComponent.h"
+#include "Application/Components/Audio/ChargeDashSoundComponent.h"
 #include "Application/Components/Combat/HealthComponent.h"
 #include "Application/Systems/Combat/HealthFixupSystem.h"
 #include "Application/Systems/Combat/HealthSystem.h"
@@ -371,6 +373,7 @@ namespace App::ECS
 		a_world.RegisterComponent<Component::BossCommandComponent>("BossCommandComponent");
 		// 始動/継続/終了の音をまとめた AudioBehavior アセットを鳴らす
 		a_world.RegisterComponent<Component::AudioListenerComponent>("AudioListenerComponent");
+		a_world.RegisterComponent<Component::ChargeDashSoundComponent>("ChargeDashSoundComponent");
 		a_world.RegisterComponent<Component::HealthComponent>("HealthComponent");
 		a_world.RegisterComponent<Component::EffectComponent>("EffectComponent");
 		// パーティクル+メッシュをまとめた EffectAsset を再生する
@@ -461,6 +464,8 @@ namespace App::ECS
 		a_world.RegisterSystem<System::SelfWeaponTriggerSystem>();
 		a_world.RegisterSystem<System::ThrusterEffectSystem>();
 		a_world.RegisterSystem<System::BoostSoundSystem>();
+		// チャージダッシュの溜めの音(溜めを進める ChargeDashSystem より後ろの PostUpdate で回る)
+		a_world.RegisterSystem<System::ChargeDashSoundSystem>();
 		a_world.RegisterSystem<System::SearchPlayerSystem>();
 		// 索敵結果(isFind)を敵の発射入力へ。銃が子なら AttachmentDispatchSystem が配信する
 		a_world.RegisterSystem<System::EnemyShootIntentSystem>();

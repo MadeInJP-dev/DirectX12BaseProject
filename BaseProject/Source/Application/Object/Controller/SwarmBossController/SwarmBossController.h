@@ -28,7 +28,7 @@ namespace App::Object
 	///   載せていなければ今までどおり Awake で出る。
 	/// ・地面から出す設定(m_isEmergeOnSpawn)なら、生成位置の真下へ縦一列に埋めて出し、
 	///   出現の行動(Emerge)から始める。真上へ飛び出して、とぐろを巻きながら鳴く。
-	/// ・飛んでいる(地上に出ている)小隊長からは、チリと金属のこすれる火花のエフェクトを出す。
+	/// ・飛んでいる(地上に出ている)小隊長からは、光の粒と光の筋が漂う幻想的なエフェクトを出す。
 	///   飛行音はボイドごとには付けず、体に沿って数か所の小隊長から 3D で鳴らす。
 	/// </remarks>
 	class SwarmBossController final : public SequenceActor
@@ -440,7 +440,7 @@ namespace App::Object
 		// 小隊長が多いと重いので m_flightEffectStride 体おきに付ける。
 		// 地面との関係を見るため、小隊長には SerchGroundComponent も付ける
 		//------------------------------------------------------------------------------------------
-		// 出しっぱなしのエフェクト(EffectAsset)。既定は Asset/Effect/Worm/Worm_FlightGrit
+		// 出しっぱなしのエフェクト(EffectAsset)。既定は Asset/Effect/Worm/Worm_FlightGlow(光の粒・光の筋・瞬き)
 		Core::GUID m_flightEffectGUID = Core::GUID("5b70e3aa-ee18-4e1c-b2ed-279aaa5ff9ef");
 		uint32_t m_flightEffectStride = 2;		// 何体おきの小隊長に付けるか(1 で全員。生成のときに決まる)
 
