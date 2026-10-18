@@ -8,6 +8,7 @@
 #include "Application/Components/Weapon/Shoulder/MissileLockComponent.h"
 #include "Application/Components/Weapon/Shoulder/MissileFireComponent.h"
 #include "Application/Components/Transform/WorldMatrixComponent.h"
+#include "Application/Components/Combat/AimPointComponent.h"
 
 namespace App::System
 {
@@ -24,7 +25,8 @@ namespace App::System
 	//
 	// 撃ち出しは肩の武器の側(MissileFireSystem)で、プレイヤーとまったく同じ。
 	// ここは要求を出すだけ。弾数・間隔・散らし角・待ち時間は肩の武器の MissileFireComponent、
-	// 狙う高さ(targetOffsetY)は MissileLockComponent を使うので、ボス専用の設定項目は無い。
+	// 狙う点は相手の AimPointComponent(無ければ原点)で、MissileLockComponent の targetOffsetY は
+	// そこからさらに上へずらす量。ボス専用の設定項目は無い。
 	//
 	// ・PostUpdate に置く理由
 	//     相手の「今フレームの」位置から狙いの向きを作るため(プレイヤー側と同じ帯)。
@@ -76,7 +78,8 @@ namespace App::System
 						if (const auto* _pTargetWorld =
 							a_ctx.pWorld->RefData<Component::WorldMatrixComponent>(_targetEntity))
 						{
-							_targetPos = Math::Matrix(_pTargetWorld->worldMat).Translation();
+							_targetPos = Component::GetAimPointPos(
+								*a_ctx.pWorld, _targetEntity, Math::Matrix(_pTargetWorld->worldMat));
 							_targetPos.y += _missile.targetOffsetY;
 							_hasTarget = true;
 						}
@@ -114,7 +117,7 @@ namespace App::System
 		// 順序 : 肩の武器への要求の書き手同士(プレイヤーとボスで対象は重ならない)
 		.After("MissileSalvoSystem")
 		// 絞り込みに使わない読み書き : 狙う相手の位置を読み、肩の武器へ要求を書く
-		.Reads<Component::WorldMatrixComponent>()
+		.Reads<Component::WorldMatrixComponent, Component::AimPointComponent>()
 		.Writes<Component::MissileFireComponent>();
 	}
 }

@@ -6,6 +6,7 @@
 #include "Application/Components/Movement/DesiredVelocityComponent.h"
 #include "Application/Components/Transform/LocalTransformComponent.h"
 #include "Application/Components/Transform/WorldMatrixComponent.h"
+#include "Application/Components/Combat/AimPointComponent.h"
 
 namespace App::System
 {
@@ -37,6 +38,8 @@ namespace App::System
 	//   その時は targetEntity を無効値へ戻し、以降は直進させる。
 	// ・自分の位置は LocalTransform を見る。弾は親を持たない(ワールド=ローカル)し、
 	//   WorldMatrix は前フレームの PostUpdate の値なので、生成直後は入っていない。
+	// ・追う先は相手の AimPointComponent の点(無ければ原点)。原点が足元の相手で
+	//   足元へ刺さらないように、狙われる側が胴体の中心あたりを持っている。
 	//==============================================================================
 	void HomingSystem::Init(App::ECS::APPWorld& a_world)
 	{
@@ -83,7 +86,8 @@ namespace App::System
 						continue;
 					}
 
-					Math::Vector3 _targetPos = Math::Matrix(_pTargetWorld->worldMat).Translation();
+					const Math::Vector3 _targetPos = Component::GetAimPointPos(
+						*a_ctx.pWorld, _homing.targetEntity, Math::Matrix(_pTargetWorld->worldMat));
 
 					//------------------------------------------------------
 					// 現在の進行方向(速度が無いと向きが決まらない)
@@ -147,7 +151,7 @@ namespace App::System
 				}
 			}
 		)
-		// 絞り込みに使わない読み : 追う相手の位置を RefData で読む
-		.Reads<Component::WorldMatrixComponent>();
+		// 絞り込みに使わない読み : 追う相手の位置と狙う点を RefData で読む
+		.Reads<Component::WorldMatrixComponent, Component::AimPointComponent>();
 	}
 }

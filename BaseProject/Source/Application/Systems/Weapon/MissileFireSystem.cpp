@@ -12,6 +12,7 @@
 #include "Application/Components/Transform/HierarchyComponent.h"
 #include "Application/Components/Physics/Collider.h"
 #include "Application/Components/Enemy/EnemyTag.h"
+#include "Application/Components/Combat/AimPointComponent.h"
 
 #include "ProjectileSpawn.h"
 #include "WeaponMuzzleSystem.h"
@@ -212,7 +213,9 @@ namespace App::System
 						{
 							if (const auto* _pTargetWorld = a_ctx.pWorld->RefData<Component::WorldMatrixComponent>(_target))
 							{
-								Math::Vector3 _targetPos = Math::Matrix(_pTargetWorld->worldMat).Translation();
+								// 相手の狙ってほしい点(AimPointComponent。無ければ原点)から、撃つ側の分だけ上へずらす
+								Math::Vector3 _targetPos = Component::GetAimPointPos(
+									*a_ctx.pWorld, _target, Math::Matrix(_pTargetWorld->worldMat));
 								_targetPos.y += _rt.targetOffsetY;
 
 								Math::Vector3 _toTarget = _targetPos - _spawnPos;
@@ -250,6 +253,6 @@ namespace App::System
 		// 順序 : 要求を出す側(プレイヤー・ボス)の後で受け取る(どちらも MissileFire を書く)
 		.After({ "MissileSalvoSystem", "BossMissileSalvoSystem" })
 		// 絞り込みに使わない読み : 自分のモデル(銃口ノード)・狙う相手の位置・発射元(ProjectileSpawn)
-		.Reads<Component::ModelComponent, Component::WorldMatrixComponent, Component::ColliderComponent, Component::HierarchyComponent, Component::EnemyTag>();
+		.Reads<Component::ModelComponent, Component::WorldMatrixComponent, Component::ColliderComponent, Component::HierarchyComponent, Component::EnemyTag, Component::AimPointComponent>();
 	}
 }

@@ -1837,6 +1837,7 @@
     <ClInclude Include="Source\Application\Components\Boid\SerchGroundComponent.h" />
     <ClInclude Include="Source\Application\Components\Combat\TargetEntityComponent.h" />
     <ClInclude Include="Source\Application\Components\Combat\LockOnTargetComponent.h" />
+    <ClInclude Include="Source\Application\Components\Combat\AimPointComponent.h" />
     <ClInclude Include="Source\Application\Components\Weapon\Shoulder\MissileLockComponent.h" />
     <ClInclude Include="Source\Application\Components\Weapon\Projectile\HomingComponent.h" />
     <ClInclude Include="Source\Application\Components\Weapon\Projectile\AlignToVelocityComponent.h" />

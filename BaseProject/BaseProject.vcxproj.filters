@@ -2996,6 +2996,9 @@
     <ClInclude Include="Source\Application\Components\Combat\LockOnTargetComponent.h">
       <Filter>Source\Application\Components\Combat</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Components\Combat\AimPointComponent.h">
+      <Filter>Source\Application\Components\Combat</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Components\Movement\LookAngleComponent.h">
       <Filter>Source\Application\Components\Movement</Filter>
     </ClInclude>

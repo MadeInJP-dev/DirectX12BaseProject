@@ -82,6 +82,7 @@
 #include "Application/Components/Combat/AimConfigComponent.h"
 #include "Application/Components/Combat/TargetEntityComponent.h"
 #include "Application/Components/Combat/LockOnTargetComponent.h"
+#include "Application/Components/Combat/AimPointComponent.h"
 #include "Application/Components/Enemy/PatrolComponent.h"
 #include "Application/Components/Enemy/CloseCombatComponent.h"
 #include "Application/Components/Weapon/Projectile/HomingComponent.h"
@@ -365,6 +366,7 @@ namespace App::ECS
 		a_world.RegisterComponent<Component::TargetEntityComponent>("TargetEntityComponent");
 		// プレイヤーのレティクル内の敵とロック対象。HUDと旋回が読む
 		a_world.RegisterComponent<Component::LockOnTargetComponent>("LockOnTargetComponent");
+		a_world.RegisterComponent<Component::AimPointComponent>("AimPointComponent");
 		// ミサイルの溜め(持ち主側)。コンバットレティクル内の敵を溜めて、肩の武器へ一斉射を要求する
 		a_world.RegisterComponent<Component::MissileLockComponent>("MissileLockComponent");
 		// 人型ボスの戦闘設定と機動状態。シーケンスからの戦闘開始命令もここに立つ
