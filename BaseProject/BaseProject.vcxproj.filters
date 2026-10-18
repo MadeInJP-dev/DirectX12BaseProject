@@ -886,6 +886,9 @@
     <Filter Include="Source\Application\Game\DebugKeys">
       <UniqueIdentifier>{fe3cba5b-1ac3-47a9-ba6d-ceab07ea7308}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Game\FPSDisplay">
+      <UniqueIdentifier>{f37b68ca-a75d-430c-945a-fa8be95ed161}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Input">
       <UniqueIdentifier>{aabcc0c4-0c56-484a-8244-197b1e0f8f99}</UniqueIdentifier>
     </Filter>
@@ -2228,6 +2231,9 @@
     </ClCompile>
     <ClCompile Include="Source\Application\Game\DebugKeys\DebugKeys.cpp">
       <Filter>Source\Application\Game\DebugKeys</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Game\FPSDisplay\FPSDisplay.cpp">
+      <Filter>Source\Application\Game\FPSDisplay</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\Frame\RenderContext\RenderContext.cpp">
       <Filter>Source\Engine\Graphics\Frame\RenderContext</Filter>
@@ -4036,6 +4042,9 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Game\DebugKeys\DebugCommands.h">
       <Filter>Source\Application\Game\DebugKeys</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Game\FPSDisplay\FPSDisplay.h">
+      <Filter>Source\Application\Game\FPSDisplay</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\Frame\RenderContext\RenderContext.h">
       <Filter>Source\Engine\Graphics\Frame\RenderContext</Filter>

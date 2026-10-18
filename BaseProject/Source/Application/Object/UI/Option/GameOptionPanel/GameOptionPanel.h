@@ -14,7 +14,7 @@ namespace App::Object
 	// スクロール処理はベースクラスに任せる
 	// 描画範囲は親に任せる
 	//
-	//   Performance … FPS の上限
+	//   Performance … FPS の上限・FPS の表示(右上)
 	//
 	// ・値の実体は UserData(GameSettings)。ここが持つのは表示用の写しで、開いたときに読み直す。
 	// ・変えた瞬間に UserData へ書き、エンジンへも流し込む(エンジン設定は書き換えない)。
@@ -35,7 +35,7 @@ namespace App::Object
 
 	protected:
 
-		// 並べる : 見出し → FPS の上限
+		// 並べる : 見出し → FPS の上限 → FPS の表示
 		void LayoutItems(Engine::GameObject::ObjectContext& a_context) override;
 
 		// 項目の操作
@@ -51,6 +51,9 @@ namespace App::Object
 
 		// 今の FPS の上限 : 選ばれていなければエンジンが今使っている値
 		Engine::EFPSRate GetCurrentFPSRate(Engine::GameObject::ObjectContext& a_context) const;
+
+		// 写しを UserData へ書く
+		void WriteSettings(Engine::GameObject::ObjectContext& a_context);
 
 	private:
 
@@ -68,5 +71,6 @@ namespace App::Object
 			{ Engine::EFPSRate::VSync,     "VSync" },
 			{ Engine::EFPSRate::Unlimited, "Unlimited" },
 		};
+		OptionSelectorUI m_fpsVisibleSelector = {};		// FPS の表示(オン/オフ)。画面の右上に出す
 	};
 }

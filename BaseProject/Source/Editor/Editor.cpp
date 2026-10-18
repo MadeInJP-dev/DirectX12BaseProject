@@ -309,6 +309,16 @@ namespace Editor
 		}
 	}
 
+	// 背景の環境設定はエフェクトエディターだけが選べる(プレハブエディターはゲームのシーンのもの)
+	const Engine::Scene::SceneAmbient* MainEditor::GetScenePreviewAmbient() const
+	{
+		if (m_upEffectEditor && m_upEffectEditor->IsOpen())
+		{
+			return m_upEffectEditor->GetPreviewAmbient();
+		}
+		return nullptr;
+	}
+
 	//======================================================================================
 	// エディター側に残っている入力を捨てる
 	//--------------------------------------------------------------------------------------

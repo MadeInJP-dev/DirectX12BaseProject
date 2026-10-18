@@ -11,6 +11,7 @@
 #include "Engine/Effect/EffectPlayer.h"
 #include "Engine/ECS/World/World.h"
 #include "Engine/Scene/BaseScene/BaseScene.h"
+#include "Engine/Scene/SceneAmbient/SceneAmbient.h"
 #include "Engine/Physics/PhysicsWorld.h"
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Graphics/DebugDraw/DebugDraw.h"
@@ -63,6 +64,7 @@ namespace Editor
 
 	EffectEditor::EffectEditor(ECS::EngineServices* a_pServices)
 		: m_pServices(a_pServices)
+		, m_upPlainAmbient(std::make_unique<Scene::SceneAmbient>(Scene::SceneAmbient::CreatePlain()))
 	{}
 	EffectEditor::~EffectEditor() = default;
 
@@ -426,17 +428,9 @@ namespace Editor
 	{
 		if (!m_isOpen || !m_upWorld) return;
 
-		// スカイだけは消しておく。
-		// エフェクト単体の見え方を詰めるための画面なので、後ろに空があると
-		// 薄い粒や加算の抜けが空の色に紛れて判断できない。
-		//
-		// ゲームのシーンは止まっていて SceneManager が環境設定を流し込まないので、
-		// ここで貸し出しを外せば開いているあいだはずっと空無しのまま。
-		// 閉じれば SceneManager が毎フレーム流し込み直すので、そのまま元へ戻る
+		// 背景(空・フォグ・光)は SceneManager がこの前に流し込み済み(GetPreviewAmbient で選んだもの)
 		if (auto* _pGE = MainEngine::Instance().RefGraphicsEngine())
 		{
-			_pGE->RefSceneView()->SetSkyTexture({});
-
 			// 確認用ワールドのアニメーションモデルの BLAS と頂点領域(PreDraw より前に)
 			_pGE->RefDrawSubmitter()->ProcessDynamicRaytracingInit(*m_upWorld);
 		}
@@ -459,6 +453,18 @@ namespace Editor
 
 		// 大きさの目安になる格子
 		if (m_isDrawGrid) DrawGrid();
+	}
+
+	//======================================================================================
+	// 背景の環境設定
+	//
+	// 黒背景 : 空・フォグ無し。粒や加算の抜けが空の色に紛れないので、単体の見え方を詰めやすい。
+	// 今のシーン : nullptr を返し、SceneManager にゲームのシーンのものを流させる
+	//======================================================================================
+	const Scene::SceneAmbient* EffectEditor::GetPreviewAmbient() const
+	{
+		if (m_background == EBackground::CurrentScene) return nullptr;
+		return m_upPlainAmbient.get();
 	}
 
 	void EffectEditor::SubmitPreviewCamera()
@@ -611,6 +617,11 @@ namespace Editor
 		Engine::EditorField::Slider("Speed", m_playSpeed, 0.05f, 3.0f, "x%.2f");
 
 		// ---- 表示 ----
+		// 背景は1行で置く。
+		// 値の欄は行の残りいっぱいに広がるので、後ろへ SameLine で続けると窓の外へ押し出され、
+		// 折り返す注意書きが1文字ずつ縦に並んでプレビューが潰れる
+		Engine::EditorField::Field("Background", m_background);
+		Engine::EditorField::Tooltip("Black : 空・フォグ無しの黒背景 / CurrentScene : 開く前のシーンの環境設定(空・フォグ・光)");
 		Engine::EditorField::Field("Grid", m_isDrawGrid);
 		if (m_isDrawGrid && !m_pServices->pOptionManager->GetDebugDrawOption().drawWire)
 		{

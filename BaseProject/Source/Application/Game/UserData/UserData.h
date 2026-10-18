@@ -64,6 +64,8 @@ namespace App::Game
 		{
 			// FPS の上限。未選択(nullopt)なら作り手の値(エンジンの WindowOption)のまま
 			std::optional<Engine::EFPSRate> opFPSRate = std::nullopt;
+
+			bool isFPSVisible = false;		// 画面の右上に FPS を出すか(デバッグの表示とは別。製品でも使う)
 		};
 
 		//------------------------------------------------------------------------------

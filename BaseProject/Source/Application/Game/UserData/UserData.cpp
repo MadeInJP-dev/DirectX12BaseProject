@@ -229,6 +229,7 @@ namespace App::Game
 		if (!a_ar.BeginGroup("Game")) return;
 
 		OptionalField(a_ar, "FPSRate", m_gameSettings.opFPSRate, Engine::EFPSRate::FPS_60);
+		a_ar.Field("IsFPSVisible", m_gameSettings.isFPSVisible);	// 後から足したもの(バイナリは末尾なので、古いファイルでは既定値のまま)
 
 		a_ar.EndGroup();
 	}

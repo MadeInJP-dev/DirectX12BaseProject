@@ -1530,6 +1530,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Game\FPSDisplay\FPSDisplay.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\Particle\GPU\EmitterSlotPool\EmitterSlotPool.cpp" />
     <ClCompile Include="Source\Engine\Graphics\Particle\GPU\GPUParticlePool\GPUParticlePool.cpp" />
     <ClCompile Include="Source\Engine\Graphics\Particle\ParticleBufferManager.cpp" />
@@ -2334,6 +2339,7 @@
     <ClInclude Include="Source\Application\Game\MouseCursor\MouseCursor.h" />
     <ClInclude Include="Source\Application\Game\DebugKeys\DebugKeys.h" />
     <ClInclude Include="Source\Application\Game\DebugKeys\DebugCommands.h" />
+    <ClInclude Include="Source\Application\Game\FPSDisplay\FPSDisplay.h" />
     <ClInclude Include="Source\Application\InstanceResource\DebugCommandResource.h" />
     <ClInclude Include="Source\Engine\Graphics\Particle\Core\EmitterData.h" />
     <ClInclude Include="Source\Engine\Graphics\Particle\Core\ParticleData.h" />

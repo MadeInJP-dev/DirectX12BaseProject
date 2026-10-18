@@ -48,6 +48,7 @@
 #include "../InputActions/InputManager/InputActionManager.h"
 #include "../MouseCursor/MouseCursor.h"
 #include "../DebugKeys/DebugKeys.h"
+#include "../FPSDisplay/FPSDisplay.h"
 
 // エディター
 
@@ -99,6 +100,13 @@ namespace App::Game
 		{
 			m_upMouseCursor = std::make_unique<MouseCursor>();
 			m_upMouseCursor->Init(&m_pEngine->GetEngineServices());
+		}
+
+		// FPS の表示 : 出すかどうかはユーザーデータが決める
+		if (!m_upFPSDisplay)
+		{
+			m_upFPSDisplay = std::make_unique<FPSDisplay>();
+			m_upFPSDisplay->Init(*m_pEngine);
 		}
 
 		// デバッグキー : Shipping では作らない(ワールドへ入口も置かれないので、受け取る側も何もしない)
@@ -231,6 +239,9 @@ namespace App::Game
 		m_pEngine->RefSceneManager()->Update(*_services.pResourceManager, a_dt);
 
 		if (m_upDebugKeys) m_upDebugKeys->EndUpdate();
+
+		// FPS の表示 : 設定画面で変えたぶんもこのフレームから効く
+		if (m_upFPSDisplay) m_upFPSDisplay->Update(m_upUserData.get());
 	}
 	void GameManager::Draw()
 	{
@@ -238,6 +249,9 @@ namespace App::Game
 
 		// シーンの描画 : 描画命令を積むだけで実行はしない
 		m_pEngine->RefSceneManager()->Draw();
+
+		// FPS の表示はシーンのUIより手前、デバッグの表示より奥
+		if (m_upFPSDisplay) m_upFPSDisplay->SubmitUI(m_pEngine->RefGraphicsEngine());
 
 		// デバッグキーの情報の表示はシーンのUIより手前、マウスカーソルより奥
 		if (m_upDebugKeys) m_upDebugKeys->SubmitUI(m_pEngine->RefGraphicsEngine());
@@ -258,6 +272,13 @@ namespace App::Game
 		{
 			m_upDebugKeys->Release();
 			m_upDebugKeys.reset();
+		}
+
+		// フォントの参照を返す。リソースの解放(MainEngine::Release)より前であること
+		if (m_upFPSDisplay)
+		{
+			m_upFPSDisplay->Release();
+			m_upFPSDisplay.reset();
 		}
 
 		// カーソル画像の参照を返す。リソースの解放(MainEngine::Release)より前であること

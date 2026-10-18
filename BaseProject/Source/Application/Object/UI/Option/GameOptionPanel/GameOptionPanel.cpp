@@ -9,6 +9,11 @@
 
 namespace App::Object
 {
+	namespace
+	{
+		const char* ToOnOff(bool a_isOn) { return a_isOn ? "On" : "Off"; }
+	}
+
 	void GameOptionPanel::OnOpen(Engine::GameObject::ObjectContext& a_context)
 	{
 		auto* _pUserDataResource = FindUserData(a_context);
@@ -40,6 +45,8 @@ namespace App::Object
 		PlaceHeaderRow(a_context, m_performanceHeader);
 		PlaceDropdown(a_context, m_fpsRateSelector.GetUI());
 		AdvanceRow();
+		PlaceSelector(a_context, m_fpsVisibleSelector);
+		AdvanceRow();
 	}
 
 	//======================================================================================
@@ -47,17 +54,35 @@ namespace App::Object
 	//======================================================================================
 	void GameOptionPanel::UpdateItems(Engine::GameObject::ObjectContext& a_context)
 	{
-		if (!m_fpsRateSelector.Update(a_context, GetCurrentFPSRate(a_context))) return;
+		bool _isChanged = false;
 
-		// 選んだ時点で「選ばれている」扱いになり、作り手の値より優先される
-		m_settings.opFPSRate = m_fpsRateSelector.GetValue();
+		// ---- FPS の上限 : 選んだ時点で「選ばれている」扱いになり、作り手の値より優先される ----
+		if (m_fpsRateSelector.Update(a_context, GetCurrentFPSRate(a_context)))
+		{
+			m_settings.opFPSRate = m_fpsRateSelector.GetValue();
+			_isChanged = true;
+		}
 
+		// ---- FPS の表示 ----
+		if (UpdateSelector(a_context, m_fpsVisibleSelector) != 0)
+		{
+			m_settings.isFPSVisible = !m_settings.isFPSVisible;
+			_isChanged = true;
+		}
+		SetSelectorText(a_context, m_fpsVisibleSelector, ToOnOff(m_settings.isFPSVisible));
+
+		if (_isChanged) WriteSettings(a_context);
+	}
+
+	void GameOptionPanel::WriteSettings(Engine::GameObject::ObjectContext& a_context)
+	{
 		auto* _pUserDataResource = FindUserData(a_context);
 		if (!_pUserDataResource || !_pUserDataResource->pUserData) return;
 
 		Game::UserData& _userData = *_pUserDataResource->pUserData;
 		_userData.RefGameSettings() = m_settings;
 
+		// その場で効かせる。FPS の表示は使う側(FPSDisplay)が毎フレーム UserData を読む
 		if (a_context.pServices && a_context.pServices->pMainEngine)
 		{
 			_userData.ApplyGameSettings(*a_context.pServices->pMainEngine);
@@ -71,6 +96,13 @@ namespace App::Object
 	{
 		ArchiveItemUI(a_ar, "PerformanceHeader", m_performanceHeader);
 		ArchiveDropdown(a_ar, "FPSRate", m_fpsRateSelector.RefUI());
+
+		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
+		// 区切りを持たない古い .ob* には無いので読まない
+		if (!a_ar.IsLegacyLayout())
+		{
+			ArchiveSelector(a_ar, "FPSVisible", m_fpsVisibleSelector);
+		}
 	}
 
 	//======================================================================================
@@ -81,10 +113,13 @@ namespace App::Object
 		DrawItemUIInspector(a_context, "PerformanceHeader", m_performanceHeader);
 		Engine::EditorField::Tooltip("見出し(文字だけの UI)。未設定なら行を取らない");
 		DrawDropdownInspector(a_context, "FPSRate", m_fpsRateSelector.RefUI());
+		DrawSelectorInspector(a_context, "FPSVisible", m_fpsVisibleSelector);
+		Engine::EditorField::Tooltip("画面の右上に FPS を出すか(デバッグの表示とは別)");
 
 		const std::string _name = m_settings.opFPSRate
 			? m_fpsRateSelector.GetName(m_settings.opFPSRate.value())
 			: std::string("(作り手の値)");
 		Engine::EditorField::Value("FPSRate", "%s", _name.c_str());
+		Engine::EditorField::Value("FPSVisible", "%s", ToOnOff(m_settings.isFPSVisible));
 	}
 }

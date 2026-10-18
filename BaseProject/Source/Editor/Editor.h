@@ -81,6 +81,7 @@ namespace Editor
 		bool IsScenePreviewActive() const override;
 		void UpdateScenePreview(float a_deltaTime) override;
 		void DrawScenePreview() override;
+		const Engine::Scene::SceneAmbient* GetScenePreviewAmbient() const override;
 
 		//=======================================================================
 		// ログについて

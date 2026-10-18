@@ -163,6 +163,20 @@ namespace Engine::Scene
 		// レンダーグラフ自体はゲームと同じものを通るので、見え方は本番と揃う
 		if (auto* _pDevTool = RefActiveScenePreview(*m_pEngine))
 		{
+			// 環境設定はツールが選んだもの(黒背景など)。無ければゲームのシーンのものを使う。
+			// 毎フレーム流すので、ツール側で切り替えればその場で入れ替わる
+			if (const SceneAmbient* _pAmbient = _pDevTool->GetScenePreviewAmbient())
+			{
+				if (auto* _pGE = m_pEngine->RefGraphicsEngine())
+				{
+					_pAmbient->Apply(*_pGE, m_ambientDLHandle);
+				}
+			}
+			else
+			{
+				ApplySceneAmbient();
+			}
+
 			_pDevTool->DrawScenePreview();
 			return;
 		}

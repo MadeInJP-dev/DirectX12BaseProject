@@ -16,6 +16,7 @@ namespace App::Game
 {
 	class UserData;
 	class MouseCursor;
+	class FPSDisplay;
 	class DebugKeys;
 
 	/// <summary>
@@ -119,6 +120,9 @@ namespace App::Game
 
 		// ゲーム中に自前で描くマウスカーソル
 		std::unique_ptr<MouseCursor> m_upMouseCursor;
+
+		// 画面の右上の FPS の表示(設定画面で出し入れする。Shipping でも作る)
+		std::unique_ptr<FPSDisplay> m_upFPSDisplay;
 
 		// 発表・確認用のデバッグキー(F1〜F7)。Shipping では作らない
 		std::unique_ptr<DebugKeys> m_upDebugKeys;

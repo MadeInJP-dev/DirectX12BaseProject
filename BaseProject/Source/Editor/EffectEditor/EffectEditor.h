@@ -12,6 +12,7 @@ namespace Engine
 		class ParticlesAsset;
 	}
 	namespace Graphics::Pipeline { class RenderingPipelineAsset; }
+	namespace Scene { class SceneAmbient; }
 }
 
 namespace Editor
@@ -34,7 +35,13 @@ namespace Editor
 	//   トーンマップやブルームの掛かり方が本番と変わり、ここで合わせた見た目が
 	//   ゲームに持っていくとずれるため。開いている間はゲームのシーンを止めて、
 	//   このワールドの描画命令だけをレンダーグラフへ流す。
-	//   ただしスカイ(空)だけは消す。薄い粒や加算の抜けが空の色に紛れるため。
+	//
+	// ・背景(環境設定)は上段の Background で選ぶ。
+	//     Black        : 空・フォグ無しの黒背景に格子だけ(既定)。薄い粒や加算の抜けが
+	//                    空の色に紛れないので、エフェクト単体の見え方を詰めるとき用
+	//     CurrentScene : 開く前のシーンの環境設定(空・フォグ・光)そのまま。
+	//                    置く先の景色の中でどう見えるかを確かめるとき用
+	//   流し込むのは SceneManager(GetPreviewAmbient で選んだものを毎フレーム渡す)。
 	//
 	// ・右側で編集する。中身はアセットインスペクターとまったく同じ関数
 	//   (EffectAssetEdit / ParticleEdit)を呼んでいるだけで、UIを二重に持っていない。
@@ -121,6 +128,12 @@ namespace Editor
 		/// 終了処理
 		/// </summary>
 		void Release();
+
+		/// <summary>
+		/// プレビューで使う環境設定
+		/// </summary>
+		/// <returns>ゲームのシーンのものを使うなら nullptr</returns>
+		const Engine::Scene::SceneAmbient* GetPreviewAmbient() const;
 
 	private:
 
@@ -230,6 +243,17 @@ namespace Editor
 		//----------------------------------------------------------------------------------
 		bool m_isDrawGrid = true;
 		float m_gridSize = 10.0f;		// 格子の半径(m)
+
+		// 背景(環境設定)。閉じても覚えておき、次に開いたときも同じ背景で見る
+		enum class EBackground
+		{
+			Black,			// 空・フォグ無しの黒背景(SceneAmbient::CreatePlain)
+			CurrentScene,	// 開く前のシーンの環境設定そのまま
+		};
+		EBackground m_background = EBackground::Black;
+
+		// 黒背景のときに流し込む環境設定
+		std::unique_ptr<Engine::Scene::SceneAmbient> m_upPlainAmbient = nullptr;
 
 		//----------------------------------------------------------------------------------
 		// プレビューの持ち主(エフェクトを付けたエンティティ)の動かし方

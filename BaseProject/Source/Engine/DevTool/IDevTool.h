@@ -14,6 +14,11 @@ namespace Engine::ECS
 	struct EngineServices;
 }
 
+namespace Engine::Scene
+{
+	class SceneAmbient;
+}
+
 namespace Engine::DevTool
 {
 	//==========================================================================================
@@ -77,6 +82,9 @@ namespace Engine::DevTool
 		// 確認用シーンの更新と描画
 		virtual void UpdateScenePreview(float a_deltaTime) = 0;
 		virtual void DrawScenePreview() = 0;
+
+		// 確認用シーンで使う環境設定。nullptr ならゲームのシーンのもの(SceneManager が流し込む)
+		virtual const Scene::SceneAmbient* GetScenePreviewAmbient() const = 0;
 
 		//------------------------------------------------------------------------------
 		// アプリ側から

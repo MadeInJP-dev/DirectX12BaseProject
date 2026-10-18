@@ -36,6 +36,24 @@ namespace Engine::Scene
 		m_dlColor                   = { 4.0f, 4.0f, 4.0f };
 	}
 
+	SceneAmbient SceneAmbient::CreatePlain()
+	{
+		SceneAmbient _ambient = {};
+
+		// メッシュのパーツが影側で真っ黒に潰れないよう、環境光を少し入れる
+		_ambient.m_ambient.ambientColorScale = { 0.4f, 0.4f, 0.4f };
+
+		// フォグの CB は既定値のままだと濃さが入っている(シーンで使う既定のため)。ここで明示的に落とす
+		_ambient.m_ambient.heightFogEnable   = 0;
+		_ambient.m_ambient.distanceFogEnable = 0;
+		_ambient.m_sceneFog.density          = 0.0f;
+		_ambient.m_groundDust.density        = 0.0f;
+		_ambient.m_fogComposite.enable       = 0;
+
+		// 空はテクスチャを持たせないので描かれない(GUID も実体も空のまま)
+		return _ambient;
+	}
+
 	//======================================================================================
 	// 保存・読み込み
 	//
