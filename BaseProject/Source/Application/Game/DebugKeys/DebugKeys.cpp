@@ -74,6 +74,12 @@ namespace App::Game
 		constexpr float STATS_WIDTH       = 260.0f;		// 下敷きの幅(px)
 		constexpr Math::Vector2 STATS_POS = { 16.0f, 16.0f };	// 画面の左上からの位置(px)
 
+		// 無敵の札。情報の表示を出しているときはその下へずらす
+		constexpr float INVINCIBLE_FONT_PIXEL = 26.0f;							// 文字の高さ(px)
+		constexpr Math::Vector2 INVINCIBLE_SIZE = { 190.0f, 44.0f };			// 下敷きの大きさ(px)
+		constexpr float INVINCIBLE_GAP = 8.0f;									// 情報の表示との隙間(px)
+		constexpr Math::Color INVINCIBLE_COLOR = { 1.0f, 0.75f, 0.1f, 1.0f };	// 文字と枠の色(目立つ黄色)
+
 		// どの UI よりも手前、マウスカーソル(10000)よりは奥
 		constexpr float STATS_LAYER = 9000.0f;
 
@@ -127,6 +133,34 @@ namespace App::Game
 		}
 		Object::Decoration::RequestResources(m_statsText, a_engine.GetEngineServices().pResourceManager);
 
+		//------------------------------------------------------------------
+		// 無敵の札 : 黄色い枠の板と文字。板の中央へ文字を置く
+		//------------------------------------------------------------------
+		m_invincibleBackground.name      = "DebugInvincibleBackground";
+		m_invincibleBackground.pivot     = { 0.0f, 0.0f };
+		m_invincibleBackground.pixelSize = INVINCIBLE_SIZE;
+		m_invincibleBackground.color     = { 0.0f, 0.0f, 0.0f, 0.6f };
+		if (auto* _pQuad = m_invincibleBackground.RefQuad())
+		{
+			_pQuad->edgeColor = INVINCIBLE_COLOR;
+			_pQuad->edgePixel = 2.0f;
+		}
+
+		m_invincibleText.name = "DebugInvincibleText";
+		m_invincibleText.SetType(Object::Decoration::EDecorationType::Text);
+		m_invincibleText.pivot       = { 0.5f, 0.5f };
+		m_invincibleText.offsetPos   = { INVINCIBLE_SIZE.x * 0.5f, INVINCIBLE_SIZE.y * 0.5f };
+		m_invincibleText.layerOffset = 1.0f;
+		m_invincibleText.color       = INVINCIBLE_COLOR;
+		if (auto* _pText = m_invincibleText.RefText())
+		{
+			_pText->text          = "INVINCIBLE";
+			_pText->fontGUID      = STATS_FONT_GUID;
+			_pText->fontPixelSize = INVINCIBLE_FONT_PIXEL;
+			_pText->textAlign     = Object::Decoration::ETextAlign::Center;
+		}
+		Object::Decoration::RequestResources(m_invincibleText, a_engine.GetEngineServices().pResourceManager);
+
 		// エディター登録
 		if (auto* _pDevTool = a_engine.RefDevTool())
 			_pDevTool->RegisterEditFunc(
@@ -144,6 +178,7 @@ namespace App::Game
 	{
 		// フォントの参照を返す
 		if (auto* _pText = m_statsText.RefText()) _pText->fontRef = {};
+		if (auto* _pText = m_invincibleText.RefText()) _pText->fontRef = {};
 
 		// 止めたまま終わっても、次に作るものへ倍率を持ち越さない
 		if (m_pEngine) m_pEngine->SetTimeScale(1.0f);
@@ -361,23 +396,38 @@ namespace App::Game
 	}
 
 	//======================================================================================
-	// 情報の表示 : 積む
+	// 情報の表示と無敵の札 : 積む
+	//--------------------------------------------------------------------------------------
+	// 無敵の札は F7 の表示とは別に、無敵の間ずっと出す。HUD を消していても出す
+	// (切り忘れたまま発表やプレイを進めないように)。左上に置き、情報の表示があればその下
 	//======================================================================================
 	void DebugKeys::SubmitUI(Engine::Graphics::GraphicsEngine* a_pGraphicsEngine) const
 	{
-		if (!m_isStatsVisible || !a_pGraphicsEngine) return;
+		if (!a_pGraphicsEngine) return;
 
 		auto* _pResourceManager = m_pEngine->GetEngineServices().pResourceManager;
 		if (!_pResourceManager) return;
+
+		const Object::Decoration::ParentOption _parentOp = {};
 
 		Object::Decoration::ParentTransform _parentTr = {};
 		_parentTr.pixelPos = STATS_POS;
 		_parentTr.layer    = STATS_LAYER;
 
-		const Object::Decoration::ParentOption _parentOp = {};
+		if (m_isStatsVisible)
+		{
+			Object::Decoration::DrawDecoration(a_pGraphicsEngine, _pResourceManager, m_statsBackground, _parentTr, _parentOp);
+			Object::Decoration::DrawDecoration(a_pGraphicsEngine, _pResourceManager, m_statsText, _parentTr, _parentOp);
 
-		Object::Decoration::DrawDecoration(a_pGraphicsEngine, _pResourceManager, m_statsBackground, _parentTr, _parentOp);
-		Object::Decoration::DrawDecoration(a_pGraphicsEngine, _pResourceManager, m_statsText, _parentTr, _parentOp);
+			// 札は情報の表示の下へ
+			_parentTr.pixelPos.y += m_statsBackground.pixelSize.y + INVINCIBLE_GAP;
+		}
+
+		if (m_commands.isPlayerInvincible)
+		{
+			Object::Decoration::DrawDecoration(a_pGraphicsEngine, _pResourceManager, m_invincibleBackground, _parentTr, _parentOp);
+			Object::Decoration::DrawDecoration(a_pGraphicsEngine, _pResourceManager, m_invincibleText, _parentTr, _parentOp);
+		}
 	}
 
 	//======================================================================================

@@ -31,6 +31,9 @@ namespace App::Game
 	///   F6        HUD の表示を切り替え(ユーザーデータの IsHUDVisible と同じもの。保存はしない)
 	///   F7        画面左上に FPS・エンティティ数・ボイド数・VRAM を出す
 	///
+	/// 無敵の間は、F7 の表示とは関係なく画面左上に「INVINCIBLE」の札を出し続ける
+	/// (HUD を消していても出す。切り忘れたまま進めないように)。
+	///
 	/// キーはユーザーが割り当てを変える EGameAction には入れず、名前から作った番号で
 	/// 別のデバイス("DebugKeys")へ積む。割り当ての候補からは IsReservedKey で外してある。
 	/// 取るのは IsPress なので、エディターを操作している間は反応しない。
@@ -74,7 +77,7 @@ namespace App::Game
 		/// </summary>
 		void EndUpdate();
 
-		// 情報の表示を積む : シーンの UI を積み終えた後に呼ぶ
+		// 情報の表示と無敵の札を積む : シーンの UI を積み終えた後に呼ぶ
 		void SubmitUI(Engine::Graphics::GraphicsEngine* a_pGraphicsEngine) const;
 
 		// ---- アクセサ ----
@@ -104,6 +107,10 @@ namespace App::Game
 		float m_statsTimer = 0.0f;				// 次に数字を取り直すまでの残り(倍率を掛けない秒)
 		Object::Decoration::Decoration m_statsBackground = {};	// 下敷きの板
 		Object::Decoration::Decoration m_statsText = {};		// 数字
+
+		// ---- 無敵の札(無敵の間ずっと出す) ----
+		Object::Decoration::Decoration m_invincibleBackground = {};	// 下敷きの板
+		Object::Decoration::Decoration m_invincibleText = {};		// 文字
 
 		// HUD の表示を切り替えた先(借り物)。表示の行に出すため覚えておく
 		const UserData* m_pUserData = nullptr;
