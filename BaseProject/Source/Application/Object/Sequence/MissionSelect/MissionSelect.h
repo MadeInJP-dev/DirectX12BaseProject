@@ -38,6 +38,7 @@ namespace App::Object
 	/// ・ミッション名は Text の飾りへ流し込む
 	///     名前だけのために画像を1枚ずつ用意しなくて済むようにするため。
 	///     ボックスの UI に Text の飾りを1つ置き、その名前(既定 "MissionName")を指す。
+	///     書き込む文字は m_nameFormat の形で作る(「OPERATION : {name}」など)。
 	/// </remarks>
 	class MissionSelect : public Engine::GameObject::BaseObject
 	{
@@ -120,6 +121,9 @@ namespace App::Object
 		// 確認ボックスへミッション名を流し込む
 		void ApplyMissionName(const MissionEntry& a_mission);
 
+		// 書き込む文字を作る(m_nameFormat の {name} をミッション名に置き換える)
+		std::string FormatMissionName(const MissionEntry& a_mission) const;
+
 		/// <summary>
 		/// ミッション名を流し込む飾りを引く(見つからなければ nullptr)
 		/// </summary>
@@ -161,6 +165,10 @@ namespace App::Object
 		// 名前で飾りを指していた頃の名残。保存の並びを保つために読み書きだけ続け、
 		// 番号を持たない古いデータでは ResolveNameDecoration がこの名前から番号を引き直す
 		std::string m_legacyNameDecorationName = "MissionName";
+
+		// 飾りへ書き込む文字の形。{name} がミッション名に置き換わる
+		// (「OPERATION : {name}」のように、名前の前後へ決まった文字を添えるため)
+		std::string m_nameFormat = "{name}";
 
 		//-------------------------------------------------------------------
 		// 状態(保存しない)

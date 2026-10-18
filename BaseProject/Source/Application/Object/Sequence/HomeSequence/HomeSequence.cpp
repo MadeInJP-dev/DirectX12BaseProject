@@ -192,19 +192,11 @@ namespace App::Object
 	//======================================================================================
 	// メニュー : ゲームを終了する
 	//--------------------------------------------------------------------------------------
-	// エディターが差し込まれているときは、アプリを閉じずにエディターへ戻るだけにする。
-	// 閉じるとエディターごと終わり、保存していない編集が消えてしまう
+	// 起動モード(エディターの有無)によらず、アプリを閉じる
 	//======================================================================================
 	void HomeSequence::ReserveQuitGame(Engine::MainEngine& a_engine)
 	{
 		if (m_isLeaving) return;
-
-		if (a_engine.HasDevTool())
-		{
-			ENGINE_LOG("[HomeSequence] エディターが居るので、終了せずエディターへ戻ります");
-			a_engine.ChangeMode(Engine::EAppMode::Editor);
-			return;
-		}
 
 		m_isLeaving = true;
 		a_engine.ReserveQuit();
@@ -385,7 +377,7 @@ namespace App::Object
 		if (Picker::DrawCombo<UIButton>("Option", _pObjectManager, m_optionButtonGUID)) m_isBound = false;
 		if (Picker::DrawCombo<UIButton>("Title", _pObjectManager, m_titleButtonGUID))   m_isBound = false;
 		if (Picker::DrawCombo<UIButton>("Quit", _pObjectManager, m_quitButtonGUID))     m_isBound = false;
-		Engine::EditorField::Tooltip("エディターが居るときは終了せず、エディターへ戻る");
+		Engine::EditorField::Tooltip("起動モードによらず、アプリを閉じる");
 
 		Engine::EditorField::AssetField(*a_context.pServices, "Scene", "OptionScene", m_optionSceneGUID);
 		Engine::EditorField::Tooltip("Option を押したときに重ねる設定画面のシーン");

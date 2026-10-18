@@ -269,7 +269,27 @@ namespace App::Object
 			return;
 		}
 
-		_pText->text = a_mission.name;
+		_pText->text = FormatMissionName(a_mission);
+	}
+
+	//======================================================================================
+	// 書き込む文字を作る
+	//--------------------------------------------------------------------------------------
+	// 形の中の {name} をすべてミッション名に置き換える。
+	// {name} を含まない形なら、形の文字がそのまま出る(名前を出さない見出しにも使える)。
+	//======================================================================================
+	std::string MissionSelect::FormatMissionName(const MissionEntry& a_mission) const
+	{
+		constexpr std::string_view KEY = "{name}";
+
+		std::string _result = m_nameFormat;
+		size_t _pos = _result.find(KEY);
+		while (_pos != std::string::npos)
+		{
+			_result.replace(_pos, KEY.size(), a_mission.name);
+			_pos = _result.find(KEY, _pos + a_mission.name.size());
+		}
+		return _result;
 	}
 
 	Decoration::Decoration* MissionSelect::ResolveNameDecoration(UIBase& a_nameUI)
@@ -373,6 +393,7 @@ namespace App::Object
 		if (!a_ar.IsLegacyLayout())
 		{
 			a_ar.Field("NameDecorationId", m_nameDecorationId);
+			a_ar.StringField("NameFormat", m_nameFormat);
 		}
 
 		if (a_ar.IsLoading())
@@ -506,6 +527,13 @@ namespace App::Object
 				Engine::EditorField::WarningText("飾りが Text ではありません");
 			}
 		}
+
+		if (Engine::EditorField::Field("Name Format", m_nameFormat))
+		{
+			// 開いている確認ボックスへ即座に反映して、見ながら直せるようにする
+			if (IsValidIndex(m_confirmIndex)) ApplyMissionName(m_missionVec[m_confirmIndex]);
+		}
+		Engine::EditorField::Tooltip("飾りへ書き込む文字の形。{name} がミッション名に置き換わる(例 : OPERATION : {name})");
 
 		//----------------------------------------------------------------------
 		// 実行中の状態は表示のみ

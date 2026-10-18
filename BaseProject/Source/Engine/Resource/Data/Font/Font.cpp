@@ -44,6 +44,7 @@ namespace Engine::Resource
 		// 参照を返すだけ。実体の破棄はスイープに任せる
 		m_texRef = {};
 		m_texHandle = {};
+		m_pTexResource = nullptr;
 
 		m_atlasData.clear();
 		m_atlasData.shrink_to_fit();
@@ -104,6 +105,9 @@ namespace Engine::Resource
 		//
 		// ここでバッチを開かないのは、テクスチャを作るだけなら転送が要らないため。
 		// 中身の転送は Flush 側でまとめて行う
+		//
+		// GPUリソース自体はムーブしても同じものなので、預ける前に転送先として覚えておく
+		m_pTexResource = _tex.GetResource();
 		m_texRef = PickResourceManager(a_pContext).Add<Texture>(std::move(_tex));
 		m_texHandle = m_texRef.GetRaw();
 
@@ -198,16 +202,16 @@ namespace Engine::Resource
 	{
 		if (!m_isDirty) return;
 		if (m_size == 0 || m_atlasData.empty()) return;
-		if (!m_texHandle.IsValid()) return;
+		if (!m_texHandle.IsValid() || m_pTexResource == nullptr) return;
 
-		ResourceBuildScope _scope(a_pContext);
+		// グリフは描画の途中で焼かれるので、コンテキスト無しで呼ばれることがある。
+		// そのときは登録先を持たない転送だけのバッチを開く
+		// (書き換えるのは既にあるテクスチャの中身だけで、マネージャーへ登録するものは無い)
+		ResourceBuildScope _scope(a_pContext, ScopedResourceBuild::TransferOnly{});
 		const ResourceBuildContext& _context = _scope.GetContext();
 
 		// 積む先が無いときは汚れたままにして、次の機会へ持ち越す
 		if (!_context.CanRecordCopy() || _context.pDevice == nullptr) return;
-
-		const Texture* _pTex = PickResourceManager(&_context).Get(m_texHandle);
-		if (_pTex == nullptr || _pTex->GetResource() == nullptr) return;
 
 		const uint32_t _regionWidth = m_dirtyMaxX - m_dirtyMinX;
 		const uint32_t _regionHeight = m_dirtyMaxY - m_dirtyMinY;
@@ -218,7 +222,7 @@ namespace Engine::Resource
 		}
 
 		// 転送する矩形ぶんのフットプリントを求める
-		D3D12_RESOURCE_DESC _regionDesc = _pTex->GetDesc();
+		D3D12_RESOURCE_DESC _regionDesc = m_pTexResource->GetDesc();
 		_regionDesc.Width = _regionWidth;
 		_regionDesc.Height = _regionHeight;
 		_regionDesc.MipLevels = 1;
@@ -280,7 +284,7 @@ namespace Engine::Resource
 		_src.PlacedFootprint = _layout;
 
 		D3D12_TEXTURE_COPY_LOCATION _dst = {};
-		_dst.pResource = _pTex->GetResource();
+		_dst.pResource = m_pTexResource;
 		_dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		_dst.SubresourceIndex = 0;
 

@@ -9,6 +9,23 @@ namespace Engine::Resource
 {
 	ScopedResourceBuild::ScopedResourceBuild(ResourceManager* a_pResourceManager, bool a_useCopy, bool a_useCompute)
 	{
+		Open(a_pResourceManager, a_useCopy, a_useCompute);
+
+		// 作ったものを登録する経路なので、登録先が無いのは呼び出し側の渡し忘れ
+		if (!a_pResourceManager)
+		{
+			ENGINE_ERRLOG(false, "[Resource] ビルドの登録先(ResourceManager)が渡されていません");
+		}
+	}
+
+	ScopedResourceBuild::ScopedResourceBuild(TransferOnly, bool a_useCopy, bool a_useCompute)
+	{
+		// 登録しないので登録先は持たない
+		Open(nullptr, a_useCopy, a_useCompute);
+	}
+
+	void ScopedResourceBuild::Open(ResourceManager* a_pResourceManager, bool a_useCopy, bool a_useCompute)
+	{
 		// バッチを開くのも転送を流すのもグラフィックスエンジン
 		auto* _pGE = MainEngine::Instance().RefGraphicsEngine();
 		if (!_pGE)
@@ -29,10 +46,6 @@ namespace Engine::Resource
 
 		m_context.pResourceManager = a_pResourceManager;
 		m_context.pAssetDatabase = a_pResourceManager ? &a_pResourceManager->RefAssetDatabase() : nullptr;
-		if (!a_pResourceManager)
-		{
-			ENGINE_ERRLOG(false, "[Resource] ビルドの登録先(ResourceManager)が渡されていません");
-		}
 
 		m_context.pGraphicsEngine = _pGE;
 		m_context.pMeshBufferAllocator = _pGE->RefMeshBufferAllocator();

@@ -85,7 +85,8 @@ namespace Engine::Resource
 		/// </summary>
 		/// <remarks>
 		/// 送れなかった(コマンドリストが取れなかった)場合は汚れたままにしておくので、
-		/// 次に呼んだときにまとめて送られる
+		/// 次に呼んだときにまとめて送られる。
+		/// コンテキストが無ければ、その場で転送だけのバッチを開く(ResourceManager は使わない)
 		/// </remarks>
 		void Flush(const ResourceBuildContext* a_pContext);
 
@@ -107,6 +108,12 @@ namespace Engine::Resource
 		// 参照は m_texRef が握っているので、シーンの切れ目のスイープでは消えない
 		ResourceRef<Texture> m_texRef = {};
 		Handle<Texture> m_texHandle = {};
+
+		// 転送先のGPUリソース(非所有) : 生かしているのは m_texRef
+		//
+		// グリフは描画の途中で焼かれ、そのとき呼び出し側はビルドコンテキストを持っていない。
+		// Flush でマネージャーからテクスチャを引き直さずに済むよう、作ったときに覚えておく
+		ID3D12Resource* m_pTexResource = nullptr;
 
 		// CPU側の焼き付け先 : 1ピクセル1バイト
 		std::vector<uint8_t> m_atlasData = {};

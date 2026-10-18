@@ -19,8 +19,17 @@ namespace Engine::Resource
 	{
 	public:
 
+		// 登録を伴わず、転送だけのバッチを開くときに渡す目印
+		struct TransferOnly {};
+
 		// a_pResourceManager : 作ったものを登録する先。コンテキストへそのまま載せる
 		explicit ScopedResourceBuild(ResourceManager* a_pResourceManager, bool a_useCopy = true, bool a_useCompute = true);
+
+		// 転送だけ : 登録先(ResourceManager)を持たないコンテキストを組む。
+		// 既にあるリソースの中身を書き換えるだけで、新しく登録するものが無い処理向け
+		// (使う側がコンテキストから ResourceManager を引かないこと)
+		explicit ScopedResourceBuild(TransferOnly, bool a_useCopy = true, bool a_useCompute = true);
+
 		~ScopedResourceBuild();
 
 		// コピーもムーブも禁止 : スコープと寿命を一致させる
@@ -31,6 +40,11 @@ namespace Engine::Resource
 
 		// ビルドコンテキストの取得
 		const ResourceBuildContext& GetContext() const { return m_context; }
+
+	private:
+
+		// バッチを開いてコンテキストを組む : 登録先は空でもよい
+		void Open(ResourceManager* a_pResourceManager, bool a_useCopy, bool a_useCompute);
 
 	private:
 
@@ -59,6 +73,20 @@ namespace Engine::Resource
 			// 呼び出し元が持っていないので、その場で開く。
 			// 登録先のマネージャーだけは呼び出し元のものを引き継ぐ
 			m_upOwned = std::make_unique<ScopedResourceBuild>(a_pContext ? a_pContext->pResourceManager : nullptr);
+			m_pContext = &m_upOwned->GetContext();
+		}
+
+		// 転送だけ : 渡されたコンテキストが使えなければ、登録先を持たないバッチを自分で開く。
+		// コピーしか積まないので、自分で開くときはコンピュートのリストを取らない
+		ResourceBuildScope(const ResourceBuildContext* a_pContext, ScopedResourceBuild::TransferOnly a_tag)
+		{
+			if (a_pContext && a_pContext->pDevice)
+			{
+				m_pContext = a_pContext;
+				return;
+			}
+
+			m_upOwned = std::make_unique<ScopedResourceBuild>(a_tag, true, false);
 			m_pContext = &m_upOwned->GetContext();
 		}
 

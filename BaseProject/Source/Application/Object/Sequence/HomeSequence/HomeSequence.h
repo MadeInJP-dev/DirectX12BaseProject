@@ -55,8 +55,7 @@ namespace App::Object
 	///
 	/// ・左上のメニュー(SideMenu)のボタン : 設定 / タイトルへ戻る / ゲームを終了
 	///     開閉は SideMenu が持ち、押されて何をするかはここが差し込む。
-	///     ゲームの終了は、エディターが差し込まれているときはエディターへ戻るだけにする
-	///     (エディターごと閉じて、保存していない編集が消えないように)。
+	///     ゲームの終了は、起動モード(エディターの有無)によらずアプリを閉じる。
 	/// </remarks>
 	class HomeSequence : public Engine::GameObject::BaseObject
 	{
@@ -101,7 +100,7 @@ namespace App::Object
 		// メニュー : タイトルへ戻る
 		void ReserveReturnTitle(Engine::Scene::SceneManager& a_sceneManager);
 
-		// メニュー : ゲームを終了する(エディターが居ればエディターへ戻る)
+		// メニュー : ゲームを終了する(起動モードによらずアプリを閉じる)
 		void ReserveQuitGame(Engine::MainEngine& a_engine);
 
 		// ガレージのシーンへ切り替える
