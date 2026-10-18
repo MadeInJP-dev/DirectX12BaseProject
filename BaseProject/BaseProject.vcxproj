@@ -637,6 +637,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\Scene\TitleRunBackdrop\TitleRunBackdrop.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Object\Scene\AmbientDustObject\AmbientDustObject.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1973,6 +1978,7 @@
     <ClInclude Include="Source\Application\Object\Scene\AmbientDustObject\AmbientDustObject.h" />
     <ClInclude Include="Source\Application\Object\Scene\Boundary\Boundary.h" />
     <ClInclude Include="Source\Application\Object\Scene\PlayerSpawner\PlayerSpawner.h" />
+    <ClInclude Include="Source\Application\Object\Scene\TitleRunBackdrop\TitleRunBackdrop.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\UIImage\UIImage.h" />
     <ClInclude Include="Source\Application\Systems\Render\AnimationOptionalDraw.h" />
     <ClInclude Include="Source\Application\Systems\Render\DynamicObjectDrawSystem.h" />

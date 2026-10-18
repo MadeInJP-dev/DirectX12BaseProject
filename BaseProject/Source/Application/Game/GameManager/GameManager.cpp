@@ -39,6 +39,7 @@
 #include "Application/Object/Sequence/MissionSelect/MissionSelect.h"
 #include "../../Object/Scene/AmbientDustObject/AmbientDustObject.h"
 #include "../../Object/Scene/PlayerSpawner/PlayerSpawner.h"
+#include "Application/Object/Scene/TitleRunBackdrop/TitleRunBackdrop.h"
 #include "Application/Object/Scene/Boundary/Boundary.h"
 #include "Application/Object/Sequence/SceneSequence/SceneSequence.h"
 #include "Application/Object/Controller/SwarmBossController/SwarmBossController.h"
@@ -152,6 +153,7 @@ namespace App::Game
 			_objRegistry.RegisterType<App::Object::GarageSequence>("GarageSequence");			// ガレージの進行役。取り付け口から引き出し線を出し、寄って武器を付け替える(出撃構成を書き換える)
 			_objRegistry.RegisterType<App::Object::Boundary>("Boundary");						// 行ける範囲の境界。近づいた面だけが見えてくる壁を描く(外へ出さないのはシステム側)
 			_objRegistry.RegisterType<App::Object::SideMenu>("SideMenu");						// カーソルを乗せると開く横のメニュー(ホームの左上)。開閉だけを持ち、中のボタンは進行役が差し込む
+			_objRegistry.RegisterType<App::Object::TitleRunBackdrop>("TitleRunBackdrop");		// タイトルの背景。出した機体を床の上でブーストさせ続け、板1枚の床を足元へ寄せてカメラで追う
 		}
 
 		// ------------------------------------------------------------------

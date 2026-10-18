@@ -607,6 +607,9 @@
     <Filter Include="Source\Application\Object\Scene\PlayerSpawner">
       <UniqueIdentifier>{c0de0f21-1111-4222-8333-0000c0de0f21}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Object\Scene\TitleRunBackdrop">
+      <UniqueIdentifier>{e4e1adea-4f34-43f2-bedb-69760413b9e4}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Application\Object\Sequence">
       <UniqueIdentifier>{6f2d9c15-3a84-4f0b-8f57-1d2a4b6c9e30}</UniqueIdentifier>
     </Filter>
@@ -1571,6 +1574,9 @@
     </ClCompile>
     <ClCompile Include="Source\Application\Object\Scene\PlayerSpawner\PlayerSpawner.cpp">
       <Filter>Source\Application\Object\Scene\PlayerSpawner</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\Scene\TitleRunBackdrop\TitleRunBackdrop.cpp">
+      <Filter>Source\Application\Object\Scene\TitleRunBackdrop</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\Sequence\GarageSequence\GarageSequence.cpp">
       <Filter>Source\Application\Object\Sequence\GarageSequence</Filter>
@@ -3265,6 +3271,9 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Object\Scene\PlayerSpawner\PlayerSpawner.h">
       <Filter>Source\Application\Object\Scene\PlayerSpawner</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\Scene\TitleRunBackdrop\TitleRunBackdrop.h">
+      <Filter>Source\Application\Object\Scene\TitleRunBackdrop</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\Sequence\GarageSequence\GarageSequence.h">
       <Filter>Source\Application\Object\Sequence\GarageSequence</Filter>
