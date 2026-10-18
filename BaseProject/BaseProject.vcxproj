@@ -1522,7 +1522,7 @@
     <ClCompile Include="Source\Engine\Option\OptionManager.cpp" />
     <ClCompile Include="Source\Engine\Option\ProjectOptions\InputOption.cpp" />
     <ClCompile Include="Source\Engine\Option\ProjectOptions\CursorOption.cpp" />
-    <ClCompile Include="Source\Engine\Option\ProjectOptions\AudioOption.cpp" />
+    <ClCompile Include="Source\Engine\Scene\SceneAudio\SceneAudio.cpp" />
     <ClCompile Include="Source\Engine\Graphics\DebugDraw\DebugDraw.cpp" />
     <ClCompile Include="Source\Engine\Graphics\Profile\GraphicsProfiler.cpp" />
     <ClCompile Include="Source\Application\Game\MouseCursor\MouseCursor.cpp">
@@ -2339,7 +2339,7 @@
     <ClInclude Include="Source\Engine\Option\ProjectOptions\BuildConfig.h" />
     <ClInclude Include="Source\Engine\Option\ProjectOptions\InputOption.h" />
     <ClInclude Include="Source\Engine\Option\ProjectOptions\CursorOption.h" />
-    <ClInclude Include="Source\Engine\Option\ProjectOptions\AudioOption.h" />
+    <ClInclude Include="Source\Engine\Scene\SceneAudio\SceneAudio.h" />
     <ClInclude Include="Source\Engine\Audio\SoundGroup.h" />
     <ClInclude Include="Source\Engine\Graphics\DebugDraw\DebugDraw.h" />
     <ClInclude Include="Source\Engine\Graphics\Profile\GraphicsProfiler.h" />

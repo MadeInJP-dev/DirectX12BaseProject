@@ -35,7 +35,7 @@ namespace Engine::Resource
 		m_soundRef = a_resourceRef;
 
 		// 音量を一度も指定されないまま鳴らされても、
-		// グループ音量とマスター音量が効いている状態にしておく
+		// プレイヤーの音量が効いている状態にしておく(シーンの席は発行元が札を付けたときに効く)
 		RefreshVolume();
 
 		return true;
@@ -65,7 +65,7 @@ namespace Engine::Resource
 
 		m_upSoundInstance->Stop();
 
-		// 覚えている音量(× グループ × マスター)で鳴らし直す。
+		// 覚えている音量(× シーン × プレイヤーの音量)で鳴らし直す。
 		// 以前はここで生の 1 を入れていたので、
 		// 鳴らす前に指定した音量もグループ音量も捨てられていた
 		RefreshVolume();
@@ -106,7 +106,7 @@ namespace Engine::Resource
 	// 音量
 	//--------------------------------------------------------------------------------------
 	// 覚えるのは「呼び出し側が指定した音量」だけ。
-	// 実際に送るときにグループ音量とマスター音量を掛ける。
+	// 実際に送るときにシーンの音量とプレイヤーの音量を掛ける。
 	//
 	// こうしておくと、設定画面で BGM を絞ったときに
 	// 鳴らしている側(進行役・コンポーネント)を1つも触らずに効かせられる。
@@ -119,11 +119,12 @@ namespace Engine::Resource
 		RefreshVolume();
 	}
 
-	void SoundInstance::SetGroup(Audio::ESoundGroup a_group)
+	void SoundInstance::SetVolumeTag(Audio::ESoundGroup a_group, Audio::VolumeScopeID a_scopeID)
 	{
-		if (m_group == a_group) return;
+		if (m_group == a_group && m_volumeScopeID == a_scopeID) return;
 
 		m_group = a_group;
+		m_volumeScopeID = a_scopeID;
 		RefreshVolume();
 	}
 
@@ -131,7 +132,7 @@ namespace Engine::Resource
 	{
 		if (!m_upSoundInstance || !m_pAudioManager) return;
 
-		const float _scale = m_pAudioManager->CalcVolumeScale(m_group);
+		const float _scale = m_pAudioManager->CalcVolumeScale(m_group, m_volumeScopeID);
 
 		m_upSoundInstance->SetVolume(std::clamp(m_volume * _scale, 0.0f, 1.0f));
 		Apply3D();

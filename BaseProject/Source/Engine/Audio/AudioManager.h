@@ -86,7 +86,7 @@ namespace Engine::Audio
 		/// Play3D / SetPos / Apply3D はこれを true にしたインスタンスでしか使えない
 		/// </param>
 		/// <param name="a_group">
-		/// 音のグループ。オプションの音量はこの単位で掛かる。
+		/// 音のグループ。シーンとプレイヤーの音量はこの単位で掛かる。
 		/// 省略すると効果音(Se)扱い
 		/// </param>
 		// GUIDから発行する。
@@ -96,28 +96,46 @@ namespace Engine::Audio
 			ESoundGroup a_group = ESoundGroup::Se);
 
 		//----------------------------------------------------------------------------------
-		// 音量設定
+		// シーンの音量(音量の席)
+		//
+		// 作り手が決める音量のつり合いはシーンが持つ(Scene::SceneAudio)。
+		// シーンは開くときに席を1つ取って音量を預け、閉じるときに返す。
+		//
+		// 音は発行した瞬間の「今の席」(VolumeScopeGuard で張る)を札として覚え、
+		// 以降はその席の音量で鳴る。重ねたシーン(ポーズ画面)の音と後ろのゲームの音が
+		// それぞれ自分のシーンの音量で鳴るのはこのため。
+		//
+		// 席の外で発行した音(エディターの試聴など)と、席を返した後に残った音は素通し(1.0)
 		//----------------------------------------------------------------------------------
 
+		// 席を取る。返った番号はシーンが閉じるまで持っておく
+		VolumeScopeID AddVolumeScope(const SoundVolume& a_volume);
+
 		/// <summary>
-		/// マスター音量 : 全部の音へ掛かる
+		/// 席の音量を差し替える
 		/// </summary>
 		/// <remarks>
 		/// 変えた瞬間に鳴っているもの全部へ送り直す。
 		/// 更新が止まっているシーンの音(ポーズ中のゲームBGMなど)にも効かせるため
 		/// </remarks>
-		void SetMasterVolume(float a_volume);
-		float GetMasterVolume() const { return m_masterVolume; }
+		void SetVolumeScope(VolumeScopeID a_id, const SoundVolume& a_volume);
 
-		// グループ音量 : そのグループの音へ掛かる
-		void SetGroupVolume(ESoundGroup a_group, float a_volume);
-		float GetGroupVolume(ESoundGroup a_group) const;
+		// 席を返す。その席の札が付いた音は以降素通しになる(普通はシーンと一緒に返却済み)
+		void RemoveVolumeScope(VolumeScopeID a_id);
+
+		// 今の席 : これから発行する音に付く札。張り替えは VolumeScopeGuard で行う
+		VolumeScopeID GetCurrentVolumeScope() const { return m_currentVolumeScopeID; }
+		void SetCurrentVolumeScope(VolumeScopeID a_id) { m_currentVolumeScopeID = a_id; }
+
+		//----------------------------------------------------------------------------------
+		// プレイヤーの音量(マスター・グループ)
+		//----------------------------------------------------------------------------------
 
 		/// <summary>
-		/// プレイヤーの音量(マスター・グループ) : 上の音量へさらに掛かる
+		/// プレイヤーの音量 : シーンの音量へさらに掛かる
 		/// </summary>
 		/// <remarks>
-		/// 上の2つは作り手が決める音量のつり合い(プロジェクトの設定 AudioOption)で、
+		/// シーンの音量は作り手が決めるつり合いで、
 		/// こちらはプレイヤーが設定画面で上下するもの(アプリのユーザーデータ)。
 		/// 分けて持つので、プレイヤーが下げても作り手のつり合いは崩れない。
 		/// 変えた瞬間に鳴っているもの全部へ送り直す
@@ -128,10 +146,10 @@ namespace Engine::Audio
 		float GetUserGroupVolume(ESoundGroup a_group) const;
 
 		/// <summary>
-		/// そのグループの音へ掛ける倍率(マスター・プレイヤーの音量込み)
+		/// そのグループの音へ掛ける倍率(シーンの音量 × プレイヤーの音量)
 		/// </summary>
 		/// <remarks>SoundInstance が実際に送る音量を出すのに使う</remarks>
-		float CalcVolumeScale(ESoundGroup a_group) const;
+		float CalcVolumeScale(ESoundGroup a_group, VolumeScopeID a_scopeID) const;
 
 		/// <summary>
 		/// 発行したサウンドインスタンスを停止して破棄する
@@ -178,13 +196,15 @@ namespace Engine::Audio
 		Pool::ItemPool<Resource::SoundInstance> m_soundInstancePool;
 
 		//----------------------------------------------------------------------------------
-		// 音量
+		// シーンの音量(席)
 		//
-		// 保存はオプション側(AudioOption)。ここは実行中の値を持つだけで、
-		// 起動時とエディターでの変更時にオプションから流し込まれる
+		// 保存はシーン側(SceneAudio)。ここは実行中の値を預かるだけ
 		//----------------------------------------------------------------------------------
-		float m_masterVolume = 1.0f;
-		std::array<float, SOUND_GROUP_COUNT> m_groupVolumeArray = {};
+		std::unordered_map<VolumeScopeID, SoundVolume> m_volumeScopeMap;
+		VolumeScopeID m_nextVolumeScopeID = INVALID_VOLUME_SCOPE_ID + 1;
+
+		// 今の席 : 発行する音に付ける札
+		VolumeScopeID m_currentVolumeScopeID = INVALID_VOLUME_SCOPE_ID;
 
 		// プレイヤーの音量。保存はアプリ側(ユーザーデータ)で、起動時と設定画面から流し込まれる
 		float m_userMasterVolume = 1.0f;
@@ -201,5 +221,37 @@ namespace Engine::Audio
 			std::vector<Handle<Resource::SoundInstance>> playingHandles;	// 鳴らした声(鳴り終わったものは見るときに外す)
 		};
 		std::unordered_map<Core::GUID, SoundPlayGate> m_playGates;
+	};
+
+	//======================================================================================
+	// 今の席を張り替えて、スコープを抜けるときに戻す
+	//
+	//     Audio::VolumeScopeGuard _guard(pAudioManager, sceneScopeID);
+	//     world.Update();		// ここで発行した音はそのシーンの音量で鳴る
+	//
+	// 入れ子にしてよい(抜けるときは張る前の席へ戻す)。AudioManager が無ければ何もしない
+	//======================================================================================
+	class VolumeScopeGuard
+	{
+	public:
+
+		VolumeScopeGuard(AudioManager* a_pAudioManager, VolumeScopeID a_id)
+			: m_pAudioManager(a_pAudioManager)
+		{
+			if (!m_pAudioManager) return;
+
+			m_prevID = m_pAudioManager->GetCurrentVolumeScope();
+			m_pAudioManager->SetCurrentVolumeScope(a_id);
+		}
+		~VolumeScopeGuard()
+		{
+			if (m_pAudioManager) m_pAudioManager->SetCurrentVolumeScope(m_prevID);
+		}
+		NON_COPYABLE_NON_MOVABLE(VolumeScopeGuard);
+
+	private:
+
+		AudioManager* m_pAudioManager = nullptr;
+		VolumeScopeID m_prevID = INVALID_VOLUME_SCOPE_ID;
 	};
 }

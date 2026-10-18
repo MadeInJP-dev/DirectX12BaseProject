@@ -91,6 +91,9 @@ namespace Engine::Scene
 		// 中身はシーン読み込み(Archive)またはエディターの AddObject で追加される。
 		// 自シーンのワールドを渡し、各オブジェクトへは ObjectContext 経由で配らせる。
 		m_upGameObjectManager = std::make_unique<GameObject::GameObjectManager>(m_upWorld.get());
+
+		// 音量の席を取る。値はシーンファイルを読んだときに流し込まれる
+		m_audio.Register(a_engine.RefAudioManager());
 	}
 
 	//======================================================================================
@@ -153,6 +156,9 @@ namespace Engine::Scene
 	void BaseScene::UpdateLoad(Resource::ResourceManager& a_resourceManager)
 	{
 		if (m_state == EState::Ready) return;
+
+		// 落ち着き待ちの間に動き出したもの(BGMの進行役など)が鳴らす音も、このシーンの音量で鳴らす
+		Audio::VolumeScopeGuard _volumeScope(m_audio.RefAudioManager(), m_audio.GetVolumeScopeID());
 
 		const auto _frameBegin = std::chrono::steady_clock::now();
 
@@ -338,12 +344,18 @@ namespace Engine::Scene
 	void BaseScene::Exit()
 	{
 		m_upWorld->Release();
+
+		// 音量の席を返す。音を借りていたものは上の Release で返し終わっている
+		m_audio.Unregister();
 	}
 
 	void BaseScene::Update(float a_dt)
 	{
 		// 読み込み中は UpdateLoad だけが回す
 		if (!IsReady()) return;
+
+		// ここで発行された音には、このシーンの音量の札が付く
+		Audio::VolumeScopeGuard _volumeScope(m_audio.RefAudioManager(), m_audio.GetVolumeScopeID());
 
 		m_upGameObjectManager->PreUpdate();
 
@@ -390,6 +402,9 @@ namespace Engine::Scene
 	{
 		// 組み立て途中のワールドは描かない
 		if (!IsReady()) return;
+
+		// 描画のフェーズで鳴らすもの(エフェクトの再生など)もこのシーンの音量で鳴らす
+		Audio::VolumeScopeGuard _volumeScope(m_audio.RefAudioManager(), m_audio.GetVolumeScopeID());
 
 		// 判定メッシュのボディのAABBをデバッグ表示へ積む(静的=水色、動く=黄色)。
 		// 積む先はエンジン側の置き場で、実際に出すかどうかは
@@ -527,6 +542,18 @@ namespace Engine::Scene
 		if (a_ar.BeginGroup("Ambient"))
 		{
 			m_ambient.Archive(a_ar);
+			a_ar.EndGroup();
+		}
+
+		// ---------------------------------------------------------
+		// シーンの音量
+		// 後から足したので区切りで囲む : 古いバイナリ(.obscene)には無く、
+		// そのときは読まずに既定値(素通し)のまま残す
+		// ---------------------------------------------------------
+		if (a_ar.BeginGroup("Audio"))
+		{
+			Persistence::ArchiveSection _section(a_ar, "SceneAudio");
+			if (!a_ar.IsLegacyLayout()) m_audio.Archive(a_ar);
 			a_ar.EndGroup();
 		}
 

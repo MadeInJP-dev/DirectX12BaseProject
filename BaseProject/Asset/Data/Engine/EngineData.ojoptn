@@ -1,15 +1,8 @@
 {
-    "AudioOption": {
-        "groupVolume0": 0.5090000033378601,
-        "groupVolume1": 1.0,
-        "groupVolume2": 1.0,
-        "groupVolume3": 1.0,
-        "masterVolume": 0.35600000619888306
-    },
     "BloomOption": {
         "enable": true,
         "intensity": 0.6000000238418579,
-        "softKnee": 0.23999999463558197,
+        "softKnee": 0.9399999976158142,
         "threshold": 1.0
     },
     "BuildConfig": {

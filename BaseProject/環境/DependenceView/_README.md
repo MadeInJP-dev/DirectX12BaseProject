@@ -59,7 +59,7 @@ Excalidraw のダークモードは描画時に色を反転するので、ダー
 | `MainEditor` | 10-09 | `WinMain`(main.cpp) | エンジンへは `IDevTool`、パネルへは `EditorContext`(`pEffectEditor` / `pEditorCamera`) |
 | `InputManager` | 10-09 | `MainEngine` | `EngineServices`。ウィンドウのフォーカスは `NativeWindow::SetFocusCallback` でつなぐ |
 | `AudioManager` | 10-09 | `MainEngine` | `EngineServices`。サウンドインスタンスは発行元を持ち、読み込みは `ResourceBuildContext::pAudioEngine` |
-| `OptionManager` | 10-09 | `MainEngine` | `EngineServices`。受け手へは `MainEngine` が流し込む(InputOption は `Init`、AudioOption は `Apply`、DebugDraw は毎フレーム) |
+| `OptionManager` | 10-09 | `MainEngine` | `EngineServices`。受け手へは `MainEngine` が流し込む(InputOption は `Init`、DebugDraw は毎フレーム。音量はシーンの `SceneAudio` が持つ) |
 | `GameManager` | 10-09 | `Application` | シーンをまたぐ記録はワールドの `GameDataResource` から引く |
 | `SceneManager` | 10-09 | `MainEngine` | `EngineServices::pSceneManager`。プレハブの読み込みは `ResourceBuildContext::pSceneManager` |
 

@@ -16,7 +16,7 @@ namespace App::Object
 	// ・マスター・BGM・SE・UI の音量を、ゲージと上げ下げのボタンの行で並べる。
 	// ・値の実体は UserData(SoundSettings, 0〜100)。ここが持つのは表示用の写しで、開いたときに読み直す。
 	// ・変えた瞬間に UserData へ書き、鳴らす側(AudioManager)へも流し込むので、その場で音が変わる。
-	//   プレイヤーの音量は作り手の音量(エンジンの AudioOption)へ掛け合わされる。
+	//   プレイヤーの音量は作り手の音量(シーンの SceneAudio)へ掛け合わされる。
 	//===============================================================================================
 	class SoundOptionPanel final : public ScrollPanelBase
 	{

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../SceneAmbient/SceneAmbient.h"
+#include "../SceneAudio/SceneAudio.h"
 #include "../SceneConfig/SceneConfig.h"
 
 namespace Engine
@@ -105,6 +106,11 @@ namespace Engine::Scene
 		SceneAmbient& RefAmbient() { return m_ambient; }
 		const SceneAmbient& GetAmbient() const { return m_ambient; }
 
+		// シーンの音量(マスター + グループごと) : シーンと一緒に保存される。
+		// このシーンで鳴らした音にはこれとプレイヤーの音量が掛かる
+		SceneAudio& RefAudio() { return m_audio; }
+		const SceneAudio& GetAudio() const { return m_audio; }
+
 		// シーンの設定(先読み一覧・計測フラグ) : シーンファイルとは別のファイルに保存される
 		SceneConfig& RefConfig() { return m_config; }
 		const SceneConfig& GetConfig() const { return m_config; }
@@ -146,6 +152,7 @@ namespace Engine::Scene
 		// データ
 		Core::GUID m_guid;						// 自身のデータの所在
 		SceneAmbient m_ambient = {};			// シーンの環境設定 : シーンと一緒に保存される
+		SceneAudio m_audio;						// シーンの音量 : シーンと一緒に保存される
 		SceneConfig m_config = {};				// シーンの設定 : 開始時に読み込んでおきたいアセット(先読み一覧)と、その計測フラグ
 
 		// ゲームの本体 : ワールド空間上にあるものすべてはこちらで管理

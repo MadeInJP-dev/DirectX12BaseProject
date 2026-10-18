@@ -7,33 +7,29 @@ namespace Engine::Audio
 	//======================================================================================
 	// 音量
 	//======================================================================================
-	void AudioManager::SetMasterVolume(float a_volume)
+	VolumeScopeID AudioManager::AddVolumeScope(const SoundVolume& a_volume)
 	{
-		const float _volume = std::clamp(a_volume, 0.0f, 1.0f);
-		if (m_masterVolume == _volume) return;
+		const VolumeScopeID _id = m_nextVolumeScopeID++;
+		m_volumeScopeMap[_id] = a_volume;
+		return _id;
+	}
 
-		m_masterVolume = _volume;
+	void AudioManager::SetVolumeScope(VolumeScopeID a_id, const SoundVolume& a_volume)
+	{
+		auto _it = m_volumeScopeMap.find(a_id);
+		if (_it == m_volumeScopeMap.end()) return;
+		if (_it->second == a_volume) return;
+
+		_it->second = a_volume;
 		RefreshAllVolume();
 	}
 
-	void AudioManager::SetGroupVolume(ESoundGroup a_group, float a_volume)
+	void AudioManager::RemoveVolumeScope(VolumeScopeID a_id)
 	{
-		const size_t _index = static_cast<size_t>(a_group);
-		if (_index >= m_groupVolumeArray.size()) return;
+		m_volumeScopeMap.erase(a_id);
 
-		const float _volume = std::clamp(a_volume, 0.0f, 1.0f);
-		if (m_groupVolumeArray[_index] == _volume) return;
-
-		m_groupVolumeArray[_index] = _volume;
-		RefreshAllVolume();
-	}
-
-	float AudioManager::GetGroupVolume(ESoundGroup a_group) const
-	{
-		const size_t _index = static_cast<size_t>(a_group);
-		if (_index >= m_groupVolumeArray.size()) return 1.0f;
-
-		return m_groupVolumeArray[_index];
+		// 返した席を張ったままにしない(以降の音は素通しで発行される)
+		if (m_currentVolumeScopeID == a_id) m_currentVolumeScopeID = INVALID_VOLUME_SCOPE_ID;
 	}
 
 	void AudioManager::SetUserMasterVolume(float a_volume)
@@ -65,10 +61,17 @@ namespace Engine::Audio
 		return m_userGroupVolumeArray[_index];
 	}
 
-	float AudioManager::CalcVolumeScale(ESoundGroup a_group) const
+	float AudioManager::CalcVolumeScale(ESoundGroup a_group, VolumeScopeID a_scopeID) const
 	{
-		// 作り手のつり合い × プレイヤーの音量
-		return m_masterVolume * GetGroupVolume(a_group) * m_userMasterVolume * GetUserGroupVolume(a_group);
+		// シーンの音量(作り手のつり合い)。席の外の音は素通し
+		float _sceneScale = 1.0f;
+		if (auto _it = m_volumeScopeMap.find(a_scopeID); _it != m_volumeScopeMap.end())
+		{
+			_sceneScale = _it->second.CalcScale(a_group);
+		}
+
+		// × プレイヤーの音量
+		return _sceneScale * m_userMasterVolume * GetUserGroupVolume(a_group);
 	}
 
 	//======================================================================================
@@ -255,9 +258,9 @@ namespace Engine::Audio
 			_instance.Init(*this, *m_pResourceManager, _soundRef, a_is3D);// インスタンスの初期化
 		}
 
-		// グループの札を付けてから預ける。
-		// 以降この音は、そのグループの音量とマスター音量が掛かった状態で鳴る
-		_instance.SetGroup(a_group);
+		// グループと席(今のシーン)の札を付けてから預ける。
+		// 以降この音は、そのシーンの音量とプレイヤーの音量が掛かった状態で鳴る
+		_instance.SetVolumeTag(a_group, m_currentVolumeScopeID);
 
 		return m_soundInstancePool.Add(std::move(_instance));
 	}
@@ -272,11 +275,7 @@ namespace Engine::Audio
 	}
 	AudioManager::AudioManager()
 	{
-		// グループ音量は既定で素通し。
-		// 実際の値は起動時にオプション(AudioOption)から流し込まれる
-		m_groupVolumeArray.fill(1.0f);
-
-		// プレイヤーの音量も既定は素通し。実際の値は起動時にアプリのユーザーデータから流し込まれる
+		// プレイヤーの音量は既定で素通し。実際の値は起動時にアプリのユーザーデータから流し込まれる
 		m_userGroupVolumeArray.fill(1.0f);
 	}
 	AudioManager::~AudioManager()

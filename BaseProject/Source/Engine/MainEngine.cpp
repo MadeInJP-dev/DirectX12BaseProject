@@ -180,10 +180,7 @@ namespace Engine
 		// サウンドの読み込み(SoundIO)はオーディオエンジンから作るので、ローダーの行き先として渡す
 		m_upResourceManager->SetAudioEngine(m_upAudioManager->RefAudioEngine());
 
-		// 保存されている音量を流し込む。
-		// オプションの読み込みはこれより前に済んでいるが、
-		// AudioManager がまだ無い状態では入れられないのでここで反映する
-		_optionManager.GetAudioOption().Apply(*m_upAudioManager);
+		// 音量はシーンが開くときに席を取って流し込む(SceneAudio)
 
 		// アセットマネージャー作成
 		InitializeAssetDatabase();

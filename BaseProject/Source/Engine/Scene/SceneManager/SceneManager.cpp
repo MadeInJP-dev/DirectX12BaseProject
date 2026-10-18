@@ -89,6 +89,16 @@ namespace Engine::Scene
 		// シーンの切り替え命令もここで消化しないので、閉じたあとに順番どおり流れる
 		if (auto* _pDevTool = RefActiveScenePreview(*m_pEngine))
 		{
+			// 確認用ワールドで鳴らす音は、開いているシーンの音量で鳴らす(本番と同じつり合いで聞くため)
+			Audio::AudioManager* _pAudioManager = nullptr;
+			Audio::VolumeScopeID _scopeID = Audio::INVALID_VOLUME_SCOPE_ID;
+			if (auto* _pTopScene = RefCurrentTopScene())
+			{
+				_pAudioManager = _pTopScene->RefAudio().RefAudioManager();
+				_scopeID = _pTopScene->GetAudio().GetVolumeScopeID();
+			}
+			Audio::VolumeScopeGuard _volumeScope(_pAudioManager, _scopeID);
+
 			_pDevTool->UpdateScenePreview(a_dt);
 			return;
 		}

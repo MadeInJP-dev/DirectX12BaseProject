@@ -28,7 +28,7 @@ namespace Engine::Resource
 		/// false で作ったインスタンスに Play3D / SetPos / Apply3D は使えない
 		/// (DirectXTK が例外を投げるため、こちら側で弾いている)
 		/// </param>
-		// a_audioManager    : 発行元。リスナーと音量(グループ・マスター)をここから引く
+		// a_audioManager    : 発行元。リスナーと音量(シーン・プレイヤー)をここから引く
 		// a_resourceManager : 元データ(Sound)の実体を引く先
 		bool Init(Audio::AudioManager& a_audioManager, ResourceManager& a_resourceManager, const ResourceRef<Sound>& a_resourceRef, bool a_is3D = false);
 
@@ -53,7 +53,7 @@ namespace Engine::Resource
 		/// </summary>
 		/// <remarks>
 		/// ここへ渡すのは「呼び出し側の都合だけで決めた音量」。
-		/// 実際に鳴るのは これ × グループ音量 × マスター音量 になる。
+		/// 実際に鳴るのは これ × シーンの音量 × プレイヤーの音量 になる。
 		/// 設定画面の値を掛けてから渡す必要はない
 		/// </remarks>
 		void SetVolume(float a_vol);
@@ -62,15 +62,17 @@ namespace Engine::Resource
 		void SetCurveDistanceScaler(float a_val);	// 減衰倍率設定 : 1 = 通常 ... FLT_MIN～FLT_MAX
 
 		//==================================================================
-		// グループ
+		// 音量の札(グループ・席)
 		//==================================================================
 
-		// どのグループの音か。オプションの音量はこの単位で掛かる
-		void SetGroup(Audio::ESoundGroup a_group);
+		// a_group   : どのグループの音か。シーンとプレイヤーの音量はこの単位で掛かる
+		// a_scopeID : どの席(シーン)の音量で鳴らすか。付けるのは発行元(AudioManager)
+		void SetVolumeTag(Audio::ESoundGroup a_group, Audio::VolumeScopeID a_scopeID);
 		Audio::ESoundGroup GetGroup() const { return m_group; }
+		Audio::VolumeScopeID GetVolumeScope() const { return m_volumeScopeID; }
 
 		/// <summary>
-		/// グループ音量・マスター音量を掛け直して送り直す
+		/// シーンの音量・プレイヤーの音量を掛け直して送り直す
 		/// </summary>
 		/// <remarks>
 		/// 設定が変わったときに AudioManager がまとめて呼ぶ。
@@ -96,11 +98,14 @@ namespace Engine::Resource
 
 		bool m_is3D = false;
 
-		// 呼び出し側が指定した音量。実際に送るときはグループとマスターを掛ける
+		// 呼び出し側が指定した音量。実際に送るときはシーンとプレイヤーの音量を掛ける
 		float m_volume = 1.0f;
 
 		// どのグループの音か
 		Audio::ESoundGroup m_group = Audio::ESoundGroup::Se;
+
+		// どの席(シーン)の音量で鳴らすか。席の外なら素通し
+		Audio::VolumeScopeID m_volumeScopeID = Audio::INVALID_VOLUME_SCOPE_ID;
 
 		// 発行元(借り物)。インスタンスはこれのプールの中にしか居ないので、先に消えることはない
 		Audio::AudioManager* m_pAudioManager = nullptr;

@@ -1168,6 +1168,9 @@
     <Filter Include="Source\Engine\Scene\SceneAmbient">
       <UniqueIdentifier>{72309446-869f-4ec8-9cfe-8920cb66af8d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Scene\SceneAudio">
+      <UniqueIdentifier>{6c4be2db-809d-4550-9527-55293d1aede6}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Scene\SceneConfig">
       <UniqueIdentifier>{5b79a51f-d67a-4fe0-963d-d3d5d7774fe3}</UniqueIdentifier>
     </Filter>
@@ -2310,8 +2313,8 @@
     <ClCompile Include="Source\Engine\Option\GraphicsOptions\WindowOption.cpp">
       <Filter>Source\Engine\Option\GraphicsOptions</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Option\ProjectOptions\AudioOption.cpp">
-      <Filter>Source\Engine\Option\ProjectOptions</Filter>
+    <ClCompile Include="Source\Engine\Scene\SceneAudio\SceneAudio.cpp">
+      <Filter>Source\Engine\Scene\SceneAudio</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Option\ProjectOptions\CursorOption.cpp">
       <Filter>Source\Engine\Option\ProjectOptions</Filter>
@@ -4160,8 +4163,8 @@
     <ClInclude Include="Source\Engine\Option\GraphicsOptions\WindowOption.h">
       <Filter>Source\Engine\Option\GraphicsOptions</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Option\ProjectOptions\AudioOption.h">
-      <Filter>Source\Engine\Option\ProjectOptions</Filter>
+    <ClInclude Include="Source\Engine\Scene\SceneAudio\SceneAudio.h">
+      <Filter>Source\Engine\Scene\SceneAudio</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Option\ProjectOptions\BuildConfig.h">
       <Filter>Source\Engine\Option\ProjectOptions</Filter>

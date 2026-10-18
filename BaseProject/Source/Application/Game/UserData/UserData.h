@@ -26,7 +26,7 @@ namespace App::Game
 		};
 
 		// ---- 音量設定 ----
-		// 0〜SOUND_VOLUME_MAX。作り手の音量(エンジンの AudioOption)へさらに掛かる
+		// 0〜SOUND_VOLUME_MAX。作り手の音量(シーンの SceneAudio)へさらに掛かる
 		static constexpr uint32_t SOUND_VOLUME_MAX = 100;
 
 		struct SoundSettings
