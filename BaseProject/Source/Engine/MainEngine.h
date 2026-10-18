@@ -87,7 +87,13 @@ namespace Engine
 
 		// デルタタイム取得
 		UINT GetFPS() const;
-		float GetDeltaTime() const;
+		float GetDeltaTime() const;			// 時間の倍率を掛けた後(ゲームはこちら)
+		float GetUnscaledDeltaTime() const;	// 倍率を掛ける前(エディターなど、止めても動かすもの)
+
+		// 時間の倍率(1 で等倍、0 で止める)とコマ送り。反映は次のフレームの頭から
+		void SetTimeScale(float a_scale);
+		float GetTimeScale() const;
+		void ReserveFrameStep();
 
 		// モード切替
 		void ChangeMode(EAppMode a_mode);

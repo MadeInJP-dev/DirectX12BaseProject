@@ -4,6 +4,7 @@
 #include "Engine/DevTool/IDevTool.h"
 
 #include "../../UserData/UserData.h"
+#include "../../DebugKeys/DebugKeys.h"
 
 // エンジン側
 #include "Engine/Input/InputManager/InputManager.h"
@@ -120,6 +121,9 @@ namespace App::Input
 				for (const auto& [_code, _name] : KeyTable())
 				{
 					const bool _isSelected = (_code == a_code);
+
+					// デバッグキー(Development までの F1〜F7)は候補に出さない。今それが入っていれば見せる
+					if (!_isSelected && Game::DebugKeys::IsReservedKey(_code)) continue;
 
 					if (Engine::EditorField::Selectable(_name.c_str(), _isSelected))
 					{

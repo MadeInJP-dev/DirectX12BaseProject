@@ -5,8 +5,11 @@
 #include "Application/Components/Combat/HealthComponent.h"
 #include "Application/Components/Combat/DefenseRatioComponent.h"
 #include "Application/Components/Transform/LocalTransformComponent.h"
+#include "Application/Components/Input/PlayerControllTag.h"
 #include "Application/InstanceResource/HitEventResource.h"
 #include "Application/InstanceResource/DeathEventResource.h"
+#include "Application/InstanceResource/DebugCommandResource.h"
+#include "Application/Game/DebugKeys/DebugCommands.h"
 
 namespace App::System
 {
@@ -39,6 +42,8 @@ namespace App::System
 	//    依存に数えなくなった(IsQueryOnlyTag)ので、今はその理由は無い)
 	// ・受けたダメージの合計には DefenseRatioComponent の比率を掛ける(持っていなければそのまま)。
 	//   0 なら無敵。ワームボスが小隊長を整理している間などに使う。
+	// ・デバッグキーの無敵(DebugCommands::isPlayerInvincible。Development まで)が立っていれば、
+	//   プレイヤー(PlayerControllTag)はダメージを食らわない。当たった演出はそのまま出る。
 	// ・PostUpdate 帯。ヒットを積むのは Physics 帯の HitDetectSystem、
 	//   消すのは次フレーム PreUpdate の HitEventClearSystem なので、その間で読む。
 	//==============================================================================
@@ -62,6 +67,10 @@ namespace App::System
 				// ヒットが1件も無いフレームは何もしない
 				if (_hitEvents.events.empty()) return;
 
+				// デバッグキーの無敵(入口が無ければ Shipping なので効かない)
+				const Game::DebugCommands* _pDebug = InstanceResource::DebugCommandResource::FindCommands(a_ctx.pWorld);
+				const bool _isPlayerInvincible = _pDebug && _pDebug->isPlayerInvincible;
+
 				for (size_t _i = 0; _i < a_count; ++_i)
 				{
 					Component::HealthComponent&               _health = a_healthArray[_i];
@@ -81,6 +90,8 @@ namespace App::System
 					}
 
 					if (_damage <= 0.0f) continue;
+
+					if (_isPlayerInvincible && a_ctx.pWorld->HasComponent<Component::PlayerControllTag>(_self)) continue;
 
 					// 防御比率(1 : そのまま / 0 : 無敵)。持っていなければそのまま食らう
 					if (a_ctx.pWorld->HasComponent<Component::DefenseRatioComponent>(_self))
@@ -114,6 +125,7 @@ namespace App::System
 		// 絞り込みに使わない読み : 防御比率を RefData で読む
 		.Reads<Component::DefenseRatioComponent>()
 		.ReadsResource<InstanceResource::HitEventResource>()
+		.ReadsResource<InstanceResource::DebugCommandResource>()
 		.WritesResource<InstanceResource::DeathEventResource>();
 	}
 }

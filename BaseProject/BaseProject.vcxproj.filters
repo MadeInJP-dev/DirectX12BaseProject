@@ -883,6 +883,9 @@
     <Filter Include="Source\Application\Game\MouseCursor">
       <UniqueIdentifier>{c0de0f01-1111-4222-8333-0000c0de0f01}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Game\DebugKeys">
+      <UniqueIdentifier>{fe3cba5b-1ac3-47a9-ba6d-ceab07ea7308}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Input">
       <UniqueIdentifier>{aabcc0c4-0c56-484a-8244-197b1e0f8f99}</UniqueIdentifier>
     </Filter>
@@ -1881,6 +1884,9 @@
     <ClCompile Include="Source\Application\Systems\Combat\ScoreSystem.cpp">
       <Filter>Source\Application\Systems\Combat</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Combat\DebugKillSystem.cpp">
+      <Filter>Source\Application\Systems\Combat</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Animation\SkinningSystem.cpp">
       <Filter>Source\Application\Systems\Animation</Filter>
     </ClCompile>
@@ -2219,6 +2225,9 @@
     </ClCompile>
     <ClCompile Include="Source\Application\Game\MouseCursor\MouseCursor.cpp">
       <Filter>Source\Application\Game\MouseCursor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Game\DebugKeys\DebugKeys.cpp">
+      <Filter>Source\Application\Game\DebugKeys</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\Frame\RenderContext\RenderContext.cpp">
       <Filter>Source\Engine\Graphics\Frame\RenderContext</Filter>
@@ -3200,6 +3209,9 @@
     <ClInclude Include="Source\Application\InstanceResource\UserDataResource.h">
       <Filter>Source\Application\InstanceResource</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\InstanceResource\DebugCommandResource.h">
+      <Filter>Source\Application\InstanceResource</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\InstanceResource\HierarchyResource.h">
       <Filter>Source\Application\InstanceResource</Filter>
     </ClInclude>
@@ -3570,6 +3582,9 @@
       <Filter>Source\Application\Systems\Weapon</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Combat\ScoreSystem.h">
+      <Filter>Source\Application\Systems\Combat</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Combat\DebugKillSystem.h">
       <Filter>Source\Application\Systems\Combat</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Animation\SkinningSystem.h">
@@ -4015,6 +4030,12 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Game\MouseCursor\MouseCursor.h">
       <Filter>Source\Application\Game\MouseCursor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Game\DebugKeys\DebugKeys.h">
+      <Filter>Source\Application\Game\DebugKeys</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Game\DebugKeys\DebugCommands.h">
+      <Filter>Source\Application\Game\DebugKeys</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\Frame\RenderContext\RenderContext.h">
       <Filter>Source\Engine\Graphics\Frame\RenderContext</Filter>

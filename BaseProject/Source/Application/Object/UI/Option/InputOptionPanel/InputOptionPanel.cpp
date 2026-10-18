@@ -7,6 +7,7 @@
 #include "Application/InstanceResource/UserDataResource.h"
 #include "Application/Game/UserData/UserData.h"
 #include "Application/Game/InputActions/InputManager/InputActionManager.h"
+#include "Application/Game/DebugKeys/DebugKeys.h"
 
 #include "Application/Object/UI/UIBase.h"
 
@@ -420,7 +421,8 @@ namespace App::Object
 			return true;
 
 		default:
-			return false;
+			// デバッグキー(Development までの F1〜F7)。割り当てると押すたびに両方が動く
+			return Game::DebugKeys::IsReservedKey(a_key);
 		}
 	}
 

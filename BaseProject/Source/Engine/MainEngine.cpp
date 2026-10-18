@@ -416,8 +416,8 @@ namespace Engine
 
 	void MainEngine::BeginDraw()
 	{
-		// エディターの更新を入れる
-		if (m_pDevTool) m_pDevTool->Update(GetDeltaTime());
+		// エディターの更新を入れる。ゲームの時間を止めていても操作できるよう、倍率を掛ける前の値で回す
+		if (m_pDevTool) m_pDevTool->Update(GetUnscaledDeltaTime());
 
 		// 描画開始 : ここでフレームインデックスが更新され、そのフレームのGPU完了を待機する
 		{
@@ -506,6 +506,26 @@ namespace Engine
 	float MainEngine::GetDeltaTime() const
 	{
 		return m_upTimeManager->GetDeltaTime();
+	}
+
+	float MainEngine::GetUnscaledDeltaTime() const
+	{
+		return m_upTimeManager->GetUnscaledDeltaTime();
+	}
+
+	void MainEngine::SetTimeScale(float a_scale)
+	{
+		m_upTimeManager->SetTimeScale(a_scale);
+	}
+
+	float MainEngine::GetTimeScale() const
+	{
+		return m_upTimeManager->GetTimeScale();
+	}
+
+	void MainEngine::ReserveFrameStep()
+	{
+		m_upTimeManager->ReserveFrameStep();
 	}
 
 	//======================================================================================

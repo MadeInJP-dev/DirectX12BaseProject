@@ -213,6 +213,7 @@
 #include "Application/Components/Combat/HealthComponent.h"
 #include "Application/Systems/Combat/HealthFixupSystem.h"
 #include "Application/Systems/Combat/HealthSystem.h"
+#include "Application/Systems/Combat/DebugKillSystem.h"
 #include "Application/Systems/Combat/DeathStateSystem.h"
 #include "Application/Components/Effect/EffectComponent.h"
 #include "Application/Components/Effect/EffectAssetComponent.h"
@@ -591,6 +592,8 @@ namespace App::ECS
 		a_world.RegisterSystem<System::ExplodeOnHitSystem>();
 		// 被弾で体力を削り、尽きたら死亡状態にする(体力持ちは ExplodeOnHit の対象外)
 		a_world.RegisterSystem<System::HealthSystem>();
+		// デバッグキーで倒すと予約されたものを死亡させる(Development まで。入口が無ければ何もしない)
+		a_world.RegisterSystem<System::DebugKillSystem>();
 		// 死亡状態のあいだ入力/AIを止め、指定秒たったら解放予約する。
 		// 体力を書く HealthSystem との前後は、タスク側の After("HealthSystem") で決めている
 		a_world.RegisterSystem<System::DeathStateSystem>();

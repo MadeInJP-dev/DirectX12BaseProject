@@ -1132,6 +1132,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Combat\DebugKillSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Combat\DeathEventClearSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1520,6 +1525,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Game\DebugKeys\DebugKeys.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\Particle\GPU\EmitterSlotPool\EmitterSlotPool.cpp" />
     <ClCompile Include="Source\Engine\Graphics\Particle\GPU\GPUParticlePool\GPUParticlePool.cpp" />
     <ClCompile Include="Source\Engine\Graphics\Particle\ParticleBufferManager.cpp" />
@@ -1863,6 +1873,7 @@
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationDraw.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\Internal\DecorationInternal.h" />
     <ClInclude Include="Source\Application\Systems\Combat\ScoreSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Combat\DebugKillSystem.h" />
     <ClInclude Include="Source\Application\Systems\Combat\DeathEventClearSystem.h" />
     <ClInclude Include="Source\Application\Object\UI\HUD\ScoreHUD\ScoreHUD.h" />
     <ClInclude Include="Source\Application\Object\Sequence\ResultSequence\ResultSequence.h" />
@@ -2321,6 +2332,9 @@
     <ClInclude Include="Source\Engine\Graphics\DebugDraw\DebugDraw.h" />
     <ClInclude Include="Source\Engine\Graphics\Profile\GraphicsProfiler.h" />
     <ClInclude Include="Source\Application\Game\MouseCursor\MouseCursor.h" />
+    <ClInclude Include="Source\Application\Game\DebugKeys\DebugKeys.h" />
+    <ClInclude Include="Source\Application\Game\DebugKeys\DebugCommands.h" />
+    <ClInclude Include="Source\Application\InstanceResource\DebugCommandResource.h" />
     <ClInclude Include="Source\Engine\Graphics\Particle\Core\EmitterData.h" />
     <ClInclude Include="Source\Engine\Graphics\Particle\Core\ParticleData.h" />
     <ClInclude Include="Source\Engine\Graphics\Particle\GPU\EmitterSlotPool\EmitterSlotPool.h" />

@@ -13,6 +13,7 @@
 #include "../../ECS/World/APPWorld.h"
 #include "../../InstanceResource/GameDataResource.h"
 #include "../../InstanceResource/UserDataResource.h"
+#include "../../InstanceResource/DebugCommandResource.h"
 
 // ECS外オブジェクト(クラスメタマネージャー / 登録するクラス)
 #include "../../../Engine/GameObject/ObjectMetaRegistry/ObjectMetaRegistry.h"
@@ -46,6 +47,7 @@
 #include "../UserData/UserData.h"
 #include "../InputActions/InputManager/InputActionManager.h"
 #include "../MouseCursor/MouseCursor.h"
+#include "../DebugKeys/DebugKeys.h"
 
 // エディター
 
@@ -99,6 +101,13 @@ namespace App::Game
 			m_upMouseCursor->Init(&m_pEngine->GetEngineServices());
 		}
 
+		// デバッグキー : Shipping では作らない(ワールドへ入口も置かれないので、受け取る側も何もしない)
+		if (!m_upDebugKeys && DebugKeys::IsEnabled())
+		{
+			m_upDebugKeys = std::make_unique<DebugKeys>();
+			m_upDebugKeys->Init(*m_pEngine);
+		}
+
 		// ------------------------------------------------------------------
 		// ECS外オブジェクト(GameObject)のクラスをメタマネージャーへ登録する。
 		// 登録したクラスはシーンの保存/読み込みと、エディターの AddObject 一覧で使われる。
@@ -147,12 +156,14 @@ namespace App::Game
 		//
 		// シーンをまたぐ記録(m_gameData)の入口もここで各ワールドへ置く。
 		// 使う側(システム・オブジェクト)はワールドから GameDataResource で引く。
-		// ユーザーデータ(設定画面が書き換えるもの)も同じく UserDataResource で引かせる
+		// ユーザーデータ(設定画面が書き換えるもの)も同じく UserDataResource で引かせる。
+		// デバッグキーの命令(Development まで)は DebugCommandResource で、キーを作ったときだけ置く
 		// ------------------------------------------------------------------
 		m_pEngine->RefSceneManager()->SetWorldFactory(
 			[pGameData = &m_gameData,
 			 pUserData = m_upUserData.get(),
-			 pInputActionManager = m_upInputActionManager.get()]() -> std::unique_ptr<Engine::ECS::World>
+			 pInputActionManager = m_upInputActionManager.get(),
+			 pDebugCommands = m_upDebugKeys ? &m_upDebugKeys->GetCommands() : nullptr]() -> std::unique_ptr<Engine::ECS::World>
 			{
 				auto _upWorld = std::make_unique<App::ECS::APPWorld>();
 				_upWorld->AddResource<App::InstanceResource::GameDataResource>();
@@ -162,6 +173,12 @@ namespace App::Game
 				auto& _userDataResource = _upWorld->RefResource<App::InstanceResource::UserDataResource>();
 				_userDataResource.pUserData = pUserData;
 				_userDataResource.pInputActionManager = pInputActionManager;
+
+				if (pDebugCommands)
+				{
+					_upWorld->AddResource<App::InstanceResource::DebugCommandResource>();
+					_upWorld->RefResource<App::InstanceResource::DebugCommandResource>().pCommands = pDebugCommands;
+				}
 				return _upWorld;
 			}
 		);
@@ -206,9 +223,14 @@ namespace App::Game
 		// ゲームモードかどうかで出し方が変わるので、モード切替(Application::ToggleAppMode)の後で呼ばれるここで決める
 		if (m_upMouseCursor) m_upMouseCursor->Update();
 
+		// デバッグキー : 予約はシーンの更新で拾われるので、その前に立てて後で下ろす
+		if (m_upDebugKeys) m_upDebugKeys->Update(m_upUserData.get());
+
 		// シーンマネージャーの更新
 		const auto& _services = m_pEngine->GetEngineServices();
 		m_pEngine->RefSceneManager()->Update(*_services.pResourceManager, a_dt);
+
+		if (m_upDebugKeys) m_upDebugKeys->EndUpdate();
 	}
 	void GameManager::Draw()
 	{
@@ -216,6 +238,9 @@ namespace App::Game
 
 		// シーンの描画 : 描画命令を積むだけで実行はしない
 		m_pEngine->RefSceneManager()->Draw();
+
+		// デバッグキーの情報の表示はシーンのUIより手前、マウスカーソルより奥
+		if (m_upDebugKeys) m_upDebugKeys->SubmitUI(m_pEngine->RefGraphicsEngine());
 
 		// マウスカーソルはどのUIよりも手前に出したいので、シーンのUIを積み終えた最後に積む
 		if (m_upMouseCursor)
@@ -228,6 +253,13 @@ namespace App::Game
 	}
 	void GameManager::Release()
 	{
+		// フォントの参照を返す。リソースの解放(MainEngine::Release)より前であること
+		if (m_upDebugKeys)
+		{
+			m_upDebugKeys->Release();
+			m_upDebugKeys.reset();
+		}
+
 		// カーソル画像の参照を返す。リソースの解放(MainEngine::Release)より前であること
 		if (m_upMouseCursor)
 		{

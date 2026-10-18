@@ -51,11 +51,17 @@
 #include "../../../InstanceResource/RadialBlurShakeResource.h"
 #include "Application/Components/Effect/EffectAssetComponent.h"
 #include "Application/Object/SequenceBgm.h"
+#include "../../../InstanceResource/DebugCommandResource.h"
+#include "Application/Game/DebugKeys/DebugCommands.h"
 
 namespace App::Object
 {
 	namespace
 	{
+		// デバッグキーで体力を減らすときに、死亡の体力(m_deathHp)より多く残しておく数。
+		// 数発撃てば死亡の行動へ入る程度
+		constexpr uint32_t DEBUG_LOW_HEALTH_MARGIN = 50;
+
 		// 小隊長を並べる向き(リーダーの後ろ)。左手系 +Z 前方なので -Z。
 		// 生成直後の LookAngle は既定(Yaw 0 = +Z 前方)なので、その後ろに並ぶ形になる
 		const Math::Vector3 PLATOON_LINE_DIR = { 0.0f, 0.0f, -1.0f };
@@ -261,6 +267,9 @@ namespace App::Object
 		// 爆散した後はリーダーも小隊長も居ないので、行動は回さない
 		if (!m_isBurst)
 		{
+			// デバッグキーで体力を減らす(減った体力は次のフレームの数え直しから効く)
+			ApplyReservedDebugLowHealth(a_context);
+
 			// 体力が一定値を切っていたら死亡へ、区切りを切っていたら小隊長の整理へ割り込む
 			// (切り替わるのはこの後の行動の更新。死亡が先で、死亡中は整理しない)
 			CheckDeath(a_context);
@@ -679,6 +688,73 @@ namespace App::Object
 		if (_isDying && !m_isDying) RequestLoadBurstEffect(a_context);
 
 		m_isDying = _isDying;
+	}
+
+	//======================================================================================
+	// デバッグキー : 体力を死亡の手前まで減らす
+	//--------------------------------------------------------------------------------------
+	// 体力は生きているボイドの数なので、ボイドを尾の小隊のものから消す(頭の形は崩さない)。
+	// 残すのは「死亡の体力 + DEBUG_LOW_HEALTH_MARGIN」。数発撃てば死亡の行動へ入る。
+	//
+	// 撃ち落としたことにはしない(死亡エフェクトもスコアも出さない)。一度に数千体を
+	// 落とすと、ボイドごとの死亡エフェクトがまとめて出て重くなるため。消えた後は
+	// いつもどおり区切りを越えたことになり、小隊長の整理(Reorganize)が走って体を組み直す。
+	// 死亡の行動に入った後と、まだ出ていないときは何もしない
+	//======================================================================================
+	void SwarmBossController::ApplyReservedDebugLowHealth(Engine::GameObject::ObjectContext& a_context)
+	{
+		const Game::DebugCommands* _pCommands = InstanceResource::DebugCommandResource::FindCommands(a_context.pWorld);
+		if (!_pCommands || !_pCommands->isBossLowHealthReserved) return;
+		if (m_isDying) return;
+
+		const uint32_t _keep = m_deathHp + DEBUG_LOW_HEALTH_MARGIN;
+		const uint32_t _alive = CountAliveBoids(a_context);
+		if (_alive <= _keep) return;
+
+		// 体のボイド(切り離したミサイルは除く)を小隊の番号と一緒に集める
+		struct BoidEntry
+		{
+			Engine::ECS::Entity entity = Engine::ECS::Limits::INVALID_ENTITY;
+			int platoonIndex = 0;
+		};
+		std::vector<BoidEntry> _boids = {};
+		_boids.reserve(_alive);
+
+		auto& _world = *a_context.pWorld;
+		const Core::GUID _self = m_guid;
+		_world.ForEach<const Component::ActiveTag, const Component::SwarmBossBoidTag, const Component::SpawnerComponent, const Component::BoidMembershipComponent>(
+			[&](
+				Engine::ECS::Chunk* a_pChunk,
+				uint32_t a_count,
+				const Component::ActiveTag*,
+				const Component::SwarmBossBoidTag*,
+				const Component::SpawnerComponent* a_spawnerArray,
+				const Component::BoidMembershipComponent*)
+			{
+				for (uint32_t _i = 0; _i < a_count; ++_i)
+				{
+					if (a_spawnerArray[_i].spawnerGUID != _self) continue;
+
+					const Engine::ECS::Entity _entity = a_pChunk->entityData[_i];
+					if (Component::IsDeadEntity(_world, _entity)) continue;
+
+					_boids.push_back({ _entity, a_spawnerArray[_i].waveIndex });
+				}
+			}
+		);
+
+		// 尾(小隊の番号が大きい方)から消す
+		std::stable_sort(_boids.begin(), _boids.end(),
+			[](const BoidEntry& a_l, const BoidEntry& a_r) { return a_l.platoonIndex > a_r.platoonIndex; });
+
+		const size_t _removeCount = (std::min)(_boids.size(), static_cast<size_t>(_alive - _keep));
+		for (size_t _i = 0; _i < _removeCount; ++_i)
+		{
+			_world.ReserveReleaseEntity(_boids[_i].entity);
+		}
+
+		ENGINE_LOG("[SwarmBossController] 体力を %u → %u へ減らしました",
+			_alive, _alive - static_cast<uint32_t>(_removeCount));
 	}
 
 	void SwarmBossController::RequestLoadBurstEffect(Engine::GameObject::ObjectContext& a_context)

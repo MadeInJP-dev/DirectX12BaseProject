@@ -16,6 +16,7 @@ namespace App::Game
 {
 	class UserData;
 	class MouseCursor;
+	class DebugKeys;
 
 	/// <summary>
 	/// ゲーム全体を通しての流れを管理するクラス
@@ -118,6 +119,9 @@ namespace App::Game
 
 		// ゲーム中に自前で描くマウスカーソル
 		std::unique_ptr<MouseCursor> m_upMouseCursor;
+
+		// 発表・確認用のデバッグキー(F1〜F7)。Shipping では作らない
+		std::unique_ptr<DebugKeys> m_upDebugKeys;
 
 		// エンジン(借り物)
 		Engine::MainEngine* m_pEngine = nullptr;

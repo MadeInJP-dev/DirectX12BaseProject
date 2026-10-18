@@ -28,6 +28,18 @@ namespace Engine::Time
 	{
 		m_upFPSController->BeginFrame();
 		m_upDeltaTime->CalcDeltaTime();
+
+		// 倍率を掛ける。コマ送りを頼まれていれば、この1フレームだけ等倍で進める
+		const float _unscaled = m_upDeltaTime->Get();
+		if (m_isFrameStepReserved)
+		{
+			m_isFrameStepReserved = false;
+			m_scaledDeltaTime = _unscaled;
+		}
+		else
+		{
+			m_scaledDeltaTime = _unscaled * m_timeScale;
+		}
 	}
 
 	void TimeManager::EndFrame(EFPSRate a_fpsRate)
@@ -35,7 +47,7 @@ namespace Engine::Time
 		m_upFPSController->EndFrame(a_fpsRate);
 	}
 
-	float TimeManager::GetDeltaTime() const
+	float TimeManager::GetUnscaledDeltaTime() const
 	{
 		return m_upDeltaTime->Get();
 	}

@@ -14,6 +14,8 @@
 #include "Application/InstanceResource/WaveAnnounceResource.h"
 #include "Application/Components/Input/PlayerControllTag.h"
 #include "Application/InstanceResource/GameDataResource.h"
+#include "Application/InstanceResource/DebugCommandResource.h"
+#include "Application/Game/DebugKeys/DebugCommands.h"
 #include "Application/Object/ObjectPicker.h"
 #include "SequenceActor.h"
 
@@ -117,6 +119,9 @@ namespace App::Object
 		// 生存数 → 全滅判定 → 出現、の順に進める
 		UpdateAliveCount(a_context);
 		UpdateClearState();
+
+		// デバッグキーでウェーブを飛ばす(条件を待たずに出すので、いつもの出現より前に置く)
+		ApplyReservedDebugSkip(a_context);
 
 		for (size_t _i = 0; _i < m_waves.size(); ++_i)
 		{
@@ -531,6 +536,88 @@ namespace App::Object
 			a_context.pWorld->RefResource<InstanceResource::WaveAnnounceResource>().Push(
 				static_cast<int>(a_index), static_cast<int>(m_waves.size()));
 		}
+	}
+
+	//======================================================================================
+	// デバッグキーでウェーブを飛ばす
+	//--------------------------------------------------------------------------------------
+	// 次に出るウェーブ(まだ出していない先頭)を条件を待たずに出す。
+	// 最後のウェーブへ飛ばすときは、間のウェーブを「出したが誰も居なかった」ことにして片付ける
+	// (spawnCount 0 のウェーブは次の全滅判定で即クリアになる)。
+	//
+	// 出ている敵(このシーケンスが出したプレハブ)は倒す予約をする。倒すのは次のフレームの
+	// DebugKillSystem で、体力切れと同じく死亡エフェクトとスコアが出る。
+	// シーンに置いたオブジェクト(SequenceActor。群れのボスなど)は倒さない。ボスは F3 で減らす。
+	//
+	// 全部出し終えていれば何もしない。決着した後も何もしない。
+	//======================================================================================
+	void SceneSequence::ApplyReservedDebugSkip(Engine::GameObject::ObjectContext& a_context)
+	{
+		auto* _pDebug = InstanceResource::DebugCommandResource::Find(a_context.pWorld);
+		if (!_pDebug || !_pDebug->pCommands) return;
+
+		const Game::DebugCommands& _commands = *_pDebug->pCommands;
+		if (!_commands.isSkipWaveReserved && !_commands.isSkipToLastWaveReserved) return;
+		if (m_result != App::Game::EGameResult::None) return;
+
+		// まだ出していない先頭のウェーブ
+		size_t _next = m_waves.size();
+		for (size_t _i = 0; _i < m_waves.size(); ++_i)
+		{
+			if (m_waves[_i].isSpawned) continue;
+			_next = _i;
+			break;
+		}
+		if (_next >= m_waves.size())
+		{
+			ENGINE_LOG("[SceneSequence] 飛ばせるウェーブがありません(全部出し終えています)");
+			return;
+		}
+
+		const size_t _target = _commands.isSkipToLastWaveReserved ? (m_waves.size() - 1) : _next;
+
+		//----------------------------------------------------------------------
+		// 出ている敵を倒す予約(倒れて消えるのを待っている個体は除く)
+		//----------------------------------------------------------------------
+		const Core::GUID _selfGUID = GetGUID();
+		if (_selfGUID.IsValid())
+		{
+			a_context.pWorld->ForEach<const Component::ActiveTag, const Component::SpawnerComponent>(
+				[&](
+					Engine::ECS::Chunk* a_pChunk,
+					uint32_t a_count,
+					const Component::ActiveTag* /*a_activeTagArray*/,
+					const Component::SpawnerComponent* a_spawnerArray
+				)
+				{
+					for (uint32_t _i = 0; _i < a_count; ++_i)
+					{
+						if (!(a_spawnerArray[_i].spawnerGUID == _selfGUID)) continue;
+						if (a_spawnerArray[_i].waveIndex < 0) continue;
+
+						const Engine::ECS::Entity _entity = a_pChunk->entityData[_i];
+						if (Component::IsDeadEntity(*a_context.pWorld, _entity)) continue;
+
+						_pDebug->killReservedVec.push_back(_entity);
+					}
+				}
+			);
+		}
+
+		//----------------------------------------------------------------------
+		// 間のウェーブは誰も出さずに済ませ、行き先のウェーブを出す
+		//----------------------------------------------------------------------
+		for (size_t _i = _next; _i < _target; ++_i)
+		{
+			Wave& _wave = m_waves[_i];
+			_wave.isSpawned  = true;
+			_wave.spawnCount = 0;
+			_wave.spawnTime  = m_time;
+		}
+
+		Spawn(a_context, _target);
+
+		ENGINE_LOG("[SceneSequence] ウェーブ %d へ飛ばしました", static_cast<int>(_target) + 1);
 	}
 
 	//======================================================================================

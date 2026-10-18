@@ -142,6 +142,9 @@ namespace App::Object
 		// 中心の爆発エフェクトの読み込みを始める(済んでいれば何もしない)
 		void RequestLoadBurstEffect(Engine::GameObject::ObjectContext& a_context);
 
+		// デバッグキー(Development まで)の予約を拾う : 体のボイドを尾から消して、体力を死亡の手前まで減らす
+		void ApplyReservedDebugLowHealth(Engine::GameObject::ObjectContext& a_context);
+
 		// 体のボイドを中心から外へ飛び散らせる(落とすのは SwarmBurstSystem)。
 		// リーダーと小隊長はもう要らないので消す。死亡の行動が頼んできたとき(burst)に呼ぶ
 		void BurstBody(Engine::GameObject::ObjectContext& a_context, const SwarmBossBurstRequest& a_request);
