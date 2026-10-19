@@ -1,14 +1,8 @@
 {
-    "BloomOption": {
-        "enable": true,
-        "intensity": 0.6000000238418579,
-        "softKnee": 0.9399999976158142,
-        "threshold": 1.0
-    },
     "BuildConfig": {
         "assetRootPath": "Asset/",
         "buildMode": 1,
-        "maxThreadCount": 4
+        "maxThreadCount": 30
     },
     "CursorOption": {
         "color": [
@@ -28,14 +22,6 @@
     "DebugDrawOption": {
         "drawWire": false
     },
-    "GIOption": {
-        "TAblendRate": 0.09000000357627869,
-        "TAphiDepth": 0.05000000074505806,
-        "TAphiNormal": 0.8999999761581421,
-        "phiColor": 4.0,
-        "phiDepth": 0.05000000074505806,
-        "phiNormal": 0.8999999761581421
-    },
     "InputOption": {
         "isCursorLockedToCenter": true,
         "isInvertLookY": false,
@@ -43,19 +29,9 @@
         "lookSensitivityY": 0.125,
         "mouseDpi": 800
     },
-    "LightingOption": {
-        "dielectricF0": 0.04500000178813934,
-        "directionalIntensity": 1.0,
-        "giIntensity": 1.0
-    },
     "RenderingOption": {
         "isZPre": true,
         "useJitter": true
-    },
-    "ToneMapOption": {
-        "exposure": 1.0,
-        "type": 4,
-        "whitePoint": 1.0499999523162842
     },
     "WindowOption": {
         "WindowTitle": "VECTOR REIGN",

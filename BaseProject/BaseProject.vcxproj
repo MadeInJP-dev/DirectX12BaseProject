@@ -2286,7 +2286,6 @@
     <ClInclude Include="Source\Application\Game\GlobalGameContext.h" />
     <ClInclude Include="Source\Engine\Graphics\D3D12\GPUBuffer\StructuredBuffer\DynamicStructuredBuffer.h" />
     <ClInclude Include="Source\Editor\Widget\StateGraphEditor\StateGraphEditor.h" />
-    <ClInclude Include="Source\Engine\Option\GraphicsOptions\ToneMapOption.h" />
     <ClInclude Include="Source\Engine\Utility\Pool\RangeAllocator\RangeAllocator.h" />
     <ClInclude Include="Source\Application\ECS\ISystem\APPISystem.h" />
     <ClInclude Include="Source\Application\ECS\PhaseTag\PhaseTag.h" />
@@ -2328,10 +2327,7 @@
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\DrawCommand.h" />
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\DrawList.h" />
     <ClInclude Include="Source\Engine\Graphics\Device\GraphicsDevice\GraphicsDevice.h" />
-    <ClInclude Include="Source\Engine\Option\GraphicsOptions\GIOptions.h" />
     <ClInclude Include="Source\Engine\Option\GraphicsOptions\RenderingOption.h" />
-    <ClInclude Include="Source\Engine\Option\GraphicsOptions\LightingOption.h" />
-    <ClInclude Include="Source\Engine\Option\GraphicsOptions\BloomOption.h" />
     <ClInclude Include="Source\Engine\Option\DebugOptions\DebugDrawOption.h" />
     <ClInclude Include="Source\Engine\Option\GraphicsOptions\WindowOption.h" />
     <ClInclude Include="Source\Engine\Option\IOption.h" />

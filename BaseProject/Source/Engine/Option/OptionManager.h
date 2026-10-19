@@ -8,12 +8,8 @@
 #include "ProjectOptions/CursorOption.h"
 
 // グラフィックスオプション
-#include "GraphicsOptions/GIOptions.h"
 #include "GraphicsOptions/WindowOption.h"
 #include "GraphicsOptions/RenderingOption.h"
-#include "GraphicsOptions/LightingOption.h"
-#include "GraphicsOptions/BloomOption.h"
-#include "GraphicsOptions/ToneMapOption.h"
 
 // デバッグオプション
 #include "DebugOptions/DebugDrawOption.h"
@@ -57,11 +53,7 @@ namespace Engine::Option
 		// ※ 音量(マスター + グループごと)はシーンの持ち物なので、
 		//    BaseScene の SceneAudio が持つ(旧 AudioOption)
 
-		// ---- グラフィックス ---- 
-		// GI設定
-		const GraphicsOptions::GIOption& GetGIOption() const { return m_giOptions; }
-		GraphicsOptions::GIOption& RefGIOption() { return m_giOptions; }
-
+		// ---- グラフィックス ----
 		// ウィンドウ設定
 		const GraphicsOptions::WindowOption& GetWindowOption() const { return m_windowOption; }
 		GraphicsOptions::WindowOption& RefWindowOption() { return m_windowOption; }
@@ -70,20 +62,11 @@ namespace Engine::Option
 		const GraphicsOptions::RenderingOption& GetRenderingOption() const { return m_renderingOption; }
 		GraphicsOptions::RenderingOption& RefRenderingOption() { return m_renderingOption; }
 
-		// ライティング設定(シェーダーへ送る調整値)
-		const GraphicsOptions::LightingOption& GetLightingOption() const { return m_lightingOption; }
-		GraphicsOptions::LightingOption& RefLightingOption() { return m_lightingOption; }
-
-		// ブルーム設定(シェーダーへ送る調整値)
-		const GraphicsOptions::BloomOption& GetBloomOption() const { return m_bloomOption; }
-		GraphicsOptions::BloomOption& RefBloomOption() { return m_bloomOption; }
-
-		// トーンマップ設定(シェーダーへ送る調整値)
-		const GraphicsOptions::ToneMapOption& GetToneMapOption() const { return m_toneMapOption; }
-		GraphicsOptions::ToneMapOption& RefToneMapOption() { return m_toneMapOption; }
-
 		// ※ 被写界深度(DoF)はカメラの持ち物なので、
 		//    アクティブカメラの FocusParamComponent が持つ(旧 DoFOption)
+		// ※ GI デノイズ・ライティング・ブルーム・トーンマップの調整値は
+		//    各パスの持ち物なので、レンダリングパイプラインのノードが持つ
+		//    (旧 GIOption / LightingOption / BloomOption / ToneMapOption)
 
 		// ---- デバッグ ----
 		// デバッグ描画設定(ワイヤー表示のオンオフ)
@@ -102,12 +85,8 @@ namespace Engine::Option
 		ProjectOptions::CursorOption m_cursorOption = {};
 
 		// グラフィックスオプション
-		GraphicsOptions::GIOption m_giOptions = {};
 		GraphicsOptions::WindowOption m_windowOption = {};
 		GraphicsOptions::RenderingOption m_renderingOption = {};
-		GraphicsOptions::LightingOption m_lightingOption = {};
-		GraphicsOptions::BloomOption m_bloomOption = {};
-		GraphicsOptions::ToneMapOption m_toneMapOption = {};
 
 		// デバッグオプション
 		DebugOptions::DebugDrawOption m_debugDrawOption = {};

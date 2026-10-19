@@ -4145,19 +4145,7 @@
     <ClInclude Include="Source\Engine\Option\DebugOptions\DebugDrawOption.h">
       <Filter>Source\Engine\Option\DebugOptions</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Option\GraphicsOptions\BloomOption.h">
-      <Filter>Source\Engine\Option\GraphicsOptions</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Option\GraphicsOptions\GIOptions.h">
-      <Filter>Source\Engine\Option\GraphicsOptions</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Option\GraphicsOptions\LightingOption.h">
-      <Filter>Source\Engine\Option\GraphicsOptions</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Option\GraphicsOptions\RenderingOption.h">
-      <Filter>Source\Engine\Option\GraphicsOptions</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Option\GraphicsOptions\ToneMapOption.h">
       <Filter>Source\Engine\Option\GraphicsOptions</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Option\GraphicsOptions\WindowOption.h">

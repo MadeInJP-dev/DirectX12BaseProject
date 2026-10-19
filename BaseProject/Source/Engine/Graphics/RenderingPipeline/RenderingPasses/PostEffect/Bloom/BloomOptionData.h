@@ -2,7 +2,7 @@
 namespace Engine::Graphics
 {
 	// 川瀬式ブルームの調整値
-	// OptionManager の BloomOption を、抽出パスと合成パスの両方が詰めて送る。
+	// 抽出パスと合成パスがそれぞれ自分の値を詰めて送る。
 	// ※ HLSL 側(Asset/Shader/Common/RootParameters/BloomOptionData.hlsli)と並びを合わせること
 	struct BloomOptionCB
 	{

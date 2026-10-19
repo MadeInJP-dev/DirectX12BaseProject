@@ -1,4 +1,4 @@
-// ライティングの調整値。OptionManager の LightingOption を毎フレーム流し込む
+// ライティングの調整値。DeferredLightingPass が持つ値を毎フレーム流し込む
 #ifndef ROOTPARAM_LIGHTING_OPTION_DATA_HLSLI
 #define ROOTPARAM_LIGHTING_OPTION_DATA_HLSLI
 

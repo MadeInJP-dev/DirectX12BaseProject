@@ -6,12 +6,8 @@ namespace Engine::Option
 	void OptionManager::Init()
 	{
 		m_pOptionList.clear();
-		m_pOptionList.push_back(&m_giOptions);
 		m_pOptionList.push_back(&m_windowOption);
 		m_pOptionList.push_back(&m_renderingOption);
-		m_pOptionList.push_back(&m_lightingOption);
-		m_pOptionList.push_back(&m_bloomOption);
-		m_pOptionList.push_back(&m_toneMapOption);
 
 		m_pOptionList.push_back(&m_buildConfig);
 		m_pOptionList.push_back(&m_inputOption);
