@@ -3,6 +3,7 @@
 #include "Application/ECS/World/APPWorld.h"
 
 #include "Application/Components/Boid/PlatoonLeaderComponent.h"
+#include "Application/Components/Boid/PlatoonFormationComponent.h"
 #include "Application/Components/Transform/LocalTransformComponent.h"
 #include "Application/Components/Movement/MovementParamsComponent.h"
 #include "Application/Components/Movement/ActualVelocityComponent.h"
@@ -36,6 +37,9 @@ namespace App::System
 	//   LocalTransform を読んで Velocity を書くので、その逆をする LockOnRotationSystem とは
 	//   読み書きが往復する。あちらが After(PlatoonFollowSystem) で向きを決めている。
 	// ・前の相手が居なくなったら目標速度を 0 にして止める。
+	//
+	// ・円陣の置き場所へ行けと命じられていれば(PlatoonFormationComponent の isActive)、
+	//   前の相手は追わずに置き場所へ寄る(目標速度 = 置き場所への差 × followGain)。
 	//==============================================================================
 	namespace
 	{
@@ -92,6 +96,31 @@ namespace App::System
 
 					const Engine::ECS::Entity _self = a_pChunk->entityData[_i];
 					if (!_world.HasComponent<Component::LocalTransformComponent>(_self)) continue;
+
+					//----------------------------------------------------------
+					// 円陣の置き場所へ行けと命じられていれば、そこへ寄る
+					//----------------------------------------------------------
+					if (_world.HasComponent<Component::PlatoonFormationComponent>(_self))
+					{
+						const auto* _pFormation = _world.RefData<Component::PlatoonFormationComponent>(_self);
+						if (_pFormation && _pFormation->isActive)
+						{
+							const Math::Vector3 _pos = _world.RefData<Component::LocalTransformComponent>(_self)->pos;
+							Math::Vector3 _target = (_pFormation->slotPos - _pos) * _platoon.followGain;
+
+							if (_move.moveSpeed > 0.0f)
+							{
+								const float _speedSq = _target.LengthSquared();
+								if (_speedSq > _move.moveSpeed * _move.moveSpeed)
+								{
+									_target *= _move.moveSpeed / std::sqrt(_speedSq);
+								}
+							}
+
+							_vel.value = _target;
+							continue;
+						}
+					}
 
 					//----------------------------------------------------------
 					// 前の相手が居なければ止まる
@@ -166,9 +195,9 @@ namespace App::System
 		)
 		// 順序 : 目標速度(Velocity)の書き手同士の並び
 		.After("CharacterMovementSystem")
-		// 絞り込みに使わない読み : 前の相手の向き・実速度(目標速度)と、自分と前の相手の位置。
+		// 絞り込みに使わない読み : 前の相手の向き・実速度(目標速度)と、自分と前の相手の位置、円陣の命令。
 		// LocalTransform の読みは LockOnRotationSystem と読み書きが往復するので、
 		// あちらが After(PlatoonFollowSystem) で向きを決めている
-		.Reads<Component::LookAngleComponent, Component::LocalTransformComponent, Component::ActualVelocityComponent, Component::DesiredVelocityComponent>();
+		.Reads<Component::LookAngleComponent, Component::LocalTransformComponent, Component::ActualVelocityComponent, Component::DesiredVelocityComponent, Component::PlatoonFormationComponent>();
 	}
 }

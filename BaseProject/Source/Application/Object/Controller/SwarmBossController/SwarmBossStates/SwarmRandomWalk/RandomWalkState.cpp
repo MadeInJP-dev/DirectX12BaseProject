@@ -9,6 +9,7 @@
 // App
 #include "../../../../../ECS/World/APPWorld.h"
 #include "../StateMachine.h"
+#include "../../SwarmBossPhase/SwarmBossPhase.h"
 
 #include "Application/Components/Transform/LocalTransformComponent.h"
 #include "Application/Components/Movement/MoveIntentComponent.h"
@@ -26,8 +27,8 @@ namespace App::Object
 			std::min(m_minDurationTime, m_maxDurationTime),
 			std::max(m_minDurationTime, m_maxDurationTime));
 
-		// 何を出すかもここで決めておく
-		m_nextAttack = PickAttack();
+		// 何を出すかもここで決めておく(抽選の重みは今のフェーズが持つ)
+		m_nextAttack = a_context.pPhase ? a_context.pPhase->PickAttack() : ESwarmBossState::Charge;
 	}
 
 	void SwarmBossRandomWalkState::Update(SwarmBossStateContext& a_context)
@@ -105,37 +106,6 @@ namespace App::Object
 		m_wanderTimer = m_wanderInterval;
 	}
 
-	ESwarmBossState SwarmBossRandomWalkState::PickAttack() const
-	{
-		// 攻撃と重みの組。足すときはここに並べる
-		const std::pair<ESwarmBossState, float> _table[] =
-		{
-			{ ESwarmBossState::Charge,     std::max(m_chargeWeight, 0.0f) },
-			{ ESwarmBossState::UperAttack, std::max(m_uperAttackWeight, 0.0f) },
-			{ ESwarmBossState::DiveAttack, std::max(m_diveAttackWeight, 0.0f) },
-			{ ESwarmBossState::CoilAttack, std::max(m_coilAttackWeight, 0.0f) },
-		};
-
-		float _total = 0.0f;
-		for (const auto& [_state, _weight] : _table) _total += _weight;
-		if (_total <= 0.0f) return ESwarmBossState::Charge;
-
-		// 0〜合計の中で引いた値が、どの重みの区間に入ったか
-		float _pick = Math::Random::Float(0.0f, _total);
-		for (const auto& [_state, _weight] : _table)
-		{
-			if (_pick < _weight) return _state;
-			_pick -= _weight;
-		}
-
-		// 浮動小数の誤差で最後を越えたときは、重みを持つ最後のもの
-		for (auto _it = std::rbegin(_table); _it != std::rend(_table); ++_it)
-		{
-			if (_it->second > 0.0f) return _it->first;
-		}
-		return ESwarmBossState::Charge;
-	}
-
 	void SwarmBossRandomWalkState::Archive(Engine::Persistence::Archive& a_ar)
 	{
 		// コントローラーに直に持っていた頃と同じ名前(既存シーンをそのまま読める)
@@ -147,10 +117,7 @@ namespace App::Object
 		a_ar.Field("Throttle", m_throttle);
 		a_ar.Field("AttackIntervalMin", m_minDurationTime);
 		a_ar.Field("AttackIntervalMax", m_maxDurationTime);
-		a_ar.Field("AttackWeightCharge", m_chargeWeight);
-		a_ar.Field("AttackWeightUperAttack", m_uperAttackWeight);
-		a_ar.Field("AttackWeightDiveAttack", m_diveAttackWeight);
-		a_ar.Field("AttackWeightCoilAttack", m_coilAttackWeight);
+		// 攻撃の抽選の重みはフェーズ(SwarmBossPhase)へ移した
 	}
 
 	void SwarmBossRandomWalkState::DrawInspector()
@@ -162,10 +129,6 @@ namespace App::Object
 		Engine::EditorField::Field("移動入力の強さ", m_throttle, 0.01f, 0.0f, 1.0f);
 		Engine::EditorField::Field("攻撃までの時間(最短)", m_minDurationTime, 0.1f, 0.0f);
 		Engine::EditorField::Field("攻撃までの時間(最長)", m_maxDurationTime, 0.1f, 0.0f);
-		Engine::EditorField::Field("抽選の重み : 突進", m_chargeWeight, 0.05f, 0.0f);
-		Engine::EditorField::Field("抽選の重み : アッパー", m_uperAttackWeight, 0.05f, 0.0f);
-		Engine::EditorField::Field("抽選の重み : ダイブ", m_diveAttackWeight, 0.05f, 0.0f);
-		Engine::EditorField::Field("抽選の重み : 巻き付き", m_coilAttackWeight, 0.05f, 0.0f);
 
 		// 目標地点は毎フレーム上書きされるので表示のみ
 		Engine::EditorField::Value("目標地点", "%.1f, %.1f, %.1f (選び直しまで %.1f 秒)", m_targetPos.x, m_targetPos.y, m_targetPos.z, m_wanderTimer);

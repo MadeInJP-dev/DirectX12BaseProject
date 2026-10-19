@@ -12,7 +12,9 @@ namespace App::Object
 	/// 入力を速度へ変えるのは SwarmLeaderMoveSystem、向きを変えるのは SwarmLookSystem。
 	///
 	/// 目標地点は「着いたら」か「時間が来たら」選び直す。時間切れも見るのは、
-	/// 障害物などで着けないまま止まってしまわないようにするため
+	/// 障害物などで着けないまま止まってしまわないようにするため。
+	///
+	/// 次に出す攻撃は入った瞬間に、今のフェーズ(SwarmBossPhase)の重みで抽選する
 	/// </remarks>
 	class SwarmBossRandomWalkState : public IState
 	{
@@ -28,9 +30,6 @@ namespace App::Object
 		// 次の目標地点を抽選する(生成位置を中心にした範囲の中)
 		void PickWanderTarget(const Math::Vector3& a_center);
 
-		// 次に出す攻撃を重みで抽選する
-		ESwarmBossState PickAttack() const;
-
 	private:
 		//------------------------------------------------------------------------------------------
 		// 調整値
@@ -44,12 +43,6 @@ namespace App::Object
 		// 攻撃には一定時間で遷移する(入るたびに最低〜最大の間で抽選)
 		float m_maxDurationTime = 14.0f;	// 次に攻撃に移行するまでの最大時間(秒)
 		float m_minDurationTime = 8.0f;		// 最低時間(秒)
-
-		// 攻撃の抽選の重み(0で出さない。全部0なら突進)
-		float m_chargeWeight    = 1.0f;		// 突進
-		float m_uperAttackWeight = 1.0f;	// アッパー(地中から突き上げ)
-		float m_diveAttackWeight = 1.0f;	// ダイブ(放物線で急降下)
-		float m_coilAttackWeight = 1.0f;	// 巻き付き(体を巻いてボイドを自爆ミサイルにする)
 
 		//------------------------------------------------------------------------------------------
 		// 実行中の状態(保存しない)

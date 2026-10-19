@@ -1474,6 +1474,12 @@
     <Filter Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Death">
       <UniqueIdentifier>{e8d4f5b6-d973-4ab9-93b4-f48c14525121}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\FormationAttack">
+      <UniqueIdentifier>{dafd2877-d933-4eb8-aa0a-dba887c747e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossPhase">
+      <UniqueIdentifier>{eb8d3e52-fee4-4816-b60f-d43abb61bb8f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Application\AppPCH.cpp">
@@ -2831,6 +2837,12 @@
     </ClCompile>
     <ClCompile Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Death\Death.cpp">
       <Filter>Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Death</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\FormationAttack\FormationAttack.cpp">
+      <Filter>Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\FormationAttack</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossPhase\SwarmBossPhase.cpp">
+      <Filter>Source\Application\Object\Controller\SwarmBossController\SwarmBossPhase</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Boid\SwarmBurstSystem.cpp">
       <Filter>Source\Application\Systems\Boid</Filter>
@@ -4763,6 +4775,9 @@
     <ClInclude Include="Source\Application\Components\Boid\PlatoonSpinComponent.h">
       <Filter>Source\Application\Components\Boid</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Components\Boid\PlatoonFormationComponent.h">
+      <Filter>Source\Application\Components\Boid</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossController.h">
       <Filter>Source\Application\Object\Controller\SwarmBossController</Filter>
     </ClInclude>
@@ -4891,6 +4906,12 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Death\Death.h">
       <Filter>Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Death</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\FormationAttack\FormationAttack.h">
+      <Filter>Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\FormationAttack</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossPhase\SwarmBossPhase.h">
+      <Filter>Source\Application\Object\Controller\SwarmBossController\SwarmBossPhase</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Boid\SwarmBurstSystem.h">
       <Filter>Source\Application\Systems\Boid</Filter>

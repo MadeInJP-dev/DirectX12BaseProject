@@ -8,6 +8,7 @@
 #include "Reorganize/Reorganize.h"
 #include "Death/Death.h"
 #include "Emerge/Emerge.h"
+#include "FormationAttack/FormationAttack.h"
 
 namespace App::Object
 {
@@ -31,6 +32,7 @@ namespace App::Object
 			case ESwarmBossState::Reorganize: _name = "小隊長の整理";         break;
 			case ESwarmBossState::Death:      _name = "死亡";                 break;
 			case ESwarmBossState::Emerge:     _name = "出現";                 break;
+			case ESwarmBossState::FormationAttack: _name = "円陣ミサイル";    break;
 			default:                          break;
 			}
 			return std::string(_name) + " (" + std::string(magic_enum::enum_name(a_state)) + ")";
@@ -51,6 +53,7 @@ namespace App::Object
 		m_upStates.emplace(ESwarmBossState::Reorganize, std::make_unique<SwarmBossReorganizeState>());
 		m_upStates.emplace(ESwarmBossState::Death, std::make_unique<SwarmBossDeathState>());
 		m_upStates.emplace(ESwarmBossState::Emerge, std::make_unique<SwarmBossEmergeState>());
+		m_upStates.emplace(ESwarmBossState::FormationAttack, std::make_unique<SwarmBossFormationAttackState>());
 
 		// 最初の行動。1フレーム目の PreUpdate で入る
 		// (地面から出す設定なら、コントローラーが生成のときに出現へ切り替え直す)
@@ -107,11 +110,14 @@ namespace App::Object
 
 	void SwarmBossStateMachine::Archive(Engine::Persistence::Archive& a_ar)
 	{
-		// ※ 並びは unordered_map の順。ここへ足すと既存のバイナリの読み順が崩れるので、
-		//    後から足す調整値は ArchiveAppended へ書く
-		for (auto& [_state, _upState] : m_upStates)
+		// 並びは列挙の順(unordered_map の順はステートを足すと組み替わるため)。
+		// ここへ足すと既存のバイナリの読み順が崩れるので、後から足す調整値は ArchiveAppended へ書く
+		for (const ESwarmBossState _state : magic_enum::enum_values<ESwarmBossState>())
 		{
-			if (_upState) _upState->Archive(a_ar);
+			auto _it = m_upStates.find(_state);
+			if (_it == m_upStates.end() || !_it->second) continue;
+
+			_it->second->Archive(a_ar);
 		}
 	}
 

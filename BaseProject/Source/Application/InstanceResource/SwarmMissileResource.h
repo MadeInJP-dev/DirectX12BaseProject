@@ -6,7 +6,7 @@ namespace App::InstanceResource
 	//
 	// ワームの体から切り離す自爆ミサイルの、切り離しの要求と飛び方の調整値。
 	//
-	// 書くのはワームボスの巻き付き攻撃(SwarmBossCoilAttackState)。
+	// 書くのはワームボスの巻き付き攻撃(SwarmBossCoilAttackState)と円陣ミサイル(SwarmBossFormationAttackState)。
 	//   ・launchRequests … 「この小隊長からボイドを1体切り離せ」という要求(小隊長のエンティティ)
 	//   ・ringCenter     … 巻いている輪の中心。切り離した直後は輪の外側へ飛び出させる
 	//   ・調整値         … 攻撃中は毎フレーム書き写す。攻撃が終わった後も飛んでいるものは
@@ -38,6 +38,10 @@ namespace App::InstanceResource
 		float launchUp     = 1.0f;		// 打ち上げの向きの上向きの重み
 		float launchOut    = 0.5f;		// 打ち上げの向きの外向き(輪の中心から離れる向き)の重み
 		float launchSpread = 0.3f;		// 打ち上げの向きのばらつき(0で揃う)
+
+		// 打ち上げの向きに混ぜる、決まった向き(円陣ミサイルはプレイヤーの方)。巻き付きは重み 0
+		Math::Vector3 launchForwardDir = { 0.0f, 0.0f, 1.0f };	// 決まった向き(単位ベクトル)
+		float launchForward = 0.0f;								// その重み
 
 		//--------------------------------------------------------------------------
 		// 誘導 : 曲がれる角度に上限があるので、横へ大きく動けば避けられる

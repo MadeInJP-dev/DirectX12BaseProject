@@ -64,7 +64,7 @@ namespace App::System
 		}
 
 		//--------------------------------------------------------------------------
-		// 切り離した直後に飛び出す向き : 輪の外側(水平)と上を重みで混ぜ、少しばらす
+		// 切り離した直後に飛び出す向き : 輪の外側(水平)と上と決まった向きを重みで混ぜ、少しばらす
 		//--------------------------------------------------------------------------
 		Math::Vector3 MakeLaunchDir(const InstanceResource::SwarmMissileResource& a_res, const Math::Vector3& a_pos)
 		{
@@ -72,7 +72,7 @@ namespace App::System
 			_out.y = 0.0f;
 			if (_out.LengthSquared() > 1e-6f) _out.Normalize();
 
-			Math::Vector3 _dir = Math::Vector3::Up() * a_res.launchUp + _out * a_res.launchOut;
+			Math::Vector3 _dir = Math::Vector3::Up() * a_res.launchUp + _out * a_res.launchOut + a_res.launchForwardDir * a_res.launchForward;
 			_dir += Math::Vector3(
 				Math::Random::Float(-1.0f, 1.0f),
 				Math::Random::Float(-1.0f, 1.0f),

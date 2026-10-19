@@ -37,6 +37,7 @@
 #include "Application/Components/Boid/BoidLeaderComponent.h"
 #include "Application/Components/Boid/PlatoonLeaderComponent.h"
 #include "Application/Components/Boid/PlatoonSpinComponent.h"
+#include "Application/Components/Boid/PlatoonFormationComponent.h"
 #include "Application/Components/Boid/BoidSpownerComponent.h"
 #include "Application/Components/Boid/SerchGroundComponent.h"
 #include "../../../InstanceResource/WormWaveResource.h"
@@ -178,6 +179,29 @@ namespace App::Object
 		}
 
 		//----------------------------------------------------------------------
+		// 面の表 a_normal に垂直な2本(面の中の軸)。上向きを基準に作るので、
+		// 面が真上・真下を向くとき以外は表が回っても軸が急に裏返らない
+		//----------------------------------------------------------------------
+		void MakePlaneBasis(const Math::Vector3& a_normal, Math::Vector3& a_outU, Math::Vector3& a_outV)
+		{
+			const Math::Vector3 _ref = (std::fabs(a_normal.y) < 0.999f) ? Math::Vector3::Up() : Math::Vector3::Right();
+			a_outU = _ref.Cross(a_normal);
+			a_outU.Normalize();
+			a_outV = a_normal.Cross(a_outU);
+		}
+
+		// フェーズの表示名
+		const char* GetPhaseDisplayName(size_t a_index)
+		{
+			switch (a_index)
+			{
+			case 0:  return "第1フェーズ(ワーム)";
+			case 1:  return "第2フェーズ(円陣)";
+			default: return "(不明)";
+			}
+		}
+
+		//----------------------------------------------------------------------
 		// シグネチャ変更の予約へ、コンポーネントの初期値を積む(持っている / 足すものだけ)
 		//----------------------------------------------------------------------
 		template<typename T>
@@ -275,6 +299,9 @@ namespace App::Object
 			CheckDeath(a_context);
 			CheckReorganize();
 
+			// フェーズが変わっていれば、そのフェーズの最初の行動へ(割り込みが出ていればそちらが先)
+			ApplyPhaseEntry();
+
 			// リーダーの行動(入力を作る)
 			UpdateLeaderBrain(a_context);
 		}
@@ -320,6 +347,7 @@ namespace App::Object
 		_stateContext.pMachine     = &m_stateMachine;
 		_stateContext.leaderEntity = m_leaderEntity;
 		_stateContext.spawnPos     = m_spawnPos;
+		_stateContext.pPhase       = &m_phases[m_phaseIndex];
 		_stateContext.pPlatoonLeaders = &m_platoonLeaderEntities;
 		_stateContext.wormLength      = GetWormLength();
 
@@ -333,6 +361,9 @@ namespace App::Object
 		if (_stateContext.isRequestReorganize)
 		{
 			ReorganizePlatoons(a_context);
+
+			// 体を組み直したこの瞬間に、次のフェーズへ移る
+			AdvancePhase();
 		}
 
 		// 防御比率は依頼が変わったときだけ書き換える(依頼しない行動は既定の 1)
@@ -361,6 +392,134 @@ namespace App::Object
 
 		// 胴回りの回転(頼まない行動は既定の 0 = 緩めて畳む)
 		UpdateBodySpin(a_context, _stateContext.bodySpinRate);
+
+		// 円陣(頼まない行動では解いて、今までどおり列で追わせる)
+		UpdateFormation(a_context, _stateContext.formation);
+	}
+
+	//======================================================================================
+	// フェーズ
+	//--------------------------------------------------------------------------------------
+	// 進めるのは整理が体を組み直した瞬間(ReorganizePlatoons の直後)。
+	// そのまま次の行動へ切り替えると整理の動き(まとまって落ち着く)が途中で切れるので、
+	// 最初の行動へ入るのは整理が終わって徘徊へ戻ってから(ApplyPhaseEntry)
+	//======================================================================================
+	void SwarmBossController::AdvancePhase()
+	{
+		if (m_phaseIndex + 1 >= m_phases.size()) return;
+
+		const uint32_t _endCount = m_phases[m_phaseIndex].GetEndReorganizeCount();
+		if (_endCount == 0 || m_reorganizeCount < _endCount) return;
+
+		++m_phaseIndex;
+		m_isPhaseEntryPending = true;
+
+		ENGINE_LOG("[SwarmBossController] %s へ移りました", GetPhaseDisplayName(m_phaseIndex));
+	}
+
+	void SwarmBossController::ApplyPhaseEntry()
+	{
+		if (!m_isPhaseEntryPending) return;
+
+		// 死亡からは抜けないので、待っていた行動は捨てる
+		if (m_isDying)
+		{
+			m_isPhaseEntryPending = false;
+			return;
+		}
+
+		// 整理が終わって徘徊へ戻るまで待つ。割り込み(整理・死亡)の要求が出ていればそちらを先に通す
+		if (m_stateMachine.GetCurrentState() != ESwarmBossState::RandomWalk) return;
+		if (m_stateMachine.IsChangeRequested()) return;
+
+		m_isPhaseEntryPending = false;
+
+		const ESwarmBossState _entry = m_phases[m_phaseIndex].GetEntryState();
+		if (_entry != ESwarmBossState::RandomWalk)
+		{
+			m_stateMachine.ReserveChangeState(_entry);
+		}
+	}
+
+	//======================================================================================
+	// 円陣 : 小隊長を渦巻きの置き場所へ並べる
+	//--------------------------------------------------------------------------------------
+	// 渦は面の上のアルキメデスの螺旋 r = a + bθ (θ : 0 〜 周回数 × 2π)。
+	// 頭の小隊長を内側(θ = 0)、尾を外側に置き、体に沿って等間隔に並べる。
+	// 等間隔にするため、弧の長さ s ≒ aθ + bθ²/2 から θ を逆算する
+	//   θ = (-a + √(a² + 2bs)) / b
+	// 並べる数は頭から joinRate の割合。残りの小隊長は今までどおり前の相手を追う。
+	//
+	// 小隊長への書き込みは 100 体ぶんだけなので毎フレーム行う。頼まれなくなったら解く命令を一度書いて以降は書かない
+	//======================================================================================
+	void SwarmBossController::UpdateFormation(Engine::GameObject::ObjectContext& a_context, const SwarmBossFormationRequest& a_request)
+	{
+		if (!a_request.isRequested && !m_isFormationWritten) return;
+		m_isFormationWritten = a_request.isRequested;
+
+		if (!a_context.pWorld) return;
+		auto& _world = *a_context.pWorld;
+
+		const size_t _count = m_platoonLeaderEntities.size();
+		if (_count == 0) return;
+
+		// 頭から並べる数(頼まれていなければ 0 = 全員解く)
+		const size_t _joinCount = a_request.isRequested
+			? static_cast<size_t>(std::ceil(static_cast<float>(_count) * std::clamp(a_request.joinRate, 0.0f, 1.0f)))
+			: 0;
+
+		// 渦の面の軸
+		Math::Vector3 _normal = a_request.normal;
+		if (_normal.LengthSquared() <= 1e-6f) _normal = Math::Vector3(0.0f, 0.0f, 1.0f);
+		_normal.Normalize();
+
+		Math::Vector3 _u = {};
+		Math::Vector3 _v = {};
+		MakePlaneBasis(_normal, _u, _v);
+
+		// 螺旋の形と、体に沿った全長
+		const float _a        = std::max(a_request.innerRadius, 0.0f);
+		const float _b        = std::max(a_request.ringSpacing, 0.0f) / DirectX::XM_2PI;
+		const float _thetaMax = std::max(a_request.turns, 0.0f) * DirectX::XM_2PI;
+		const float _length   = _a * _thetaMax + 0.5f * _b * _thetaMax * _thetaMax;
+
+		for (size_t _i = 0; _i < _count; ++_i)
+		{
+			const Engine::ECS::Entity _platoon = m_platoonLeaderEntities[_i];
+			if (!_world.IsAliveEntity(_platoon)) continue;
+			if (!_world.HasComponent<Component::PlatoonFormationComponent>(_platoon)) continue;
+
+			auto* _pFormation = _world.RefData<Component::PlatoonFormationComponent>(_platoon);
+			if (_i >= _joinCount)
+			{
+				_pFormation->isActive = false;
+				_pFormation->isLookAt = false;
+				continue;
+			}
+
+			// 頭(0)から尾(1)への割合を、体に沿った長さへ
+			const float _t = (_count > 1) ? static_cast<float>(_i) / static_cast<float>(_count - 1) : 0.0f;
+			const float _s = _length * _t;
+
+			float _theta = 0.0f;
+			if (_b > 1e-4f)
+			{
+				_theta = (-_a + std::sqrt(_a * _a + 2.0f * _b * _s)) / _b;
+			}
+			else if (_a > 1e-4f)
+			{
+				_theta = _s / _a;	// 広がらない(ただの円)
+			}
+
+			const float _radius = _a + _b * _theta;
+			const float _angle  = _theta + a_request.roll;
+			const Math::Vector3 _pos = a_request.center + (_u * std::cos(_angle) + _v * std::sin(_angle)) * _radius;
+
+			_pFormation->isActive = true;
+			_pFormation->slotPos  = _pos;
+			_pFormation->isLookAt = a_request.isLookAtTarget;
+			_pFormation->lookDir  = a_request.lookTarget - _pos;
+		}
 	}
 
 	//======================================================================================
@@ -1490,6 +1649,9 @@ namespace App::Object
 			// 胴回りの回転の命令の受け皿(書くのは UpdateBodySpin、読むのは FollowLeaderSystem)
 			EnsureRootComponent<Component::PlatoonSpinComponent>(_world, _instanceVec);
 
+			// 円陣の命令の受け皿(書くのは UpdateFormation、読むのは PlatoonFollowSystem / SwarmLookSystem)
+			EnsureRootComponent<Component::PlatoonFormationComponent>(_world, _instanceVec);
+
 			// 地面との関係(飛んでいるかを見る。レイを打つのは SerchGroundSystem)
 			EnsureRootComponent<Component::SerchGroundComponent>(_world, _instanceVec);
 
@@ -1910,6 +2072,15 @@ namespace App::Object
 				Engine::Persistence::ArchiveSection _section(a_ar, "SwarmBossStates");
 				m_stateMachine.ArchiveAppended(a_ar);
 			}
+
+			// ---- フェーズ ----
+			{
+				Engine::Persistence::ArchiveSection _section(a_ar, "SwarmBossPhases");
+				for (size_t _i = 0; _i < m_phases.size(); ++_i)
+				{
+					m_phases[_i].Archive(a_ar, "Phase" + std::to_string(_i + 1));
+				}
+			}
 		}
 
 		// 鳴き声が差し替わっているかもしれないので、次に鳴くときに借り直す
@@ -2073,6 +2244,27 @@ namespace App::Object
 			Engine::EditorField::HelpText("最高速まで %.1f 秒(1 秒に %.2f 周)", m_spinMaxSpeed / m_spinAcceleration, m_spinMaxSpeed / DirectX::XM_2PI);
 		}
 		Engine::EditorField::Value("回転", "%.2f rad/s (頼まれた強さ %.2f / 輪の広がり %.2f)", m_spinSpeed, m_spinRequestRate, m_spinRadiusRatio);
+
+		Engine::EditorField::Header("フェーズ");
+		Engine::EditorField::Value("今のフェーズ", "%s%s", GetPhaseDisplayName(m_phaseIndex),
+			m_isPhaseEntryPending ? " (最初の行動を待っている)" : "");
+		if (m_phaseIndex + 1 < m_phases.size())
+		{
+			Engine::EditorField::SameLine();
+			if (Engine::EditorField::CreateSmallButton("次へ"))
+			{
+				// デバッグ : 整理を待たずに進める。最初の行動へ入るのは徘徊に居るとき
+				++m_phaseIndex;
+				m_isPhaseEntryPending = true;
+			}
+		}
+		for (size_t _i = 0; _i < m_phases.size(); ++_i)
+		{
+			Engine::EditorField::IDScope _id(static_cast<int>(_i));
+			Engine::EditorField::Line();
+			Engine::EditorField::HelpText("%s", GetPhaseDisplayName(_i));
+			m_phases[_i].DrawInspector();
+		}
 
 		Engine::EditorField::Header("リーダーの行動");
 		m_stateMachine.DrawInspector();

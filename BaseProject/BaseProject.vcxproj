@@ -462,6 +462,16 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\FormationAttack\FormationAttack.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossPhase\SwarmBossPhase.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Boid\SwarmBurstSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1891,6 +1901,9 @@
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Emerge\Emerge.h" />
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Common\BallMotion.h" />
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\Death\Death.h" />
+    <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\FormationAttack\FormationAttack.h" />
+    <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossPhase\SwarmBossPhase.h" />
+    <ClInclude Include="Source\Application\Components\Boid\PlatoonFormationComponent.h" />
     <ClInclude Include="Source\Application\Systems\Boid\SwarmBurstSystem.h" />
     <ClInclude Include="Source\Application\Components\Boid\SwarmBurstComponent.h" />
     <ClInclude Include="Source\Application\Components\Combat\DefenseRatioComponent.h" />

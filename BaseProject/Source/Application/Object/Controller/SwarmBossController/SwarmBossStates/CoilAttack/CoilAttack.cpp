@@ -329,6 +329,7 @@ namespace App::Object
 		_res.launchUp      = m_missileLaunchUp;
 		_res.launchOut     = m_missileLaunchOut;
 		_res.launchSpread  = m_missileLaunchSpread;
+		_res.launchForward = 0.0f;	// 決まった向きは使わない(円陣ミサイルが書いた値を残さない)
 		_res.speed         = m_missileSpeed;
 		_res.acceleration  = m_missileAcceleration;
 		_res.turnSpeedDeg  = m_missileTurnSpeedDeg;

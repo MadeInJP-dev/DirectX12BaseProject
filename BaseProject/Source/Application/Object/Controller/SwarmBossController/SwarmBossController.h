@@ -3,6 +3,7 @@
 #include "Application/Object/Sequence/SceneSequence/SequenceActor.h"
 
 #include "SwarmBossStates/StateMachine.h"
+#include "SwarmBossPhase/SwarmBossPhase.h"
 
 #include "Application/Components/Boss/SwarmBossWave.h"
 
@@ -30,6 +31,8 @@ namespace App::Object
 	///   出現の行動(Emerge)から始める。真上へ飛び出して、とぐろを巻きながら鳴く。
 	/// ・飛んでいる(地上に出ている)小隊長からは、光の粒と光の筋が漂う幻想的なエフェクトを出す。
 	///   飛行音はボイドごとには付けず、体に沿って数か所の小隊長から 3D で鳴らす。
+	/// ・行動はフェーズ(SwarmBossPhase)で切り替わる。第1フェーズはワーム(突進・アッパー・ダイブ・巻き付き)、
+	///   1回目の小隊長の整理で第2フェーズ(円陣ミサイル)へ移る。
 	/// </remarks>
 	class SwarmBossController final : public SequenceActor
 	{
@@ -131,6 +134,22 @@ namespace App::Object
 		// 小隊長を「最大数 × 今の体力の比率」まで尾から減らし、ボイドを残った小隊長へ割り当て直す。
 		// 整理の行動が頼んできたとき(isRequestReorganize)に呼ぶ
 		void ReorganizePlatoons(Engine::GameObject::ObjectContext& a_context);
+
+		//------------------------------------------------------------------------------------------
+		// フェーズ
+		//------------------------------------------------------------------------------------------
+		// 今のフェーズを終える整理の回数に達していたら次のフェーズへ進める。体を組み直した直後に呼ぶ
+		void AdvancePhase();
+
+		// フェーズが変わった後、整理が終わって徘徊へ戻ったら、そのフェーズの最初の行動へ切り替える
+		void ApplyPhaseEntry();
+
+		//------------------------------------------------------------------------------------------
+		// 円陣(円陣ミサイルが頼む)
+		//------------------------------------------------------------------------------------------
+		// 頼まれた渦巻きから小隊長ごとの置き場所を決め、PlatoonFormationComponent へ書く(小隊長への命令)。
+		// 置き場所へ寄せるのは PlatoonFollowSystem、向けるのは SwarmLookSystem
+		void UpdateFormation(Engine::GameObject::ObjectContext& a_context, const SwarmBossFormationRequest& a_request);
 
 		//------------------------------------------------------------------------------------------
 		// 死亡(体力が一定値を切ったら)
@@ -314,6 +333,29 @@ namespace App::Object
 		// ---- 実行中の状態(保存しない) ----
 		uint32_t m_reorganizeCount = 0;			// 越えた区切りの数(整理を始めた回数)
 		float m_bodyDefenseRatio = 1.0f;		// 体(ボイド)に今入れてある防御比率
+
+		//------------------------------------------------------------------------------------------
+		// フェーズ
+		//
+		// 徘徊から出す攻撃の組み合わせをフェーズごとに持つ。次のフェーズへ移るのは、
+		// 小隊長の整理が「そのフェーズを終える回数」目に体を組み直したとき。
+		// 移った後は、整理が終わって徘徊へ戻った時点でそのフェーズの最初の行動へ入る
+		//------------------------------------------------------------------------------------------
+		static constexpr size_t PHASE_COUNT = 2;
+		std::array<SwarmBossPhase, PHASE_COUNT> m_phases =
+		{
+			// 第1フェーズ(ワーム) : 突進・アッパー・ダイブ・巻き付き。1回目の整理で次へ
+			SwarmBossPhase({ 1.0f, 1.0f, 1.0f, 1.0f, 0.0f }, 1, ESwarmBossState::RandomWalk),
+			// 第2フェーズ(円陣) : 円陣ミサイル。最後のフェーズで、入ったらすぐ円陣を組む
+			SwarmBossPhase({ 0.0f, 0.0f, 0.0f, 0.0f, 1.0f }, 0, ESwarmBossState::FormationAttack),
+		};
+
+		// ---- 実行中の状態(保存しない) ----
+		size_t m_phaseIndex = 0;				// 今のフェーズ(0 始まり)
+		bool m_isPhaseEntryPending = false;		// フェーズの最初の行動へ入るのを待っているか
+
+		// ---- 円陣の実行中の状態(保存しない) ----
+		bool m_isFormationWritten = false;		// 並べる命令を小隊長へ書いたか(やめたら解く命令を一度だけ書く)
 
 		//------------------------------------------------------------------------------------------
 		// 死亡

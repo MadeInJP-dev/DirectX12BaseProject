@@ -7,6 +7,7 @@
 #include "Application/Components/Boid/BoidSteeringParamsComponent.h"
 #include "Application/Components/Boid/BoidLeaderComponent.h"
 #include "Application/Components/Boid/PlatoonLeaderComponent.h"
+#include "Application/Components/Boid/PlatoonFormationComponent.h"
 #include "Application/Components/Movement/ActualVelocityComponent.h"
 #include "Application/Components/Boid/SwarmMissileComponent.h"
 #include "Application/Components/Boid/SwarmBurstComponent.h"
@@ -19,7 +20,8 @@ namespace App::System
 	// 群れのボス(リーダー / 小隊長 / ボイド)の「どちらを向いているか」を進める。
 	// 持ち物は既存の LookAngleComponent で、体の向き(quat)にするのは RotationSystem。
 	//
-	//   リーダー・小隊長 … 実際に進んでいる向き(ActualVelocityComponent)へ寄せる
+	//   リーダー・小隊長 … 実際に進んでいる向き(ActualVelocityComponent)へ寄せる。
+	//                      小隊長は円陣で向けと命じられていれば(PlatoonFormationComponent の isLookAt)その向きへ
 	//   ボイド           … 所属している小隊長(BoidMembershipComponent.platoonID)の向きへ寄せる
 	//   ミサイル         … 切り離されたボイド。飛んでいる向き(SwarmMissileComponent.dir)をそのまま向く
 	//   爆散             … 死亡で飛び散ったボイド。飛んでいる向き(SwarmBurstComponent.velocity)をそのまま向く
@@ -109,14 +111,14 @@ namespace App::System
 		);
 
 		//--------------------------------------------------------------------------
-		// 小隊長 : 進んでいる向きへ
+		// 小隊長 : 進んでいる向きへ(円陣で向けと命じられていればその向きへ)
 		//--------------------------------------------------------------------------
 		// 自分のチャンクの値だけを書く(ほかのエンティティは RefData で読むだけ)ので、ワーカーで回す
 		a_world.ActiveJobTask<const Component::PlatoonLeaderComponent, const Component::ActualVelocityComponent, Component::LookAngleComponent>(
 			Engine::ECS::ESystemType::Update,
 			"SwarmLookSystem_Platoon",
 			[](
-				Engine::ECS::Chunk*      /*a_pChunk*/,
+				Engine::ECS::Chunk*               a_pChunk,
 				uint32_t                          a_count,
 				const Engine::ECS::SystemContext& a_ctx,
 				Component::ActiveTag*                        /*a_tags*/,
@@ -125,16 +127,30 @@ namespace App::System
 				Component::LookAngleComponent*               a_lookArray
 			)
 			{
+				auto& _world = *a_ctx.pWorld;
+
 				for (size_t _i = 0; _i < a_count; ++_i)
 				{
-					TurnToVelocity(
-						a_lookArray[_i], a_actualArray[_i].value,
-						a_platoonArray[_i].turnSpeedDeg, a_ctx.dt);
+					Math::Vector3 _dir = a_actualArray[_i].value;
+
+					const Engine::ECS::Entity _self = a_pChunk->entityData[_i];
+					if (_world.HasComponent<Component::PlatoonFormationComponent>(_self))
+					{
+						const auto* _pFormation = _world.RefData<Component::PlatoonFormationComponent>(_self);
+						if (_pFormation && _pFormation->isActive && _pFormation->isLookAt)
+						{
+							_dir = _pFormation->lookDir;
+						}
+					}
+
+					TurnToVelocity(a_lookArray[_i], _dir, a_platoonArray[_i].turnSpeedDeg, a_ctx.dt);
 				}
 			}
 		)
 		// 順序 : 向き(LookAngle)はリーダー → 小隊長 → ボイドの順に決める
-		.After("SwarmLookSystem_Leader");
+		.After("SwarmLookSystem_Leader")
+		// 絞り込みに使わない読み : 円陣の命令(自分のもの)
+		.Reads<Component::PlatoonFormationComponent>();
 
 		//--------------------------------------------------------------------------
 		// ボイド : 所属している小隊長の向きへ

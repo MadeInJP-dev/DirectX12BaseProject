@@ -16,6 +16,7 @@ namespace App::Object
 		Reorganize,			// 体力が一定量減るたびに、球体状にぐるぐるまとまって小隊長を整理する(その間は無敵)。抽選には入らない
 		Death,				// 体力が一定値を切ったら、地上の高いところで球体状にまとまり、ウェーブを速めていって最後に爆散する。抜けない
 		Emerge,				// 出現 : 地面の下から一直線に上空へ飛び出し、とぐろを巻きながら鳴く。出した直後だけ。抽選には入らない
+		FormationAttack,	// 円陣ミサイル(第2フェーズ) : リーダーを中心に体を渦巻きの円陣に並べてプレイヤーへ向け、外周から順にボイドをミサイルにして撃つ
 	};
 
 	class SwarmBossStateMachine
@@ -36,6 +37,9 @@ namespace App::Object
 		void ReserveChangeState(ESwarmBossState a_state);
 
 		ESwarmBossState GetCurrentState() const { return m_currentState; }
+
+		// 切り替え要求が出ていて、まだ切り替わっていないか
+		bool IsChangeRequested() const { return m_isChangeRequested; }
 
 		// デバッグ : 次の攻撃が固定されていれば a_out に入れて true(徘徊が攻撃へ移るときに見る)
 		bool GetDebugNextAttack(ESwarmBossState& a_out) const
