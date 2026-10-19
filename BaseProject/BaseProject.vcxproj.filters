@@ -985,6 +985,9 @@
     <Filter Include="Source\Engine\Graphics\Particle\GPU\GPUParticlePool">
       <UniqueIdentifier>{229201f6-2891-4b39-9ee9-fcd39d23ca33}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Graphics\Particle\GPU\ParticleDrawTable">
+      <UniqueIdentifier>{f3c15bf1-e4d5-44a7-bcda-d4e700bb98be}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Persistence">
       <UniqueIdentifier>{61c624a0-fa3b-460f-b306-fffd8f83055e}</UniqueIdentifier>
     </Filter>
@@ -2330,6 +2333,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\Particle\GPU\GPUParticlePool\GPUParticlePool.cpp">
       <Filter>Source\Engine\Graphics\Particle\GPU\GPUParticlePool</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Graphics\Particle\GPU\ParticleDrawTable\ParticleDrawTable.cpp">
+      <Filter>Source\Engine\Graphics\Particle\GPU\ParticleDrawTable</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Persistence\Archive\Archive.cpp">
       <Filter>Source\Engine\Persistence\Archive</Filter>
@@ -4177,6 +4183,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\Particle\GPU\GPUParticlePool\GPUParticlePool.h">
       <Filter>Source\Engine\Graphics\Particle\GPU\GPUParticlePool</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\Particle\GPU\ParticleDrawTable\ParticleDrawTable.h">
+      <Filter>Source\Engine\Graphics\Particle\GPU\ParticleDrawTable</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Persistence\Archive\Archive.h">
       <Filter>Source\Engine\Persistence\Archive</Filter>

@@ -1542,6 +1542,7 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\Particle\GPU\EmitterSlotPool\EmitterSlotPool.cpp" />
     <ClCompile Include="Source\Engine\Graphics\Particle\GPU\GPUParticlePool\GPUParticlePool.cpp" />
+    <ClCompile Include="Source\Engine\Graphics\Particle\GPU\ParticleDrawTable\ParticleDrawTable.cpp" />
     <ClCompile Include="Source\Engine\Graphics\Particle\ParticleBufferManager.cpp" />
     <ClCompile Include="Source\Engine\Persistence\Archive\Archive.cpp" />
     <ClCompile Include="Source\Engine\Physics\Core\PhysicsBroadPhaseLayer\PhysicsBroadPhaseLayer.cpp" />
@@ -2348,6 +2349,7 @@
     <ClInclude Include="Source\Engine\Graphics\Particle\Core\ParticleData.h" />
     <ClInclude Include="Source\Engine\Graphics\Particle\GPU\EmitterSlotPool\EmitterSlotPool.h" />
     <ClInclude Include="Source\Engine\Graphics\Particle\GPU\GPUParticlePool\GPUParticlePool.h" />
+    <ClInclude Include="Source\Engine\Graphics\Particle\GPU\ParticleDrawTable\ParticleDrawTable.h" />
     <ClInclude Include="Source\Engine\Graphics\Particle\ParticleBufferManager.h" />
     <ClInclude Include="Source\Engine\Persistence\Archive\Archive.h" />
     <ClInclude Include="Source\Engine\Graphics\Raytracing\BLAS\BLAS.h" />

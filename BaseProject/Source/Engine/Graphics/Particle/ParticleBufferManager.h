@@ -17,6 +17,7 @@ namespace Engine::Graphics
 namespace Engine::Graphics::Particle
 {
 	class EmitterSlotPool;
+	class ParticleDrawTable;
 
 	class ParticleBufferManager
 	{
@@ -91,6 +92,14 @@ namespace Engine::Graphics::Particle
 		//----------------------------------------------------------------------------------
 		EmitterSlotPool* RefEmitterSlotPool() { return m_upEmitterSlotPool.get(); }
 		const EmitterSlotPool* GetEmitterSlotPool() const { return m_upEmitterSlotPool.get(); }
+
+		//----------------------------------------------------------------------------------
+		// 描画設定の表と、半透明の粒をまとめて描く一覧(全アセット共通)
+		//
+		// シミュレーションが毎フレーム組み直して半透明の粒を遠い順に並べ、ParticlePass が読む
+		//----------------------------------------------------------------------------------
+		ParticleDrawTable* RefDrawTable() { return m_upDrawTable.get(); }
+		const ParticleDrawTable* GetDrawTable() const { return m_upDrawTable.get(); }
 
 		/// <summary>
 		/// パーティクルのバッファを取得
@@ -214,6 +223,9 @@ namespace Engine::Graphics::Particle
 
 		// エミット用の座席プール : すべてのパーティクルアセットのワールド座標と生存時間を管理
 		std::unique_ptr<EmitterSlotPool> m_upEmitterSlotPool = nullptr;
+
+		// 描画設定の表と半透明の一覧 : 全アセット共通で1つ
+		std::unique_ptr<ParticleDrawTable> m_upDrawTable = nullptr;
 
 		// 眠っているプールを見分けるための時刻(メインスレッドのみ)
 		double m_elapsedTime = 0.0;

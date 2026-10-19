@@ -5,6 +5,7 @@
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 
 #include "Engine/Graphics/Particle/GPU/EmitterSlotPool/EmitterSlotPool.h"
+#include "Engine/Graphics/Particle/GPU/ParticleDrawTable/ParticleDrawTable.h"
 
 #include "Engine/MainEngine.h"	// GPU が使い終わってからの解放(ReserveRelease)
 
@@ -53,6 +54,12 @@ namespace Engine::Graphics::Particle
 			m_upEmitterSlotPool = std::make_unique<EmitterSlotPool>();
 		}
 		m_upEmitterSlotPool->Init(EMITTER_SLOT_BLOCK_SIZE);
+
+		// 描画設定の表と半透明の一覧(GPU のバッファは使うときに作る)
+		if (!m_upDrawTable)
+		{
+			m_upDrawTable = std::make_unique<ParticleDrawTable>();
+		}
 	}
 	void ParticleBufferManager::Release()
 	{
@@ -94,6 +101,9 @@ namespace Engine::Graphics::Particle
 
 		// 座席データの解放
 		if (m_upEmitterSlotPool) m_upEmitterSlotPool->Release();
+
+		// 描画設定の表と半透明の一覧
+		if (m_upDrawTable) m_upDrawTable->Release();
 	}
 	void ParticleBufferManager::BeginFrame(float a_dt)
 	{
@@ -251,6 +261,9 @@ namespace Engine::Graphics::Particle
 			_upPool->RefAliveList().Barrier(a_pCmdList, D3D12_RESOURCE_STATE_COMMON);
 			_upPool->SetArgsReady(false);
 		}
+
+		// 半透明をまとめて描いた一覧と引数も COMMON へ
+		if (m_upDrawTable) m_upDrawTable->FinishFrame(a_pCmdList);
 	}
 	void ParticleBufferManager::ReserveEmit(const Handle<Resource::ParticlesAsset>&a_handle, const EmitterData & a_emitterData)
 	{

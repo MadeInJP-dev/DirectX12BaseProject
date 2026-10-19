@@ -55,6 +55,39 @@ namespace Engine::Graphics::Particle
 	}
 
 	//======================================================================================
+	// 半透明の粒の並べ替え(SortParticleShader.hlsl のバイトニックソート)
+	//
+	// 半透明のアセットの粒は、全アセットぶんを1本の一覧へ集めて遠い順に並べ、1回で描く
+	// (アセットごとに描くと、違うアセットの粒どうしの前後が決められない)。
+	//
+	//   BLOCK_SIZE        : 1グループが共有メモリで並べる要素数。並べ替え用のバッファはこれ以上の2のべき乗
+	//   THREAD_GROUP_SIZE : 1グループのスレッド数(1スレッドが比較する1組 = 2要素を受け持つ)
+	// ※ シェーダーの SORT_BLOCK_SIZE / SORT_THREAD_GROUP_SIZE と合わせること
+	//======================================================================================
+	inline constexpr uint32_t PARTICLE_SORT_BLOCK_SIZE = 1024;
+	inline constexpr uint32_t PARTICLE_SORT_THREAD_GROUP_SIZE = PARTICLE_SORT_BLOCK_SIZE / 2;
+
+	/// 並べ替え用のバッファの要素数(要る数以上の2のべき乗。BLOCK_SIZE より小さくはしない)
+	inline uint32_t ToParticleSortSize(uint32_t a_count)
+	{
+		return (std::max)(std::bit_ceil(a_count), PARTICLE_SORT_BLOCK_SIZE);
+	}
+
+	//======================================================================================
+	// 描く一覧の1件 : 描画設定の表の番号と、粒の番号を1つの uint に詰める
+	//
+	//   上位 12bit : 描画設定の表(ParticleDrawRecord)の番号
+	//   下位 20bit : プールの中の粒の番号(1プールの上限 PARTICLE_POOL_HARD_LIMIT = 2^20 に収まる)
+	// ※ HLSL 側 PARTICLE_DRAW_* と合わせること
+	//======================================================================================
+	inline constexpr uint32_t PARTICLE_DRAW_RECORD_SHIFT = 20;
+	inline constexpr uint32_t PARTICLE_DRAW_RECORD_MAX = 1u << (32 - PARTICLE_DRAW_RECORD_SHIFT);
+	static_assert(PARTICLE_POOL_HARD_LIMIT <= (1u << PARTICLE_DRAW_RECORD_SHIFT), "粒の番号が下位ビットに収まらない");
+
+	// 表の番号を一覧の上位ビットから引く印(半透明をまとめて描くとき、ルート定数で渡す)
+	inline constexpr uint32_t PARTICLE_DRAW_RECORD_FROM_LIST = 0xFFFFFFFFu;
+
+	//======================================================================================
 	// プールの準備中に溜めておく発生命令の上限(1アセットあたり)
 	//
 	// 準備中に積まれた命令は、使えるようになるまで持ち越す。
@@ -192,26 +225,28 @@ namespace Engine::Graphics::Particle
 	};
 
 	/// <summary>
-	/// 描画時にアセット単位で送る定数バッファ
-	/// ※ HLSL 側 ParticleDrawData と並びを合わせること
-	/// ※ 定数バッファなので float4 単位で行が変わる。並べ替えるときは両側を必ず揃えること
+	/// 描画設定の表の1件(アセット1つぶん)。全アセットぶんを StructuredBuffer に並べて送る
 	/// </summary>
-	struct ParticleDrawData
+	/// <remarks>
+	/// 半透明の粒はアセットをまたいで1回で描くので、粒ごとに「どのアセットの設定か」を
+	/// 表の番号で引く(描く一覧の上位ビット)。加算の粒はアセットごとに描き、番号はルート定数で渡す。
+	/// ※ HLSL 側 ParticleDrawRecord と並びを合わせること
+	/// ※ 発生源の行列は全アセット共通の EmitterSlotPool の StructuredBuffer から引く
+	/// </remarks>
+	struct ParticleDrawRecord
 	{
-		uint32_t	orientation = 0;		// EParticleOrientation
-		float		stretch = 1.0f;			// 進行方向への伸ばし倍率
-		float		endSizeScale = 1.0f;	// 寿命の終わりでのサイズ倍率(1で変化なし)
-		float		fadeInRatio = 0.0f;		// 頭から不透明になるまでの割合(0でフェードインなし)
+		uint32_t	particleBufferIndex = 0;	// 粒バッファの SRV の番号
+		uint32_t	texIndex = 0;				// 絵の SRV の番号
+		uint32_t	orientation = 0;			// EParticleOrientation
+		float		stretch = 1.0f;				// 進行方向への伸ばし倍率
 
-		float		fadeOutRatio = 0.0f;	// 末尾で透明になるまでの割合(0でフェードアウトなし)
-		float		softDepth = 0.0f;		// 奥の物との境目をぼかす幅(m。0でぼかさない)
-		float		pad0 = 0.0f;
-		float		pad1 = 0.0f;
+		float		endSizeScale = 1.0f;		// 寿命の終わりでのサイズ倍率(1で変化なし)
+		float		fadeInRatio = 0.0f;			// 頭から不透明になるまでの割合(0でフェードインなし)
+		float		fadeOutRatio = 0.0f;		// 末尾で透明になるまでの割合(0でフェードアウトなし)
+		float		softDepth = 0.0f;			// 奥の物との境目をぼかす幅(m。0でぼかさない)
 
 		Math::Color	startColor = { 1.0f, 1.0f, 1.0f, 1.0f };	// 発生時の色
 		Math::Color	endColor = { 1.0f, 1.0f, 1.0f, 1.0f };		// 消える直前の色
-
-		// ※ 発生源の行列は以前ここ(定数バッファ)に 8 個まで載せていた。
-		//    今は全アセット共通の EmitterSlotPool の StructuredBuffer から引く
 	};
+	static_assert(sizeof(ParticleDrawRecord) == 64, "HLSL 側 ParticleDrawRecord と大きさを合わせること");
 }

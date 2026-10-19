@@ -5,6 +5,7 @@
 #include "Engine/Graphics/Particle/ParticleBufferManager.h"
 #include "Engine/Graphics/Particle/GPU/GPUParticlePool/GPUParticlePool.h"
 #include "Engine/Graphics/Particle/GPU/EmitterSlotPool/EmitterSlotPool.h"
+#include "Engine/Graphics/Particle/GPU/ParticleDrawTable/ParticleDrawTable.h"
 
 #include "Engine/Graphics/Frame/RenderContext/RenderContext.h"
 #include "Engine/Graphics/PipelineState/PipelineStateManager/PipelineStateManager.h"
@@ -12,6 +13,31 @@
 #include "Engine/Resource/Data/Shader/IO/ShaderIO.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 #include "Engine/Resource/Data/QuadPolygon/QuadPolygon.h"
+
+namespace
+{
+	//======================================================================================
+	// 描画設定の表の1件をアセットから作る
+	//======================================================================================
+	Engine::Graphics::Particle::ParticleDrawRecord MakeDrawRecord(
+		const Engine::Graphics::Particle::GPUParticlePool& a_pool,
+		const Engine::Resource::ParticlesAsset& a_particle,
+		UINT a_texIndex)
+	{
+		Engine::Graphics::Particle::ParticleDrawRecord _record = {};
+		_record.particleBufferIndex = a_pool.GetParticlePoolSRV().GetIndex();
+		_record.texIndex     = a_texIndex;
+		_record.orientation  = static_cast<uint32_t>(a_particle.GetOrientation());
+		_record.stretch      = a_particle.GetStretch();
+		_record.endSizeScale = a_particle.GetEndSizeScale();
+		_record.fadeInRatio  = a_particle.GetFadeInRatio();
+		_record.fadeOutRatio = a_particle.GetFadeOutRatio();
+		_record.softDepth    = a_particle.GetSoftDepth();
+		_record.startColor   = a_particle.GetStartColor();
+		_record.endColor     = a_particle.GetEndColor();
+		return _record;
+	}
+}
 
 namespace Engine::Graphics
 {
@@ -243,23 +269,60 @@ namespace Engine::Graphics
 		// 描く板ポリのインデックス数。ParticlePass が張るもの(平らな1枚板)と合わせる
 		const UINT _quadIndexCount = a_pGE->RefQuadPolygon() ? a_pGE->RefQuadPolygon()->GetIndexCount() : 0u;
 
+		// 更新するプールか。
+		// 眠っているプール(最後に出してから最大寿命が経った)には生きている粒が無い。
+		// 更新は容量ぶん走るので、回さずに飛ばす。
+		// 引数バッファと生存リストが無ければ、更新シェーダーの書き先が無い
+		auto _isUpdatable = [_pParticleManager](const Handle<Resource::ParticlesAsset>& a_handle, const auto& a_upPool)
+			{
+				if (!a_upPool) return false;
+				if (!_pParticleManager->IsReady(a_handle)) return false;
+				if (!_pParticleManager->IsAwake(a_handle)) return false;
+				return a_upPool->GetDrawArgsResource() && a_upPool->RefAliveList().GetResource();
+			};
+
+		//----------------------------------------------------------------------------------
+		// 描画設定の表を組む
+		//
+		// 更新するプールのうち、アセットと絵が引けるもの(描けるもの)を全部積む。
+		// ParticlePass はアセットごとに、この表の番号で設定を引いて描く
+		//----------------------------------------------------------------------------------
+		auto* _pDrawTable = _pParticleManager->RefDrawTable();
+		if (!_pDrawTable || !m_pResourceManager) return;
+
+		_pDrawTable->BeginBuild();
 		for (auto& [_handle, _pool] : _pParticleManager->GetPoolMap())
 		{
-			if (!_pool) continue;
-			if (!_pParticleManager->IsReady(_handle)) continue;
+			if (!_isUpdatable(_handle, _pool)) continue;
 
-			// 眠っているプール(最後に出してから最大寿命が経った)には生きている粒が無い。
-			// 更新は容量ぶん走るので、回さずに飛ばす
-			if (!_pParticleManager->IsAwake(_handle)) continue;
+			const auto* _pParticle = m_pResourceManager->Get(_handle);
+			if (!_pParticle) continue;
+			const auto* _pTex = m_pResourceManager->Get(_pParticle->GetTexHandle());
+			if (!_pTex) continue;
+
+			_pDrawTable->AddRecord(
+				_handle,
+				MakeDrawRecord(*_pool, *_pParticle, _pTex->GetSRV().GetIndex()),
+				_pParticle->GetBlendMode() == Particle::EParticleBlendMode::AlphaBlend,
+				_pool->GetMaxCapacity(),
+				_pParticle->GetSortOrder(),
+				_pParticle->GetName());
+		}
+		_pDrawTable->Commit(
+			a_pGE->RefRenderDevice()->RefDevice(),
+			a_pGE->RefDescriptorHeapManager(),
+			_pCmd,
+			a_pGE->RefRenderDevice()->GetCurrentFrameIndex());
+
+		for (auto& [_handle, _pool] : _pParticleManager->GetPoolMap())
+		{
+			if (!_isUpdatable(_handle, _pool)) continue;
 
 			// ヒープを先に張る。
 			// ルートシグネチャが CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED のときは、
 			// SetComputeRootSignature より前に SetDescriptorHeaps を済ませておく決まり
 			// (このフレームに発生命令が無いと、上の発生ループで張られていない)
 			a_pCtx->BindBindlessHeaps();
-
-			// 引数バッファと生存リストが無ければ、更新シェーダーの書き先が無い
-			if (!_pool->GetDrawArgsResource() || !_pool->RefAliveList().GetResource()) continue;
 
 			//------------------------------------------------------------------
 			// 間接描画の引数をリセットする
@@ -303,7 +366,8 @@ namespace Engine::Graphics
 			_cbData.deltaTime = MainEngine::Instance().GetDeltaTime();
 
 			// 重力と減衰はアセット単位。プールごとに回しているのでここで引ける
-			if (const auto* _pParticle = m_pResourceManager ? m_pResourceManager->Get(_handle) : nullptr)
+			const auto* _pParticle = m_pResourceManager ? m_pResourceManager->Get(_handle) : nullptr;
+			if (_pParticle)
 			{
 				// GravityPow は「重力をどれだけ受けるか」の倍率。
 				// 1 で普通に落ち、0 で無重力、負にすると浮き上がる(煙向き)

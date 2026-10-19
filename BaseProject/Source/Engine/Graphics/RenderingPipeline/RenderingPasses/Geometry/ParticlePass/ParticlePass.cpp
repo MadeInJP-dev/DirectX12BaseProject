@@ -6,6 +6,7 @@
 #include "Engine/Graphics/Particle/ParticleBufferManager.h"
 #include "Engine/Graphics/Particle/GPU/GPUParticlePool/GPUParticlePool.h"
 #include "Engine/Graphics/Particle/GPU/EmitterSlotPool/EmitterSlotPool.h"
+#include "Engine/Graphics/Particle/GPU/ParticleDrawTable/ParticleDrawTable.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 #include "Engine/Graphics/Frame/SceneView/CameraData.h"
 #include "Engine/Graphics/D3D12/InputLayout.h"
@@ -16,9 +17,9 @@ namespace Engine::Graphics::Pipeline
 	{
 		// 深度は読むだけ : 半透明なので書かず、手前のものには隠される。
 		// 単体で置いた構成も作れるよう任意にしてある。
-		// PS からも SRV で読む(奥の物との境目をぼかす)ので、番号をルートパラメータ 4 へ張らせる。
+		// PS からも SRV で読む(奥の物との境目をぼかす)ので、番号をルートパラメータ 2 へ張らせる。
 		// 繋がっていなければ無効値が届き、シェーダーはぼかしを飛ばす
-		DeclareInput("Depth", EAccessType::DepthRead, EPassSlotType::Texture, false, 4);
+		DeclareInput("Depth", EAccessType::DepthRead, EPassSlotType::Texture, false, 2);
 
 		// 描き足す先 : 「前段が描いた絵の上に重ねる」という順序をこの線で表す
 		DeclareInput("Color", EAccessType::RTV, EPassSlotType::Texture, false);
@@ -133,18 +134,33 @@ namespace Engine::Graphics::Pipeline
 		const UINT _slotSRVIndex = _pSlotPool->GetSRVIndex();
 		if (_slotSRVIndex == (std::numeric_limits<UINT>::max)()) return;
 
+		//----------------------------------------------------------
+		// 描画設定の表(全アセット共通の1本)
+		//
+		// 粒バッファ・絵・色などはアセットごとに違うので、VS はこの表を番号で引く。
+		// シミュレーションがこのフレームに組んで送っていなければ、描くものが無い
+		//----------------------------------------------------------
+		const auto* _pDrawTable = _particleManager->GetDrawTable();
+		if (!_pDrawTable || !_pDrawTable->IsRecordReady()) return;
+		const UINT _recordSRVIndex = _pDrawTable->GetRecordSRVIndex();
+
 		// 間接描画のコマンドシグネチャ(DrawIndexed 1件)。作れていなければ描きようがない
 		ID3D12CommandSignature* _pDrawSignature = _pGE->GetDrawIndexedSignature();
 		if (!_pDrawSignature) return;
 
 		//----------------------------------------------------------
-		// 1アセット分を描く
+		// 描く一覧を1回描く
+		//
+		// a_listSRVIndex : 描く一覧(そのプールの生存リスト)
+		// a_recordIndex  : 表の番号
+		// 引数(インスタンス数など)はシミュレーションが GPU 上に用意したものを読む
+		// (INDIRECT_ARGUMENT 状態にして印を立ててある)。カメラが何台あっても同じ引数を読んで描くだけでよい
 		//----------------------------------------------------------
-		auto _drawPool = [&](
-			const Handle<Resource::ParticlesAsset>& /*a_handle*/,
-			const auto& a_upPool,
-			const Resource::ParticlesAsset& a_particle,
-			const Handle<ID3D12PipelineState>& a_psoHandle)
+		auto _drawList = [&](
+			const Handle<ID3D12PipelineState>& a_psoHandle,
+			UINT a_listSRVIndex,
+			uint32_t a_recordIndex,
+			ID3D12Resource* a_pArgs)
 			{
 				// ヒープとルートシグネチャはグラフが張ってあるので、PSOだけ選び直す
 				_pGE->BindPSO(_pCtx, a_psoHandle);
@@ -153,39 +169,77 @@ namespace Engine::Graphics::Pipeline
 				CameraData _cbCam = _pGE->GetSceneView()->GetCameraData();
 				_pCtx->GraphicsBindRootCBV(0, _cbCam);
 
-				// パーティクルデータと発生源の席と生存リスト(バインドレス : 番号をルート定数で渡す)。
-				// 並びはシェーダーの PassDescriptorIndex0(粒 → 席 → 生存リスト)と同じ。
-				// 生存リストはシミュレーションが NON_PIXEL_SHADER_RESOURCE にしてある(印が立っているプールだけ描く)
+				// 並びはシェーダーの PassDescriptorIndex0(表 → 席 → 描く一覧 → 表の番号)と同じ
 				const UINT _vsIndices[] = {
-					a_upPool->GetParticlePoolSRV().GetIndex(),
+					_recordSRVIndex,
 					_slotSRVIndex,
-					a_upPool->GetAliveListSRV().GetIndex(),
+					a_listSRVIndex,
+					a_recordIndex,
 				};
 				_pCtx->GraphicsBindDescriptorIndices(1, _vsIndices);
 
-				// パーティクル画像
-				auto* _pTex = _resManager.Get(a_particle.GetTexHandle());
-				if (!_pTex) return;
-				const UINT _texIndex = _pTex->GetSRV().GetIndex();
-				_pCtx->GraphicsBindDescriptorIndices(2, std::span<const UINT>(&_texIndex, 1));
+				_pCtx->DrawPolygonIndirect(_pDrawSignature, a_pArgs);
+			};
 
-				// 描画設定バインド : 板ポリの向きと、寿命に沿った見た目の変化はアセット単位
-				Particle::ParticleDrawData _cbDraw = {};
-				_cbDraw.orientation  = static_cast<uint32_t>(a_particle.GetOrientation());
-				_cbDraw.stretch      = a_particle.GetStretch();
-				_cbDraw.endSizeScale = a_particle.GetEndSizeScale();
-				_cbDraw.fadeInRatio  = a_particle.GetFadeInRatio();
-				_cbDraw.fadeOutRatio = a_particle.GetFadeOutRatio();
-				_cbDraw.softDepth    = a_particle.GetSoftDepth();
-				_cbDraw.startColor   = a_particle.GetStartColor();
-				_cbDraw.endColor     = a_particle.GetEndColor();
+		//----------------------------------------------------------
+		// アセットごとに描く
+		//
+		// 同じ重ね方どうしは、アセットの SortOrder が小さい順に描く(後に描いたものが上に乗る)。
+		// プールの一覧は unordered_map なので、並べ替えないとアセットを足しただけで前後が入れ替わる。
+		// SortOrder が同じなら名前順にして、毎回同じ並びになるようにしておく
+		//----------------------------------------------------------
+		auto _drawEachPool = [&](Particle::EParticleBlendMode a_mode, const Handle<ID3D12PipelineState>& a_psoHandle)
+			{
+				struct DrawEntry
+				{
+					Handle<Resource::ParticlesAsset> handle = {};
+					const Particle::GPUParticlePool* pPool = nullptr;
+					const Resource::ParticlesAsset* pParticle = nullptr;
+					uint32_t recordIndex = 0;
+				};
+				std::vector<DrawEntry> _entries;
+				_entries.reserve(_particleManager->GetPoolMap().size());
 
-				_pCtx->GraphicsBindRootCBV(3, _cbDraw);
+				for (auto& [_handle, _upPool] : _particleManager->GetPoolMap())
+				{
+					if (!_upPool) continue;
 
-				// 描画 : 引数(インスタンス数など)はシミュレーションが GPU 上に用意したものを読む。
-				// 引数は INDIRECT_ARGUMENT 状態になっている(シミュレーションが遷移させ、印を立てた)。
-				// カメラが何台あっても、同じ引数を読んで描くだけでよい
-				_pCtx->DrawPolygonIndirect(_pDrawSignature, a_upPool->GetDrawArgsResource());
+					// このフレームの間接描画の引数が用意されているものだけ描く。
+					// 用意していない(シミュレーションが回らなかった)プールの引数は COMMON のままで、
+					// 中身も前のフレームのもの。それを ExecuteIndirect で読むと状態が食い違う。
+					// 準備中・眠っているプールはシミュレーションが回さないので、ここで弾かれる
+					if (!_upPool->IsArgsReady()) continue;
+
+					// 表に載っていない(アセットか絵が引けなかった)ものは描けない
+					const auto _recordIndex = _pDrawTable->FindRecordIndex(_handle);
+					if (!_recordIndex) continue;
+
+					auto* _pParticle = _resManager.Get(_handle);
+					if (!_pParticle) continue;
+					if (_pParticle->GetBlendMode() != a_mode) continue;
+
+					_entries.push_back({ _handle, _upPool.get(), _pParticle, *_recordIndex });
+				}
+
+				// SortOrder の小さい順(同じなら名前順、それも同じならハンドル順)
+				std::stable_sort(_entries.begin(), _entries.end(),
+					[](const DrawEntry& a_l, const DrawEntry& a_r)
+					{
+						if (a_l.pParticle->GetSortOrder() != a_r.pParticle->GetSortOrder())
+						{
+							return a_l.pParticle->GetSortOrder() < a_r.pParticle->GetSortOrder();
+						}
+						if (a_l.pParticle->GetName() != a_r.pParticle->GetName())
+						{
+							return a_l.pParticle->GetName() < a_r.pParticle->GetName();
+						}
+						return a_l.handle.id < a_r.handle.id;
+					});
+
+				for (const auto& _entry : _entries)
+				{
+					_drawList(a_psoHandle, _entry.pPool->GetAliveListSRV().GetIndex(), _entry.recordIndex, _entry.pPool->GetDrawArgsResource());
+				}
 			};
 
 		//----------------------------------------------------------
@@ -195,77 +249,16 @@ namespace Engine::Graphics::Pipeline
 		// 煙(半透明)を先に置いてから炎(加算)を足すと、爆発の芯が煙の手前で光る。
 		// 逆にすると煙が炎を覆い隠してしまう。
 		//
-		// 同じ重ね方どうしは、アセットの SortOrder が小さい順に描く(後に描いたものが上に乗る)。
-		// プールの一覧は unordered_map なので、並べ替えないとアセットを足しただけで前後が入れ替わる。
-		// SortOrder が同じなら名前順にして、毎回同じ並びになるようにしておく。
 		// (粒どうしの前後までは並べ替えていない)
 		//----------------------------------------------------------
-		const Particle::EParticleBlendMode _drawOrder[] =
+		if (m_alphaBlendPSO.IsValid())
 		{
-			Particle::EParticleBlendMode::AlphaBlend,
-			Particle::EParticleBlendMode::Additive,
-		};
+			_drawEachPool(Particle::EParticleBlendMode::AlphaBlend, m_alphaBlendPSO);
+		}
 
-		for (const auto _mode : _drawOrder)
+		if (m_additivePSO.IsValid())
 		{
-			const Handle<ID3D12PipelineState>& _psoHandle = (_mode == Particle::EParticleBlendMode::Additive)
-				? m_additivePSO
-				: m_alphaBlendPSO;
-
-			if (!_psoHandle.IsValid()) continue;
-
-			// この重ね方で描くプールを集める
-			struct DrawEntry
-			{
-				Handle<Resource::ParticlesAsset> handle = {};
-				const Particle::GPUParticlePool* pPool = nullptr;
-				const Resource::ParticlesAsset* pParticle = nullptr;
-			};
-			std::vector<DrawEntry> _entries;
-			_entries.reserve(_particleManager->GetPoolMap().size());
-
-			for (auto& [_handle, _upPool] : _particleManager->GetPoolMap())
-			{
-				if (!_upPool) continue;
-
-				// プールが読み込み済みかチェック
-				if (!_particleManager->IsReady(_handle)) continue;
-
-				// 眠っているプール(最後に出してから最大寿命が経った)には生きている粒が無い。
-				// 描画は容量ぶん走るので、描かずに飛ばす
-				if (!_particleManager->IsAwake(_handle)) continue;
-
-				// このフレームの間接描画の引数が用意されているものだけ描く。
-				// 用意していない(シミュレーションが回らなかった)プールの引数は COMMON のままで、
-				// 中身も前のフレームのもの。それを ExecuteIndirect で読むと状態が食い違う
-				if (!_upPool->IsArgsReady()) continue;
-
-				auto* _pParticle = _resManager.Get(_handle);
-				if (!_pParticle) continue;
-				if (_pParticle->GetBlendMode() != _mode) continue;
-
-				_entries.push_back({ _handle, _upPool.get(), _pParticle });
-			}
-
-			// SortOrder の小さい順(同じなら名前順、それも同じならハンドル順)
-			std::stable_sort(_entries.begin(), _entries.end(),
-				[](const DrawEntry& a_l, const DrawEntry& a_r)
-				{
-					if (a_l.pParticle->GetSortOrder() != a_r.pParticle->GetSortOrder())
-					{
-						return a_l.pParticle->GetSortOrder() < a_r.pParticle->GetSortOrder();
-					}
-					if (a_l.pParticle->GetName() != a_r.pParticle->GetName())
-					{
-						return a_l.pParticle->GetName() < a_r.pParticle->GetName();
-					}
-					return a_l.handle.id < a_r.handle.id;
-				});
-
-			for (const auto& _entry : _entries)
-			{
-				_drawPool(_entry.handle, _entry.pPool, *_entry.pParticle, _psoHandle);
-			}
+			_drawEachPool(Particle::EParticleBlendMode::Additive, m_additivePSO);
 		}
 	}
 

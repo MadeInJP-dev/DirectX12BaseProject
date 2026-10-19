@@ -5,13 +5,31 @@ VSOutput VSMain(VSInput a_input)
 {
 	VSOutput _out;
 
-	// パーティクルデータを取得。
-	// 生きている粒だけが生存リストに詰めて並んでいて、SV_InstanceID はその何番目か
-	// (インスタンス数は Update が数えた生存数。範囲外は読まないよう表の長さで丸める)
-	uint _aliveCount, _aliveStride;
-	g_aliveList.GetDimensions(_aliveCount, _aliveStride);
-	const uint _particleIndex = g_aliveList[min(a_input.instID, _aliveCount - 1)];
-	ParticleData _particleData = g_particleBuffer[_particleIndex];
+	//----------------------------------------------------------------
+	// 描く一覧から粒を引く
+	//
+	// SV_InstanceID は描く一覧の何番目か(インスタンス数は数えた数。範囲外は読まないよう表の長さで丸める)。
+	//   加算   : 一覧はそのプールの生存リスト(粒の番号)。表の番号はルート定数
+	//   半透明 : 一覧は全アセットの粒を遠い順に並べたもの。1件の上位ビットが表の番号、下位ビットが粒の番号
+	// 1回の描画でアセット(= 粒バッファ)が粒ごとに変わるので、番号は NonUniformResourceIndex で引く
+	//----------------------------------------------------------------
+	uint _listCount, _listStride;
+	g_drawList.GetDimensions(_listCount, _listStride);
+	const uint _entry = g_drawList[min(a_input.instID, _listCount - 1)];
+
+	const bool _isFromList = (g_recordIndex == PARTICLE_DRAW_RECORD_FROM_LIST);
+	uint _recordCount, _recordStride;
+	g_drawRecords.GetDimensions(_recordCount, _recordStride);
+	const uint _recordIndex = min(_isFromList ? (_entry >> PARTICLE_DRAW_RECORD_SHIFT) : g_recordIndex, _recordCount - 1);
+	const uint _particleIndex = _isFromList ? (_entry & PARTICLE_DRAW_PARTICLE_MASK) : _entry;
+
+	const ParticleDrawRecord _draw = g_drawRecords[_recordIndex];
+	StructuredBuffer<ParticleData> _particles = ResourceDescriptorHeap[NonUniformResourceIndex(_draw.particleBufferIndex)];
+	ParticleData _particleData = _particles[_particleIndex];
+
+	// PS が使うもの(絵とぼかす幅)は板ごとに渡す
+	_out.texIndex = _draw.texIndex;
+	_out.softDepth = _draw.softDepth;
 
 	// パーティクルの寿命判定
 	if (_particleData.life <= 0.0f)
@@ -60,12 +78,12 @@ VSOutput VSMain(VSInput a_input)
 	float _stretch = 1.0f;
 	bool _isRotate = false;		// 面の中で回してよい向きか(進行方向に合わせる向きでは回さない)
 
-	if (g_draw.orientation == PARTICLE_ORIENT_BILLBOARD)
+	if (_draw.orientation == PARTICLE_ORIENT_BILLBOARD)
 	{
 		_isRotate = true;
 	}
-	else if (g_draw.orientation == PARTICLE_ORIENT_EMITTER_AXIS ||
-		g_draw.orientation == PARTICLE_ORIENT_EMITTER_FACING)
+	else if (_draw.orientation == PARTICLE_ORIENT_EMITTER_AXIS ||
+		_draw.orientation == PARTICLE_ORIENT_EMITTER_FACING)
 	{
 		//------------------------------------------------------------
 		// 発生源に合わせる
@@ -83,10 +101,10 @@ VSOutput VSMain(VSInput a_input)
 		const float3 _emitZ = normalize(mul(float4(ParticleQuatRotate(_q, float3(0.0f, 0.0f, 1.0f)), 0.0f), _emitterMat).xyz);
 
 		_axisX = _emitX;
-		if (g_draw.orientation == PARTICLE_ORIENT_EMITTER_AXIS)
+		if (_draw.orientation == PARTICLE_ORIENT_EMITTER_AXIS)
 		{
 			_axisY = _emitZ;
-			_stretch = g_draw.stretch;
+			_stretch = _draw.stretch;
 		}
 		else
 		{
@@ -104,7 +122,7 @@ VSOutput VSMain(VSInput a_input)
 		{
 			float3 _dir = _velocity * rsqrt(_speedSq);
 
-			if (g_draw.orientation == PARTICLE_ORIENT_VELOCITY_BILLBOARD)
+			if (_draw.orientation == PARTICLE_ORIENT_VELOCITY_BILLBOARD)
 			{
 				// 進行方向を画面へ射影して、その向きへ板を回す。
 				// 常にカメラ正面を向いたままなので、真横から見ても板が消えない
@@ -114,7 +132,7 @@ VSOutput VSMain(VSInput a_input)
 					_screenDir = normalize(_screenDir);
 					_axisY = (_camRight * _screenDir.x) + (_camUp * _screenDir.y);
 					_axisX = (_camRight * _screenDir.y) - (_camUp * _screenDir.x);
-					_stretch = g_draw.stretch;
+					_stretch = _draw.stretch;
 				}
 			}
 			else
@@ -128,7 +146,7 @@ VSOutput VSMain(VSInput a_input)
 				{
 					_axisY = _dir;
 					_axisX = normalize(_side);
-					_stretch = g_draw.stretch;
+					_stretch = _draw.stretch;
 				}
 			}
 		}
@@ -158,7 +176,7 @@ VSOutput VSMain(VSInput a_input)
 
 	// 寿命に沿ったサイズ変化。
 	// 煙は膨らみ(>1)、火花は縮む(<1)。1 なら変化しない
-	float _sizeScale = lerp(1.0f, g_draw.endSizeScale, _lifeT);
+	float _sizeScale = lerp(1.0f, _draw.endSizeScale, _lifeT);
 
 	// ビルボード計算
 	float3 _localPos = a_input.pos.xyz * (_particleData.size * _sizeScale);
@@ -187,18 +205,18 @@ VSOutput VSMain(VSInput a_input)
 	// 爆発は「白く光る → オレンジ → くすんだ煙」のように色が変わる。
 	// RGB は 1 を超えてよく、超えたぶんがブルームのしきい値を抜けて光って見える
 	// ---------------------------------------------------------------
-	float4 _color = lerp(g_draw.startColor, g_draw.endColor, _lifeT);
+	float4 _color = lerp(_draw.startColor, _draw.endColor, _lifeT);
 
 	// 出だしと終わりのフェード。
 	// 割合(0〜1)で指定するので、粒ごとに寿命が違っても同じ見え方になる
 	float _alpha = _color.a;
-	if (g_draw.fadeInRatio > 0.0f)
+	if (_draw.fadeInRatio > 0.0f)
 	{
-		_alpha *= saturate(_lifeT / g_draw.fadeInRatio);
+		_alpha *= saturate(_lifeT / _draw.fadeInRatio);
 	}
-	if (g_draw.fadeOutRatio > 0.0f)
+	if (_draw.fadeOutRatio > 0.0f)
 	{
-		_alpha *= saturate((1.0f - _lifeT) / g_draw.fadeOutRatio);
+		_alpha *= saturate((1.0f - _lifeT) / _draw.fadeOutRatio);
 	}
 
 	_out.color = float4(_color.rgb, _alpha);

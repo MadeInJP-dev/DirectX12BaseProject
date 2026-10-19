@@ -8,17 +8,18 @@
 // ルートパラメーター
 //
 //   0 : CBV(b0)         カメラ
-//   1 : SRVの番号     粒バッファ(更新パスの出力をそのまま読む) + 発生源の席 + 生存リスト
-//   2 : SRVの番号(t1) 絵
-//   3 : CBV(b1)         アセット単位の描画設定(PS もぼかす幅を読む)
-//   4 : SRVの番号     深度(グラフが張る。奥の物との境目をぼかすのに使う)
+//   1 : SRVの番号     描画設定の表 + 発生源の席 + 描く一覧、と表の番号
+//   2 : SRVの番号     深度(グラフが張る。奥の物との境目をぼかすのに使う)
+//
+// 粒バッファと絵はアセットごとに違うので、描画設定の表(ParticleDrawRecord)から番号を引く。
+//   加算   : アセットごとに描く。描く一覧 = そのプールの生存リスト(粒の番号)、表の番号はルート定数
+//   半透明 : 全アセットの粒を遠い順に並べた一覧を1回で描く。一覧の1件の上位ビットが表の番号
+//            (ルート定数は PARTICLE_DRAW_RECORD_FROM_LIST)
 //==========================================================================================
 #define PARTICLE_ROOT_SIG \
 RS_FLAGS","\
 "CBV(b0, visibility = SHADER_VISIBILITY_ALL),"\
-"RootConstants(num32BitConstants=3, b100, visibility = SHADER_VISIBILITY_VERTEX),"\
-"RootConstants(num32BitConstants=1, b101, visibility = SHADER_VISIBILITY_PIXEL),"\
-"CBV(b1, visibility = SHADER_VISIBILITY_ALL),"\
+"RootConstants(num32BitConstants=4, b100, visibility = SHADER_VISIBILITY_VERTEX),"\
 "RootConstants(num32BitConstants=1, b102, visibility = SHADER_VISIBILITY_PIXEL),"\
 RS_STATIC_SAMPLER
 
@@ -27,33 +28,21 @@ cbuffer CBCamera : register(b0)
 	CameraData g_camera;
 }
 
-cbuffer CBParticleDraw : register(b1)
-{
-	ParticleDrawData g_draw;
-}
-
 // SRVの番号(ResourceDescriptorHeap の添字)。ルート定数で届く
 cbuffer PassDescriptorIndex0 : register(b100)
 {
-	uint g_particleBufferIndex;
+	uint g_drawRecordIndex;			// 描画設定の表(全アセット共通の1本)
 	uint g_emitterSlotIndex;		// 発生源の席(全アセット共通の1本)
-	uint g_aliveListIndex;			// 生きている粒の番号の一覧(SV_InstanceID で引く)
+	uint g_drawListIndex;			// 描く一覧(SV_InstanceID で引く)
+	uint g_recordIndex;				// 表の番号。PARTICLE_DRAW_RECORD_FROM_LIST なら一覧の上位ビットから引く
 }
 
-StructuredBuffer<ParticleData> Get_particleBuffer() { StructuredBuffer<ParticleData> _r = ResourceDescriptorHeap[g_particleBufferIndex]; return _r; }
-#define g_particleBuffer Get_particleBuffer()
+StructuredBuffer<ParticleDrawRecord> Get_drawRecords() { StructuredBuffer<ParticleDrawRecord> _r = ResourceDescriptorHeap[g_drawRecordIndex]; return _r; }
+#define g_drawRecords Get_drawRecords()
 StructuredBuffer<EmitterTransform> Get_emitterSlots() { StructuredBuffer<EmitterTransform> _r = ResourceDescriptorHeap[g_emitterSlotIndex]; return _r; }
 #define g_emitterSlots Get_emitterSlots()
-StructuredBuffer<uint> Get_aliveList() { StructuredBuffer<uint> _r = ResourceDescriptorHeap[g_aliveListIndex]; return _r; }
-#define g_aliveList Get_aliveList()
-// SRVの番号(ResourceDescriptorHeap の添字)。ルート定数で届く
-cbuffer PassDescriptorIndex1 : register(b101)
-{
-	uint g_mainTexIndex;
-}
-
-Texture2D Get_mainTex() { Texture2D _r = ResourceDescriptorHeap[g_mainTexIndex]; return _r; }
-#define g_mainTex Get_mainTex()
+StructuredBuffer<uint> Get_drawList() { StructuredBuffer<uint> _r = ResourceDescriptorHeap[g_drawListIndex]; return _r; }
+#define g_drawList Get_drawList()
 
 // 深度の SRV の番号(グラフが張る)。深度が繋がっていないパイプラインでは無効値が来る
 cbuffer PassDescriptorIndex2 : register(b102)
@@ -90,4 +79,9 @@ struct VSOutput
 
 	// 板のその点のビュー空間の奥行き(m)。奥の物との境目をぼかすのに使う
 	float viewDepth : TEXCOORD2;
+
+	// 描画設定の表から引いた、PS が使うもの。
+	// 半透明は1回の描画にいろいろなアセットの粒が混ざるので、板ごとに持たせる
+	nointerpolation uint texIndex : TEXCOORD3;		// 絵の SRV の番号
+	nointerpolation float softDepth : TEXCOORD4;	// 奥の物との境目をぼかす幅(m。0でぼかさない)
 };

@@ -42,22 +42,32 @@ struct ParticleData
 	float4 orientation;
 };
 
-// アセット単位の描画設定。
-// 定数バッファなので float4 単位で行が変わる。並べ替えるときはCPU側も必ず揃えること
-struct ParticleDrawData
+// 描画設定の表の1件(アセット1つぶん)。全アセットぶんが StructuredBuffer に並ぶ。
+// 半透明の粒はアセットをまたいで1回で描くので、粒ごとに表の番号で引く
+// ※ CPU 側 Engine::Particle::ParticleDrawRecord と並びを合わせること
+struct ParticleDrawRecord
 {
-	uint	orientation;	// 上の PARTICLE_ORIENT_*
-	float	stretch;		// 進行方向への伸ばし倍率
-	float	endSizeScale;	// 寿命の終わりでのサイズ倍率(1で変化なし)
-	float	fadeInRatio;	// 寿命のうち頭で透明→不透明にする割合(0でなし)
+	uint	particleBufferIndex;	// 粒バッファの SRV の番号
+	uint	texIndex;				// 絵の SRV の番号
+	uint	orientation;			// 上の PARTICLE_ORIENT_*
+	float	stretch;				// 進行方向への伸ばし倍率
 
-	float	fadeOutRatio;	// 寿命のうち末尾で不透明→透明にする割合(0でなし)
-	float	softDepth;		// 奥の物との境目をぼかす幅(m。0でぼかさない)
-	float2	pad;
+	float	endSizeScale;			// 寿命の終わりでのサイズ倍率(1で変化なし)
+	float	fadeInRatio;			// 寿命のうち頭で透明→不透明にする割合(0でなし)
+	float	fadeOutRatio;			// 寿命のうち末尾で不透明→透明にする割合(0でなし)
+	float	softDepth;				// 奥の物との境目をぼかす幅(m。0でぼかさない)
 
-	float4	startColor;		// RGBは1を超えてよい(超えたぶんにブルームが乗る)
+	float4	startColor;				// RGBは1を超えてよい(超えたぶんにブルームが乗る)
 	float4	endColor;
 };
+
+// 描く一覧の1件 : 上位 12bit が描画設定の表の番号、下位 20bit が粒の番号
+// ※ CPU 側 PARTICLE_DRAW_RECORD_SHIFT と合わせること
+#define PARTICLE_DRAW_RECORD_SHIFT		20
+#define PARTICLE_DRAW_PARTICLE_MASK		((1u << PARTICLE_DRAW_RECORD_SHIFT) - 1u)
+
+// 表の番号を一覧から引く印(半透明をまとめて描くとき)
+#define PARTICLE_DRAW_RECORD_FROM_LIST	0xFFFFFFFFu
 
 // 発生源の席1つぶん。全アセット共通の StructuredBuffer に並ぶ。
 // ローカル空間で回している粒は、描画時にここの行列でワールドへ戻す。
