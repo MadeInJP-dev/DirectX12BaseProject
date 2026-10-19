@@ -392,6 +392,21 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Character\DeathMotionSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Boid\BoidDeathLeaveSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Effect\OneShotEffectSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Editor\CompEditHelper\CompEditHelper.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1523,6 +1538,7 @@
     <ClCompile Include="Source\Engine\Option\ProjectOptions\InputOption.cpp" />
     <ClCompile Include="Source\Engine\Option\ProjectOptions\CursorOption.cpp" />
     <ClCompile Include="Source\Engine\Scene\SceneAudio\SceneAudio.cpp" />
+    <ClCompile Include="Source\Engine\Scene\ScenePhysics\ScenePhysics.cpp" />
     <ClCompile Include="Source\Engine\Graphics\DebugDraw\DebugDraw.cpp" />
     <ClCompile Include="Source\Engine\Graphics\Profile\GraphicsProfiler.cpp" />
     <ClCompile Include="Source\Application\Game\MouseCursor\MouseCursor.cpp">
@@ -1820,6 +1836,12 @@
     <ClInclude Include="Source\Application\Utility\EffectPrefabSpawnHelper.h" />
     <ClInclude Include="Source\Application\Systems\Effect\DebrisEmitterSystem.h" />
     <ClInclude Include="Source\Application\Systems\Effect\BallisticSystem.h" />
+    <ClInclude Include="Source\Application\Components\Character\DeathMotionComponent.h" />
+    <ClInclude Include="Source\Application\Components\Character\DeathSmokeTag.h" />
+    <ClInclude Include="Source\Application\ECS\Event\EffectEvent\EffectEvent.h" />
+    <ClInclude Include="Source\Application\Systems\Character\DeathMotionSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Boid\BoidDeathLeaveSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Effect\OneShotEffectSystem.h" />
     <ClInclude Include="..\Library\Include\imgui-docking\imgui.h" />
     <ClInclude Include="..\Library\Include\imgui-docking\imgui_impl_dx12.h" />
     <ClInclude Include="..\Library\Include\imgui-docking\imgui_impl_win32.h" />
@@ -2337,6 +2359,7 @@
     <ClInclude Include="Source\Engine\Option\ProjectOptions\InputOption.h" />
     <ClInclude Include="Source\Engine\Option\ProjectOptions\CursorOption.h" />
     <ClInclude Include="Source\Engine\Scene\SceneAudio\SceneAudio.h" />
+    <ClInclude Include="Source\Engine\Scene\ScenePhysics\ScenePhysics.h" />
     <ClInclude Include="Source\Engine\Audio\SoundGroup.h" />
     <ClInclude Include="Source\Engine\Graphics\DebugDraw\DebugDraw.h" />
     <ClInclude Include="Source\Engine\Graphics\Profile\GraphicsProfiler.h" />

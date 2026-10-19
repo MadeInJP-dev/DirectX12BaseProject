@@ -19,7 +19,7 @@ namespace App::System
 	// BallisticComponent を持つもの(飛び散る岩の破片など)を放物線で飛ばし、
 	// 地面に当たったら跳ね返して、勢いが尽きたら止める。
 	//
-	//   速度 += 重力 × dt、位置 += 速度 × dt
+	//   速度 += 重力(シーンの設定) × dt、位置 += 速度 × dt
 	//   進む向きへ「移動量 + 半径」のレイを打ち、地面(上向きの面)に当たったら
 	//     面に沿う速さ × (1 - friction)、面に向かう速さ × -restitution
 	//   跳ね返る速さが restSpeed を下回ったら、その場で止める
@@ -33,8 +33,6 @@ namespace App::System
 	//==============================================================================
 	namespace
 	{
-		constexpr float GRAVITY = 9.81f;
-
 		// これより寝ている面は地面として扱わない(壁に当たったら跳ね返すだけで止めない)
 		constexpr float GROUND_NORMAL_Y = 0.3f;
 	}
@@ -59,6 +57,8 @@ namespace App::System
 				const auto& _physicsWorld = _world.GetResource<Engine::Physics::PhysicsWorld>();
 				const float _dt = a_ctx.dt;
 				const uint32_t _queryMask = static_cast<uint32_t>(Component::ECollisionLayer::StaticObject);
+				// 重力はシーンの設定(ScenePhysics)が物理空間へ流し込んだもの
+				const Math::Vector3 _gravity = _physicsWorld.GetGravity();
 
 				// 寿命とエフェクトを持つかはチャンク(同じ組み合わせ)で揃っているので、先頭で1回だけ見る
 				const Engine::ECS::Entity _first = a_pChunk->entityData[0];
@@ -82,7 +82,7 @@ namespace App::System
 					//------------------------------------------------------
 					if (!_ballistic.isResting && _dt > 0.0f)
 					{
-						_ballistic.velocity.y -= GRAVITY * _ballistic.gravityScale * _dt;
+						_ballistic.velocity += _gravity * _ballistic.gravityScale * _dt;
 
 						const Math::Vector3 _prevPos = _trans.pos;
 						const Math::Vector3 _move    = _ballistic.velocity * _dt;

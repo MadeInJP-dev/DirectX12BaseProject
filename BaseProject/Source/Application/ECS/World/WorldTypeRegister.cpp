@@ -100,6 +100,8 @@
 #include "Application/Components/Boid/WarmGroundEffectComponent.h"
 #include "Application/Components/Effect/DebrisEmitterComponent.h"
 #include "Application/Components/Effect/BallisticComponent.h"
+#include "Application/Components/Character/DeathMotionComponent.h"
+#include "Application/Components/Character/DeathSmokeTag.h"
 #include "Application/Components/Boid/BoidContactDamageComponent.h"
 #include "Application/Components/Boid/SwarmMissileComponent.h"
 #include "Application/Components/Combat/DefenseRatioComponent.h"
@@ -236,6 +238,10 @@
 #include "Application/Systems/Boid/BoidGroundEffectSystem.h"
 #include "Application/Systems/Effect/DebrisEmitterSystem.h"
 #include "Application/Systems/Effect/BallisticSystem.h"
+#include "Application/Systems/Character/DeathMotionSystem.h"
+#include "Application/Systems/Boid/BoidDeathLeaveSystem.h"
+#include "Application/Systems/Effect/OneShotEffectSystem.h"
+#include "Application/ECS/Event/EffectEvent/EffectEvent.h"
 #include "Application/Systems/Boid/BoidContactDamageSystem.h"
 #include "Application/Systems/Boid/SwarmMissileSystem.h"
 #include "Application/Systems/Boid/SwarmBurstSystem.h"
@@ -418,6 +424,9 @@ namespace App::ECS
 		// エフェクトプレハブ : 破片を撒く / 撒かれた破片を放物線で飛ばして着地させる
 		a_world.RegisterComponent<Component::DebrisEmitterComponent>("DebrisEmitterComponent");
 		a_world.RegisterComponent<Component::BallisticComponent>("BallisticComponent");
+		// 死んだら爆発 → 黒くなって回りながら落下 → 地面で爆発 / 落下中の煙の印(DeathMotionSystem が付ける)
+		a_world.RegisterComponent<Component::DeathMotionComponent>("DeathMotionComponent");
+		a_world.RegisterComponent<Component::DeathSmokeTag>("DeathSmokeTag");
 		// ワームの体(ボイド)の体当たり。持つのは次に判定するまでの待ち時間だけ
 		a_world.RegisterComponent<Component::BoidContactDamageComponent>("BoidContactDamageComponent");
 		// 足元の接地判定。書くのは RayCollisionSystem(StateMachineComponent から分けた)
@@ -633,6 +642,12 @@ namespace App::ECS
 		a_world.RegisterSystem<System::DebrisEmitterSystem>();
 		// 撒かれた破片を放物線で飛ばし、地面で跳ねて止める
 		a_world.RegisterSystem<System::BallisticSystem>();
+		// 死亡モーション : 死んだら落とし、地面で止めて時間で消す(爆発は単発エフェクトのイベントへ積む)
+		a_world.RegisterSystem<System::DeathMotionSystem>();
+		// 死亡モーションへ移るボイドを群れから外す(操舵・追従・ウェーブ・体当たりを外す)
+		a_world.RegisterSystem<System::BoidDeathLeaveSystem>();
+		// 単発エフェクトのイベントをまとめて出す。積む側より後ろで回るよう、登録は後ろにしておく
+		a_world.RegisterSystem<System::OneShotEffectSystem>();
 		// ワームの体(ボイド)がプレイヤーに触れたらダメージを積む(減らすのは HealthSystem)
 		a_world.RegisterSystem<System::BoidContactDamageSystem>();
 		// ワームの体(ボイド)を切り離して自爆ミサイルにする(切り離す小隊長を決めるのはワームボスの巻き付き攻撃)
@@ -684,6 +699,8 @@ namespace App::ECS
 		a_world.AddResource<InstanceResource::BoundaryResource>();
 		// 画面のラジアルブラーの震え(ボスの咆哮が書き、RadialBlurShakeSystem が読む)
 		a_world.AddResource<InstanceResource::RadialBlurShakeResource>();
+		// 単発エフェクトのイベント(DeathMotionSystem などが積み、OneShotEffectSystem が出す)
+		a_world.AddResource<ECS::OneShotEffectEventResource>();
 
 		// 初期化
 		a_world.RefResource<Engine::Pool::RangePool<Engine::Resource::BoneMatrix>>().Init(10000);
@@ -699,6 +716,7 @@ namespace App::ECS
 		// 1フレーム分のヒット数はたかが知れているので少なめに確保
 		a_world.RefResource<InstanceResource::HitEventResource>().Reserve(256);
 		a_world.RefResource<InstanceResource::DeathEventResource>().Reserve(64);
+		a_world.RefResource<ECS::OneShotEffectEventResource>().Reserve(64);
 
 		// 同時に走るウェーブは数本(SwarmBossController の Max Wave)
 		a_world.RefResource<InstanceResource::WormWaveResource>().Reserve(16);

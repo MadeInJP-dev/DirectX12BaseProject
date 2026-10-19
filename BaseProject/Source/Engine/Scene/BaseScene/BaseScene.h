@@ -2,6 +2,7 @@
 
 #include "../SceneAmbient/SceneAmbient.h"
 #include "../SceneAudio/SceneAudio.h"
+#include "../ScenePhysics/ScenePhysics.h"
 #include "../SceneConfig/SceneConfig.h"
 
 namespace Engine
@@ -111,6 +112,10 @@ namespace Engine::Scene
 		SceneAudio& RefAudio() { return m_audio; }
 		const SceneAudio& GetAudio() const { return m_audio; }
 
+		// シーンの物理の設定(重力) : シーンと一緒に保存され、ワールドの PhysicsWorld へ流し込まれる
+		ScenePhysics& RefPhysics() { return m_physics; }
+		const ScenePhysics& GetPhysics() const { return m_physics; }
+
 		// シーンの設定(先読み一覧・計測フラグ) : シーンファイルとは別のファイルに保存される
 		SceneConfig& RefConfig() { return m_config; }
 		const SceneConfig& GetConfig() const { return m_config; }
@@ -153,6 +158,7 @@ namespace Engine::Scene
 		Core::GUID m_guid;						// 自身のデータの所在
 		SceneAmbient m_ambient = {};			// シーンの環境設定 : シーンと一緒に保存される
 		SceneAudio m_audio;						// シーンの音量 : シーンと一緒に保存される
+		ScenePhysics m_physics;					// シーンの物理の設定(重力) : シーンと一緒に保存される
 		SceneConfig m_config = {};				// シーンの設定 : 開始時に読み込んでおきたいアセット(先読み一覧)と、その計測フラグ
 
 		// ゲームの本体 : ワールド空間上にあるものすべてはこちらで管理

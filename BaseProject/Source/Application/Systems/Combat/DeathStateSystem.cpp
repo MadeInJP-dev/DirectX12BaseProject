@@ -7,6 +7,7 @@
 #include "Application/Components/Movement/BoostIntentComponent.h"
 #include "Application/Components/Movement/MoveIntentComponent.h"
 #include "Application/Components/Combat/ActionIntentComponent.h"
+#include "Application/Components/Character/DeathMotionComponent.h"
 
 namespace App::System
 {
@@ -190,7 +191,10 @@ namespace App::System
 					// 返してから消すため、直接消さずに解放予約を通す
 					a_ctx.pWorld->ReserveReleaseEntity(a_pChunk->entityData[_i]);
 				}
-			}
+			},
+			// 死亡モーションを持つものは、落ちて地面についてから DeathMotionSystem が消す
+			// (releaseDelay で消すと、落ちている途中で消えてしまう)
+			Engine::ECS::Exclude<Component::DeathMotionComponent>()
 		)
 		// 順序 : 体力(HealthComponent)の書き手同士。死亡状態にする HealthSystem の後で時間を進める
 		// (以前は登録順で後ろに並ぶ想定だったが、実際には段の都合で先に走っていた)

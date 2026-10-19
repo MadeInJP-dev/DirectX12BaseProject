@@ -358,9 +358,15 @@ namespace Engine::Physics
 			*m_upObjectVsBroadPhaseLayerFilter,
 			*m_upObjectLayerPairFilter);
 
-		m_upPhysicsSystem->SetGravity(Internal::ToJolt(a_desc.gravity));
+		SetGravity(a_desc.gravity);
 
 		m_pEngine->OnWorldCreated();
+	}
+
+	void PhysicsWorld::SetGravity(const Math::Vector3& a_gravity)
+	{
+		m_gravity = a_gravity;
+		if (m_upPhysicsSystem) m_upPhysicsSystem->SetGravity(Internal::ToJolt(a_gravity));
 	}
 
 	PhysicsWorld::~PhysicsWorld()

@@ -22,7 +22,7 @@ namespace App::Component
 	struct BallisticComponent
 	{
 		// ---- 設定(保存) ----
-		float gravityScale  = 1.0f;		// 重力の倍率(9.81 m/秒^2 に掛ける)
+		float gravityScale  = 1.0f;		// 重力の倍率(シーンの重力 ScenePhysics に掛ける)
 		float restitution   = 0.35f;	// 跳ね返りの強さ(0で跳ねない / 1で同じ速さで跳ね返る)
 		float friction      = 0.4f;		// 着地のたびに地面に沿う速さを落とす割合(0〜1)
 		float restSpeed     = 3.0f;		// 跳ね返る速さがこれを下回ったら止まる(m/秒)

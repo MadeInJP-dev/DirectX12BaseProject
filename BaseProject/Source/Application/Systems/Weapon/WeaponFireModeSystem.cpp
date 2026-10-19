@@ -9,15 +9,20 @@
 #include "Application/Components/Weapon/WeaponConfig/SemiAutoFireComponent.h"
 #include "Application/Components/Weapon/WeaponConfig/WeaponOverHeatComponent.h"
 #include "Application/Components/Weapon/WeaponConfig/WeaponReloadComponent.h"
+#include "Application/Components/Combat/HealthComponent.h"
+#include "Application/Components/Transform/HierarchyComponent.h"
 
 namespace App::System
 {
 	namespace
 	{
 		//==================================================================================
-		// 熱と弾倉による「撃てる / 撃てない」
+		// 熱と弾倉と持ち主の生死による「撃てる / 撃てない」
 		//
-		// どちらも持っていなければ常に撃てる。
+		// どれも持っていなければ常に撃てる。
+		// 持ち主(自分か親)が死んでいる間は撃たない。途中のバーストもここで打ち切る。
+		// 死んだときの攻撃入力は DeathStateSystem が PreUpdate 帯で消しているが、
+		// 引き金を配る側との前後が帯の中の並びしだいなので、撃つ側でも見ておく
 		// 撃ち方のシステムから、自分のエンティティの分だけを RefData で触る
 		// (チャンクを分けて回しても、同じエンティティを2つのワーカーが触ることはない)
 		//==================================================================================
@@ -25,10 +30,12 @@ namespace App::System
 		{
 			Component::WeaponOverHeatComponent* pHeat = nullptr;
 			Component::WeaponReloadComponent* pReload = nullptr;
+			bool isOwnerDead = false;
 
 			// 今撃てるか
 			bool CanShoot() const
 			{
+				if (isOwnerDead) return false;
 				if (pHeat && pHeat->runtimeData.isOverheat) return false;
 				if (pReload && (pReload->runtimeData.isReload || pReload->GetRemaining() == 0)) return false;
 				return true;
@@ -73,6 +80,7 @@ namespace App::System
 			FireLimit _limit = {};
 			_limit.pHeat = a_world.RefData<Component::WeaponOverHeatComponent>(a_entity);
 			_limit.pReload = a_world.RefData<Component::WeaponReloadComponent>(a_entity);
+			_limit.isOwnerDead = Component::IsDeadSelfOrOwner(a_world, a_entity);
 			return _limit;
 		}
 	}
@@ -120,7 +128,9 @@ namespace App::System
 		)
 		// 順序 : 熱と弾倉の進行(冷却・リロード)を済ませてから判定し、撃ったぶんを書き足す
 		.After({ "WeaponOverHeatSystem", "WeaponReloadSystem" })
-		.Writes<Component::WeaponOverHeatComponent, Component::WeaponReloadComponent>();
+		.Writes<Component::WeaponOverHeatComponent, Component::WeaponReloadComponent>()
+		// 絞り込みに使わない読み : 持ち主の生死(IsDeadSelfOrOwner。死亡状態を書くのは PostUpdate 帯)
+		.Reads<Component::HealthComponent, Component::HierarchyComponent>();
 
 		//==================================================================================
 		// バースト : 一度始まったら引き金を離しても撃ち切り、撃ち切ったら waitTime あけて次へ
@@ -178,7 +188,9 @@ namespace App::System
 		)
 		// 順序 : 熱と弾倉の書き手同士。撃ち方どうしは対象が重ならないが、並びを決めておく
 		.After({ "WeaponOverHeatSystem", "WeaponReloadSystem", "AutoFireSystem" })
-		.Writes<Component::WeaponOverHeatComponent, Component::WeaponReloadComponent>();
+		.Writes<Component::WeaponOverHeatComponent, Component::WeaponReloadComponent>()
+		// 絞り込みに使わない読み : 持ち主の生死(IsDeadSelfOrOwner。死亡状態を書くのは PostUpdate 帯)
+		.Reads<Component::HealthComponent, Component::HierarchyComponent>();
 
 		//==================================================================================
 		// 単発 : 引いた瞬間に1発。撃ってから waitTime たつまでは引き直しても撃たない
@@ -223,6 +235,8 @@ namespace App::System
 			}
 		)
 		.After({ "WeaponOverHeatSystem", "WeaponReloadSystem", "BurstFireSystem" })
-		.Writes<Component::WeaponOverHeatComponent, Component::WeaponReloadComponent>();
+		.Writes<Component::WeaponOverHeatComponent, Component::WeaponReloadComponent>()
+		// 絞り込みに使わない読み : 持ち主の生死(IsDeadSelfOrOwner。死亡状態を書くのは PostUpdate 帯)
+		.Reads<Component::HealthComponent, Component::HierarchyComponent>();
 	}
 }

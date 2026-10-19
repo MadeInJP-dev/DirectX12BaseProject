@@ -577,6 +577,18 @@
     <Filter Include="Source\Application\ECS\World">
       <UniqueIdentifier>{3dc837d5-152d-5fdf-8667-24d048cb9698}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Components\Character">
+      <UniqueIdentifier>{bfc73737-d2ae-4d1b-a494-9eafaa7c8a4f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Systems\Character">
+      <UniqueIdentifier>{0508b379-5732-4c0d-84b7-b69f02ad0981}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\ECS\Event">
+      <UniqueIdentifier>{c7a0dd29-433d-48ae-bd3e-d74a2e6acb3b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\ECS\Event\EffectEvent">
+      <UniqueIdentifier>{1b13c069-5cb5-48ef-819c-ccef92313762}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Application\Editor">
       <UniqueIdentifier>{8ec41a0e-27a6-4a7b-95cf-00406d76aae9}</UniqueIdentifier>
     </Filter>
@@ -1174,6 +1186,9 @@
     <Filter Include="Source\Engine\Scene\SceneAudio">
       <UniqueIdentifier>{6c4be2db-809d-4550-9527-55293d1aede6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Scene\ScenePhysics">
+      <UniqueIdentifier>{8d52e391-1aed-49b3-aed2-735a1f039ca7}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Scene\SceneConfig">
       <UniqueIdentifier>{5b79a51f-d67a-4fe0-963d-d3d5d7774fe3}</UniqueIdentifier>
     </Filter>
@@ -1501,6 +1516,15 @@
       <Filter>Source\Application\Systems\Effect</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Effect\BallisticSystem.cpp">
+      <Filter>Source\Application\Systems\Effect</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Character\DeathMotionSystem.cpp">
+      <Filter>Source\Application\Systems\Character</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Boid\BoidDeathLeaveSystem.cpp">
+      <Filter>Source\Application\Systems\Boid</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Effect\OneShotEffectSystem.cpp">
       <Filter>Source\Application\Systems\Effect</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\RenderingPipelineEdit\CompositeNode\BuiltinCompositeNodes.cpp">
@@ -2319,6 +2343,9 @@
     <ClCompile Include="Source\Engine\Scene\SceneAudio\SceneAudio.cpp">
       <Filter>Source\Engine\Scene\SceneAudio</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Scene\ScenePhysics\ScenePhysics.cpp">
+      <Filter>Source\Engine\Scene\ScenePhysics</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Option\ProjectOptions\CursorOption.cpp">
       <Filter>Source\Engine\Option\ProjectOptions</Filter>
     </ClCompile>
@@ -2919,6 +2946,24 @@
       <Filter>Source\Application\Systems\Effect</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Effect\BallisticSystem.h">
+      <Filter>Source\Application\Systems\Effect</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Components\Character\DeathMotionComponent.h">
+      <Filter>Source\Application\Components\Character</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Components\Character\DeathSmokeTag.h">
+      <Filter>Source\Application\Components\Character</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\ECS\Event\EffectEvent\EffectEvent.h">
+      <Filter>Source\Application\ECS\Event\EffectEvent</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Character\DeathMotionSystem.h">
+      <Filter>Source\Application\Systems\Character</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Boid\BoidDeathLeaveSystem.h">
+      <Filter>Source\Application\Systems\Boid</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Effect\OneShotEffectSystem.h">
       <Filter>Source\Application\Systems\Effect</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\RenderingPipelineEdit\CompositeNode\CompositeNode.h">
@@ -4159,6 +4204,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Scene\SceneAudio\SceneAudio.h">
       <Filter>Source\Engine\Scene\SceneAudio</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Scene\ScenePhysics\ScenePhysics.h">
+      <Filter>Source\Engine\Scene\ScenePhysics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Option\ProjectOptions\BuildConfig.h">
       <Filter>Source\Engine\Option\ProjectOptions</Filter>

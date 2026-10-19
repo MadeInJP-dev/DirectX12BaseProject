@@ -94,6 +94,12 @@ namespace Engine::Scene
 
 		// 音量の席を取る。値はシーンファイルを読んだときに流し込まれる
 		m_audio.Register(a_engine.RefAudioManager());
+
+		// 物理の設定(重力)の流し込み先。ここで既定値を入れ、シーンファイルを読んだときに上書きされる
+		if (m_upWorld && m_upWorld->HasResource<Physics::PhysicsWorld>())
+		{
+			m_physics.Register(&m_upWorld->RefResource<Physics::PhysicsWorld>());
+		}
 	}
 
 	//======================================================================================
@@ -347,6 +353,9 @@ namespace Engine::Scene
 
 		// 音量の席を返す。音を借りていたものは上の Release で返し終わっている
 		m_audio.Unregister();
+
+		// 物理空間はワールドの持ち物なので、ワールドより先に手を離す
+		m_physics.Unregister();
 	}
 
 	void BaseScene::Update(float a_dt)
@@ -554,6 +563,17 @@ namespace Engine::Scene
 		{
 			Persistence::ArchiveSection _section(a_ar, "SceneAudio");
 			if (!a_ar.IsLegacyLayout()) m_audio.Archive(a_ar);
+			a_ar.EndGroup();
+		}
+
+		// ---------------------------------------------------------
+		// シーンの物理の設定(重力)
+		// 音量と同じく後から足したので区切りで囲む : 無いファイルは既定値のまま
+		// ---------------------------------------------------------
+		if (a_ar.BeginGroup("Physics"))
+		{
+			Persistence::ArchiveSection _section(a_ar, "ScenePhysics");
+			if (!a_ar.IsLegacyLayout()) m_physics.Archive(a_ar);
 			a_ar.EndGroup();
 		}
 

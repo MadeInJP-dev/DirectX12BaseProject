@@ -27,11 +27,14 @@ namespace App::System
 				for (size_t _i = 0; _i < a_count; ++_i)
 				{
 					const Component::LocalTransformComponent& _trsComp = a_trsArray[_i];
+					Component::WorldMatrixComponent& _worldMatComp = a_worldMatArray[_i];
+
+					// 組み直したかを子へ伝える(子の行列は CommitHierarchyWorldMatrixSystem が組む)。
+					// 階層を持たない親(スポナーが出した敵など)に付けた子も、親が動けば組み直されるようにする
+					_worldMatComp.wasUpdatedThisFrame = _trsComp.isDirty;
 
 					// 変更がなければ更新しない
 					if (!_trsComp.isDirty) continue;
-
-					Component::WorldMatrixComponent& _worldMatComp = a_worldMatArray[_i];
 
 					// 変換行列計算(スケール→回転→平行移動の順で合成)
 					// 回転は正規化してから使う。エディタで直打ちした値が

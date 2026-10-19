@@ -35,7 +35,7 @@ namespace Engine::Physics
 		uint32_t maxBodies				= 65536;	// ボイド4000体 + 地形 + 弾 を余裕で収める
 		uint32_t maxBodyPairs			= 65536;
 		uint32_t maxContactConstraints	= 10240;
-		Math::Vector3 gravity			= { 0.0f, -9.8f, 0.0f };
+		Math::Vector3 gravity			= { 0.0f, -9.81f, 0.0f };	// 作った直後の重力。シーンを開くと ScenePhysics の値で上書きされる
 
 		// エフェクトエディターのプレビュー用
 		static PhysicsWorldDesc MakePreview() noexcept
@@ -172,6 +172,16 @@ namespace Engine::Physics
 			uint32_t a_queryMask, ECS::Entity a_ignore, ECS::Entity a_ignore2, ShapeHit& a_outHit) const;
 
 		//----------------------------------------------------------------------------------
+		// 重力
+		//
+		// 値の持ち主はシーン(Engine::Scene::ScenePhysics)。読み込んだときと編集したときに流し込まれる。
+		// 自前で落下を解くシステム(DeathMotion / Ballistic など)もここから引く。
+		// 書くのはメインスレッドのシステムの外だけなので、システムからは読むだけでよい
+		//----------------------------------------------------------------------------------
+		void SetGravity(const Math::Vector3& a_gravity);
+		const Math::Vector3& GetGravity() const { return m_gravity; }
+
+		//----------------------------------------------------------------------------------
 		// 確認用
 		//----------------------------------------------------------------------------------
 
@@ -190,6 +200,9 @@ namespace Engine::Physics
 	private:
 
 		PhysicsEngine* m_pEngine = nullptr;
+
+		// 重力(Jolt へも同じ値を渡している)
+		Math::Vector3 m_gravity = { 0.0f, -9.81f, 0.0f };
 
 		// PhysicsSystem はレイヤー定義を参照で持つので、こちらを先に宣言する
 		// (メンバーは宣言の逆順に壊れる = PhysicsSystem が先に消える)

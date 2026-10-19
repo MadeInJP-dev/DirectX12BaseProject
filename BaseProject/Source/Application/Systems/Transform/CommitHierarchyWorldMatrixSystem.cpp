@@ -19,13 +19,16 @@ namespace App::System
 			Engine::ECS::WriteList<Component::WorldMatrixComponent>{},
 			[](const Engine::ECS::SystemContext& a_ctx)
 			{
-				// 更新前にワールド行列のフラグを消しておく
-				a_ctx.pWorld->ForEach<Component::WorldMatrixComponent>(
+				// 更新前にワールド行列のフラグを消しておく。
+				// 階層を持たないものの印は CalcMatrixSystem が組み直したかどうかで立てているので消さない
+				// (消すと、階層を持たない親に付けた子が親の移動に付いて来なくなる)
+				a_ctx.pWorld->ForEach<Component::WorldMatrixComponent, const Component::HierarchyComponent>(
 					[]
 					(
 						Engine::ECS::Chunk* /*a_pChunk*/,
 						uint32_t a_count,
-						Component::WorldMatrixComponent* a_worldMatArray
+						Component::WorldMatrixComponent* a_worldMatArray,
+						const Component::HierarchyComponent* /*a_hArray*/
 						)
 					{
 						for (size_t _i = 0; _i < a_count; ++_i)

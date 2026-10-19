@@ -17,6 +17,8 @@
 #include "Application/Components/Effect/EffectAssetComponent.h"
 #include "Application/Components/Effect/EffectOverrideComponent.h"
 #include "Application/Components/Effect/EffectComponent.h"
+#include "Application/Components/Transform/HierarchyComponent.h"
+#include "Engine/ECS/Component/TransientTag.h"
 
 namespace App::Utility
 {
@@ -61,6 +63,7 @@ namespace App::Utility
 			Engine::ECS::World& a_world,
 			const Core::GUID& a_effectGUID,
 			const Math::Vector3& a_pos,
+			const Math::Quaternion& a_rot,
 			bool a_isDestroyOnFinish,
 			const Math::Vector3& a_emitDir,
 			float a_scale,
@@ -70,17 +73,18 @@ namespace App::Utility
 			Engine::ECS::Signature& _sig = a_outSig;
 			EffectDataMap& _data = a_outData;
 
-			// ---- 位置 ----
+			// ---- 位置と向き ----
 			Component::LocalTransformComponent _localTrs = {};
 			_localTrs.pos = a_pos;
+			_localTrs.quat = a_rot;
 			_localTrs.isDirty = true;
 			if (!PushComponent(a_world, _sig, _data, _localTrs)) return false;
 
 			// ---- ワールド行列 ----
 			// CalcMatrixSystem(PostUpdate)が Draw の前に組み直すが、
-			// 出た最初のフレームから正しい位置で出したいので、ここで平行移動だけ入れておく
+			// 出た最初のフレームから正しい位置で出したいので、ここで向きと平行移動を入れておく
 			Component::WorldMatrixComponent _worldMat = {};
-			_worldMat.worldMat = Math::Matrix::CreateTranslation(a_pos);
+			_worldMat.worldMat = Math::Matrix::CreateFromQuaternion(a_rot) * Math::Matrix::CreateTranslation(a_pos);
 			_worldMat.wasUpdatedThisFrame = false;
 			if (!PushComponent(a_world, _sig, _data, _worldMat)) return false;
 
@@ -94,7 +98,8 @@ namespace App::Utility
 
 			// ---- 出す側からの上書き ----
 			// アセットは共有なので、大きさと向きの違いはここで付ける。
-			// このエンティティは平行移動しか持たないので、渡された向きはそのままワールドの向きになる
+			// 吹き出す向きを渡すのは向きを持たない呼び出し(ReserveSpawnEffectAt / SpawnEffectAtNow)だけなので、
+			// 渡された向きはそのままワールドの向きになる
 			Component::EffectOverrideComponent _override = {};
 			_override.effectScale = (a_scale > 0.0f) ? a_scale : 1.0f;
 
@@ -132,12 +137,122 @@ namespace App::Utility
 		EffectDataMap _data = {};
 
 		if (!BuildEffectEntity(
-			a_world, a_effectGUID, a_pos, a_isDestroyOnFinish, a_emitDir, a_scale, _sig, _data))
+			a_world, a_effectGUID, a_pos, Math::Quaternion::Identity(), a_isDestroyOnFinish, a_emitDir, a_scale, _sig, _data))
 		{
 			return false;
 		}
 
 		// 反復中なので即時生成せず、遅延生成コマンドに積む
+		a_world.ReserveCreateEntityWithData(_sig, std::move(_data));
+		return true;
+	}
+
+	bool ReserveSpawnEffect(
+		Engine::ECS::World& a_world,
+		const Core::GUID& a_effectGUID,
+		const Math::Matrix& a_worldMat,
+		bool a_isDestroyOnFinish,
+		float a_scale)
+	{
+		if (a_effectGUID == Core::DEFAULT_GUID) return false;
+
+		// 拡縮は使わない(大きさは a_scale で付ける)。位置と向きだけ取り出す
+		Math::Matrix _worldMat = a_worldMat;
+		Math::Vector3 _scale;
+		Math::Quaternion _rot;
+		Math::Vector3 _pos;
+		if (!_worldMat.Decompose(_scale, _rot, _pos))
+		{
+			// 潰れた行列は向きが取れないので、位置だけで出す
+			_pos = a_worldMat.Translation();
+			_rot = Math::Quaternion::Identity();
+		}
+
+		Engine::ECS::Signature _sig = {};
+		EffectDataMap _data = {};
+
+		if (!BuildEffectEntity(
+			a_world, a_effectGUID, _pos, _rot, a_isDestroyOnFinish, {}, a_scale, _sig, _data))
+		{
+			return false;
+		}
+
+		a_world.ReserveCreateEntityWithData(_sig, std::move(_data));
+		return true;
+	}
+
+	//==========================================================================================
+	// 子として出す
+	//
+	// 遅延生成なので出したエンティティの ID は返らない。
+	// 親は ID で付ける(HierarchyLinkSystem は GUID が入っているときだけ親を引き直すので、ID が残る)。
+	// 階層の深さは親の深さ + 1(CreateChildInstanceNow と同じ)。
+	//==========================================================================================
+	bool ReserveSpawnChildEffect(
+		Engine::ECS::World& a_world,
+		const Core::GUID& a_effectGUID,
+		Engine::ECS::Entity a_parent,
+		float a_scale,
+		std::initializer_list<Engine::ECS::ComponentTypeID> a_extraTagIDs)
+	{
+		if (a_effectGUID == Core::DEFAULT_GUID) return false;
+		if (a_parent == Engine::ECS::Limits::INVALID_ENTITY || !a_world.IsAliveEntity(a_parent)) return false;
+
+		Engine::ECS::Signature _sig = {};
+		EffectDataMap _data = {};
+
+		// 親の原点に置く(ローカル)
+		if (!BuildEffectEntity(
+			a_world, a_effectGUID, Math::Vector3(0.0f, 0.0f, 0.0f), Math::Quaternion::Identity(), false, {}, a_scale, _sig, _data))
+		{
+			return false;
+		}
+
+		// ---- 位置だけ親に付いて行く ----
+		// 回転と拡縮まで継ぐと、親が回ったり縮んだりしたときに煙まで振り回される
+		const auto _transTypeID = a_world.GetCompTypeID<Component::LocalTransformComponent>();
+		{
+			Component::LocalTransformComponent _localTrs = {};
+			std::memcpy(&_localTrs, _data[_transTypeID].data(), sizeof(_localTrs));
+			_localTrs.inheritance = Component::ETransformInheritance::Translation;
+			std::memcpy(_data[_transTypeID].data(), &_localTrs, sizeof(_localTrs));
+		}
+
+		// 出た最初のフレームから親の位置に出るよう、ワールド行列も親の位置にしておく
+		if (const auto* _pParentMat = a_world.RefData<Component::WorldMatrixComponent>(a_parent))
+		{
+			const auto _matTypeID = a_world.GetCompTypeID<Component::WorldMatrixComponent>();
+
+			Component::WorldMatrixComponent _worldMat = {};
+			std::memcpy(&_worldMat, _data[_matTypeID].data(), sizeof(_worldMat));
+			_worldMat.worldMat = Math::Matrix::CreateTranslation(Math::Matrix(_pParentMat->worldMat).Translation());
+			std::memcpy(_data[_matTypeID].data(), &_worldMat, sizeof(_worldMat));
+		}
+
+		// ---- 親子 ----
+		Component::HierarchyComponent _hierarchy = {};
+		_hierarchy.parentID = a_parent;
+		_hierarchy.depth = 1;
+		if (const auto* _pParentHierarchy = a_world.RefData<Component::HierarchyComponent>(a_parent))
+		{
+			_hierarchy.depth = _pParentHierarchy->depth + 1;
+		}
+		if (!PushComponent(a_world, _sig, _data, _hierarchy)) return false;
+
+		// ---- 保存しない ----
+		PushComponent(a_world, _sig, _data, Engine::ECS::TransientTag{});
+
+		// ---- 呼んだ側の印 ----
+		for (const Engine::ECS::ComponentTypeID _tagID : a_extraTagIDs)
+		{
+			if (_tagID == Engine::ECS::Limits::INVALID_COMPONENTTYPEID) continue;
+
+			_sig.set(_tagID);
+			auto& _buf = _data[_tagID];
+			_buf.assign(a_world.GetComponentMetaData(_tagID).compAlignSize, 0);
+			if (auto _ctor = a_world.GetCompFunc(_tagID).construct; _ctor && !_buf.empty()) _ctor(_buf.data());
+		}
+
 		a_world.ReserveCreateEntityWithData(_sig, std::move(_data));
 		return true;
 	}
@@ -163,7 +278,7 @@ namespace App::Utility
 		EffectDataMap _data = {};
 
 		if (!BuildEffectEntity(
-			a_world, a_effectGUID, a_pos, a_isDestroyOnFinish, a_emitDir, a_scale, _sig, _data))
+			a_world, a_effectGUID, a_pos, Math::Quaternion::Identity(), a_isDestroyOnFinish, a_emitDir, a_scale, _sig, _data))
 		{
 			return Engine::ECS::Limits::INVALID_ENTITY;
 		}

@@ -13,6 +13,7 @@
 #include "Application/Components/Physics/Collider.h"
 #include "Application/Components/Enemy/EnemyTag.h"
 #include "Application/Components/Combat/AimPointComponent.h"
+#include "Application/Components/Combat/HealthComponent.h"
 
 #include "ProjectileSpawn.h"
 #include "WeaponMuzzleSystem.h"
@@ -118,6 +119,14 @@ namespace App::System
 					if (_rt.waitTimer > 0.0f)
 					{
 						_rt.waitTimer = (std::max)(_rt.waitTimer - a_ctx.dt, 0.0f);
+					}
+
+					// 持ち主(肩の武器なら機体、本体が撃つならその本体)が死んでいる間は撃たない。
+					// 要求は捨て、撃っている途中の一斉射もここで止める(残りは出さない)
+					if (Component::IsDeadSelfOrOwner(*a_ctx.pWorld, _self))
+					{
+						_fire.request.isRequested = false;
+						continue;
 					}
 
 					//==============================================================
@@ -253,6 +262,8 @@ namespace App::System
 		// 順序 : 要求を出す側(プレイヤー・ボス)の後で受け取る(どちらも MissileFire を書く)
 		.After({ "MissileSalvoSystem", "BossMissileSalvoSystem" })
 		// 絞り込みに使わない読み : 自分のモデル(銃口ノード)・狙う相手の位置・発射元(ProjectileSpawn)
-		.Reads<Component::ModelComponent, Component::WorldMatrixComponent, Component::ColliderComponent, Component::HierarchyComponent, Component::EnemyTag, Component::AimPointComponent>();
+		.Reads<Component::ModelComponent, Component::WorldMatrixComponent, Component::ColliderComponent, Component::HierarchyComponent, Component::EnemyTag, Component::AimPointComponent>()
+		// 持ち主の生死(IsDeadSelfOrOwner)
+		.Reads<Component::HealthComponent>();
 	}
 }

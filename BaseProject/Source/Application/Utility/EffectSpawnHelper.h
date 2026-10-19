@@ -54,6 +54,44 @@ namespace App::Utility
 		float a_scale = 1.0f);
 
 	/// <summary>
+	/// エフェクトアセットを指定の位置と向きで再生する(遅延コマンドを積むだけ)
+	/// </summary>
+	/// <remarks>
+	/// ReserveSpawnEffectAt との違いは、向きも行列から付けるところだけ。
+	/// 単発エフェクトのイベント(OneShotEffectEvent)を出すのに使う。
+	/// 行列の拡縮は使わない(大きさは a_scale で付ける)
+	/// </remarks>
+	/// <param name="a_worldMat">出す位置と向き(ワールド)</param>
+	/// <returns>生成コマンドを積めたら true</returns>
+	bool ReserveSpawnEffect(
+		Engine::ECS::World& a_world,
+		const Core::GUID& a_effectGUID,
+		const Math::Matrix& a_worldMat,
+		bool a_isDestroyOnFinish = true,
+		float a_scale = 1.0f);
+
+	/// <summary>
+	/// エフェクトアセットを、指定のエンティティの子として再生する(遅延コマンドを積むだけ)
+	/// </summary>
+	/// <remarks>
+	/// 持ち主に付いて行かせたい出しっぱなしのもの(落下中の煙など)向け。
+	/// ・親の原点に置き、位置だけ親に付いて行く(回転と拡縮は継がない)。
+	/// ・自分からは消えない(destroyOnFinish なし)。親が消えるときに一緒に消える。
+	///   止めたいときは、a_extraTagIDs で付けた印から自分を探して再生の要求を下ろす。
+	/// ・保存しない印(TransientTag)を付ける。
+	/// ・遅延生成なので出したエンティティの ID は返らない。
+	/// </remarks>
+	/// <param name="a_parent">付いて行く相手。生きていなければ何もしない</param>
+	/// <param name="a_extraTagIDs">一緒に付ける印(データを持たない型)のタイプID</param>
+	/// <returns>生成コマンドを積めたら true</returns>
+	bool ReserveSpawnChildEffect(
+		Engine::ECS::World& a_world,
+		const Core::GUID& a_effectGUID,
+		Engine::ECS::Entity a_parent,
+		float a_scale = 1.0f,
+		std::initializer_list<Engine::ECS::ComponentTypeID> a_extraTagIDs = {});
+
+	/// <summary>
 	/// エフェクトアセットを指定座標で再生し、作ったエンティティを返す(即時生成)
 	/// </summary>
 	/// <remarks>

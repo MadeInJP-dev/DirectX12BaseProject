@@ -2,6 +2,8 @@
 
 #include "Engine/ECS/World/World.h"
 
+#include "Application/Components/Transform/HierarchyComponent.h"
+
 namespace App::Component
 {
 	//==========================================================================================
@@ -51,6 +53,31 @@ namespace App::Component
 
 		const HealthComponent* _pHealth = a_world.RefData<HealthComponent>(a_entity);
 		return _pHealth && _pHealth->isDead;
+	}
+
+	//==========================================================================================
+	// 自分か、親をたどった先の持ち主が死亡状態か。
+	//
+	// 武器は持ち主の子として付く(体力を持つのは持ち主)ので、武器から見て
+	// 「持ち主が死んでいるか」を知りたいときに使う。本体が武器を兼ねる敵は自分を見て終わる。
+	// 使う側は HealthComponent と HierarchyComponent の読みを宣言すること
+	//==========================================================================================
+	inline bool IsDeadSelfOrOwner(Engine::ECS::World& a_world, Engine::ECS::Entity a_entity)
+	{
+		// 親子が輪になっていたときの保険。実際の階層はせいぜい数段
+		constexpr int MAX_DEPTH = 8;
+
+		for (int _depth = 0; _depth < MAX_DEPTH && a_entity != Engine::ECS::Limits::INVALID_ENTITY; ++_depth)
+		{
+			if (IsDeadEntity(a_world, a_entity)) return true;
+
+			if (!a_world.HasComponent<HierarchyComponent>(a_entity)) return false;
+			const HierarchyComponent* _pHierarchy = a_world.RefData<HierarchyComponent>(a_entity);
+			if (!_pHierarchy) return false;
+
+			a_entity = _pHierarchy->parentID;
+		}
+		return false;
 	}
 }
 
