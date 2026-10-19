@@ -7,6 +7,12 @@ namespace Engine::Resource
 	class ResourceManager;
 }
 
+namespace Engine::Graphics::Particle
+{
+	class GPUParticlePool;
+	class ParticleDrawTable;
+}
+
 namespace Engine::Graphics
 {
 	class GraphicsEngine;
@@ -45,6 +51,23 @@ namespace Engine::Graphics
 			Handle<ID3D12RootSignature>& a_outRootSig,
 			Handle<ID3D12PipelineState>& a_outPSO);
 
+		//------------------------------------------------------------------
+		// 半透明の粒を全アセットぶん1本の一覧へ集め、カメラから遠い順に並べる
+		//
+		//   BeginGatherAlphaBlend : 集める先を UAV にして、集めた数(引数の[1])を 0 に戻す(更新の前に1回)
+		//   GatherAlphaBlend      : 1プールぶんを集める(そのプールの Update の後)
+		//   SortAlphaBlend        : 集めたものを並べて描く一覧へ書き出し、描ける状態にする(全プールの後に1回)
+		//------------------------------------------------------------------
+		void BeginGatherAlphaBlend(RenderContext* a_pCtx, Particle::ParticleDrawTable& a_table, UINT a_quadIndexCount);
+		void GatherAlphaBlend(
+			RenderContext* a_pCtx,
+			Particle::ParticleDrawTable& a_table,
+			Particle::GPUParticlePool& a_pool,
+			uint32_t a_recordIndex,
+			UINT a_slotSRVIndex,
+			const Math::Vector3& a_cameraPos);
+		void SortAlphaBlend(RenderContext* a_pCtx, Particle::ParticleDrawTable& a_table, const Math::Vector3& a_cameraPos);
+
 	private:
 
 		PipelineStateManager* m_pPSOManager = nullptr;
@@ -63,6 +86,10 @@ namespace Engine::Graphics
 		// プールを伸ばしたあと、増えた範囲を使えるようにする
 		Handle<ID3D12RootSignature> m_growRootSig = {};
 		Handle<ID3D12PipelineState> m_growPSO = {};
+
+		// 半透明の粒を集めて遠い順に並べる
+		Handle<ID3D12RootSignature> m_sortRootSig = {};
+		Handle<ID3D12PipelineState> m_sortPSO = {};
 
 		// このフレームの乱数の種
 		uint32_t m_frameCounter = 0;

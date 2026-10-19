@@ -151,8 +151,8 @@ namespace Engine::Graphics::Pipeline
 		//----------------------------------------------------------
 		// 描く一覧を1回描く
 		//
-		// a_listSRVIndex : 描く一覧(そのプールの生存リスト)
-		// a_recordIndex  : 表の番号
+		// a_listSRVIndex : 描く一覧(加算ならそのプールの生存リスト、半透明なら全アセットを並べた一覧)
+		// a_recordIndex  : 表の番号(半透明は PARTICLE_DRAW_RECORD_FROM_LIST で、一覧の上位ビットから引く)
 		// 引数(インスタンス数など)はシミュレーションが GPU 上に用意したものを読む
 		// (INDIRECT_ARGUMENT 状態にして印を立ててある)。カメラが何台あっても同じ引数を読んで描くだけでよい
 		//----------------------------------------------------------
@@ -182,7 +182,7 @@ namespace Engine::Graphics::Pipeline
 			};
 
 		//----------------------------------------------------------
-		// アセットごとに描く
+		// アセットごとに描く(加算。半透明を並べられなかったときもこちら)
 		//
 		// 同じ重ね方どうしは、アセットの SortOrder が小さい順に描く(後に描いたものが上に乗る)。
 		// プールの一覧は unordered_map なので、並べ替えないとアセットを足しただけで前後が入れ替わる。
@@ -249,11 +249,24 @@ namespace Engine::Graphics::Pipeline
 		// 煙(半透明)を先に置いてから炎(加算)を足すと、爆発の芯が煙の手前で光る。
 		// 逆にすると煙が炎を覆い隠してしまう。
 		//
-		// (粒どうしの前後までは並べ替えていない)
+		// 半透明は奥から順に描かないと正しく重ならない。シミュレーションが全アセットの粒を
+		// 1本の一覧へ集めてカメラから遠い順に並べてあるので、それを1回で描く
+		// (アセットごとに描くと、違うアセットの粒どうしの前後が決められない)。
+		// 距離が同じ粒は SortOrder の小さいアセットが先(下)になる。
+		// 並べられなかったフレーム(並べ替えのシェーダーが読めていない)はアセットごとに描く。
+		//
+		// 加算は描く順に依存しないので、アセットごとに描く
 		//----------------------------------------------------------
 		if (m_alphaBlendPSO.IsValid())
 		{
-			_drawEachPool(Particle::EParticleBlendMode::AlphaBlend, m_alphaBlendPSO);
+			if (_pDrawTable->IsArgsReady())
+			{
+				_drawList(m_alphaBlendPSO, _pDrawTable->GetDrawListSRV().GetIndex(), Particle::PARTICLE_DRAW_RECORD_FROM_LIST, _pDrawTable->GetDrawArgsResource());
+			}
+			else
+			{
+				_drawEachPool(Particle::EParticleBlendMode::AlphaBlend, m_alphaBlendPSO);
+			}
 		}
 
 		if (m_additivePSO.IsValid())

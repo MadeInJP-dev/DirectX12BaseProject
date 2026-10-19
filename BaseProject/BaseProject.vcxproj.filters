@@ -5080,6 +5080,9 @@
     <FxCompile Include="Asset\Shader\Source\Particle\Update\GrowParticlePool.hlsl">
       <Filter>Asset\Shader\Source\Particle\Update</Filter>
     </FxCompile>
+    <FxCompile Include="Asset\Shader\Source\Particle\Update\SortParticleShader.hlsl">
+      <Filter>Asset\Shader\Source\Particle\Update</Filter>
+    </FxCompile>
     <FxCompile Include="Asset\Shader\Source\PostProcess\Bloom\BloomCompositeShader.hlsl">
       <Filter>Asset\Shader\Source\PostProcess\Bloom</Filter>
     </FxCompile>

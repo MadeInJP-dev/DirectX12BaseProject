@@ -8,6 +8,7 @@
 #include "Engine/Graphics/Particle/GPU/ParticleDrawTable/ParticleDrawTable.h"
 
 #include "Engine/Graphics/Frame/RenderContext/RenderContext.h"
+#include "Engine/Graphics/Frame/SceneView/SceneView.h"
 #include "Engine/Graphics/PipelineState/PipelineStateManager/PipelineStateManager.h"
 
 #include "Engine/Resource/Data/Shader/IO/ShaderIO.h"
@@ -37,6 +38,33 @@ namespace
 		_record.endColor     = a_particle.GetEndColor();
 		return _record;
 	}
+
+	//======================================================================================
+	// 半透明の粒を集めて並べるシェーダー(SortParticleShader.hlsl)の設定
+	// ※ HLSL 側 SORT_MODE_* / CBParticleSort と並びを合わせること
+	//======================================================================================
+	enum class ESortMode : uint32_t
+	{
+		Gather,			// 1プールぶんを集める
+		LocalSort,		// ブロックごとに並べ切る
+		GlobalStep,		// ブロックをまたぐ比較1段ぶん
+		LocalMerge,		// ブロックの中の残りの段
+	};
+
+	struct SortCB
+	{
+		Engine::Math::Vector3 cameraPos;
+		uint32_t sortSize = 0;
+
+		uint32_t mode = 0;
+		uint32_t k = 0;
+		uint32_t j = 0;
+		uint32_t writeOut = 0;
+
+		uint32_t recordIndex = 0;
+		uint32_t pad[3] = {};
+	};
+	static_assert(sizeof(SortCB) == 48, "HLSL 側 CBParticleSort と大きさを合わせること");
 }
 
 namespace Engine::Graphics
@@ -66,6 +94,11 @@ namespace Engine::Graphics
 			"Asset/Shader/Source/Particle/Update/GrowParticlePool.cso",
 			"GrowParticlePoolShader",
 			m_growRootSig, m_growPSO);
+
+		SetupComputeShader(
+			"Asset/Shader/Source/Particle/Update/SortParticleShader.cso",
+			"SortParticleShader",
+			m_sortRootSig, m_sortPSO);
 	}
 
 	bool ParticleSimulation::SetupComputeShader(
@@ -285,7 +318,7 @@ namespace Engine::Graphics
 		// 描画設定の表を組む
 		//
 		// 更新するプールのうち、アセットと絵が引けるもの(描けるもの)を全部積む。
-		// ParticlePass はアセットごとに、この表の番号で設定を引いて描く
+		// 半透明の粒は集めるときに表の番号を持たせ、描くときにその番号で設定を引く
 		//----------------------------------------------------------------------------------
 		auto* _pDrawTable = _pParticleManager->RefDrawTable();
 		if (!_pDrawTable || !m_pResourceManager) return;
@@ -313,6 +346,25 @@ namespace Engine::Graphics
 			a_pGE->RefDescriptorHeapManager(),
 			_pCmd,
 			a_pGE->RefRenderDevice()->GetCurrentFrameIndex());
+
+		//----------------------------------------------------------------------------------
+		// 半透明の粒を集める準備
+		//
+		// 距離は半透明のメッシュと同じく描くカメラの位置から測る
+		// (この時点でカメラは確定している。カメラが何台あっても並びはこのカメラのもの)。
+		// 並べ替えのシェーダーが読めていなければ集めない。ParticlePass はアセットごとに描く(前後は入れ替わる)
+		//----------------------------------------------------------------------------------
+		const bool _isGatherReady = m_sortRootSig.IsValid() && m_sortPSO.IsValid() && _pDrawTable->HasAlphaBlend();
+		Math::Vector3 _cameraPos = {};
+		if (const auto* _pSceneView = a_pGE->GetSceneView())
+		{
+			const auto& _pos = _pSceneView->GetCPUCameraData().pos;
+			_cameraPos = Math::Vector3(_pos.x, _pos.y, _pos.z);
+		}
+		if (_isGatherReady)
+		{
+			BeginGatherAlphaBlend(a_pCtx, *_pDrawTable, _quadIndexCount);
+		}
 
 		for (auto& [_handle, _pool] : _pParticleManager->GetPoolMap())
 		{
@@ -426,6 +478,17 @@ namespace Engine::Graphics
 				}
 			);
 
+			// 半透明の粒は全アセットぶん1本の一覧へ集める(並べるのは全プールの後)。
+			// 加算は描く順に依存しないので集めない
+			if (_isGatherReady)
+			{
+				const auto _recordIndex = _pDrawTable->FindRecordIndex(_handle);
+				if (_recordIndex && _pDrawTable->IsAlphaBlendRecord(*_recordIndex))
+				{
+					GatherAlphaBlend(a_pCtx, *_pDrawTable, *_pool, *_recordIndex, _slotSRVIndex, _cameraPos);
+				}
+			}
+
 			// 描画で読むので、引数は間接引数の状態へ、生存リストは VS が SRV で読む状態へ。
 			// 遷移のバリアが Update の書き込みの完了待ちも兼ねる。
 			// 印を立てたプールだけが描かれ、フレームの終わりで COMMON へ戻される
@@ -433,5 +496,167 @@ namespace Engine::Graphics
 			_pool->RefAliveList().Barrier(_pCmd, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 			_pool->SetArgsReady(true);
 		}
+
+		// 集めた半透明の粒を遠い順に並べて、描く一覧を作る
+		if (_isGatherReady)
+		{
+			SortAlphaBlend(a_pCtx, *_pDrawTable, _cameraPos);
+		}
+	}
+
+	//======================================================================================
+	// 半透明の粒を全アセットぶん1本の一覧へ集め、遠い順に並べる
+	// (SortParticleShader.hlsl。並べ方はバイトニックソート)
+	//
+	//   BeginGatherAlphaBlend : 集めた数(引数の[1])を 0 に戻す
+	//   GatherAlphaBlend      : プールごとに、生きている粒を (キー, 表の番号 + 粒の番号) にして積む
+	//   SortAlphaBlend        :
+	//     LocalSort  : ブロック(PARTICLE_SORT_BLOCK_SIZE)ごとに並べ切る
+	//     段の大きさ k をブロックの2倍から全体まで倍々に :
+	//       GlobalStep : 相手がブロックの外にある比較(j >= ブロック)を1段ずつ
+	//       LocalMerge : 残りの段(j < ブロック)をブロックの中でまとめて
+	//     最後の Dispatch だけが描く一覧へ書き出す。段と段の間は UAV バリアで区切る。
+	// 並べるのは集める先の全体(2のべき乗)。集めた数より後ろはシェーダーが
+	// 「いちばん後ろへ行く値」で埋めるので、集めた数は GPU から読み戻さなくてよい
+	//======================================================================================
+	void ParticleSimulation::BeginGatherAlphaBlend(RenderContext* a_pCtx, Particle::ParticleDrawTable& a_table, UINT a_quadIndexCount)
+	{
+		auto* _pCmd = a_pCtx ? a_pCtx->RefCurrentCmdList() : nullptr;
+		if (!_pCmd) return;
+
+		// フレームの頭は COMMON(前のフレームの終わりで FinishFrame が戻す)なので、書く前に UAV へ
+		a_table.RefDrawArgs().Barrier(_pCmd, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		a_table.RefSortBuffer().Barrier(_pCmd, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		a_table.RefDrawList().Barrier(_pCmd, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+		// インスタンス数(集めた数)は 0 から始め、集めるたびに足す。
+		// インデックス数は描く板ポリ(ParticlePass が張るもの)と合わせる
+		a_pCtx->BindBindlessHeaps();
+		a_pCtx->SetComputeRootSignature(m_resetRootSig);
+		a_pCtx->SetComputePSO(m_resetPSO);
+		const UINT _resetParam[] = {
+			a_table.RefDrawArgs().GetUAV().GetIndex(),
+			a_quadIndexCount,
+			0u,
+		};
+		a_pCtx->ComputeBindDescriptorIndices(0, _resetParam);
+		a_pCtx->Dispatch(1, 1, 1);
+		D3D12::UAVBarrier(_pCmd, { a_table.GetDrawArgsResource() });
+	}
+
+	void ParticleSimulation::GatherAlphaBlend(
+		RenderContext* a_pCtx,
+		Particle::ParticleDrawTable& a_table,
+		Particle::GPUParticlePool& a_pool,
+		uint32_t a_recordIndex,
+		UINT a_slotSRVIndex,
+		const Math::Vector3& a_cameraPos)
+	{
+		auto* _pCmd = a_pCtx ? a_pCtx->RefCurrentCmdList() : nullptr;
+		if (!_pCmd) return;
+
+		// Update が書いた生存リストと生きている数(プールの引数の[1])を読むので、書き終わりを待つ。
+		// 集める先への書き込みは数えて取った別々の枠なので、集める Dispatch どうしは区切らなくてよい
+		D3D12::UAVBarrier(_pCmd, { a_pool.RefAliveList().GetResource(), a_pool.GetDrawArgsResource() });
+
+		a_pCtx->SetComputeRootSignature(m_sortRootSig);
+		a_pCtx->SetComputePSO(m_sortPSO);
+
+		// 並びはシェーダーの PassDescriptorIndex0 と同じ
+		const UINT _indices[] = {
+			a_pool.GetParticlePoolUAV().GetIndex(),
+			a_slotSRVIndex,
+			a_pool.GetAliveListUAV().GetIndex(),
+			a_pool.RefDrawArgs().GetUAV().GetIndex(),
+			a_table.RefSortBuffer().GetUAV().GetIndex(),
+			a_table.RefDrawArgs().GetUAV().GetIndex(),
+			a_table.RefDrawList().GetUAV().GetIndex(),
+		};
+		a_pCtx->ComputeBindDescriptorIndices(1, _indices);
+
+		SortCB _cb = {};
+		_cb.cameraPos = a_cameraPos;
+		_cb.sortSize = a_table.GetSortSize();
+		_cb.mode = static_cast<uint32_t>(ESortMode::Gather);
+		_cb.recordIndex = a_recordIndex;
+		a_pCtx->BindCB()->BindAndAttachDataComputeRootCBV<SortCB>(_pCmd, 0, _cb);
+
+		// 1スレッド = 生存リストの1件。生きている数は GPU にしか無いので容量ぶん立てる
+		const UINT _threadNum = a_pool.GetMaxCapacity();
+		a_pCtx->Dispatch((_threadNum + Particle::PARTICLE_SORT_THREAD_GROUP_SIZE - 1u) / Particle::PARTICLE_SORT_THREAD_GROUP_SIZE, 1, 1);
+	}
+
+	void ParticleSimulation::SortAlphaBlend(RenderContext* a_pCtx, Particle::ParticleDrawTable& a_table, const Math::Vector3& a_cameraPos)
+	{
+		auto* _pCmd = a_pCtx ? a_pCtx->RefCurrentCmdList() : nullptr;
+		if (!_pCmd) return;
+
+		auto& _sortBuffer = a_table.RefSortBuffer();
+		const UINT _sortSize = a_table.GetSortSize();
+		ID3D12Resource* const _pDrawList = a_table.RefDrawList().GetResource();
+
+		// 集め終わり(集める先と集めた数)を待つ
+		D3D12::UAVBarrier(_pCmd, { _sortBuffer.GetResource(), a_table.GetDrawArgsResource() });
+
+		a_pCtx->BindBindlessHeaps();
+		a_pCtx->SetComputeRootSignature(m_sortRootSig);
+		a_pCtx->SetComputePSO(m_sortPSO);
+
+		// 並べるときはプールの番号を読まないので、集める先の番号で埋めておく
+		const UINT _sortIndex = _sortBuffer.GetUAV().GetIndex();
+		const UINT _indices[] = {
+			_sortIndex,
+			_sortIndex,
+			_sortIndex,
+			_sortIndex,
+			_sortIndex,
+			a_table.RefDrawArgs().GetUAV().GetIndex(),
+			a_table.RefDrawList().GetUAV().GetIndex(),
+		};
+		a_pCtx->ComputeBindDescriptorIndices(1, _indices);
+
+		SortCB _cb = {};
+		_cb.cameraPos = a_cameraPos;
+		_cb.sortSize = _sortSize;
+
+		constexpr UINT BLOCK = Particle::PARTICLE_SORT_BLOCK_SIZE;
+		auto _dispatch = [&](ESortMode a_mode, uint32_t a_k, uint32_t a_j, bool a_isLast)
+			{
+				_cb.mode = static_cast<uint32_t>(a_mode);
+				_cb.k = a_k;
+				_cb.j = a_j;
+				_cb.writeOut = a_isLast ? 1u : 0u;
+				a_pCtx->BindCB()->BindAndAttachDataComputeRootCBV<SortCB>(_pCmd, 0, _cb);
+
+				// GlobalStep は1スレッド = 1組(全体の半分)、ほかは1グループ = 1ブロック
+				const UINT _groupNum = (a_mode == ESortMode::GlobalStep)
+					? (_sortSize / 2) / Particle::PARTICLE_SORT_THREAD_GROUP_SIZE
+					: _sortSize / BLOCK;
+				a_pCtx->Dispatch(_groupNum, 1, 1);
+
+				// 次の段はこの段の結果を読む(最後の段の後は、下の遷移が完了待ちを兼ねる)
+				if (!a_isLast)
+				{
+					D3D12::UAVBarrier(_pCmd, { _sortBuffer.GetResource(), _pDrawList });
+				}
+			};
+
+		_dispatch(ESortMode::LocalSort, 0, 0, _sortSize == BLOCK);
+		for (UINT _k = BLOCK * 2; _k <= _sortSize; _k <<= 1)
+		{
+			for (UINT _j = _k / 2; _j >= BLOCK; _j >>= 1)
+			{
+				_dispatch(ESortMode::GlobalStep, _k, _j, false);
+			}
+			_dispatch(ESortMode::LocalMerge, _k, 0, _k == _sortSize);
+		}
+
+		// 描画で読むので、引数は間接引数の状態へ、描く一覧は VS が SRV で読む状態へ。
+		// 集める先はここで使い終わり(フレームの頭は COMMON の約束)。
+		// 印を立てると ParticlePass が半透明をまとめて1回で描き、フレームの終わりで COMMON へ戻される
+		a_table.RefDrawArgs().Barrier(_pCmd, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+		a_table.RefDrawList().Barrier(_pCmd, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		_sortBuffer.Barrier(_pCmd, D3D12_RESOURCE_STATE_COMMON);
+		a_table.SetArgsReady(true);
 	}
 }
