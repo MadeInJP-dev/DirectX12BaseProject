@@ -45,6 +45,7 @@
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/AntiAliasing/TAAPass/TAAPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Bloom/BloomExtractPass/BloomExtractPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Bloom/BloomCompositePass/BloomCompositePass.h"
+#include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Bloom/ScreenSpaceLensFlarePass/ScreenSpaceLensFlarePass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Bloom/KawaseBlurPass/KawaseBlurPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Blur/GaussianBlurPass/GaussianBlurPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Blur/RadialBlurPass/RadialBlurPass.h"
@@ -443,6 +444,23 @@ namespace Editor::Inspector
 			}
 		};
 
+		class ScreenSpaceLensFlareEditor : public PassEditor<ScreenSpaceLensFlarePass>
+		{
+		protected:
+			EPassEditResult OnDrawDetail(ScreenSpaceLensFlarePass& a_pass) override
+			{
+				auto& _params = a_pass.RefParams();
+				bool _isEdit = DrawEnableCheck(_params.enable);
+
+				_isEdit |= Engine::EditorField::Field("Intensity", _params.intensity, 0.01f, 0.0f);
+				Engine::EditorField::Tooltip("画面の中心で折り返したブルームを足す強さ");
+
+				Engine::EditorField::HelpText("Bloom に KawaseBlurPass の Result を繋いでください");
+
+				return _isEdit ? EPassEditResult::Param : EPassEditResult::None;
+			}
+		};
+
 		//==================================================================================
 		//
 		// Blur
@@ -828,6 +846,7 @@ namespace Editor::Inspector
 		a_registry.Register<TAAPass, NoteOnlyEditor<TAAPass>>(std::initializer_list<const char*>{ "History 出力を History 入力へ繋いでください", "(Temporal なので前フレームのぶんが入ります)" });
 		a_registry.Register<BloomExtractPass, BloomExtractEditor>();
 		a_registry.Register<BloomCompositePass, BloomCompositeEditor>();
+		a_registry.Register<ScreenSpaceLensFlarePass, ScreenSpaceLensFlareEditor>();
 		a_registry.Register<KawaseBlurPass, NoteOnlyEditor<KawaseBlurPass>>(std::initializer_list<const char*>{ "縮小4段をまとめて1枚のブルームにします", "Down0 が一番大きい段(1/2)です" });
 		a_registry.Register<GaussianBlurPass, GaussianBlurEditor>();
 		a_registry.Register<RadialBlurPass, RadialBlurEditor>();

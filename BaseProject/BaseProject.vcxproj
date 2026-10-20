@@ -1503,6 +1503,7 @@
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Blur\GaussianBlurPass\GaussianBlurPass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\KawaseBlurPass\KawaseBlurPass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\BloomCompositePass\BloomCompositePass.cpp" />
+    <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\ScreenSpaceLensFlarePass\ScreenSpaceLensFlarePass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Blur\RadialBlurPass\RadialBlurPass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\GroundEffect\GroundFieldPass\GroundFieldPass.cpp" />
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Fog\SceneVolumetricFogPass\SceneVolumetricFogPass.cpp" />
@@ -2186,6 +2187,7 @@
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Blur\GaussianBlurPass\GaussianBlurPass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\KawaseBlurPass\KawaseBlurPass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\BloomCompositePass\BloomCompositePass.h" />
+    <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\ScreenSpaceLensFlarePass\ScreenSpaceLensFlarePass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Blur\RadialBlurPass\RadialBlurPass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\GroundEffect\GroundFieldPass\GroundFieldPass.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Fog\SceneVolumetricFogPass\SceneVolumetricFogPass.h" />
@@ -2736,6 +2738,20 @@
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CSMain</EntryPointName>
     </FxCompile>
     <FxCompile Include="Asset\Shader\Source\PostProcess\Bloom\BloomCompositeShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.6</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">6.6</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">6.6</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.6</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CSMain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CSMain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CSMain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CSMain</EntryPointName>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\Source\PostProcess\Bloom\ScreenSpaceLensFlareCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.6</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>

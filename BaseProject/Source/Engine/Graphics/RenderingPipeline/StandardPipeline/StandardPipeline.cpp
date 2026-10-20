@@ -26,6 +26,7 @@
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Blur/GaussianBlurPass/GaussianBlurPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Bloom/KawaseBlurPass/KawaseBlurPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Bloom/BloomCompositePass/BloomCompositePass.h"
+#include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Bloom/ScreenSpaceLensFlarePass/ScreenSpaceLensFlarePass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Blur/RadialBlurPass/RadialBlurPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Distortion/FishEyePass/FishEyePass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/Geometry/DebugLinePass/DebugLinePass.h"
@@ -235,6 +236,9 @@ namespace Engine::Graphics::Pipeline
 		auto* _pKawase = AddPass<KawaseBlurPass>(_graph, a_registry, "KawaseBlurPass", 14, 0);
 		auto* _pBloomComposite = AddPass<BloomCompositePass>(_graph, a_registry, "BloomCompositePass", 15, 0);
 
+		// レンズフレア : まとめたブルームを中心で折り返して足す。ブルームを足し終えた絵に重ねる
+		auto* _pLensFlare = AddPass<ScreenSpaceLensFlarePass>(_graph, a_registry, "ScreenSpaceLensFlarePass", 15, 1);
+
 		// ラジアルブラーはブルームの後。
 		// 光ったところごと放射状に流れてほしいので、逆にすると跡だけが後から光る
 		auto* _pRadial = AddPass<RadialBlurPass>(_graph, a_registry, "RadialBlurPass", 16, 0);
@@ -379,8 +383,12 @@ namespace Engine::Graphics::Pipeline
 		Link(_graph, _pDoF, "Result", _pBloomComposite, "Color");
 		Link(_graph, _pKawase, "Result", _pBloomComposite, "Bloom");
 
+		// ---- レンズフレア ----
+		Link(_graph, _pBloomComposite, "Result", _pLensFlare, "Color");
+		Link(_graph, _pKawase, "Result", _pLensFlare, "Bloom");
+
 		// ---- 歪み ----
-		Link(_graph, _pBloomComposite, "Result", _pRadial, "Color");
+		Link(_graph, _pLensFlare, "Result", _pRadial, "Color");
 		Link(_graph, _pRadial, "Result", _pFishEye, "Color");
 
 		// ---- UI ----

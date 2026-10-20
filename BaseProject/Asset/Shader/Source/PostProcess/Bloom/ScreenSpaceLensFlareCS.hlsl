@@ -1,12 +1,44 @@
+//==========================================================================================
+//
+// ScreenSpaceLensFlareCS
+//
+// まとめ終わったブルームを画面の中心で折り返して、メインカラーへ加算する。
+//
+//   出力 = メインカラー + (上下反転したブルーム + 点対称に反転したブルーム) * intensity
+//
+// 明るいところの反対側にゴーストが映る、簡易的なスクリーンスペースのレンズフレア。
+// 元の位置のブルームは BloomCompositePass が足し終えているので、ここでは足さない。
+//
+// ブルームと同じくトーンマップ前のHDR段階で足す。
+// 無効時はメインカラーをそのまま素通しするので、絵は変わらない。
+//
+//==========================================================================================
+#include "../../../Common/RootSignatureLayout.hlsli"
 
-struct ScreenSpaceLensFareData
+//==========================================================================================
+// ルートパラメーター
+//
+//   0 : CBV(b13)           レンズフレア設定
+//   1 : SRVの番号(t0-t1) メインカラー + ブルーム
+//   2 : UAVの番号(u0)    合成結果
+//==========================================================================================
+#define SSLF_RS \
+"RootFlags(CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED)," \
+"CBV(b13, visibility = SHADER_VISIBILITY_ALL)," \
+"RootConstants(num32BitConstants=2, b100), " \
+"RootConstants(num32BitConstants=1, b101)"
+
+// ※ C++ の ScreenSpaceLensFlarePass::ScreenSpaceLensFlareCB と並びを合わせること
+struct ScreenSpaceLensFlareData
 {
 	float intensity;		// 強度
+	int enable;			// 0 なら素通し
+	float2 pad;
 };
 
 cbuffer SSLFCB : register(b13)
 {
-	ScreenSpaceLensFareData g_sslf;
+	ScreenSpaceLensFlareData g_sslf;
 }
 
 // 入力
@@ -45,8 +77,9 @@ RWTexture2D<float4> Get_outTex()
 }
 #define g_outTex Get_outTex()
 
+[RootSignature(SSLF_RS)]
 [numthreads(8, 8, 1)]
-void main( uint3 DTid : SV_DispatchThreadID )
+void CSMain( uint3 DTid : SV_DispatchThreadID )
 {
 	// 画像の縦横サイズを取得
 	uint _width, _height;
@@ -57,14 +90,26 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		return;
 
 	float4 _mainColor = g_colorTex[DTid.xy];
-	
+
+	// 無効ならそのまま通す
+	if (g_sslf.enable == 0)
+	{
+		g_outTex[DTid.xy] = _mainColor;
+		return;
+	}
+
+	// 画面の中心で折り返した位置。
+	// uint のまま符号を反転すると巨大な値になって範囲外読み(= 0)になるので、
+	// 反対側の端から数える。ブルームは出力と同じ解像度(BloomCompositePass と同じ前提)
+	const uint _flipX = _width - 1 - DTid.x;
+	const uint _flipY = _height - 1 - DTid.y;
+
 	// 高輝度画像
-	float3 _bloomCol0 = g_bloomTex[DTid.xy].rgb;
-	float3 _bloomCol1 = g_bloomTex[float2(DTid.x, -DTid.y)].rgb;
-	float3 _bloomCol2 = g_bloomTex[float2(-DTid.x, -DTid.y)].rgb;
+	float3 _bloomCol1 = g_bloomTex[uint2(DTid.x, _flipY)].rgb;	// 上下反転
+	float3 _bloomCol2 = g_bloomTex[uint2(_flipX, _flipY)].rgb;	// 点対称
 
 	// SSLFカラー作成
-	float3 _sslfColor = _bloomCol0 + _bloomCol1 + _bloomCol2;
+	float3 _sslfColor = _bloomCol1 + _bloomCol2;
 	_sslfColor *= g_sslf.intensity;
 
 	// アルファはメインカラーのものを保つ

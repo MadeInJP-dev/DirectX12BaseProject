@@ -23,6 +23,7 @@
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Blur/GaussianBlurPass/GaussianBlurPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Bloom/KawaseBlurPass/KawaseBlurPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Bloom/BloomCompositePass/BloomCompositePass.h"
+#include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Bloom/ScreenSpaceLensFlarePass/ScreenSpaceLensFlarePass.h"
 
 // ---- デノイズ ----
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Denoise/Shadow/ShadowTemporalAccumulationPass/ShadowTemporalAccumulationPass.h"
@@ -130,6 +131,7 @@ namespace Engine::Graphics::Pipeline
 		a_registry.RegisterType<GaussianBlurPass>("GaussianBlurPass");
 		a_registry.RegisterType<KawaseBlurPass>("KawaseBlurPass");
 		a_registry.RegisterType<BloomCompositePass>("BloomCompositePass");
+		a_registry.RegisterType<ScreenSpaceLensFlarePass>("ScreenSpaceLensFlarePass");
 
 		// ---- デノイズ(1ノード＝1回。反復はノードを並べる) ----
 		a_registry.RegisterType<ShadowTemporalAccumulationPass>("ShadowTemporalAccumulationPass");

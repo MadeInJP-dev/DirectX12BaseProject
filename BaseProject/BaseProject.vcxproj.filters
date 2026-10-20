@@ -1309,6 +1309,9 @@
     <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\BloomCompositePass">
       <UniqueIdentifier>{6ef6a875-ef39-4066-be7a-6060874bf3c3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\ScreenSpaceLensFlarePass">
+      <UniqueIdentifier>{3572721a-a0a2-4e24-af46-d2b488db3489}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\GroundEffect">
       <UniqueIdentifier>{c5a37a32-69b5-4b33-b2a2-bf828505cd3a}</UniqueIdentifier>
     </Filter>
@@ -2663,6 +2666,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\BloomCompositePass\BloomCompositePass.cpp">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\BloomCompositePass</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\ScreenSpaceLensFlarePass\ScreenSpaceLensFlarePass.cpp">
+      <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\ScreenSpaceLensFlarePass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Blur\RadialBlurPass\RadialBlurPass.cpp">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Blur\RadialBlurPass</Filter>
@@ -4661,6 +4667,9 @@
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\BloomCompositePass\BloomCompositePass.h">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\BloomCompositePass</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\ScreenSpaceLensFlarePass\ScreenSpaceLensFlarePass.h">
+      <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Bloom\ScreenSpaceLensFlarePass</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Blur\RadialBlurPass\RadialBlurPass.h">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Blur\RadialBlurPass</Filter>
     </ClInclude>
@@ -5165,6 +5174,9 @@
       <Filter>Asset\Shader\Source\Particle\Update</Filter>
     </FxCompile>
     <FxCompile Include="Asset\Shader\Source\PostProcess\Bloom\BloomCompositeShader.hlsl">
+      <Filter>Asset\Shader\Source\PostProcess\Bloom</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\Source\PostProcess\Bloom\ScreenSpaceLensFlareCS.hlsl">
       <Filter>Asset\Shader\Source\PostProcess\Bloom</Filter>
     </FxCompile>
     <FxCompile Include="Asset\Shader\Source\PostProcess\Bloom\BloomExtractShader.hlsl">
