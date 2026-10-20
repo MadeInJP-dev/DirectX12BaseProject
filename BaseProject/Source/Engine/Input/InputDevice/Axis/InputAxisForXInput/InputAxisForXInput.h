@@ -2,28 +2,25 @@
 
 #include "../InputAxisBase.h"
 
-// XInput はコントローラーの入力デバイスだけで使う。
-// プリコンパイル済みヘッダーへ置くと全翻訳単位に広がるため
-#include <Xinput.h>
-
 namespace Engine::Input
 {
-	class InputButtonBase;
-
 	/// <summary>
 	/// XInputを使用したコントローラー軸制御
 	/// </summary>
+	/// <remarks>
+	/// 値は -1〜1。遊び(デッドゾーン)の内側は 0 にし、外側を 0〜1 へ広げ直す。
+	/// コントローラーの状態は InputDeviceManager が1フレーム1回読んだものを見る
+	/// </remarks>
 	class InputAxisForXInput : public InputAxisBase
 	{
 	public:
 
+		// a_userIndex : 何番のコントローラーか(0〜3) / a_isLeft : 左スティックか
 		InputAxisForXInput(UINT a_userIndex,bool a_isLeft) 
 		{
 			m_userIndex = a_userIndex;
 			m_isLeft = a_isLeft;
 		};
-
-		void PreUpdate() override;
 
 		// フレームの移動量を使って、軸の入力状況を更新
 		void Update(InputContext& a_inputContext) override;
@@ -31,10 +28,6 @@ namespace Engine::Input
 	private:
 		// 左かどうか
 		bool m_isLeft = false;
-
-		// 今は個別で持ってるが、コントローラークラスができたときにでもポインタに変更予定
-		XINPUT_STATE m_conState = {};
-		XINPUT_STATE m_prevConState = {};
 
 		UINT m_userIndex = 0;
 	};

@@ -32,6 +32,21 @@ namespace Engine::Input
 		void SetValueRate(float a_rate) { m_valueRate = a_rate; }		// レート設定
 		void SetLimitValue(float a_limit) { m_limitValue = a_limit; }	// 限界値設定
 
+		/// <summary>
+		/// 値を「1秒あたりの量」として扱うか
+		/// </summary>
+		/// <remarks>
+		/// 立てると GetState がこのフレームの経過時間を掛けた量を返す。
+		/// スティックやキーのように「倒している間ずっと同じ値」の軸で、
+		/// 1フレームに足す量(視点の角度など)を作るとき、FPS で速さが変わらないようにする。
+		/// マウスの移動量はもともと1フレームぶんの量なので立てない。
+		/// 移動の向きのように、そのまま向きとして使う軸も立てない。
+		/// </remarks>
+		void SetPerSecond(bool a_isPerSecond) { m_isPerSecond = a_isPerSecond; }
+
+		// このフレームの経過時間(秒)。コレクターが更新の前に渡す
+		void SetDeltaTime(float a_deltaTime) { m_deltaTime = a_deltaTime; }
+
 		Math::Vector2 GetState() const;
 
 
@@ -43,5 +58,11 @@ namespace Engine::Input
 
 		// 軸の限界値
 		float m_limitValue = FLT_MAX;
+
+		// 1秒あたりの量として扱うか(GetState で経過時間を掛ける)
+		bool m_isPerSecond = false;
+
+		// このフレームの経過時間(秒)
+		float m_deltaTime = 0.0f;
 	};
 }

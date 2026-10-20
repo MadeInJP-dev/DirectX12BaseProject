@@ -306,6 +306,7 @@ namespace App::Game
 
 		// 後から足したもの : 追加は必ず末尾へ
 		OptionalField(a_ar, "IsInvertLookY", m_inputSettings.opIsInvertLookY, false);
+		ActionMapArchive(a_ar, "Controller", m_inputSettings.controller);	// 古いファイルに無ければ空のまま(既定は InputActionManager が補う)
 
 		a_ar.EndGroup();
 	}

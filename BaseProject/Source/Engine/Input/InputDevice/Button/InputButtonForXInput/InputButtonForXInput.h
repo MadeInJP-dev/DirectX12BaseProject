@@ -1,18 +1,22 @@
 ﻿#pragma once
 #include "../InputButtonBase.h"
 
-// XInput はコントローラーの入力デバイスだけで使う。
-// プリコンパイル済みヘッダーへ置くと全翻訳単位に広がるため
-#include <Xinput.h>
-
 namespace Engine::Input
 {
+	//=================================================================================================
+	// コントローラーのボタン
+	// 
+	// 番号は GamepadKey(Core/GamepadKey.h)。複数渡すとどれか1つで押下になる。
+	// トリガーもしきい値を超えたらボタンとして押したことにする。
+	// コントローラーの状態は InputDeviceManager が1フレーム1回読んだものを見る
+	//=================================================================================================
 	class InputButtonForXInput : public InputButtonBase
 	{
 	public:
 
-		InputButtonForXInput(WORD a_button);
-		InputButtonForXInput(const std::vector<WORD>& a_buttonVec);
+		// a_userIndex : 何番のコントローラーか(0〜3)
+		InputButtonForXInput(UINT a_userIndex, int a_padKey);
+		InputButtonForXInput(UINT a_userIndex, const std::vector<int>& a_padKeyVec);
 		~InputButtonForXInput() override = default;
 
 		void Update(InputContext& a_inputContext) override;
@@ -22,11 +26,8 @@ namespace Engine::Input
 
 	private:
 
-		XINPUT_STATE m_conState = {};
-		XINPUT_STATE m_prevConState = {};
-
 		UINT m_userIndex = 0;
 
-		std::vector<WORD> m_buttonVec = {};
+		std::vector<int> m_padKeyVec = {};
 	};
 }

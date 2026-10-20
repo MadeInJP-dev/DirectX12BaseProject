@@ -2,6 +2,8 @@
 
 #include <variant>	// 入力の割り当ては軸とボタンのどちらかを持つ
 
+#include "Engine/Input/Core/GamepadKey.h"	// コントローラーのボタンの番号
+
 namespace App::Game
 {
 	//------------------------------------------------------------------------------
@@ -36,6 +38,8 @@ namespace App::Game
 	// 入力設定
 	//------------------------------------------------------------------------------
 	// アクション1つに対して、押すキー(ボタン)か4方向のキー(軸)のどちらかを持つ。
+	// コントローラーはキーの代わりに GamepadKey の番号を入れる。
+	// 軸はスティックなので、4方向にはそのスティックの上右下左を入れる。
 
 	struct ButtonInputData
 	{
@@ -56,6 +60,7 @@ namespace App::Game
 	{
 		std::unordered_map<Game::EGameAction, InputBindingData> keyboard;
 		std::unordered_map<Game::EGameAction, InputBindingData> mouse;
+		std::unordered_map<Game::EGameAction, InputBindingData> controller;
 
 		float mouseSensitivity = 1.0f;		// マウス感度 : 作り手の感度(エンジンの InputOption)へ掛ける倍率
 
@@ -119,6 +124,32 @@ namespace App::Game
 		_settings.keyboard[EGameAction::Back]       = ButtonInputData{ VK_BACK };			// 戻る
 		_settings.keyboard[EGameAction::Menu]       = ButtonInputData{ VK_ESCAPE };			// メニュー
 		_settings.keyboard[EGameAction::BottonMove] = AxisInputData{ VK_UP, VK_RIGHT, VK_DOWN, VK_LEFT };	// 項目の移動
+
+		// ---- コントローラー ----
+		namespace Pad = Engine::Input::GamepadKey;
+		const AxisInputData _leftStick  = { Pad::LThumbUp, Pad::LThumbRight, Pad::LThumbDown, Pad::LThumbLeft };
+		const AxisInputData _rightStick = { Pad::RThumbUp, Pad::RThumbRight, Pad::RThumbDown, Pad::RThumbLeft };
+
+		_settings.controller[EGameAction::Move] = _leftStick;									// 移動
+		_settings.controller[EGameAction::Look] = _rightStick;									// 視点
+
+		_settings.controller[EGameAction::Boost]       = ButtonInputData{ Pad::A };				// ブースト
+		_settings.controller[EGameAction::ChargeBoost] = ButtonInputData{ Pad::X };				// チャージブースト
+		_settings.controller[EGameAction::Down]        = ButtonInputData{ Pad::B };				// 下方向ブースト
+
+		_settings.controller[EGameAction::LWeaponAttack] = ButtonInputData{ Pad::LTrigger };		// 左武器攻撃
+		_settings.controller[EGameAction::RWeaponAttack] = ButtonInputData{ Pad::RTrigger };		// 右武器攻撃
+
+		_settings.controller[EGameAction::LMissileLock] = ButtonInputData{ Pad::LShoulder };		// 左肩ミサイル
+		_settings.controller[EGameAction::RMissileLock] = ButtonInputData{ Pad::RShoulder };		// 右肩ミサイル
+
+		_settings.controller[EGameAction::Pose] = ButtonInputData{ Pad::Start };					// 一時停止
+
+		// UI
+		_settings.controller[EGameAction::Select]     = ButtonInputData{ Pad::A };				// 決定
+		_settings.controller[EGameAction::Back]       = ButtonInputData{ Pad::B };				// 戻る
+		_settings.controller[EGameAction::Menu]       = ButtonInputData{ Pad::Start };			// メニュー
+		_settings.controller[EGameAction::BottonMove] = _leftStick;								// 項目の移動
 
 		return _settings;
 	}

@@ -8,6 +8,7 @@
 
 // エンジン側
 #include "Engine/Input/InputManager/InputManager.h"
+#include "Engine/Input/Core/GamepadKey.h"
 #include "Engine/Input/InputCollector/InputCollector.h"
 #include "Engine/Input/InputDevice/Axis/InputAxisForWindowsMouse/InputAxisForWindowsMouse.h"
 #include "Engine/Input/InputDevice/Axis/InputAxisForWindows/InputAxisForWindows.h"
@@ -22,6 +23,16 @@ namespace App::Input
 	namespace
 	{
 		//==================================================================================
+		// スティック・キーで視点を回す速さ(度/秒)
+		//----------------------------------------------------------------------------------
+		// 視点は1フレームに足す角度なので、軸を「1秒あたりの量」にして経過時間を掛ける。
+		// こうしないと FPS で回る速さが変わる。
+		// マウスは移動量そのものなので、ここの値は関係しない
+		//==================================================================================
+		constexpr float STICK_LOOK_SPEED = 180.0f;		// スティックを倒しきったとき
+		constexpr float KEY_LOOK_SPEED = 60.0f;			// キー(矢印キー)を押している間
+
+		//==================================================================================
 		// 割り当て1件をデバイスへ積む
 		//==================================================================================
 		void AddBinding(
@@ -31,16 +42,70 @@ namespace App::Input
 		{
 			if (const auto* _pAxis = std::get_if<Game::AxisInputData>(&a_binding))
 			{
-				a_collector.AddAxis(
-					a_action,
-					std::make_unique<Engine::Input::InputAxisForWindows>(
-						_pAxis->up, _pAxis->right, _pAxis->down, _pAxis->left));
+				auto _upAxis = std::make_unique<Engine::Input::InputAxisForWindows>(
+					_pAxis->up, _pAxis->right, _pAxis->down, _pAxis->left);
+
+				// 視点は1秒あたりの角度にする(FPS で速さが変わらないように)
+				if (a_action == Game::EGameAction::Look)
+				{
+					_upAxis->SetValueRate(KEY_LOOK_SPEED);
+					_upAxis->SetPerSecond(true);
+				}
+
+				a_collector.AddAxis(a_action, std::move(_upAxis));
 			}
 			else if (const auto* _pButton = std::get_if<Game::ButtonInputData>(&a_binding))
 			{
 				a_collector.AddButton(
 					a_action,
 					std::make_unique<Engine::Input::InputButtonForWindows>(_pButton->key));
+			}
+		}
+
+		//==================================================================================
+		// コントローラーの割り当て1件をデバイスへ積む
+		//----------------------------------------------------------------------------------
+		// 軸はスティックそのものなので、上の番号でどちらのスティックかを決める。
+		// (上右下左を別々のボタンにはできない)
+		//==================================================================================
+
+		// 割り当てるコントローラーの番号(1P)
+		constexpr UINT CONTROLLER_USER_INDEX = 0;
+
+		void AddControllerBinding(
+			Engine::Input::InputCollector& a_collector,
+			Game::EGameAction a_action,
+			const Game::InputBindingData& a_binding)
+		{
+			namespace Pad = Engine::Input::GamepadKey;
+
+			if (const auto* _pAxis = std::get_if<Game::AxisInputData>(&a_binding))
+			{
+				bool _isLeft = false;
+				if (_pAxis->up == Pad::LThumbUp)		_isLeft = true;
+				else if (_pAxis->up == Pad::RThumbUp)	_isLeft = false;
+				else
+				{
+					ENGINE_WARNING("コントローラーの軸にはスティックしか割り当てられません : %s",
+						std::string(magic_enum::enum_name(a_action)).c_str());
+					return;
+				}
+
+				auto _upAxis = std::make_unique<Engine::Input::InputAxisForXInput>(CONTROLLER_USER_INDEX, _isLeft);
+				// 視点は1秒あたりの角度にする(FPS で速さが変わらないように)
+				if (a_action == Game::EGameAction::Look)
+				{
+					_upAxis->SetValueRate(STICK_LOOK_SPEED);
+					_upAxis->SetPerSecond(true);
+				}
+
+				a_collector.AddAxis(a_action, std::move(_upAxis));
+			}
+			else if (const auto* _pButton = std::get_if<Game::ButtonInputData>(&a_binding))
+			{
+				a_collector.AddButton(
+					a_action,
+					std::make_unique<Engine::Input::InputButtonForXInput>(CONTROLLER_USER_INDEX, _pButton->key));
 			}
 		}
 
@@ -101,10 +166,38 @@ namespace App::Input
 			return KEY_TABLE;
 		}
 
-		// キーコードの表示名。一覧に無いものは番号のまま出す
-		std::string KeyName(int a_code)
+		// コントローラーで選べるボタンの一覧(スティックの向きは軸で選ぶので入れない)
+		const std::vector<std::pair<int, std::string>>& PadKeyTable()
 		{
-			for (const auto& [_code, _name] : KeyTable())
+			namespace Pad = Engine::Input::GamepadKey;
+
+			static const std::vector<std::pair<int, std::string>> PAD_KEY_TABLE =
+			{
+				{ Pad::A, "A" },
+				{ Pad::B, "B" },
+				{ Pad::X, "X" },
+				{ Pad::Y, "Y" },
+				{ Pad::LShoulder, "LB" },
+				{ Pad::RShoulder, "RB" },
+				{ Pad::LTrigger, "LT" },
+				{ Pad::RTrigger, "RT" },
+				{ Pad::DPadUp, "DPad Up" },
+				{ Pad::DPadDown, "DPad Down" },
+				{ Pad::DPadLeft, "DPad Left" },
+				{ Pad::DPadRight, "DPad Right" },
+				{ Pad::Start, "Start" },
+				{ Pad::Back, "Back" },
+				{ Pad::LThumbPress, "L Stick Press" },
+				{ Pad::RThumbPress, "R Stick Press" },
+			};
+
+			return PAD_KEY_TABLE;
+		}
+
+		// キーコードの表示名。一覧に無いものは番号のまま出す
+		std::string KeyName(int a_code, const std::vector<std::pair<int, std::string>>& a_table)
+		{
+			for (const auto& [_code, _name] : a_table)
 			{
 				if (_code == a_code) return _name;
 			}
@@ -112,13 +205,13 @@ namespace App::Input
 		}
 
 		// キーを選ぶプルダウン。選び直されたら true
-		bool DrawKeyCombo(const char* a_label, int& a_code)
+		bool DrawKeyCombo(const char* a_label, int& a_code, const std::vector<std::pair<int, std::string>>& a_table)
 		{
 			bool _isChanged = false;
 
-			if (Engine::EditorField::ComboScope _combo{ a_label, KeyName(a_code).c_str() })
+			if (Engine::EditorField::ComboScope _combo{ a_label, KeyName(a_code, a_table).c_str() })
 			{
-				for (const auto& [_code, _name] : KeyTable())
+				for (const auto& [_code, _name] : a_table)
 				{
 					const bool _isSelected = (_code == a_code);
 
@@ -136,9 +229,40 @@ namespace App::Input
 			return _isChanged;
 		}
 
-		// 対応表1つ分の編集。どこか触られたら true
-		bool DrawActionMapEdit(std::unordered_map<Game::EGameAction, Game::InputBindingData>& a_map)
+		// コントローラーの軸 : どちらのスティックかを選ぶ。選び直されたら true
+		bool DrawStickCombo(const char* a_label, Game::AxisInputData& a_axis)
 		{
+			namespace Pad = Engine::Input::GamepadKey;
+			static const Game::AxisInputData LEFT_STICK  = { Pad::LThumbUp, Pad::LThumbRight, Pad::LThumbDown, Pad::LThumbLeft };
+			static const Game::AxisInputData RIGHT_STICK = { Pad::RThumbUp, Pad::RThumbRight, Pad::RThumbDown, Pad::RThumbLeft };
+
+			const bool _isLeft = (a_axis.up == Pad::LThumbUp);
+			const bool _isRight = (a_axis.up == Pad::RThumbUp);
+			const char* _preview = _isLeft ? "Left Stick" : (_isRight ? "Right Stick" : "Unknown");
+
+			bool _isChanged = false;
+			if (Engine::EditorField::ComboScope _combo{ a_label, _preview })
+			{
+				if (Engine::EditorField::Selectable("Left Stick", _isLeft))
+				{
+					a_axis = LEFT_STICK;
+					_isChanged = true;
+				}
+				if (Engine::EditorField::Selectable("Right Stick", _isRight))
+				{
+					a_axis = RIGHT_STICK;
+					_isChanged = true;
+				}
+			}
+			return _isChanged;
+		}
+
+		// 対応表1つ分の編集。どこか触られたら true
+		// a_isController : コントローラーの表か(ボタンの候補と、軸の選び方が変わる)
+		bool DrawActionMapEdit(std::unordered_map<Game::EGameAction, Game::InputBindingData>& a_map, bool a_isController)
+		{
+			const auto& _table = a_isController ? PadKeyTable() : KeyTable();
+
 			bool _isChanged = false;
 
 			// map の並びは毎回変わるので、必ず enum の並びで出す
@@ -152,14 +276,21 @@ namespace App::Input
 
 				if (auto* _pAxis = std::get_if<Game::AxisInputData>(&_it->second))
 				{
-					_isChanged |= DrawKeyCombo("Up", _pAxis->up);
-					_isChanged |= DrawKeyCombo("Right", _pAxis->right);
-					_isChanged |= DrawKeyCombo("Down", _pAxis->down);
-					_isChanged |= DrawKeyCombo("Left", _pAxis->left);
+					if (a_isController)
+					{
+						_isChanged |= DrawStickCombo("Stick", *_pAxis);
+					}
+					else
+					{
+						_isChanged |= DrawKeyCombo("Up", _pAxis->up, _table);
+						_isChanged |= DrawKeyCombo("Right", _pAxis->right, _table);
+						_isChanged |= DrawKeyCombo("Down", _pAxis->down, _table);
+						_isChanged |= DrawKeyCombo("Left", _pAxis->left, _table);
+					}
 				}
 				else if (auto* _pButton = std::get_if<Game::ButtonInputData>(&_it->second))
 				{
-					_isChanged |= DrawKeyCombo("Key", _pButton->key);
+					_isChanged |= DrawKeyCombo("Key", _pButton->key, _table);
 				}
 			}
 
@@ -240,6 +371,19 @@ namespace App::Input
 
 			_inputManager.AddDevice(DEVICE_MOUSE, std::move(_upMouse));
 		}
+
+		// ---- コントローラー ----
+		// 繋がっていない間はコレクターが読みに行かず、入力なしになる
+		{
+			auto _upController = std::make_unique<Engine::Input::InputCollector>(Engine::Input::EInputDevice::Gamepad);
+
+			for (const auto& [_action, _binding] : _settings.controller)
+			{
+				AddControllerBinding(*_upController, _action, _binding);
+			}
+
+			_inputManager.AddDevice(DEVICE_CONTROLLER, std::move(_upController));
+		}
 	}
 
 	//======================================================================================
@@ -253,6 +397,7 @@ namespace App::Input
 
 		_settings.keyboard = m_defaultSettings.keyboard;
 		_settings.mouse = m_defaultSettings.mouse;
+		_settings.controller = m_defaultSettings.controller;
 
 		ApplyAndSave();
 
@@ -272,6 +417,10 @@ namespace App::Input
 		for (const auto& [_action, _binding] : m_defaultSettings.mouse)
 		{
 			a_settings.mouse.try_emplace(_action, _binding);
+		}
+		for (const auto& [_action, _binding] : m_defaultSettings.controller)
+		{
+			a_settings.controller.try_emplace(_action, _binding);
 		}
 	}
 
@@ -323,7 +472,7 @@ namespace App::Input
 		if (Engine::EditorField::CollapsingHeader("Keyboard", true))
 		{
 			Engine::EditorField::IDScope _id("Keyboard");
-			_isChanged |= DrawActionMapEdit(_settings.keyboard);
+			_isChanged |= DrawActionMapEdit(_settings.keyboard, false);
 		}
 
 		if (Engine::EditorField::CollapsingHeader("Mouse"))
@@ -331,7 +480,15 @@ namespace App::Input
 			Engine::EditorField::HelpText("視点(Look)はマウスの移動量そのものなので割り当ては無い");
 
 			Engine::EditorField::IDScope _id("Mouse");
-			_isChanged |= DrawActionMapEdit(_settings.mouse);
+			_isChanged |= DrawActionMapEdit(_settings.mouse, false);
+		}
+
+		if (Engine::EditorField::CollapsingHeader("Controller"))
+		{
+			Engine::EditorField::HelpText("軸はスティック(左右)を選ぶ。トリガー(LT/RT)はボタンとして扱う");
+
+			Engine::EditorField::IDScope _id("Controller");
+			_isChanged |= DrawActionMapEdit(_settings.controller, true);
 		}
 
 		// 触られていたら、その場で入力へ反映してユーザーデータへ書き出す

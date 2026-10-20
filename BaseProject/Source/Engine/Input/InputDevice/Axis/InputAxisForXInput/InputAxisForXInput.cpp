@@ -1,20 +1,39 @@
 ﻿#include "InputAxisForXInput.h"
 
+#include "../../../Internal/InputContext.h"
+#include "../../../InputDeviceManager.h"
+
 namespace Engine::Input
 {
-	void InputAxisForXInput::PreUpdate()
+	namespace
 	{
-		m_prevConState = m_conState;
+		// スティックの最大値
+		constexpr float THUMB_MAX = 32767.0f;
+
+		// 遊びの内側は 0、外側は遊びの縁を 0 として 1 までに広げ直す
+		// (縁でいきなり遊びの分の値が出ないように)
+		Math::Vector2 ApplyDeadzone(SHORT a_x, SHORT a_y, SHORT a_deadzone)
+		{
+			const float _x = static_cast<float>(a_x);
+			const float _y = static_cast<float>(a_y);
+			const float _deadzone = static_cast<float>(a_deadzone);
+
+			const float _length = std::sqrt(_x * _x + _y * _y);
+			if (_length <= _deadzone) return Math::Vector2::Zero();
+
+			const float _rate = (std::min(_length, THUMB_MAX) - _deadzone) / (THUMB_MAX - _deadzone);
+			return Math::Vector2(_x / _length * _rate, _y / _length * _rate);
+		}
 	}
 
-	// 入力コンテキストは使用しない
-	// 繋がっているかの確かめはコレクター(InputCollector)が済ませている
-	void InputAxisForXInput::Update(InputContext&)
+	void InputAxisForXInput::Update(InputContext& a_inputContext)
 	{
-		// 別の番号のコントローラーだけが繋がっているときや、
-		// 確かめた直後に抜かれたときはここで失敗する。止めずに入力なしとして扱う
-		DWORD _res = XInputGetState(m_userIndex, &m_conState);
-		if (_res != ERROR_SUCCESS)
+		// この番号のコントローラーが繋がっていなければ入力なし
+		// (倒したまま抜かれたときに値が残らないように)
+		const XINPUT_GAMEPAD* _pPad = a_inputContext.pDeviceManager
+			? a_inputContext.pDeviceManager->GetGamepadState(m_userIndex)
+			: nullptr;
+		if (!_pPad)
 		{
 			NoInput();
 			return;
@@ -22,13 +41,11 @@ namespace Engine::Input
 
 		if(m_isLeft)
 		{
-			m_axis.x = m_conState.Gamepad.sThumbLX / 32767.f;
-			m_axis.y = m_conState.Gamepad.sThumbLY / 32767.f;
+			m_axis = ApplyDeadzone(_pPad->sThumbLX, _pPad->sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
 		}
 		else
 		{
-			m_axis.x = m_conState.Gamepad.sThumbRX / 32767.f;
-			m_axis.y = m_conState.Gamepad.sThumbRY / 32767.f;
+			m_axis = ApplyDeadzone(_pPad->sThumbRX, _pPad->sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
 		}
 	}
 }

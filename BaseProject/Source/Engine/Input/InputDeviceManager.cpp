@@ -102,6 +102,13 @@ namespace Engine::Input
 		return false;
 	}
 
+	const XINPUT_GAMEPAD* InputDeviceManager::GetGamepadState(UINT a_userIndex) const
+	{
+		if (a_userIndex >= XUSER_MAX_COUNT) return nullptr;
+		if (!m_gamepadConected[a_userIndex]) return nullptr;
+		return &m_gamepadStates[a_userIndex];
+	}
+
 	// どれか1台でも繋がっていれば接続とする。触ったかどうかは全台を見る
 	bool InputDeviceManager::UpdateGamepad(bool& a_outIsTouched)
 	{
@@ -119,14 +126,14 @@ namespace Engine::Input
 
 				// 繋いだフレームは基準が無いので触ったことにしない
 				// (スティックが遊びの外で止まっている個体でいきなり切り替わらないように)
-				if (m_prevGamepadConected[_userIndex])
+				if (m_gamepadConected[_userIndex])
 				{
-					a_outIsTouched = a_outIsTouched || IsGamepadTouched(_state.Gamepad, m_prevGamepadStates[_userIndex]);
+					a_outIsTouched = a_outIsTouched || IsGamepadTouched(_state.Gamepad, m_gamepadStates[_userIndex]);
 				}
 			}
 
-			m_prevGamepadConected[_userIndex] = _isConected;
-			m_prevGamepadStates[_userIndex] = _state.Gamepad;
+			m_gamepadConected[_userIndex] = _isConected;
+			m_gamepadStates[_userIndex] = _state.Gamepad;
 		}
 		return _isGamepadConnected;
 	}

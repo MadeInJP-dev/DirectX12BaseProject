@@ -165,6 +165,7 @@ namespace Engine::Input
 		_context.isMouseLockToCenter = m_isCursorLockActive;
 		_context.deltaX = m_deltaX;
 		_context.deltaY = m_deltaY;
+		_context.deltaTime = MainEngine::Instance().GetUnscaledDeltaTime();
 		_context.pDeviceManager = m_upInputDeviceManager.get();
 		for (auto& _device : m_upInputDeviceMap)
 		{

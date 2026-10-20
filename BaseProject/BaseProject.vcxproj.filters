@@ -5105,6 +5105,9 @@
     <ClInclude Include="Source\Engine\Input\Core\InputDevice.h">
       <Filter>Source\Engine\Input\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Input\Core\GamepadKey.h">
+      <Filter>Source\Engine\Input\Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Asset\Shader\Source\Debug\DebugLine\DebugLinePS.hlsl">

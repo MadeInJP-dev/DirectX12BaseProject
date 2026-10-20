@@ -44,6 +44,10 @@ namespace Engine::Input
 		EInputDevice GetActiveDevice() const { return m_activeDevice; }
 		bool IsConected(EInputDevice a_inputDevice) const;
 
+		// このフレームのコントローラーの入力。繋がっていなければ nullptr
+		// XInput は1台につき1フレーム1回だけここで読み、ボタンや軸はこれを見る
+		const XINPUT_GAMEPAD* GetGamepadState(UINT a_userIndex) const;
+
 	private:
 
 		// ゲームパッドの状態を読み、接続されているかどうかを返す
@@ -64,13 +68,14 @@ namespace Engine::Input
 		// 現在接続されているデバイスたち
 		std::unordered_map<EInputDevice, bool> m_conectedDevices = {};
 
-		//--------------------------------------------------------------------------------------------
-		// 最後に触ったデバイスの判定に使う前フレームの状態
-		//--------------------------------------------------------------------------------------------
+		// このフレームのコントローラーの接続と入力(1台ごと)
+		// 最後に触ったデバイスの判定では、書き換える前の値を前フレームとして使う
+		std::array<bool, XUSER_MAX_COUNT> m_gamepadConected = {};
+		std::array<XINPUT_GAMEPAD, XUSER_MAX_COUNT> m_gamepadStates = {};
+
+		// 最後に触ったデバイスの判定に使う、前フレームのキーの押下(仮想キーごと)
 		// 「押されている」ではなく「押された瞬間」で判定するため。
 		// 押しっぱなしやスティックの戻りの悪さで、別のデバイスへ切り替えられなくなるのを防ぐ
-		std::bitset<256> m_prevKeyDown = {};											// 仮想キーごとの押下
-		std::array<bool, XUSER_MAX_COUNT> m_prevGamepadConected = {};					// ゲームパッドの接続
-		std::array<XINPUT_GAMEPAD, XUSER_MAX_COUNT> m_prevGamepadStates = {};			// ゲームパッドの入力
+		std::bitset<256> m_prevKeyDown = {};
 	};
 }

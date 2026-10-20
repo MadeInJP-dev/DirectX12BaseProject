@@ -16,6 +16,10 @@ namespace Engine::Input
 		float deltaX = 0.0f;
 		float deltaY = 0.0f;
 
+		// このフレームの経過時間(秒)。時間の倍率を掛ける前のもの
+		// (スローや一時停止でマウスの視点は遅くならないので、それに揃える)
+		float deltaTime = 0.0f;
+
 		// デバイスの接続状態(借り物。持ち主は InputManager)
 		// コレクターが自分のデバイスが繋がっているかを確かめるのに使う
 		const InputDeviceManager* pDeviceManager = nullptr;

@@ -43,6 +43,7 @@ namespace App::Input
 		// (AddDevice は同じ名前で束ごと上書きする。他所から同名で登録しないこと)
 		static constexpr const char* DEVICE_KEYBOARD = "Keyboard";
 		static constexpr const char* DEVICE_MOUSE = "Mouse";
+		static constexpr const char* DEVICE_CONTROLLER = "Controller";
 
 		// ユーザーデータから入力設定情報を復元
 		// a_pInputManager : 割り当てを流し込む先(借り物。持ち主は MainEngine)

@@ -1842,6 +1842,7 @@
     <ClInclude Include="..\Library\Include\imgui-docking\imconfig.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\ZPrePass\GroundDepth.h" />
     <ClInclude Include="Source\Engine\Input\Core\InputDevice.h" />
+    <ClInclude Include="Source\Engine\Input\Core\GamepadKey.h" />
     <ClInclude Include="Source\Engine\Input\InputDeviceManager.h" />
     <ClInclude Include="Source\Engine\Resource\Data\EffectPrefab\EffectPrefab.h" />
     <ClInclude Include="Source\Application\Components\Effect\DebrisEmitterComponent.h" />

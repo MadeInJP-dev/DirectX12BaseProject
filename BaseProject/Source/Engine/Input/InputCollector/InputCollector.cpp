@@ -42,6 +42,7 @@ namespace Engine::Input
 			}
 			for(auto& _axis : m_upAxisMap)
 			{
+				_axis.second->SetDeltaTime(a_inputContext.deltaTime);
 				_axis.second->Update(a_inputContext);
 			}
 		}

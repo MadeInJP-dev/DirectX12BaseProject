@@ -95,7 +95,7 @@ namespace DXSM = DirectX::SimpleMath;
 // DirectX Extensions (Mesh, Texture, Audio, Input)
 //
 // DirectXTex は Texture.cpp / TextureImporter.cpp、
-// XInput は InputAxisForXInput.h / InputButtonForXInput.h で読む
+// XInput は InputDeviceManager.h で読む(コントローラーの状態はそこが1フレーム1回読む)
 //---------------------------------------------------------
 #include <DirectXMesh.h>       // メッシュ処理
 #include <Audio.h>             // サウンド処理
