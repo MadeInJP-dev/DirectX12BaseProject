@@ -1,13 +1,15 @@
 ﻿#include "InputCollector.h"
 
 #include "../Internal/InputContext.h"
+#include "../InputDeviceManager.h"
 
 #include "../InputDevice/Button/InputButtonBase.h"
 #include "../InputDevice/Axis/InputAxisBase.h"
 
 namespace Engine::Input
 {
-	InputCollector::InputCollector()
+	InputCollector::InputCollector(EInputDevice a_device)
+		: m_device(a_device)
 	{}
 	InputCollector::~InputCollector()
 	{}
@@ -25,8 +27,14 @@ namespace Engine::Input
 			}
 		}
 
+		// デバイスが繋がっているか
+		// 繋がっていないデバイスを読みに行くと失敗するので、無効と同じく入力なしにする
+		// (確かめ先が無いときは繋がっているものとして扱う)
+		const bool _isConected = !a_inputContext.pDeviceManager
+			|| a_inputContext.pDeviceManager->IsConected(m_device);
+
 		// 有効 or 監視 : ボタンの状態を更新
-		if (GetActiveState() != EActiveState::Disable)
+		if ((GetActiveState() != EActiveState::Disable) && _isConected)
 		{
 			for (auto& _button : m_upButtonMap)
 			{
@@ -37,7 +45,7 @@ namespace Engine::Input
 				_axis.second->Update(a_inputContext);
 			}
 		}
-		// 無効 : すべて入力されていない状態に更新
+		// 無効・未接続 : すべて入力されていない状態に更新
 		else
 		{
 			for (auto& _button : m_upButtonMap)

@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemGroup>    <Filter Include="Source\Engine\DevTool">
+  <ItemGroup>
+    <Filter Include="Source\Engine\DevTool">
       <UniqueIdentifier>{b2813b74-4575-435e-a7ab-c43bfabe561d}</UniqueIdentifier>
     </Filter>
-
     <Filter Include="Source\Editor">
       <UniqueIdentifier>{9993d5dd-e269-41d9-8858-2cb01e00e967}</UniqueIdentifier>
     </Filter>
@@ -2880,6 +2880,9 @@
     <ClCompile Include="Source\Application\Systems\Render\GroundEffectSetSystem.cpp">
       <Filter>Source\Application\Systems\Render</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Input\InputDeviceManager.cpp">
+      <Filter>Source\Engine\Input</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Engine\DevTool\IDevTool.h">
@@ -5095,6 +5098,12 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Render\GroundEffectSetSystem.h">
       <Filter>Source\Application\Systems\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Input\InputDeviceManager.h">
+      <Filter>Source\Engine\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Input\Core\InputDevice.h">
+      <Filter>Source\Engine\Input\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

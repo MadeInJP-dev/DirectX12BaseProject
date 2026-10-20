@@ -376,6 +376,7 @@
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\ZPrePass\GroundDepth.cpp" />
+    <ClCompile Include="Source\Engine\Input\InputDeviceManager.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\EffectPrefab\EffectPrefab.cpp" />
     <ClCompile Include="Source\Application\Utility\EffectPrefabSpawnHelper.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
@@ -1840,6 +1841,8 @@
     <ClInclude Include="Source\Engine\Graphics\Device\RenderDevice.h" />
     <ClInclude Include="..\Library\Include\imgui-docking\imconfig.h" />
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\ZPrePass\GroundDepth.h" />
+    <ClInclude Include="Source\Engine\Input\Core\InputDevice.h" />
+    <ClInclude Include="Source\Engine\Input\InputDeviceManager.h" />
     <ClInclude Include="Source\Engine\Resource\Data\EffectPrefab\EffectPrefab.h" />
     <ClInclude Include="Source\Application\Components\Effect\DebrisEmitterComponent.h" />
     <ClInclude Include="Source\Application\Components\Effect\BallisticComponent.h" />

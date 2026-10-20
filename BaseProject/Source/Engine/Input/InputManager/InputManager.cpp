@@ -3,6 +3,7 @@
 #include "../Internal/InputContext.h"
 
 #include "../InputCollector/InputCollector.h"
+#include "../InputDeviceManager.h"
 #include "../InputDevice/Button/InputButtonBase.h"
 #include "../InputDevice/Button/InputButtonForWindowsChord/InputButtonForWindowsChord.h"
 #include "../InputDevice/Axis/InputAxisBase.h"
@@ -76,6 +77,9 @@ namespace Engine::Input
 	{
 		m_pInputOption = a_pInputOption;
 
+		m_upInputDeviceManager = std::make_unique<InputDeviceManager>();
+		m_upInputDeviceManager->Init();
+
 		// 保存されている設定を反映する
 		// この時点ではまだウィンドウが生成されていないため、
 		// 中心座標はここでは求めず、固定を行うフレームごとに実測する
@@ -117,6 +121,10 @@ namespace Engine::Input
 	{
 		if (!m_isActive) return;
 
+		// 接続の確認と、最後に触ったデバイスの判定
+		// 生のマウス移動量・ホイールはこの後で取り出されて0に戻るので、その前に見る
+		m_upInputDeviceManager->Update();
+
 		// マウスの固定化
 		// エディタ操作中は固定しない。
 		// デバッグプレイ中は固定する : 視点の移動量は固定していないと作られないので、
@@ -157,6 +165,7 @@ namespace Engine::Input
 		_context.isMouseLockToCenter = m_isCursorLockActive;
 		_context.deltaX = m_deltaX;
 		_context.deltaY = m_deltaY;
+		_context.pDeviceManager = m_upInputDeviceManager.get();
 		for (auto& _device : m_upInputDeviceMap)
 		{
 			_device.second->Update(_context);
@@ -355,12 +364,9 @@ namespace Engine::Input
 	// 任意のアプリケーションボタンの入力状態を取得
 	InputButtonBase::EState InputManager::GetButtonState(ActionKey a_action) const
 	{
-		if (!m_isActive) return InputButtonBase::EState::Free;
-		// プレイモード以外はゲーム入力を渡さない
-		if (!IsPlayMode()) return InputButtonBase::EState::Free;
-
-		// エディタ操作中(テキスト入力など)はゲーム入力を無効化
-		if (IsUICapturingInput()) return InputButtonBase::EState::Free;
+		if (!m_isActive)			return InputButtonBase::EState::Free;		// 入力検知を開始しているかどうか
+		if (!IsPlayMode())			return InputButtonBase::EState::Free;		// プレイモード以外はゲーム入力を渡さない
+		if (IsUICapturingInput())	return InputButtonBase::EState::Free;		// エディタ操作中(テキスト入力など)はゲーム入力を無効化
 
 		InputButtonBase::EState _buttonState = InputButtonBase::EState::Free;
 		for (auto& _device : m_upInputDeviceMap)

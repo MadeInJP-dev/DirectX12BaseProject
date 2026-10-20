@@ -11,23 +11,23 @@ namespace Engine::Option::ProjectOptions
 namespace Engine::Input
 {
 	class InputCollector;
+	class InputDeviceManager;
 
-	/// <summary>
-	/// 様々な入力を管理するクラス : 複数のInputCllectorを管理
-	/// </summary>
-	/// <remarks>
-	/// アクションの指定は ActionID(uint32_t)。取得も登録もこの番号を鍵にしている。
-	/// 引数の ActionKey は番号・enum class・文字列のどれでも受け取れるので、
-	///
-	///   a_pInputManager->IsPress(EGameAction::Boost);	// ゲーム側の enum
-	///   a_pInputManager->IsPress("Boost");				// 名前(ハッシュを通る)
-	///
-	/// のどちらでも書ける。名前を渡した場合はハッシュ値が番号になるので、
-	/// 登録と取得で同じ書き方を通していれば混ぜても構わない。
-	///
-	/// 注意 : 番号の衝突はエンジン側では防げない。
-	/// ゲーム側で複数の enum を用意する場合は、開始値をずらして重ならないようにすること。
-	/// </remarks>
+	//===============================================================================================
+	// 様々な入力を管理するクラス : 複数のInputCllectorを管理
+	// 
+	// アクションの指定は ActionID(uint32_t)。取得も登録もこの番号を鍵にしている。
+	// 引数の ActionKey は番号・enum class・文字列のどれでも受け取れるので、
+	//
+	//   a_pInputManager->IsPress(EGameAction::Boost);	// ゲーム側の enum
+	//   a_pInputManager->IsPress("Boost");				// 名前(ハッシュを通る)
+	//
+	// のどちらでも書ける。名前を渡した場合はハッシュ値が番号になるので、
+	// 登録と取得で同じ書き方を通していれば混ぜても構わない。
+	//
+	// 注意 : 番号の衝突はエンジン側では防げない。
+	// ゲーム側で複数の enum を用意する場合は、開始値をずらして重ならないようにすること。
+	//===============================================================================================
 	class InputManager
 	{
 	public:
@@ -157,6 +157,9 @@ namespace Engine::Input
 		const std::unique_ptr<InputCollector>& GetDevice(std::string_view a_name) const;
 		std::unique_ptr<InputCollector>& RefDevice(std::string_view a_name);
 
+		// 接続中のデバイスと、最後に触ったデバイス
+		const InputDeviceManager& GetInputDeviceManager() const { return *m_upInputDeviceManager; }
+
 		bool IsActive() const { return m_isActive; }
 		void SetActive(bool a_active) { m_isActive = a_active; }
 
@@ -178,6 +181,9 @@ namespace Engine::Input
 		bool m_isActive = true;
 
 		std::unordered_map<std::string, std::unique_ptr<InputCollector>> m_upInputDeviceMap = {};
+
+		// デバイスの接続状態と、最後に触ったデバイス
+		std::unique_ptr<InputDeviceManager> m_upInputDeviceManager = nullptr;
 
 		// マウス制御
 		bool m_isCursorLockedToCenter = false;	// 固定する設定かどうか

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../Core/InputAction.h"
+#include "../Core/InputDevice.h"
 #include "../InputDevice/Button/InputButtonBase.h"
 
 namespace Engine::Input
@@ -31,7 +32,8 @@ namespace Engine::Input
 			Enable,			// 有効 : アプリに入力の影響を与える
 		};
 
-		InputCollector();
+		// a_device : 入力を集めるデバイス。繋がっていない間は入力なしになる
+		explicit InputCollector(EInputDevice a_device = EInputDevice::KeyboardMouse);
 		~InputCollector();
 
 		void Update(InputContext& a_inputContext);
@@ -51,6 +53,9 @@ namespace Engine::Input
 		// 任意の入力状況の取得
 		InputButtonBase::EState GetButtonState(ActionKey a_action) const;
 		Math::Vector2 GetAxisState(ActionKey a_action) const;
+
+		// 入力を集めるデバイス
+		EInputDevice GetDevice() const { return m_device; }
 
 		// 入力デバイスの状態の取得と設定
 		EActiveState GetActiveState() const { return m_state; }
@@ -89,6 +94,9 @@ namespace Engine::Input
 		// 登録されているデバイス(鍵はアクションID)
 		std::unordered_map<ActionID, std::unique_ptr<InputButtonBase>> m_upButtonMap;
 		std::unordered_map<ActionID, std::unique_ptr<InputAxisBase>> m_upAxisMap;
+
+		// 入力を集めるデバイス
+		EInputDevice m_device = EInputDevice::KeyboardMouse;
 
 		// 有効
 		EActiveState m_state = EActiveState::Enable;

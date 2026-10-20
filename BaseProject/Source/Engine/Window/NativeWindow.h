@@ -74,6 +74,12 @@ namespace Engine::Window
 		/// </summary>
 		void OnMouseWheel(int a_delta);
 
+		// 溜まっている生の移動量・ホイールを、取り出さずに見る(0に戻さない)
+		// 最後に触ったデバイスの判定(InputDeviceManager)が、InputManager が取り出す前に覗く
+		int GetRawMouseDeltaX() const { return m_rawMouseDeltaX; }
+		int GetRawMouseDeltaY() const { return m_rawMouseDeltaY; }
+		int GetRawMouseWheelDelta() const { return m_wheelDelta; }
+
 		// アクセサ
 		const HWND& GetWindowHandle() const { return m_hWnd; }
 		const UINT& GetClientWidth() const { return m_clientWidth; }
