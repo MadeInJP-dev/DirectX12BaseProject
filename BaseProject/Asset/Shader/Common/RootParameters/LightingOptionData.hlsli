@@ -16,6 +16,14 @@ struct LightingOptionData
 	float reflectionRoughnessEnd;
 	float reflectionBlurRadius;	// 粗さ End のときのぼかし半径(反射テクスチャの画素数)
 	float pad;
+
+	// リムライト(主光源の逆光で輪郭を光らせる)
+	float3 rimColor;			// 光の色に掛ける色
+	float rimIntensity;			// 強さ
+	float rimPower;				// 輪郭の細さ(大きいほど縁だけに寄る)
+	float rimBackLightStart;	// 逆光の度合いがこの値から効き始める(-1..1)
+	float rimBackLightEnd;		// この値で効き切る
+	float rimShadowRate;		// 影で消す割合(0 = 影を無視, 1 = 影で消す)。光に背を向けた面には効かない
 };
 
 #endif

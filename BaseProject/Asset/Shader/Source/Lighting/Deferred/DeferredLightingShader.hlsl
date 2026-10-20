@@ -274,6 +274,9 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
 		// 主光源だけがレイトレの影を受ける
 		float _dlShadow = (_dlIdx == 0) ? _shadow : 1.0f;
 
+		//------------------------------------------------------------------
+		// 拡散反射
+		
 		// シンプルなディズニーベースの拡散反射を実装する
 		// フレネル反射を考慮した拡散反射を計算
 		float _diffuseFromFresnel = CalcDiffuseFromFresnel(
@@ -289,6 +292,8 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
 		// 最終的な拡散反射光を計算
 		float3 _diffuse = _albedo * _diffuseFromFresnel * _lambertDiffuse;
 
+		//------------------------------------------------------------------
+		// 鏡面反射
 		// Cook-Torranceモデルの鏡面反射BRDF( D*F*G / (4*NdotL*NdotV) )を計算
 		float _specTerm = CookTorranceSpecular(
 			_L,
@@ -312,6 +317,37 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
 
 		// 直接光(拡散+鏡面)の強さをオプションから調整可能にする
 		_outColor += (_diffuse + _spec) * g_lightingOp.directionalIntensity;
+
+		//------------------------------------------------------------------
+		// リムライト
+
+		// カメラから見た輪郭を抽出し、逆光方向の主光源に連動させる
+		// 主光源を対象にする
+		if(_dlIdx == 0)
+		{
+			float _NdotV = saturate(dot(_normal, _V));
+			float _rimMask = pow(1.0f - _NdotV, g_lightingOp.rimPower);
+
+			// L は表面から光源へ向かう方向
+			// 光源はカメラの反対側にあるほど、逆光係数が大きくなる
+			const float _backStart = g_lightingOp.rimBackLightStart;
+			const float _backEnd = max(g_lightingOp.rimBackLightEnd, _backStart + 1e-4f);
+			float _backLight = smoothstep(
+				_backStart,
+				_backEnd,
+				dot(-_L, _V)
+			);
+
+			// 影でどれだけ消すか
+			// 影マスクは光に背を向けた面(NdotL <= 0)をレイを飛ばさず 0 にしている(RayShadowShader)。
+			// 逆光のリムはまさにその面に出るので、そこでマスクを掛けると必ず消える。
+			// 実際にレイで調べた面(NdotL > 0)だけマスクを使う
+			float _rimShadowMask = (_NdotL > 0.0f) ? _dlShadow : 1.0f;
+			float _rimShadow = lerp(1.0f, _rimShadowMask, g_lightingOp.rimShadowRate);
+
+			float3 _rimLight = _rimMask * _backLight * _radiance * g_lightingOp.rimColor * _rimShadow * g_lightingOp.rimIntensity;
+			_outColor += _rimLight;
+		}
 	}
 
 	//------------------------------------------------------------------

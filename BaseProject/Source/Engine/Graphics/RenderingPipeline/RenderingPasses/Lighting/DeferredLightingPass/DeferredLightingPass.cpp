@@ -97,5 +97,11 @@ namespace Engine::Graphics::Pipeline
 		a_arch.Field("reflectionRoughnessStart", m_cb.reflectionRoughnessStart);
 		a_arch.Field("reflectionRoughnessEnd", m_cb.reflectionRoughnessEnd);
 		a_arch.Field("reflectionBlurRadius", m_cb.reflectionBlurRadius);
+		a_arch.Field("rimColor", m_cb.rimColor);
+		a_arch.Field("rimIntensity", m_cb.rimIntensity);
+		a_arch.Field("rimPower", m_cb.rimPower);
+		a_arch.Field("rimBackLightStart", m_cb.rimBackLightStart);
+		a_arch.Field("rimBackLightEnd", m_cb.rimBackLightEnd);
+		a_arch.Field("rimShadowRate", m_cb.rimShadowRate);
 	}
 }

@@ -186,6 +186,21 @@ namespace Editor::Inspector
 				_isEdit |= Engine::EditorField::Field("ReflectionBlurRadius", _params.reflectionBlurRadius, 0.1f, 0.0f, 64.0f);
 				Engine::EditorField::Tooltip("粗さ End のときのぼかし半径(反射テクスチャの画素数)。粗さに比例して広がります");
 
+				// リムライト
+				_isEdit |= Engine::EditorField::ColorField("RimColor", _params.rimColor);
+				Engine::EditorField::Tooltip("主光源の色に掛ける色");
+
+				_isEdit |= Engine::EditorField::Field("RimIntensity", _params.rimIntensity, 0.01f, 0.0f);
+				_isEdit |= Engine::EditorField::Field("RimPower", _params.rimPower, 0.05f, 0.1f, 16.0f);
+				Engine::EditorField::Tooltip("輪郭の細さ。大きいほど縁だけが光ります");
+
+				_isEdit |= Engine::EditorField::Field("RimBackLightStart", _params.rimBackLightStart, 0.01f, -1.0f, 1.0f);
+				_isEdit |= Engine::EditorField::Field("RimBackLightEnd", _params.rimBackLightEnd, 0.01f, -1.0f, 1.0f);
+				Engine::EditorField::Tooltip("光がカメラの向こう側にある度合い(1 = 真正面の逆光)。Start から効き始め End で効き切ります。Start を下げると横からの光でも光ります");
+
+				_isEdit |= Engine::EditorField::Field("RimShadowRate", _params.rimShadowRate, 0.01f, 0.0f, 1.0f);
+				Engine::EditorField::Tooltip("影の中でリムを消す割合。0 で影を無視して光ります。影は光の当たる面でしか調べていないので、光に背を向けた面(真後ろからの逆光のリム)には効きません");
+
 				return _isEdit ? EPassEditResult::Param : EPassEditResult::None;
 			}
 		};
