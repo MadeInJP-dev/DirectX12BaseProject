@@ -16,7 +16,7 @@ namespace App::Object
 	//
 	//   UIAnchor      … 画面のどこに、どの向き・どの大きさで置くか(位置・大きさ・回転・倍率・色・Z順・湾曲)
 	//   Decoration    … そこから相対で出す絵(板ポリ・画像・文字)。配列で何枚でも重ねられる
-	//   UIInteraction … カーソルへの反応(当たり判定の設定・押下・音)。押せる UI だけが持つ
+	//   UIInteraction … カーソルへの反応(当たり判定の設定・押下・音・項目移動の前と次)。押せる UI だけが持つ
 	//   UITransition  … 出し入れと合図の演出(拡大して戻る・薄くなって消える など)。全部の飾りの上から掛かる
 	//   UIMaterial    … 飾り全部に掛ける効果(ディゾルブなど)。アセットを GUID で指す。無くてもよい
 	//
@@ -154,6 +154,27 @@ namespace App::Object
 		// 触れるかどうか。切ると乗っても押しても反応しない(Disabled 扱い)
 		bool IsInteractable() const { return m_opInteraction && m_opInteraction->isInteractable; }
 		void SetInteractable(bool a_isInteractable);
+
+		//-----------------------------------------------------------------------
+		// 項目移動(キー・パッドで UI を順に選ぶ。押せない UI は持たない)
+		//
+		// 前・次の UI を GUID で持って保存する。実際に選択を動かすのは UINavigationGroup
+		//-----------------------------------------------------------------------
+
+		// 項目移動で選ばれているか(IsHovered も立つ)
+		bool IsNavFocused() const { return m_opInteraction && m_opInteraction->isNavFocused; }
+
+		// 前・次の UI の GUID(空なら無し。押せない UI は常に空)
+		const Core::GUID& GetNavPrevGUID() const;
+		const Core::GUID& GetNavNextGUID() const;
+
+		// 前・次の UI を指し直す(押せない UI では何もしない)
+		void SetNavPrevGUID(const Core::GUID& a_guid);
+		void SetNavNextGUID(const Core::GUID& a_guid);
+
+		// 前・次の UI を引く : 指していない・シーンに無い・UI でないなら nullptr
+		UIBase* FindNavPrev(const Engine::GameObject::ObjectContext& a_context) const;
+		UIBase* FindNavNext(const Engine::GameObject::ObjectContext& a_context) const;
 
 		//-----------------------------------------------------------------------
 		// 演出(出し入れと合図)
@@ -406,6 +427,12 @@ namespace App::Object
 
 		// インスペクター : カーソルへの反応(判定の範囲の表示を含む)
 		void DrawInteractionInspector(Engine::GameObject::ObjectContext& a_context);
+
+		// インスペクター : 項目移動の前・次(指した相手の向かい側もつなぐ)
+		void DrawNavigationInspector(Engine::GameObject::ObjectContext& a_context);
+
+		// GUID から UI を引く(項目移動の前・次用)
+		static UIBase* FindUI(const Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_guid);
 
 		// インスペクター : 出し入れと合図の演出(確認用に流すボタンを含む)
 		void DrawTransitionInspector();

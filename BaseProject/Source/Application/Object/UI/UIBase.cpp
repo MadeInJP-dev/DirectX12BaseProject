@@ -593,6 +593,50 @@ namespace App::Object
 	}
 
 	//======================================================================================
+	// 項目移動の前・次
+	//======================================================================================
+	const Core::GUID& UIBase::GetNavPrevGUID() const
+	{
+		static const Core::GUID EMPTY_GUID = {};
+		return m_opInteraction ? m_opInteraction->navPrevGUID : EMPTY_GUID;
+	}
+
+	const Core::GUID& UIBase::GetNavNextGUID() const
+	{
+		static const Core::GUID EMPTY_GUID = {};
+		return m_opInteraction ? m_opInteraction->navNextGUID : EMPTY_GUID;
+	}
+
+	void UIBase::SetNavPrevGUID(const Core::GUID& a_guid)
+	{
+		if (m_opInteraction) m_opInteraction->navPrevGUID = a_guid;
+	}
+
+	void UIBase::SetNavNextGUID(const Core::GUID& a_guid)
+	{
+		if (m_opInteraction) m_opInteraction->navNextGUID = a_guid;
+	}
+
+	UIBase* UIBase::FindNavPrev(const Engine::GameObject::ObjectContext& a_context) const
+	{
+		return FindUI(a_context, GetNavPrevGUID());
+	}
+
+	UIBase* UIBase::FindNavNext(const Engine::GameObject::ObjectContext& a_context) const
+	{
+		return FindUI(a_context, GetNavNextGUID());
+	}
+
+	// ポインタは持たずに毎回引く。相手が消されたときに古いポインタを踏まないように
+	// (引くのは GUID の対応表なので軽い)
+	UIBase* UIBase::FindUI(const Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_guid)
+	{
+		if (!a_context.pObjectManager || !a_guid.IsValid()) return nullptr;
+
+		return Core::TypeInfo::Cast<UIBase>(a_context.pObjectManager->FindByGUID(a_guid));
+	}
+
+	//======================================================================================
 	// シリアライズ
 	//--------------------------------------------------------------------------------------
 	// 前半はテクスチャを1枚だけ持っていた頃の並びをそのまま残してある。
@@ -673,6 +717,13 @@ namespace App::Object
 
 		// 飾り全部に掛ける効果(UIマテリアル)
 		if (!a_ar.IsLegacyLayout()) a_ar.GUIDField("MaterialGUID", m_materialGUID);
+
+		// 項目移動の前・次の UI。押せない UI も並びを保つために空の GUID を書き、読んだ値は捨てる
+		if (!a_ar.IsLegacyLayout())
+		{
+			a_ar.GUIDField("NavPrevGUID", _interaction.navPrevGUID);
+			a_ar.GUIDField("NavNextGUID", _interaction.navNextGUID);
+		}
 
 		m_anchor.editSize = m_anchor.pixelSize;
 

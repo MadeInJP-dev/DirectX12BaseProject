@@ -99,6 +99,13 @@ namespace App::Input
 					_upAxis->SetPerSecond(true);
 				}
 
+				// UI の項目移動は十字キーでも動かせるようにする。
+				// 1つのアクションに軸は1つしか積めないので、スティックの軸へ十字キーも読ませる
+				if (a_action == Game::EGameAction::BottonMove)
+				{
+					_upAxis->SetUseDPad(true);
+				}
+
 				a_collector.AddAxis(a_action, std::move(_upAxis));
 			}
 			else if (const auto* _pButton = std::get_if<Game::ButtonInputData>(&a_binding))

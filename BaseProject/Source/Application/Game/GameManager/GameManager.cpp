@@ -31,6 +31,7 @@
 #include "Application/Object/UI/Widget/UIGauge/UIGauge.h"
 #include "Application/Object/UI/Option/OptionHUD.h"
 #include "Application/Object/UI/Widget/SideMenu/SideMenu.h"
+#include "Application/Object/Sequence/UINavigationGroup/UINavigationGroup.h"
 #include "Application/Object/Sequence/TitleSequence/TitleSequence.h"
 #include "Application/Object/Sequence/LoadingSequence/LoadingSequence.h"
 #include "Application/Object/Sequence/HomeSequence/HomeSequence.h"
@@ -154,6 +155,7 @@ namespace App::Game
 			_objRegistry.RegisterType<App::Object::Boundary>("Boundary");						// 行ける範囲の境界。近づいた面だけが見えてくる壁を描く(外へ出さないのはシステム側)
 			_objRegistry.RegisterType<App::Object::SideMenu>("SideMenu");						// カーソルを乗せると開く横のメニュー(ホームの左上)。開閉だけを持ち、中のボタンは進行役が差し込む
 			_objRegistry.RegisterType<App::Object::TitleRunBackdrop>("TitleRunBackdrop");		// タイトルの背景。出した機体を床の上でブーストさせ続け、板1枚の床を足元へ寄せてカメラで追う
+			_objRegistry.RegisterType<App::Object::UINavigationGroup>("UINavigationGroup");		// キー・パッドで UI を順に選ぶ。最初の UI だけを持ち、各 UI の前・次をたどる
 		}
 
 		// ------------------------------------------------------------------

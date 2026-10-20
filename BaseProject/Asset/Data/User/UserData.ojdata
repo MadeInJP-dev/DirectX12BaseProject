@@ -13,6 +13,102 @@
         "WindowMode": 2
     },
     "Input": {
+        "Controller": [
+            {
+                "Action": "Look",
+                "Down": 22577,
+                "Left": 22579,
+                "Right": 22578,
+                "Type": "Axis",
+                "Up": 22576
+            },
+            {
+                "Action": "Move",
+                "Down": 22561,
+                "Left": 22563,
+                "Right": 22562,
+                "Type": "Axis",
+                "Up": 22560
+            },
+            {
+                "Action": "Down",
+                "Key": 22529,
+                "Type": "Button"
+            },
+            {
+                "Action": "Boost",
+                "Key": 22528,
+                "Type": "Button"
+            },
+            {
+                "Action": "ChargeBoost",
+                "Key": 22530,
+                "Type": "Button"
+            },
+            {
+                "Action": "RWeaponAttack",
+                "Key": 22535,
+                "Type": "Button"
+            },
+            {
+                "Action": "LWeaponAttack",
+                "Key": 22534,
+                "Type": "Button"
+            },
+            {
+                "Action": "RMissileLock",
+                "Key": 22532,
+                "Type": "Button"
+            },
+            {
+                "Action": "LMissileLock",
+                "Key": 22533,
+                "Type": "Button"
+            },
+            {
+                "Action": "Pose",
+                "Key": 22548,
+                "Type": "Button"
+            },
+            {
+                "Action": "Select",
+                "Key": 22528,
+                "Type": "Button"
+            },
+            {
+                "Action": "Back",
+                "Key": 22529,
+                "Type": "Button"
+            },
+            {
+                "Action": "Menu",
+                "Key": 22548,
+                "Type": "Button"
+            },
+            {
+                "Action": "BottonMove",
+                "Down": 22561,
+                "Left": 22563,
+                "Right": 22562,
+                "Type": "Axis",
+                "Up": 22560
+            },
+            {
+                "Action": "NextItem",
+                "Key": 22532,
+                "Type": "Button"
+            },
+            {
+                "Action": "PrevItem",
+                "Key": 22533,
+                "Type": "Button"
+            },
+            {
+                "Action": "Decide",
+                "Key": 22528,
+                "Type": "Button"
+            }
+        ],
         "HasIsInvertLookY": false,
         "IsInvertLookY": false,
         "Keyboard": [
@@ -94,6 +190,16 @@
                 "Right": 39,
                 "Type": "Axis",
                 "Up": 38
+            },
+            {
+                "Action": "NextItem",
+                "Key": 9,
+                "Type": "Button"
+            },
+            {
+                "Action": "Decide",
+                "Key": 13,
+                "Type": "Button"
             }
         ],
         "Mouse": [],

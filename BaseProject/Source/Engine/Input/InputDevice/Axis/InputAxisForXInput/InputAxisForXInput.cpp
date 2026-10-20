@@ -24,6 +24,17 @@ namespace Engine::Input
 			const float _rate = (std::min(_length, THUMB_MAX) - _deadzone) / (THUMB_MAX - _deadzone);
 			return Math::Vector2(_x / _length * _rate, _y / _length * _rate);
 		}
+
+		// 十字キーの向き(上・右が正)。押されていなければ 0
+		Math::Vector2 ReadDPad(const XINPUT_GAMEPAD& a_pad)
+		{
+			Math::Vector2 _axis = Math::Vector2::Zero();
+			if (a_pad.wButtons & XINPUT_GAMEPAD_DPAD_UP)	_axis.y += 1.0f;
+			if (a_pad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT)	_axis.x += 1.0f;
+			if (a_pad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN)	_axis.y -= 1.0f;
+			if (a_pad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT)	_axis.x -= 1.0f;
+			return _axis;
+		}
 	}
 
 	void InputAxisForXInput::Update(InputContext& a_inputContext)
@@ -46,6 +57,13 @@ namespace Engine::Input
 		else
 		{
 			m_axis = ApplyDeadzone(_pPad->sThumbRX, _pPad->sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+		}
+
+		// 十字キー : 押されている間はスティックより優先する
+		if (m_isUseDPad)
+		{
+			const Math::Vector2 _dPad = ReadDPad(*_pPad);
+			if (_dPad != Math::Vector2::Zero()) m_axis = _dPad;
 		}
 	}
 }

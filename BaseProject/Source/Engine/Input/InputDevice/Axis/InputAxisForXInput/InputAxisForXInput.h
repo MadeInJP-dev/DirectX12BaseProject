@@ -25,9 +25,21 @@ namespace Engine::Input
 		// フレームの移動量を使って、軸の入力状況を更新
 		void Update(InputContext& a_inputContext) override;
 
+		/// <summary>
+		/// 十字キーもこの軸として読むか
+		/// </summary>
+		/// <remarks>
+		/// UI の項目移動のように、スティックでも十字キーでも同じ向きを出したいとき用。
+		/// 十字キーが押されている間はスティックより優先する(値は -1 / 0 / 1)
+		/// </remarks>
+		void SetUseDPad(bool a_isUse) { m_isUseDPad = a_isUse; }
+
 	private:
 		// 左かどうか
 		bool m_isLeft = false;
+
+		// 十字キーも読むか
+		bool m_isUseDPad = false;
 
 		UINT m_userIndex = 0;
 	};

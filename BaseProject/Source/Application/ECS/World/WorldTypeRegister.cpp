@@ -265,6 +265,7 @@
 #include "Application/InstanceResource/SwarmMissileResource.h"
 #include "Application/InstanceResource/PlayerHUDResource.h"
 #include "Application/InstanceResource/UICursorResource.h"
+#include "Application/InstanceResource/UINavigationResource.h"
 #include "Application/InstanceResource/BoundaryResource.h"
 #include "Application/InstanceResource/RadialBlurShakeResource.h"
 #include "Engine/Graphics/Raytracing/DynamicRaytracingData.h"
@@ -698,6 +699,8 @@ namespace App::ECS
 		a_world.AddResource<InstanceResource::PlayerHUDResource>();
 		// UI のカーソルの取り合い(書くのも読むのも UI。システムは触らない)
 		a_world.AddResource<InstanceResource::UICursorResource>();
+		// UI の項目移動(キー・パッドで選ぶ)の取り合い(書くのも読むのも UI。システムは触らない)
+		a_world.AddResource<InstanceResource::UINavigationResource>();
 		// 行ける範囲(Boundary オブジェクトが書き、BoundaryClampSystem が読む)
 		a_world.AddResource<InstanceResource::BoundaryResource>();
 		// 画面のラジアルブラーの震え(ボスの咆哮が書き、RadialBlurShakeSystem が読む)

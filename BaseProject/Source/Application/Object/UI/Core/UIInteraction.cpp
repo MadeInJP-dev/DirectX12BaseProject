@@ -11,6 +11,7 @@
 
 #include "Application/ECS/World/APPWorld.h"
 #include "Application/InstanceResource/UICursorResource.h"
+#include "Application/InstanceResource/UINavigationResource.h"
 
 namespace App::Object
 {
@@ -81,7 +82,22 @@ namespace App::Object
 	{
 		if (!a_context.pWorld || !a_context.pWorld->HasResource<InstanceResource::UICursorResource>()) return false;
 
+		// キー・パッドで選んでいる間は、カーソルは誰にも乗らない。
+		// 乗せると、選んでいる UI とカーソルの下の UI が両方光る
+		if (a_context.pWorld->HasResource<InstanceResource::UINavigationResource>()
+			&& a_context.pWorld->GetResource<InstanceResource::UINavigationResource>().IsCursorBlocked(a_context.frameIndex))
+		{
+			return false;
+		}
+
 		return a_context.pWorld->GetResource<InstanceResource::UICursorResource>().IsOwner(a_context.frameIndex, a_pOwner);
+	}
+
+	bool UIInteraction::IsNavFocusedOwner(const Engine::GameObject::ObjectContext& a_context, const void* a_pOwner) const
+	{
+		if (!a_context.pWorld || !a_context.pWorld->HasResource<InstanceResource::UINavigationResource>()) return false;
+
+		return a_context.pWorld->GetResource<InstanceResource::UINavigationResource>().IsFocused(a_context.frameIndex, a_pOwner);
 	}
 
 	//======================================================================================
@@ -96,6 +112,9 @@ namespace App::Object
 	//
 	// ・入力はプレイモード中しか受け取らない(InputManager 側で止まる)。
 	//   エディター操作でUIが光ったり押されたりしない。
+	//
+	// ・項目移動(UINavigationGroup)で選ばれている間も「乗っている」にし、
+	//   決定(Decide)で押せるようにする。カーソルでの押下とは別に進める。
 	//======================================================================================
 	void UIInteraction::Advance(Engine::GameObject::ObjectContext& a_context, const void* a_pOwner, bool a_isReceivable)
 	{
@@ -109,6 +128,7 @@ namespace App::Object
 
 		// 乗った瞬間を見るために、前のフレームの状態を控えておく
 		const bool _wasHovered = isHovered;
+		const bool _wasNavFocused = isNavFocused;
 
 		//==================================================================
 		// 反応しない状態
@@ -122,18 +142,23 @@ namespace App::Object
 			isPressed = false;
 			isPressStartedInside = false;
 			isCursorInside = false;
+			isNavFocused = false;
+			isNavPressStarted = false;
 			return;
 		}
 
 		auto& _input = *a_context.pServices->pInputManager;
 
 		//==================================================================
-		// カーソルが乗っているか
+		// 乗っているか
 		//
-		// 矩形の中に居るか(名乗り)と、重なりの取り合いに勝ったかの両方。
-		// 手前に別のUIが重なっているフレームは、下のUIはここで落ちる
+		// カーソルが乗っている(矩形の中に居て、重なりの取り合いに勝った)か、
+		// 項目移動で選ばれているか。見た目と音はどちらも同じ「乗った」にする。
+		// 手前に別のUIが重なっているフレームは、下のUIのカーソル側はここで落ちる
 		//==================================================================
-		isHovered = isCursorInside && IsCursorOwner(a_context, a_pOwner);
+		const bool _isCursorHovered = isCursorInside && IsCursorOwner(a_context, a_pOwner);
+		isNavFocused = IsNavFocusedOwner(a_context, a_pOwner);
+		isHovered = _isCursorHovered || isNavFocused;
 
 		// 乗った瞬間だけ鳴らす。乗っている間ずっとだと鳴り続けてしまう
 		if (isHovered && !_wasHovered)
@@ -142,14 +167,14 @@ namespace App::Object
 		}
 
 		//==================================================================
-		// 押下の進行
+		// カーソルでの押下
 		//==================================================================
 		const bool _isPressMoment   = _input.IsPress(clickAction);		// 押した瞬間
 		const bool _isHoldMoment    = _input.IsHold(clickAction);		// 押している間
 		const bool _isReleaseMoment = _input.IsRelease(clickAction);	// 離した瞬間
 
 		// 内側で押し始めたときだけ受け付ける
-		if (_isPressMoment && isHovered)
+		if (_isPressMoment && _isCursorHovered)
 		{
 			isPressStartedInside = true;
 
@@ -157,15 +182,15 @@ namespace App::Object
 			PlaySound(a_context, pressSoundGUID, pressSoundHandle, pressSoundCoolTime);
 		}
 
-		isPressed = isPressStartedInside && _isHoldMoment;
+		bool _isCursorPressed = isPressStartedInside && _isHoldMoment;
 
 		if (_isReleaseMoment)
 		{
 			// 押し始めと離しの両方が内側なら成立
-			isClicked = (isPressStartedInside && isHovered);
+			if (isPressStartedInside && _isCursorHovered) isClicked = true;
 
 			isPressStartedInside = false;
-			isPressed = false;
+			_isCursorPressed = false;
 		}
 
 		// 押していないのに押し始めの記録が残っていたら落とす
@@ -173,8 +198,44 @@ namespace App::Object
 		if (!_isHoldMoment && !_isReleaseMoment)
 		{
 			isPressStartedInside = false;
-			isPressed = false;
+			_isCursorPressed = false;
 		}
+
+		//==================================================================
+		// 項目移動での押下(決定)
+		//
+		// 前のフレームから選ばれていたときだけ受け付ける。
+		// カーソル操作から決定ボタンで切り替えた瞬間は、選択を見せるだけで押さない
+		// (見えていなかった項目がいきなり押されないように)。
+		// 押している間に選択が移ったら、離しても押し切りにしない
+		//==================================================================
+		const bool _isDecidePress   = _input.IsPress(Game::EGameAction::Decide);
+		const bool _isDecideHold    = _input.IsHold(Game::EGameAction::Decide);
+		const bool _isDecideRelease = _input.IsRelease(Game::EGameAction::Decide);
+
+		if (_isDecidePress && isNavFocused && _wasNavFocused)
+		{
+			isNavPressStarted = true;
+			PlaySound(a_context, pressSoundGUID, pressSoundHandle, pressSoundCoolTime);
+		}
+
+		bool _isNavPressed = isNavPressStarted && _isDecideHold;
+
+		if (_isDecideRelease)
+		{
+			if (isNavPressStarted && isNavFocused) isClicked = true;
+
+			isNavPressStarted = false;
+			_isNavPressed = false;
+		}
+
+		if (!_isDecideHold && !_isDecideRelease)
+		{
+			isNavPressStarted = false;
+			_isNavPressed = false;
+		}
+
+		isPressed = _isCursorPressed || _isNavPressed;
 	}
 
 	//======================================================================================
@@ -326,5 +387,6 @@ namespace App::Object
 		// 実行中の状態は表示のみ
 		static const char* STATE_NAME[] = { "Normal", "Hovered", "Pressed", "Disabled" };
 		Engine::EditorField::Value("State", "%s", STATE_NAME[static_cast<int>(GetState())]);
+		Engine::EditorField::Value("NavFocused", "%s", isNavFocused ? "true" : "false");
 	}
 }

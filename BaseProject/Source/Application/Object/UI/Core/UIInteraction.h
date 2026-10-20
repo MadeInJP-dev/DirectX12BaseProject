@@ -28,6 +28,10 @@ namespace App::Object
 	// 当たり判定の矩形そのものは UIBase が組み立てる(飾りの範囲を使うことがあるため)。
 	// **判定は UI 1つにつき1枚だけ**で、ここが持つ状態(乗っている・押している)もその1枚に対するもの。
 	// 押せる場所を増やしたいときは、判定を足すのではなく UI を増やすこと
+	//
+	// キー・パッドでの項目移動(UINavigationGroup)のために、前・次の UI を GUID で持つ。
+	// 項目移動で選ばれている間は「乗っている」と同じ扱いになり、決定(Decide)で押される。
+	// 項目移動の間はカーソルが誰にも乗らない(UINavigationResource が止める)
 	//======================================================================================
 	struct UIInteraction
 	{
@@ -57,12 +61,25 @@ namespace App::Object
 		// 同じ音を鳴らし直す最短間隔(秒)。0 で間引かない
 		float soundMinInterval = 0.08f;
 
+		// 項目移動での前・次の UI。キー・パッドで選ぶときに、ここをたどって移る。
+		// 空なら無し(前が空のときは、グループが最初からたどって「次が自分」のものを前とみなす)。
+		// 実際に選択を動かすのは UINavigationGroup
+		Core::GUID navPrevGUID = {};
+		Core::GUID navNextGUID = {};
+
 		//-----------------------------------------------------------------------
 		// 状態(保存しない)
 		//-----------------------------------------------------------------------
-		bool isHovered = false;		// カーソルが乗っている(かつ自分が手前)
+		bool isHovered = false;		// カーソルが乗っている(かつ自分が手前)か、項目移動で選ばれている
 		bool isPressed = false;		// 押されている最中
 		bool isClicked = false;		// このフレームに押し切られた
+
+		// 項目移動で選ばれている(グループが選んでいて、キー・パッドで操作している間)
+		bool isNavFocused = false;
+
+		// 選ばれている間に決定を押し始めたか。
+		// 押している間に選択が移ったら、離しても押し切りにしない
+		bool isNavPressStarted = false;
 
 		// 矩形の中にカーソルが居るか。ClaimCursor で見た結果。
 		// これが true でも、手前に別のUIが重なっていれば isHovered は false になる
@@ -111,10 +128,16 @@ namespace App::Object
 		/// <summary>
 		/// 取り合いの結果を見て、乗った・押したを進める(持ち主の Update から)
 		/// </summary>
+		/// <remarks>
+		/// カーソルでの押下(clickAction)と、項目移動で選ばれているときの決定(Decide)を両方見る
+		/// </remarks>
 		void Advance(Engine::GameObject::ObjectContext& a_context, const void* a_pOwner, bool a_isReceivable);
 
-		// このフレームのカーソルを自分が取ったか
+		// このフレームのカーソルを自分が取ったか(項目移動の間は誰も取れない)
 		bool IsCursorOwner(const Engine::GameObject::ObjectContext& a_context, const void* a_pOwner) const;
+
+		// このフレームに項目移動で選ばれているか
+		bool IsNavFocusedOwner(const Engine::GameObject::ObjectContext& a_context, const void* a_pOwner) const;
 
 		// 借りている音のインスタンスを返す
 		void ReleaseSounds(Engine::GameObject::ObjectContext& a_context);

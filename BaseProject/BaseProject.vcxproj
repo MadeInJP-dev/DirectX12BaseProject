@@ -613,6 +613,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\Sequence\UINavigationGroup\UINavigationGroup.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\Option\SoundOptionPanel\SoundOptionPanel.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1986,6 +1991,7 @@
     <ClInclude Include="Source\Application\InstanceResource\SingletonEntityResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\PlayerHUDResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\UICursorResource.h" />
+    <ClInclude Include="Source\Application\InstanceResource\UINavigationResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\BoundaryResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\HitEventResource.h" />
     <ClInclude Include="Source\Application\InstanceResource\WormWaveResource.h" />
@@ -2006,6 +2012,7 @@
     <ClInclude Include="Source\Application\Object\UI\Widget\UIButton\UIButton.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\UIGauge\UIGauge.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\SideMenu\SideMenu.h" />
+    <ClInclude Include="Source\Application\Object\Sequence\UINavigationGroup\UINavigationGroup.h" />
     <ClInclude Include="Source\Application\Object\UI\Option\SoundOptionPanel\SoundOptionPanel.h" />
     <ClInclude Include="Source\Application\Object\UI\Option\OptionHUD.h" />
     <ClInclude Include="Source\Application\Object\UI\Option\ScrollPanelBase.h" />

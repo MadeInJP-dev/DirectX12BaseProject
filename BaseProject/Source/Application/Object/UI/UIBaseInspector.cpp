@@ -4,6 +4,7 @@
 // 実行時の処理(UIBase.cpp)と分けてある。中身の編集欄はそれぞれの持ち主が持つ :
 //   アンカー       … UIAnchor::DrawInspector
 //   カーソルへの反応 … UIInteraction::DrawSettingsInspector / DrawSoundInspector
+//   項目移動の前・次 … ここ(指した相手の向かい側もつなぐため、他の UI を触る)
 //   飾り1つ       … Decoration::DrawDecorationInspector
 //   演出          … UITransition::DrawSettingsInspector
 //   マテリアル     … アセット(UIMaterial)を指すだけ。中身はアセットのインスペクターで編集する
@@ -14,6 +15,8 @@
 #include "Engine/ECS/System/SystemContext.h"	// ObjectContext が運ぶサービス群
 #include "Engine/Option/OptionManager.h"		// ウィンドウ解像度(px)取得用
 #include "Engine/EditorField/EditorField.h"
+
+#include "Application/Object/ObjectPicker.h"	// 項目移動の前・次を選ぶコンボ
 
 namespace App::Object
 {
@@ -51,6 +54,9 @@ namespace App::Object
 
 		// カーソルへの反応(押せる UI だけ)
 		if (m_opInteraction) DrawInteractionInspector(a_context);
+
+		// 項目移動の前・次(押せる UI だけ)
+		if (m_opInteraction) DrawNavigationInspector(a_context);
 
 		// 飾り全部に掛ける効果
 		DrawMaterialInspector(a_context);
@@ -119,6 +125,63 @@ namespace App::Object
 		{
 			Engine::EditorField::WarningText("Cursor : 手前の別UIに取られています(Layer %.1f)", m_anchor.layer);
 		}
+	}
+
+	//======================================================================================
+	// 項目移動の前・次
+	//--------------------------------------------------------------------------------------
+	// 片側だけつなぎ忘れないように、指した相手の向かい側(Next を選んだら相手の Prev)も
+	// この UI へ向ける。指し替えたときは、前に指していた相手の向かい側が自分なら外す。
+	// 最後の Next を最初へ向ければ、端で止まらずに一周する
+	//======================================================================================
+	void UIBase::DrawNavigationInspector(Engine::GameObject::ObjectContext& a_context)
+	{
+		UIInteraction& _interaction = *m_opInteraction;
+		auto* _pObjectManager = a_context.pObjectManager;
+
+		Engine::EditorField::Header("Navigation");
+		Engine::EditorField::HelpText("キー・パッドで選ぶときの前と次。選択を動かすのは UINavigationGroup(最初の UI を指す)");
+
+		// ---- 前 ----
+		Core::GUID _prevGUID = _interaction.navPrevGUID;
+		if (Picker::DrawCombo<UIBase>("Prev", _pObjectManager, _prevGUID))
+		{
+			UIBase* _pOld = FindUI(a_context, _interaction.navPrevGUID);
+			if (_pOld && _pOld != this && _pOld->GetNavNextGUID() == GetGUID()) _pOld->SetNavNextGUID({});
+
+			_interaction.navPrevGUID = _prevGUID;
+
+			UIBase* _pNew = FindUI(a_context, _prevGUID);
+			if (_pNew && _pNew != this) _pNew->SetNavNextGUID(GetGUID());
+		}
+		Engine::EditorField::Tooltip("上・左で移る先。選んだ UI の Next はこの UI になる。空なら「Next がこの UI」のものを前とみなす");
+
+		// ---- 次 ----
+		Core::GUID _nextGUID = _interaction.navNextGUID;
+		if (Picker::DrawCombo<UIBase>("Next", _pObjectManager, _nextGUID))
+		{
+			UIBase* _pOld = FindUI(a_context, _interaction.navNextGUID);
+			if (_pOld && _pOld != this && _pOld->GetNavPrevGUID() == GetGUID()) _pOld->SetNavPrevGUID({});
+
+			_interaction.navNextGUID = _nextGUID;
+
+			UIBase* _pNew = FindUI(a_context, _nextGUID);
+			if (_pNew && _pNew != this) _pNew->SetNavPrevGUID(GetGUID());
+		}
+		Engine::EditorField::Tooltip("下・右・Tab で移る先。選んだ UI の Prev はこの UI になる");
+
+		// ---- つなぎ方の間違い ----
+		auto _warnLink = [&](const char* a_label, const Core::GUID& a_guid)
+			{
+				if (!a_guid.IsValid()) return;
+
+				const UIBase* _pTarget = FindUI(a_context, a_guid);
+				if (!_pTarget)						Engine::EditorField::WarningText("%s : シーンに無い UI を指しています", a_label);
+				else if (_pTarget == this)			Engine::EditorField::WarningText("%s : 自分を指しています", a_label);
+				else if (!_pTarget->HasInteraction())	Engine::EditorField::WarningText("%s : 押せない UI です(選べません)", a_label);
+			};
+		_warnLink("Prev", _interaction.navPrevGUID);
+		_warnLink("Next", _interaction.navNextGUID);
 	}
 
 	//======================================================================================

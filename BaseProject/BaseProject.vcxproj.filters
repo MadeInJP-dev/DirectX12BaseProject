@@ -637,6 +637,9 @@
     <Filter Include="Source\Application\Object\Sequence\PauseSequence">
       <UniqueIdentifier>{ae36ba85-9ecf-45d4-9717-d265a9d8dfef}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Object\Sequence\UINavigationGroup">
+      <UniqueIdentifier>{8fbc59b6-529b-4598-953b-c2bf27dda2d8}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Application\Object\Sequence\ResultSequence">
       <UniqueIdentifier>{9bdd3ccf-4975-46d7-bde0-7b49028c58be}</UniqueIdentifier>
     </Filter>
@@ -1628,6 +1631,9 @@
     </ClCompile>
     <ClCompile Include="Source\Application\Object\Sequence\PauseSequence\PauseSequence.cpp">
       <Filter>Source\Application\Object\Sequence\PauseSequence</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\Sequence\UINavigationGroup\UINavigationGroup.cpp">
+      <Filter>Source\Application\Object\Sequence\UINavigationGroup</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\Sequence\ResultSequence\ResultSequence.cpp">
       <Filter>Source\Application\Object\Sequence\ResultSequence</Filter>
@@ -3326,6 +3332,9 @@
     <ClInclude Include="Source\Application\InstanceResource\UICursorResource.h">
       <Filter>Source\Application\InstanceResource</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\InstanceResource\UINavigationResource.h">
+      <Filter>Source\Application\InstanceResource</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\InstanceResource\BoundaryResource.h">
       <Filter>Source\Application\InstanceResource</Filter>
     </ClInclude>
@@ -3361,6 +3370,9 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Object\Sequence\PauseSequence\PauseSequence.h">
       <Filter>Source\Application\Object\Sequence\PauseSequence</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\Sequence\UINavigationGroup\UINavigationGroup.h">
+      <Filter>Source\Application\Object\Sequence\UINavigationGroup</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\Sequence\ResultSequence\ResultSequence.h">
       <Filter>Source\Application\Object\Sequence\ResultSequence</Filter>

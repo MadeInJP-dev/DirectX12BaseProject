@@ -30,7 +30,10 @@ namespace App::Game
 		Select,			// 選択
 		Back,			// 一つ戻る
 		Menu,			// オプションやタイトルに戻るが出てくる
-		BottonMove,		// 選択できる項目のみを順番に移動できる
+		BottonMove,		// 選択できる項目のみを順番に移動できる(上・左で前、下・右で次。UINavigationGroup が読む)
+		NextItem,		// 次の項目へ移る(Tab / RB)。UINavigationGroup が読む
+		PrevItem,		// 前の項目へ移る(LB)。UINavigationGroup が読む
+		Decide,			// 項目の移動で選んでいるものを決める(Select はカーソルで押すほう)
 		//--------------------------------------------------------------------------
 	};
 
@@ -124,6 +127,8 @@ namespace App::Game
 		_settings.keyboard[EGameAction::Back]       = ButtonInputData{ VK_BACK };			// 戻る
 		_settings.keyboard[EGameAction::Menu]       = ButtonInputData{ VK_ESCAPE };			// メニュー
 		_settings.keyboard[EGameAction::BottonMove] = AxisInputData{ VK_UP, VK_RIGHT, VK_DOWN, VK_LEFT };	// 項目の移動
+		_settings.keyboard[EGameAction::NextItem]   = ButtonInputData{ VK_TAB };				// 次の項目へ
+		_settings.keyboard[EGameAction::Decide]     = ButtonInputData{ VK_RETURN };			// 選んでいる項目を決める
 
 		// ---- コントローラー ----
 		namespace Pad = Engine::Input::GamepadKey;
@@ -149,7 +154,10 @@ namespace App::Game
 		_settings.controller[EGameAction::Select]     = ButtonInputData{ Pad::A };				// 決定
 		_settings.controller[EGameAction::Back]       = ButtonInputData{ Pad::B };				// 戻る
 		_settings.controller[EGameAction::Menu]       = ButtonInputData{ Pad::Start };			// メニュー
-		_settings.controller[EGameAction::BottonMove] = _leftStick;								// 項目の移動
+		_settings.controller[EGameAction::BottonMove] = _leftStick;								// 項目の移動(十字キーも効く : InputActionManager)
+		_settings.controller[EGameAction::NextItem]   = ButtonInputData{ Pad::RShoulder };		// 次の項目へ
+		_settings.controller[EGameAction::PrevItem]   = ButtonInputData{ Pad::LShoulder };		// 前の項目へ
+		_settings.controller[EGameAction::Decide]     = ButtonInputData{ Pad::A };				// 選んでいる項目を決める
 
 		return _settings;
 	}
