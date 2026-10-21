@@ -204,5 +204,14 @@ namespace App::Object::Decoration
 
 		// 番号。持っていない古いデータは 0 のまま読まれ、UIBase が振り直す
 		a_ar.Field("ID", a_decoration.id);
+
+		// プリセット(指していなければ空の GUID)。写すのは読み込み後の SyncPreset
+		a_ar.GUIDField("PresetGUID", a_decoration.preset.presetGUID);
+		a_ar.Field("PresetFollow", a_decoration.preset.follow);
+		if (a_ar.IsLoading())
+		{
+			a_decoration.preset.isApplied = false;
+			a_decoration.preset.isRequested = false;
+		}
 	}
 }

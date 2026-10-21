@@ -144,13 +144,17 @@ namespace App::Object::Decoration
 
 			Engine::EditorField::Header("Image");
 
-			if (Engine::EditorField::AssetField(a_services, "Texture", "Texture", a_image.texGUID))
 			{
-				RequestResources(a_decoration, a_services.pResourceManager);
-				_isChanged = true;
+				Engine::EditorField::DisabledScope _disabled(a_decoration.preset.IsLocked(EPresetPart::CONTENT));
+				if (Engine::EditorField::AssetField(a_services, "Texture", "Texture", a_image.texGUID))
+				{
+					RequestResources(a_decoration, a_services.pResourceManager);
+					_isChanged = true;
+				}
 			}
 			Engine::EditorField::Image(a_services, a_image.texRef, 128, 128);
 
+			Engine::EditorField::DisabledScope _disabled(a_decoration.preset.IsLocked(EPresetPart::LOOK));
 			if (Engine::EditorField::Field("UVOffset", a_image.quad.uvOffset, 0.01f)) _isChanged = true;
 			if (Engine::EditorField::Field("UVScale", a_image.quad.uvScale, 0.01f)) _isChanged = true;
 			Engine::EditorField::Tooltip("1枚に並べた絵から1コマ切り出すときの倍率 (uv * UVScale + UVOffset)");
@@ -164,7 +168,12 @@ namespace App::Object::Decoration
 
 			Engine::EditorField::Header("Text");
 
-			if (Engine::EditorField::MultilineField("Text", a_text.text)) _isChanged = true;
+			{
+				Engine::EditorField::DisabledScope _disabled(a_decoration.preset.IsLocked(EPresetPart::CONTENT));
+				if (Engine::EditorField::MultilineField("Text", a_text.text)) _isChanged = true;
+			}
+
+			Engine::EditorField::DisabledScope _disabled(a_decoration.preset.IsLocked(EPresetPart::LOOK));
 
 			if (Engine::EditorField::AssetField(a_services, "Font", "Font", a_text.fontGUID))
 			{
@@ -204,9 +213,10 @@ namespace App::Object::Decoration
 		}
 	}
 
-	bool DrawDecorationInspector(Decoration& a_decoration, const Engine::ECS::EngineServices& a_services)
+	bool DrawDecorationInspector(Decoration& a_decoration, const Engine::ECS::EngineServices& a_services, bool a_isShowPreset)
 	{
 		bool _isChanged = false;
+		const PresetLink& _link = a_decoration.preset;
 
 		//----------------------------------------------------------------------------------
 		// 共通
@@ -216,13 +226,23 @@ namespace App::Object::Decoration
 		Engine::EditorField::Value("ID", "%u", a_decoration.id);
 		Engine::EditorField::Tooltip("他から飾りを指すときの番号(名前を変えても変わらない)");
 
-		// 種類を変えると中身は作り直す(板ポリ⇔画像は UV と枠を引き継ぐ)
-		EDecorationType _type = a_decoration.GetType();
-		if (Engine::EditorField::Field("Type", _type))
+		// プリセット(付いていく部分は、EditPreset を立てない限り下で触れない)
+		if (a_isShowPreset)
 		{
-			a_decoration.SetType(_type);
-			RequestResources(a_decoration, a_services.pResourceManager);
-			_isChanged = true;
+			// つながりを変えただけではプリセットへ書き戻さない
+			DrawPresetInspector(a_decoration, a_services);
+		}
+
+		// 種類を変えると中身は作り直す(板ポリ⇔画像は UV と枠を引き継ぐ)
+		{
+			Engine::EditorField::DisabledScope _disabled(_link.IsLocked(EPresetPart::LOOK));
+			EDecorationType _type = a_decoration.GetType();
+			if (Engine::EditorField::Field("Type", _type))
+			{
+				a_decoration.SetType(_type);
+				RequestResources(a_decoration, a_services.pResourceManager);
+				_isChanged = true;
+			}
 		}
 
 		int _group = static_cast<int>(a_decoration.group);
@@ -238,18 +258,28 @@ namespace App::Object::Decoration
 		if (Engine::EditorField::Field("OffsetPos", a_decoration.offsetPos, 1.0f)) _isChanged = true;
 		Engine::EditorField::Tooltip("親のピボット位置からのずれ(px)。シーンビューの小さいハンドルでも動かせる");
 
-		// 文字の大きさは FontPixelSize が決めるので、矩形の大きさは出さない
-		if (a_decoration.GetType() != EDecorationType::Text)
 		{
-			if (Engine::EditorField::Field("PixelSize", a_decoration.pixelSize, 1.0f, 0.0f, 8192.0f)) _isChanged = true;
+			Engine::EditorField::DisabledScope _disabled(_link.IsLocked(EPresetPart::SIZE));
+
+			// 文字の大きさは FontPixelSize が決めるので、矩形の大きさは出さない
+			if (a_decoration.GetType() != EDecorationType::Text)
+			{
+				if (Engine::EditorField::Field("PixelSize", a_decoration.pixelSize, 1.0f, 0.0f, 8192.0f)) _isChanged = true;
+			}
 		}
 
 		if (Engine::EditorField::Field("Rotation", a_decoration.rotation, 0.1f, -360.0f, 360.0f)) _isChanged = true;
-		if (Engine::EditorField::Field("Scale", a_decoration.scale, 0.01f, 0.0f, 64.0f)) _isChanged = true;
-		if (Engine::EditorField::Field("Pivot (0-1)", a_decoration.pivot, 0.01f, 0.0f, 1.0f)) _isChanged = true;
+		{
+			Engine::EditorField::DisabledScope _disabled(_link.IsLocked(EPresetPart::SIZE));
+			if (Engine::EditorField::Field("Scale", a_decoration.scale, 0.01f, 0.0f, 64.0f)) _isChanged = true;
+			if (Engine::EditorField::Field("Pivot (0-1)", a_decoration.pivot, 0.01f, 0.0f, 1.0f)) _isChanged = true;
+		}
 		if (Engine::EditorField::Field("LayerOffset", a_decoration.layerOffset, 0.1f)) _isChanged = true;
 		Engine::EditorField::Tooltip("親のレイヤーへ足す。大きいほど手前");
-		if (Engine::EditorField::Field("Color", a_decoration.color)) _isChanged = true;
+		{
+			Engine::EditorField::DisabledScope _disabled(_link.IsLocked(EPresetPart::LOOK));
+			if (Engine::EditorField::Field("Color", a_decoration.color)) _isChanged = true;
+		}
 
 		//----------------------------------------------------------------------------------
 		// 種類ごと
@@ -271,110 +301,123 @@ namespace App::Object::Decoration
 		// 枠(文字以外)
 		if (QuadStyle* _pQuad = a_decoration.RefQuad())
 		{
+			Engine::EditorField::DisabledScope _disabled(_link.IsLocked(EPresetPart::LOOK));
 			if (DrawEdgeUI(*_pQuad)) _isChanged = true;
 		}
 
 		//----------------------------------------------------------------------------------
 		// カーソルへの反応
 		//----------------------------------------------------------------------------------
-		Engine::EditorField::Header("Reaction");
-
-		bool _hasReaction = a_decoration.opReaction.has_value();
-		if (Engine::EditorField::Field("Reaction", _hasReaction))
 		{
-			if (_hasReaction) a_decoration.opReaction = UIReaction();
-			else              a_decoration.opReaction.reset();
-			_isChanged = true;
-		}
-		Engine::EditorField::Tooltip("親のUIにカーソルが乗った / 押されたときに反応する(押せるUIのみ)");
+			Engine::EditorField::DisabledScope _reactionDisabled(_link.IsLocked(EPresetPart::REACTION));
+			Engine::EditorField::Header("Reaction");
 
-		if (a_decoration.opReaction.has_value())
-		{
-			UIReaction& _reaction = *a_decoration.opReaction;
+			bool _hasReaction = a_decoration.opReaction.has_value();
+			if (Engine::EditorField::Field("Reaction", _hasReaction))
+			{
+				if (_hasReaction) a_decoration.opReaction = UIReaction();
+				else              a_decoration.opReaction.reset();
+				_isChanged = true;
+			}
+			Engine::EditorField::Tooltip("親のUIにカーソルが乗った / 押されたときに反応する(押せるUIのみ)");
 
-			Engine::EditorField::IndentScope _indent;
-			Engine::EditorField::IDScope _id("Reaction");
+			if (a_decoration.opReaction.has_value())
+			{
+				UIReaction& _reaction = *a_decoration.opReaction;
 
-			Engine::EditorField::FlagsField("VisibleState", _reaction.visibleState);
-			Engine::EditorField::Tooltip("この状態のときだけ出す(カーソル時だけ枠を出す等)");
+				Engine::EditorField::IndentScope _indent;
+				Engine::EditorField::IDScope _id("Reaction");
 
-			if (Engine::EditorField::Field("BlendSpeed", _reaction.blendSpeed, 0.5f, 0.0f, 120.0f)) _isChanged = true;
-			Engine::EditorField::Tooltip("切り替わりの速さ。0 で即時");
+				Engine::EditorField::FlagsField("VisibleState", _reaction.visibleState);
+				Engine::EditorField::Tooltip("この状態のときだけ出す(カーソル時だけ枠を出す等)");
 
-			if (DrawStateStyleUI("Hovered", _reaction.hovered))  _isChanged = true;
-			if (DrawStateStyleUI("Pressed", _reaction.pressed))  _isChanged = true;
-			if (DrawStateStyleUI("Disabled", _reaction.disabled)) _isChanged = true;
+				if (Engine::EditorField::Field("BlendSpeed", _reaction.blendSpeed, 0.5f, 0.0f, 120.0f)) _isChanged = true;
+				Engine::EditorField::Tooltip("切り替わりの速さ。0 で即時");
+
+				if (DrawStateStyleUI("Hovered", _reaction.hovered))  _isChanged = true;
+				if (DrawStateStyleUI("Pressed", _reaction.pressed))  _isChanged = true;
+				if (DrawStateStyleUI("Disabled", _reaction.disabled)) _isChanged = true;
+			}
 		}
 
 		//----------------------------------------------------------------------------------
 		// アニメーション
 		//----------------------------------------------------------------------------------
-		Engine::EditorField::Header("Animation");
-
-		// ---- トゥイーン ----
-		bool _hasTween = a_decoration.opTweenAnim.has_value();
-		if (Engine::EditorField::Field("Tween", _hasTween))
 		{
-			if (_hasTween) a_decoration.opTweenAnim = UIAnimation();
-			else           a_decoration.opTweenAnim.reset();
-			_isChanged = true;
+			Engine::EditorField::DisabledScope _animationDisabled(_link.IsLocked(EPresetPart::ANIMATION));
+			Engine::EditorField::Header("Animation");
+
+			// ---- トゥイーン ----
+			bool _hasTween = a_decoration.opTweenAnim.has_value();
+			if (Engine::EditorField::Field("Tween", _hasTween))
+			{
+				if (_hasTween) a_decoration.opTweenAnim = UIAnimation();
+				else           a_decoration.opTweenAnim.reset();
+				_isChanged = true;
+			}
+
+			if (a_decoration.opTweenAnim.has_value())
+			{
+				UIAnimation& _anim = *a_decoration.opTweenAnim;
+
+				Engine::EditorField::IndentScope _indent;
+				Engine::EditorField::IDScope _id("Tween");
+
+				if (Engine::EditorField::Field("Duration", _anim.durationTime, 0.01f, 0.0f, 60.0f)) _isChanged = true;
+				if (Engine::EditorField::Field("Loop", _anim.isLoop)) _isChanged = true;
+				if (Engine::EditorField::Field("PingPong", _anim.isPingPong)) _isChanged = true;
+				if (Engine::EditorField::Field("Ease", _anim.ease)) _isChanged = true;
+
+				Engine::EditorField::HelpText("チェックを入れたチャンネルだけが動きます");
+
+				if (DrawAnimElementUI("Color##ch", EAnimChannel::COLOR, _anim.channels, _anim.color, DrawColorValue)) _isChanged = true;
+				if (DrawAnimElementUI("Position##ch", EAnimChannel::POSITION, _anim.channels, _anim.position, DrawVectorValue)) _isChanged = true;
+				if (DrawAnimElementUI("Scale##ch", EAnimChannel::SCALE, _anim.channels, _anim.scale, DrawVectorValue)) _isChanged = true;
+				if (DrawAnimElementUI("Rotation##ch", EAnimChannel::ROTATION, _anim.channels, _anim.rotation, DrawFloatValue)) _isChanged = true;
+				if (DrawAnimElementUI("UV##ch", EAnimChannel::UV, _anim.channels, _anim.uv, DrawVectorValue)) _isChanged = true;
+
+				if (Engine::EditorField::Button("Replay")) _anim.currentTime = 0.0f;
+				Engine::EditorField::SameLine();
+				Engine::EditorField::Text("%.2f / %.2f", _anim.currentTime, _anim.durationTime);
+			}
+
+			// ---- 揺れ ----
+			bool _hasOscillation = a_decoration.opOscillationAnim.has_value();
+			if (Engine::EditorField::Field("Oscillation", _hasOscillation))
+			{
+				if (_hasOscillation) a_decoration.opOscillationAnim = UIProceduralAnimation();
+				else                 a_decoration.opOscillationAnim.reset();
+				_isChanged = true;
+			}
+
+			if (a_decoration.opOscillationAnim.has_value())
+			{
+				UIProceduralAnimation& _anim = *a_decoration.opOscillationAnim;
+
+				Engine::EditorField::IndentScope _indent;
+				Engine::EditorField::IDScope _id("Oscillation");
+
+				Engine::EditorField::HelpText("位置と回転は足す量、大きさと色は掛ける量(1が元のまま)");
+
+				// 上下限を立てたときの初期値 : そのチャンネルらしい範囲を入れておく
+				if (DrawOscillationUI("Position##osc", EAnimChannel::POSITION, _anim.channels, _anim.position, DrawVectorValue,
+					Math::Vector2(-10.0f, -10.0f), Math::Vector2(10.0f, 10.0f))) _isChanged = true;
+
+				if (DrawOscillationUI("Scale##osc", EAnimChannel::SCALE, _anim.channels, _anim.scale, DrawVectorValue,
+					Math::Vector2(0.9f, 0.9f), Math::Vector2(1.1f, 1.1f))) _isChanged = true;
+
+				if (DrawOscillationUI("Rotation##osc", EAnimChannel::ROTATION, _anim.channels, _anim.rotation, DrawFloatValue,
+					-10.0f, 10.0f)) _isChanged = true;
+
+				if (DrawOscillationUI("Color##osc", EAnimChannel::COLOR, _anim.channels, _anim.color, DrawColorValue,
+					Math::Color(1.0f, 1.0f, 1.0f, 0.3f), Math::Color(1.0f, 1.0f, 1.0f, 1.0f))) _isChanged = true;
+			}
 		}
 
-		if (a_decoration.opTweenAnim.has_value())
+		// 付いていく部分を直したら、プリセットへ書き戻す(同じプリセットを指す飾りが全部変わる)
+		if (_isChanged && _link.IsLinked() && _link.isEditPreset)
 		{
-			UIAnimation& _anim = *a_decoration.opTweenAnim;
-
-			Engine::EditorField::IndentScope _indent;
-			Engine::EditorField::IDScope _id("Tween");
-
-			if (Engine::EditorField::Field("Duration", _anim.durationTime, 0.01f, 0.0f, 60.0f)) _isChanged = true;
-			if (Engine::EditorField::Field("Loop", _anim.isLoop)) _isChanged = true;
-			if (Engine::EditorField::Field("PingPong", _anim.isPingPong)) _isChanged = true;
-			if (Engine::EditorField::Field("Ease", _anim.ease)) _isChanged = true;
-
-			Engine::EditorField::HelpText("チェックを入れたチャンネルだけが動きます");
-
-			if (DrawAnimElementUI("Color##ch", EAnimChannel::COLOR, _anim.channels, _anim.color, DrawColorValue)) _isChanged = true;
-			if (DrawAnimElementUI("Position##ch", EAnimChannel::POSITION, _anim.channels, _anim.position, DrawVectorValue)) _isChanged = true;
-			if (DrawAnimElementUI("Scale##ch", EAnimChannel::SCALE, _anim.channels, _anim.scale, DrawVectorValue)) _isChanged = true;
-			if (DrawAnimElementUI("Rotation##ch", EAnimChannel::ROTATION, _anim.channels, _anim.rotation, DrawFloatValue)) _isChanged = true;
-			if (DrawAnimElementUI("UV##ch", EAnimChannel::UV, _anim.channels, _anim.uv, DrawVectorValue)) _isChanged = true;
-
-			if (Engine::EditorField::Button("Replay")) _anim.currentTime = 0.0f;
-			Engine::EditorField::SameLine();
-			Engine::EditorField::Text("%.2f / %.2f", _anim.currentTime, _anim.durationTime);
-		}
-
-		// ---- 揺れ ----
-		bool _hasOscillation = a_decoration.opOscillationAnim.has_value();
-		if (Engine::EditorField::Field("Oscillation", _hasOscillation))
-		{
-			if (_hasOscillation) a_decoration.opOscillationAnim = UIProceduralAnimation();
-			else                 a_decoration.opOscillationAnim.reset();
-			_isChanged = true;
-		}
-
-		if (a_decoration.opOscillationAnim.has_value())
-		{
-			UIProceduralAnimation& _anim = *a_decoration.opOscillationAnim;
-
-			Engine::EditorField::IndentScope _indent;
-			Engine::EditorField::IDScope _id("Oscillation");
-
-			Engine::EditorField::HelpText("位置と回転は足す量、大きさと色は掛ける量(1が元のまま)");
-
-			// 上下限を立てたときの初期値 : そのチャンネルらしい範囲を入れておく
-			if (DrawOscillationUI("Position##osc", EAnimChannel::POSITION, _anim.channels, _anim.position, DrawVectorValue,
-				Math::Vector2(-10.0f, -10.0f), Math::Vector2(10.0f, 10.0f))) _isChanged = true;
-
-			if (DrawOscillationUI("Scale##osc", EAnimChannel::SCALE, _anim.channels, _anim.scale, DrawVectorValue,
-				Math::Vector2(0.9f, 0.9f), Math::Vector2(1.1f, 1.1f))) _isChanged = true;
-
-			if (DrawOscillationUI("Rotation##osc", EAnimChannel::ROTATION, _anim.channels, _anim.rotation, DrawFloatValue,
-				-10.0f, 10.0f)) _isChanged = true;
-
-			if (DrawOscillationUI("Color##osc", EAnimChannel::COLOR, _anim.channels, _anim.color, DrawColorValue,
-				Math::Color(1.0f, 1.0f, 1.0f, 0.3f), Math::Color(1.0f, 1.0f, 1.0f, 1.0f))) _isChanged = true;
+			PushToPreset(a_decoration, a_services.pResourceManager);
 		}
 
 		return _isChanged;

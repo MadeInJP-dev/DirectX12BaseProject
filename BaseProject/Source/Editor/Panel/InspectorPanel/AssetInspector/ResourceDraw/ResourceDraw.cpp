@@ -13,6 +13,7 @@
 #include "AudioBehaviorEdit/AudioBehaviorEdit.h"
 #include "EffectAssetEdit/EffectAssetEdit.h"
 #include "UIMaterialEdit/UIMaterialEdit.h"
+#include "UIPresetEdit/UIPresetEdit.h"
 
 #include "Engine/Resource/Data/EffectPrefab/EffectPrefab.h"
 #include "Editor/EffectEditor/EffectEditor.h"
@@ -196,6 +197,19 @@ namespace Editor::Inspector
 		if (!_pMaterial) { return; }
 
 		UIMaterialEdit(a_editContext, _pMaterial);
+	}
+
+	//-----------------------------------------------------------------------------------------
+	// UIプリセット
+	//-----------------------------------------------------------------------------------------
+	void UIPresetDraw(EditorContext& a_editContext)
+	{
+		auto _guid = a_editContext.pAssetProp->guid;
+
+		auto* _pPreset = ResolveAsset<Resource::UIPreset>(*a_editContext.pServices->pResourceManager, _guid);
+		if (!_pPreset) { return; }
+
+		UIPresetEdit(a_editContext, _pPreset);
 	}
 
 	//-----------------------------------------------------------------------------------------

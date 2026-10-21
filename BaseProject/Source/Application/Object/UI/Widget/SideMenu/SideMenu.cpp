@@ -7,7 +7,6 @@
 
 #include "Application/Object/ObjectPicker.h"
 #include "Application/Object/UI/UIBase.h"
-#include "Application/Object/UI/Widget/UIPanel/UIPanel.h"
 
 namespace App::Object
 {
@@ -106,7 +105,7 @@ namespace App::Object
 		UIBase* _pPanel = Picker::Find<UIBase>(_pObjectManager, m_panelGUID);
 		if (!_pPanel) return;
 
-		// 隠れきったら出さない。中のボタンも描かれず押せなくなる(UIPanel の下に置いてあれば)
+		// 隠れきったら出さない。下に置いた中のボタンも描かれず押せなくなる
 		_pPanel->SetVisible(m_openRate > 0.0f);
 
 		const float _eased = Decoration::Ease(Decoration::EEase::OutCubic, m_openRate);
@@ -159,17 +158,10 @@ namespace App::Object
 		Engine::EditorField::Tooltip("開き口(三本線のボタンなど)。アンカーの PixelSize が範囲になる");
 
 		Picker::DrawCombo<UIBase>("Panel", _pObjectManager, m_panelGUID);
-		Engine::EditorField::Tooltip("メニューの入れ物(UIPanel)。中のボタンと Area はヒエラルキーでこの下に置く(下に置いたものが一緒に滑る)");
-		if (UIBase* _pPanel = Picker::Find<UIBase>(_pObjectManager, m_panelGUID))
-		{
-			if (!Core::TypeInfo::Cast<UIPanel>(_pPanel))
-			{
-				Engine::EditorField::WarningText("UIPanel ではないので、下に置いた UI へ表示が伝わりません");
-			}
-		}
+		Engine::EditorField::Tooltip("メニューの入れ物(UIElement)。中のボタンと Area はヒエラルキーでこの下に置く(下に置いたものが一緒に滑り、一緒に出入りする)");
 
 		Picker::DrawCombo<UIBase>("Area", _pObjectManager, m_areaGUID);
-		Engine::EditorField::Tooltip("開いている間、カーソルが居れば閉じない範囲。裏のボタンを塞ぐため押せる UI(UIImage)にする");
+		Engine::EditorField::Tooltip("開いている間、カーソルが居れば閉じない範囲。裏のボタンを塞ぐため BlockCursor を立てた UIElement にする");
 
 		Engine::EditorField::Field("SlideTime", m_slideTime, 0.01f, 0.0f, 2.0f);
 		Engine::EditorField::Tooltip("滑り込む/滑り出るのにかかる時間(秒)。0 で一瞬");

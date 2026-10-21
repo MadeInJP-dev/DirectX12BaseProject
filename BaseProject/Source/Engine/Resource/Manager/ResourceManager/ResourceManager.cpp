@@ -17,6 +17,9 @@ namespace Engine::Resource
 		// UIマテリアル : ノイズのテクスチャを ResourceRef で握っているのでテクスチャより先に捨てる
 		ReleaseData<UIMaterial>();
 
+		// UIプリセット : 何も握っていない(中身は文字列だけ)
+		ReleaseData<UIPreset>();
+
 		ReleaseData<Model>();
 		ReleaseData<Material>();
 		ReleaseData<Mesh>();
@@ -66,6 +69,7 @@ namespace Engine::Resource
 
 		// UIマテリアルもノイズのテクスチャを握っているので、テクスチャより先に片付ける
 		SweepUnused<UIMaterial>();
+		SweepUnused<UIPreset>();
 
 		// モデルは中身(メッシュ・マテリアル・アニメーション)を ResourceRef で握っているので、
 		// モデルが消えた後でないと下は 0 にならない
@@ -105,6 +109,7 @@ namespace Engine::Resource
 		if (_type == "EffectAsset")				{ a_func(std::type_identity<EffectAsset>{});			return true; }
 		if (_type == "Font")					{ a_func(std::type_identity<Font>{});					return true; }
 		if (_type == "UIMaterial")				{ a_func(std::type_identity<UIMaterial>{});				return true; }
+		if (_type == "UIPreset")				{ a_func(std::type_identity<UIPreset>{});				return true; }
 		if (_type == "Mesh")					{ a_func(std::type_identity<Mesh>{});					return true; }
 		if (_type == "Material")				{ a_func(std::type_identity<Material>{});				return true; }
 		if (_type == "Animation")				{ a_func(std::type_identity<AnimationData>{});			return true; }

@@ -745,6 +745,18 @@ namespace Engine
 		_uiMaterial.AddExtensions(".ojuimat");
 		_uiMaterial.AddExtensions(".obuimat");
 		_assetDB.AddSupporedExtensions(_uiMaterial);
+		// UIプリセット(飾りの見た目。指している飾りは、直すと全部変わる)
+		Resource::TypeExtension _uiPreset = {};
+		_uiPreset.type = "UIPreset";
+		_uiPreset.AddExtensions(".ojuipreset");
+		_uiPreset.AddExtensions(".obuipreset");
+		_assetDB.AddSupporedExtensions(_uiPreset);
+		// オブジェクトのプレハブ(GameObject の部分木。エディターで置くときに写す)
+		// 置き場は Asset/ObjectPrefab/。置くのはエディターだけなので JSON だけを書く
+		Resource::TypeExtension _objectPrefab = {};
+		_objectPrefab.type = "ObjectPrefab";
+		_objectPrefab.AddExtensions(".ojobjprfb");
+		_assetDB.AddSupporedExtensions(_objectPrefab);
 		// 全アセットに一括でメタファイル作成
 		// すでにあれば無視
 		_assetDB.CreateMetaFileForAllAssets();

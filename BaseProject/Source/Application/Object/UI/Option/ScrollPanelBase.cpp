@@ -8,7 +8,6 @@
 #include "Application/InstanceResource/UserDataResource.h"
 
 #include "Application/Object/UI/UIBase.h"
-#include "Application/Object/UI/Widget/UIPanel/UIPanel.h"
 #include "Application/Object/UI/Widget/UIGauge/UIGauge.h"
 
 //==========================================================================================
@@ -531,14 +530,7 @@ namespace App::Object
 		Engine::EditorField::Header("Scroll");
 
 		DrawUIPicker(a_context, "RootPanel", m_rootPanelGUID);
-		Engine::EditorField::Tooltip("このパネルの出し入れの単位(UIPanel)。項目とバーはヒエラルキーでこの下に置く");
-		if (UIBase* _pRoot = FindUI(a_context, m_rootPanelGUID))
-		{
-			if (!Core::TypeInfo::Cast<UIPanel>(_pRoot))
-			{
-				Engine::EditorField::WarningText("UIPanel ではないので、下に置いた UI へ表示が伝わりません");
-			}
-		}
+		Engine::EditorField::Tooltip("このパネルの出し入れの単位(UIElement など)。項目とバーはヒエラルキーでこの下に置く");
 
 		DrawUIPicker(a_context, "BarTrack", m_barTrackGUID);
 		Engine::EditorField::Tooltip("バーの溝。描画範囲の右端に縦いっぱいで置かれ、押すとつまみがそこへ飛ぶ");

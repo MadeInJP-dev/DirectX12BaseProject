@@ -141,5 +141,9 @@ namespace Editor::Inspector
 		{
 			UIMaterialDraw(a_editContext);
 		}
+		else if (_type == "UIPreset")
+		{
+			UIPresetDraw(a_editContext);
+		}
 	}
 }

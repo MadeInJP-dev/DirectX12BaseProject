@@ -23,7 +23,7 @@ namespace App::Object
 	//   次にキーを押したときはそこから動く。切り替えた最初の1回は選択を見せるだけで動かさない。
 	// ・選ばれている UI は「乗っている」(IsHovered)と同じ扱いになる。
 	//   飾りの Hovered・乗った音・進行役の「乗ったら説明を出す」がそのまま効く。
-	// ・選べるのは、出ていて(上の UIPanel も含む)触れる(Interactable)押せる UI だけ。
+	// ・選べるのは、出ていて(上の親も含む)触れる(Interactable)押せる UI だけ。
 	//   選べないものは飛ばして、その先へ進む。
 	// ・選べる UI が1つも無い間(パネルごと隠れているなど)は何もしない。
 	//   また出てきたときは最初の UI から選び直す(SetCurrentGUID で決めてあればそちら)。
@@ -97,7 +97,7 @@ namespace App::Object
 		// 最初の UI から Next をたどった中で、カーソルが乗っている UI(無ければ nullptr)
 		UIBase* FindHoveredInChain(const Engine::GameObject::ObjectContext& a_context) const;
 
-		// 選べるか : 押せて、触れて、出ている(上の UIPanel も含む)
+		// 選べるか : 押せて、触れて、出ている(上の親も含む)
 		static bool IsSelectable(const Engine::GameObject::ObjectContext& a_context, const UIBase* a_pUI);
 
 		// インスペクター : 最初の UI から Next をたどった並び(つなぎ方の確認用)

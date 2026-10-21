@@ -36,12 +36,14 @@ namespace App::Object
 	//   HUD のように押されることのない UI はカーソル反応を持たず、カーソルの取り合いにも出ない
 	//   (画面いっぱいの HUD が下のボタンを塞ぐことがない)。
 	//
-	// ・親子(BaseObject の親)の下に置いた UI は、親の行列(位置・回転・倍率)に追従する。
+	// ・親子(BaseObject の親)の下に置いた UI は、親の行列(位置・回転・倍率・Z順)に追従する。
 	//   アンカーの値は親から見たもの。画面での値は CalcWorldAnchor で引く。
 	//
-	// ・UIPanel の下に置いた UI は、パネルの表示にも従う。
-	//   パネルを隠せば、下にあるものは自分の Visible に関係なく描かれず、押せなくなる。
-	//   親がパネルでなければ表示は伝わらない。
+	// ・表示も親から伝わる。親を隠せば、下にあるものは自分の Visible に関係なく描かれず、押せなくなる。
+	//   親の UI が消える演出の最中は子も一緒に描かれ、親の濃さで薄れる。
+	//   UI でない親(進行役など)も、出し入れを持っていればその表示に従う。
+	//
+	// 飾りにするか、別の UI(子)にするかの決まりは 環境/Docs/UIGuidelines.md
 	//
 	// インスペクター・ギズモ(エディター用)は UIBaseInspector.cpp にある
 	//======================================================================================
@@ -52,7 +54,7 @@ namespace App::Object
 		// 継承されるうえに Cast の行き先にもなるので、型の連鎖に載せる
 		ENGINE_TYPE_CHAIN_BASE(UIBase, Engine::GameObject::BaseObject);
 
-		// 押せる UI として作る(UIImage など、そのまま置くもの)
+		// 押せる UI として作る(UIButton など)
 		UIBase();
 
 		// 解放処理
@@ -88,6 +90,30 @@ namespace App::Object
 		bool DrawGizmo(const Engine::GameObject::ObjectGizmoContext& a_ctx, Engine::GameObject::ObjectContext& a_context) override;
 
 		//-----------------------------------------------------------------------
+		// 親の飾りへまとめる(エディター用、UIBaseMerge.cpp)
+		//
+		// 別の UI にしておく理由が無い UI を、親の UI の飾りへ移す。
+		// 理由の一覧は 環境/Docs/UIGuidelines.md の「別の UI にする条件」
+		//-----------------------------------------------------------------------
+
+		/// <summary>
+		/// 親の飾りへまとめられるか
+		/// </summary>
+		/// <param name="a_outReason">まとめられないときの理由(条件のどれに当たったか)</param>
+		/// <remarks>他のオブジェクトから GUID で指されていないかを、全員の保存値から探して確かめる(重いのでエディターだけで使う)</remarks>
+		bool CanMergeIntoParent(Engine::GameObject::ObjectContext& a_context, std::string& a_outReason) const;
+
+		/// <summary>
+		/// 親の飾りへまとめる
+		/// </summary>
+		/// <remarks>
+		/// 飾りは画面での見た目が変わらないよう、親から見た値に直して親の末尾へ足す。
+		/// 自分の下の UI は親へ付け替え(見た目の場所は保つ)、自分は次のフレームに消える
+		/// </remarks>
+		/// <returns>まとめられなかったら false(何も変えない)</returns>
+		bool MergeIntoParent(Engine::GameObject::ObjectContext& a_context);
+
+		//-----------------------------------------------------------------------
 		// 表示の切り替え
 		//-----------------------------------------------------------------------
 
@@ -99,18 +125,17 @@ namespace App::Object
 		/// 画面の中で出したり引っ込めたりするもの(ホームとステージセレクトの
 		/// 出し分けなど)は、消さずにこれで切り替える。
 		///
-		/// 実際に出るかは、上にある UIPanel の表示も合わせて決まる(IsVisibleInHierarchy)。
+		/// 実際に出るかは、上にある親の表示も合わせて決まる(IsVisibleInHierarchy)。
 		/// 切り替わったときは出し入れの演出(UITransition の show / hide)が流れる
 		/// </remarks>
 		bool IsVisible() const override { return m_isVisible; }
 		void SetVisible(bool a_isVisible) override;
 
 		/// <summary>
-		/// 実際に出ているか : 自分の指定と、上にある UIPanel 全部の表示
+		/// 実際に出ているか : 自分の指定と、上にある親全員の表示
 		/// </summary>
 		/// <remarks>
-		/// 親を根まで辿る。
-		/// 親がパネルでないところは飛ばして、さらに上を見る。
+		/// 親を根まで辿り、1つでも隠れていれば出ていない。
 		/// 押せるか・進行を止めるかの判断はこちらで行う(消える演出の最中は false)
 		/// </remarks>
 		bool IsVisibleInHierarchy(const Engine::GameObject::ObjectContext& a_context) const;
@@ -121,7 +146,7 @@ namespace App::Object
 		/// <remarks>
 		/// 消える演出(hide)の最中は Visible が切れていても描き、
 		/// 合図の間だけ描く UI(PulseOnly)は合図が終わったら描かない。
-		/// 上の UIPanel が隠れていれば、どちらでも描かない
+		/// 上の親が隠れていれば、どちらでも描かない
 		/// </remarks>
 		bool IsDrawnInHierarchy(const Engine::GameObject::ObjectContext& a_context) const;
 
@@ -216,7 +241,7 @@ namespace App::Object
 		/// 画面での置き場所 : アンカーに実行中だけのずらしと親の行列を掛けたもの
 		/// </summary>
 		/// <remarks>
-		/// 変わるのは位置・回転・倍率だけ。大きさ(pixelSize)・Z順(layer)・色は自分の値のまま
+		/// 変わるのは位置・回転・倍率・Z順(layer は親の Z順との足し算)。大きさ(pixelSize)と色は自分の値のまま
 		/// (大きさへ倍率を掛けるかは使う側の決まりに従う。親の倍率も scale に入っている)。
 		/// 描画・当たり判定はこれを使う。他の UI の画面での位置を見たいときもこちら
 		/// </remarks>
@@ -235,10 +260,10 @@ namespace App::Object
 		// 行列(BaseObject) : 子の UI はこの行列に追従する
 		//-----------------------------------------------------------------------
 
-		// アンカーの位置(実行中だけのずらし込み)・回転・倍率から組み立てる
+		// アンカーの位置(実行中だけのずらし込み)・回転・倍率・Z順から組み立てる
 		Math::Matrix CalcLocalMatrix() const override;
 
-		// 親が変わっても画面での置き場所が変わらないよう、アンカーの位置・回転・倍率を直す
+		// 親が変わっても画面での置き場所が変わらないよう、アンカーの位置・回転・倍率・Z順を直す
 		void RebaseLocal(const Math::Matrix& a_oldParentWorld, const Math::Matrix& a_newParentWorld) override;
 
 		//-----------------------------------------------------------------------
@@ -355,6 +380,9 @@ namespace App::Object
 
 		// 保存されているGUIDから、飾りのテクスチャ・フォントを引き直す
 		void RequestDecorationResources(Engine::GameObject::ObjectContext& a_context);
+
+		// 指しているプリセットが変わった飾りへ写し直す(PreUpdate と描画の頭で呼ぶ)
+		void SyncDecorationPresets(Engine::GameObject::ObjectContext& a_context);
 
 		// 飾りの一覧をインスペクターへ出す(追加・削除・並べ替え)
 		void DrawDecorationListInspector(Engine::GameObject::ObjectContext& a_context);
@@ -474,8 +502,17 @@ namespace App::Object
 		// インスペクター : 出し入れと合図の演出(確認用に流すボタンを含む)
 		void DrawTransitionInspector();
 
-		// 上にある UIPanel が全部出ているか(自分の Visible は見ない)
-		bool IsParentPanelsVisible(const Engine::GameObject::ObjectContext& a_context) const;
+		// 自分の指定だけで描くか(消える演出の最中は描く・合図だけの UI は合図の間だけ)。親は見ない
+		bool IsSelfDrawn() const;
+
+		// 上にある親が全員出ているか(自分の Visible は見ない)
+		bool IsParentsVisible() const;
+
+		// 上にある親が全員描かれているか(親の UI は IsSelfDrawn と HUD の隠しで見る)
+		bool IsParentsDrawn(const Engine::GameObject::ObjectContext& a_context) const;
+
+		// 上にある親の UI の演出の濃さを掛け合わせたもの
+		float CalcParentsTransitionAlpha() const;
 
 		// 描く前の差し替えに、演出の値を掛ける
 		Decoration::DrawOverride ApplyTransition(const Decoration::DrawOverride& a_override) const;

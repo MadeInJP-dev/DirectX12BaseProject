@@ -31,7 +31,7 @@ VECTOR_REGINE/
    │  ├─ Data/            起動時に読む設定(Engine / Game / User)
    │  ├─ Scenes/          シーン(<名前>/<名前>.ojscene と .obscene)
    │  ├─ RenderingPipeline/ レンダリングパイプライン(.ojrpipe)
-   │  └─ ほか             Model / Texture / Material / Effect / Prefab / StateMachine など
+   │  └─ ほか             Model / Texture / Material / Effect / Prefab / ObjectPrefab(GameObject の部分木) / UIPreset(飾りの見た目) / StateMachine など
    ├─ 環境/               設計資料(下の表を参照)
    └─ x64/                ビルド出力(BaseProject.exe)
 ```
@@ -42,6 +42,7 @@ VECTOR_REGINE/
 |---|---|
 | コーディング規約(命名・namespace・所有・Include・層の依存・コメント・クラスの並び・ECS・RenderGraph) | [BaseProject/環境/Docs/CodingStandards.md](BaseProject/環境/Docs/CodingStandards.md) |
 | 規約への適合状況と未修正項目 | [BaseProject/環境/Docs/CodingRulesAudit.md](BaseProject/環境/Docs/CodingRulesAudit.md) |
+| UI の作り方(クラスの切り方・親子で伝わるもの・別の UI にする条件) | [BaseProject/環境/Docs/UIGuidelines.md](BaseProject/環境/Docs/UIGuidelines.md) |
 | ディレクトリの分け方 | CodingStandards.md の「9. Directory Structure」 |
 | 層(Core / Engine / Application / Editor)の依存の向き | CodingStandards.md の「4. Dependency Rules」 |
 | フォルダ名 Common / Core / Internal の意味 | [README.txt](README.txt) |

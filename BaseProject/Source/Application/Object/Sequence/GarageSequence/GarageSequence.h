@@ -70,7 +70,7 @@ namespace App::Object
 	// ・箱・一覧の項目・戻るボタンはシーンへ置いた UIButton を GUID で引く(HomeSequence と同じ)。
 	//   見た目はシーン側で直せる。中身はここが飾りへ流し込む : 画像は "Icon"、名前は "Name"、
 	//   取り付け口の名前は "Slot"(箱)/ 一覧の見出しは "Title"、今付いている印は "Bg" の色。
-	// ・全体の箱と、寄りの一覧はそれぞれ UIPanel にまとめ、そのパネルの表示を切り替える。
+	// ・全体の箱と、寄りの一覧はそれぞれ入れ物の UI(UIElement)にまとめ、その入れ物の表示を切り替える。
 	// ・寄りでは性能の板(UI 1枚)に、カーソルが乗っている武器(乗っていなければ今付いている武器)の
 	//   性能を出す。飾り : "StatName"(武器名)/ "StatMode"(撃ち方)/ 項目ごとに
 	//   "StatLabel0〜4"(項目名)/ "StatValue0〜4"(値)/ "StatBarBg0〜4"(棒の枠。この幅が満タン)/
@@ -220,8 +220,8 @@ namespace App::Object
 		Core::GUID m_homeSceneGUID = {};	// 戻る先(ホームのシーン)
 
 		Core::GUID m_backButtonGUID = {};	// 戻る(寄り → 全体、全体 → ホーム)
-		Core::GUID m_overviewPanelGUID = {};	// 全体で出すもの(箱)をまとめた UIPanel
-		Core::GUID m_listPanelGUID = {};		// 寄りで出すもの(一覧)をまとめた UIPanel
+		Core::GUID m_overviewPanelGUID = {};	// 全体で出すもの(箱)をまとめた入れ物の UI
+		Core::GUID m_listPanelGUID = {};		// 寄りで出すもの(一覧)をまとめた入れ物の UI
 
 		// 取り付け口ごとの箱(UIButton)。EWeaponMount の順
 		std::array<Core::GUID, MOUNT_COUNT> m_boxGUIDs = {};

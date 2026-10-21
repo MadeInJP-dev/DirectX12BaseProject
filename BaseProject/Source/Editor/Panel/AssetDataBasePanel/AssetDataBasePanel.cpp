@@ -4,6 +4,7 @@
 #include "Engine/Resource/Data/AudioBehavior/IO/AudioBehaviorIO.h"
 #include "Engine/Resource/Data/EffectAsset/IO/EffectAssetIO.h"
 #include "Engine/Resource/Data/UIMaterial/IO/UIMaterialIO.h"
+#include "Engine/Resource/Data/UIPreset/IO/UIPresetIO.h"
 #include "Engine/Resource/Data/EffectPrefab/EffectPrefab.h"
 #include "Engine/Resource/Manager/AssetDatabase/AssetDatabase.h"
 
@@ -46,6 +47,11 @@ namespace Editor
 
 		m_assetCreateFuncs["UIMaterial"] = [](const ECS::EngineServices& a_services, const std::string& path, const std::string& name) {
 			Resource::UIMaterialIO::Create(*a_services.pAssetDatabase, path, name);
+			};
+
+		// UIプリセット : 既定の飾り(白い板ポリ)で作る。飾りから作るときは飾りのインスペクターの Save As Preset
+		m_assetCreateFuncs["UIPreset"] = [](const ECS::EngineServices& a_services, const std::string& path, const std::string& name) {
+			Resource::UIPresetIO::Create(*a_services.pAssetDatabase, path, name);
 			};
 
 		// レンダリングパイプライン : パスの一覧はグラフィックスエンジンが持っているので引いて渡す

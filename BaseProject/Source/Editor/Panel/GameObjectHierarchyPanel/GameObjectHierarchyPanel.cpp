@@ -4,6 +4,11 @@
 #include "Engine/GameObject/GameObjectManager/GameObjectManager.h"
 #include "Engine/GameObject/BaseObject/BaseObject.h"
 #include "Engine/GameObject/ObjectMetaRegistry/ObjectMetaRegistry.h"
+#include "Engine/Resource/Manager/AssetDatabase/AssetDatabase.h"
+
+#include <nlohmannJSON/json.hpp>	// プレハブの中身を読む
+
+#include "Application/Object/UI/UIBase.h"	// UI を親の飾りへまとめる
 
 #include "../../Helper/EditorHelper.h"
 
@@ -19,6 +24,15 @@
 //
 // ・見出しはオブジェクトの名前。名前が無ければクラス名
 //
+// ・プレハブ(ObjectPrefab)
+//     右クリックの Save As Prefab で、そのオブジェクトと下を Asset/ObjectPrefab/ へ書き出す。
+//     置くのは AddObject の From Prefab(根へ)か、右クリックの Place Prefab Here(その下へ)。
+//     置いた時点で写すだけで、元のアセットとはつながらない(GUID は振り直される)
+//
+// ・UI は右クリックで親の飾りへまとめられる(Merge Into Parent)
+//     別の UI にしておく理由(環境/Docs/UIGuidelines.md)が無いものだけ。
+//     まとめられないときは、メニューに理由を出す
+//
 // ・検索中は平らに並べる
 //     階層をたどると、一致した子が閉じた親の中に隠れて見つけられないため。
 //==========================================================================================
@@ -28,6 +42,59 @@ namespace Editor
 	{
 		// ドラッグ&ドロップで受け渡す種類の名札
 		constexpr const char* DRAG_PAYLOAD_NAME = "GameObject";
+
+		// プレハブの置き場と拡張子(AssetDatabase に "ObjectPrefab" として登録してある)
+		constexpr const char* PREFAB_DIR = "Asset/ObjectPrefab";
+		constexpr const char* PREFAB_EXT = "objprfb";
+
+		// プレハブを読んで置く : 読めなければ nullptr
+		GameObject::BaseObject* PlacePrefab(
+			GameObject::GameObjectManager* a_pManager,
+			const Engine::Resource::AssetProperty& a_prop,
+			GameObject::BaseObject* a_pParent)
+		{
+			const std::string _path = a_prop.filePath + ".oj" + PREFAB_EXT;
+
+			std::ifstream _ifs(_path);
+			if (!_ifs.is_open())
+			{
+				ENGINE_WARNING("[GameObjectHierarchy] プレハブを開けません : %s", _path.c_str());
+				return nullptr;
+			}
+
+			const nlohmann::json _json = nlohmann::json::parse(_ifs, nullptr, false);
+			if (_json.is_discarded())
+			{
+				ENGINE_WARNING("[GameObjectHierarchy] プレハブの中身が読めません : %s", _path.c_str());
+				return nullptr;
+			}
+
+			return a_pManager->InstantiatePrefab(_json, a_pParent);
+		}
+
+		// プレハブの一覧を出し、選ばれたものを返す(選ばれなければ nullptr)
+		const Engine::Resource::AssetProperty* DrawPrefabList(EditorContext& a_editContext, const char* a_searchID)
+		{
+			const auto& _prefabList = a_editContext.pServices->pAssetDatabase->GetTypeMetaVec("ObjectPrefab");
+			if (_prefabList.empty())
+			{
+				Engine::EditorField::HelpText("  (no prefab)");
+				return nullptr;
+			}
+
+			const std::string& _search = EditorHelper::DrawSearchBox(a_searchID);
+
+			const Engine::Resource::AssetProperty* _pSelected = nullptr;
+			for (const auto& _prop : _prefabList)
+			{
+				if (!EditorHelper::IsMatchSearch(_search, _prop.fileName)) continue;
+
+				ImGui::PushID(&_prop);
+				if (ImGui::MenuItem(_prop.fileName.c_str())) _pSelected = &_prop;
+				ImGui::PopID();
+			}
+			return _pSelected;
+		}
 
 		// 検索に当たるか : 名前とクラス名のどちらかに含まれていればよい
 		bool IsMatchObject(const std::string& a_search, const GameObject::BaseObject* a_pObject)
@@ -105,6 +172,19 @@ namespace Editor
 					}
 				}
 			}
+
+			// プレハブから(根へ置く)
+			Engine::EditorField::Line();
+			Engine::EditorField::HelpText("From Prefab");
+			if (const auto* _pProp = DrawPrefabList(a_editContext, "##AddPrefabSearch"))
+			{
+				if (GameObject::BaseObject* _pNew = PlacePrefab(_pManager, *_pProp, nullptr))
+				{
+					a_editContext.pGameObject = _pNew;
+					a_editContext.ClearEntitySelection();
+				}
+				ImGui::CloseCurrentPopup();
+			}
 			ImGui::EndPopup();
 		}
 
@@ -164,7 +244,7 @@ namespace Editor
 					ImGui::Selectable(_pObject->GetDisplayName(), _isSelected);
 
 					HandleSelect(a_editContext, _pObject, _selectedStillAlive);
-					HandleContextMenu(a_editContext, _pObject);
+					HandleContextMenu(a_editContext, _pManager, _pObject);
 
 					ImGui::PopID();
 				}
@@ -234,7 +314,7 @@ namespace Editor
 		// ポップアップは直前の項目の状態を消費するので、必ず最後に回す
 		HandleSelect(a_editContext, a_pObject, a_inoutIsSelectedAlive);
 		HandleDragAndDrop(a_pManager, a_pObject);
-		HandleContextMenu(a_editContext, a_pObject);
+		HandleContextMenu(a_editContext, a_pManager, a_pObject);
 
 		if (!_isOpen) return;
 
@@ -271,9 +351,82 @@ namespace Editor
 	//======================================================================================
 	void GameObjectHierarchyPanel::HandleContextMenu(
 		EditorContext& a_editContext,
+		GameObject::GameObjectManager* a_pManager,
 		GameObject::BaseObject* a_pObject)
 	{
 		if (!ImGui::BeginPopupContextItem()) return;
+
+		//------------------------------------------------------------------
+		// UI : 親の飾りへまとめる
+		//
+		// まとめられるかは開いている間だけ調べる(GUID で指されていないかを全員の保存値から探すので重い)
+		//------------------------------------------------------------------
+		if (auto* _pUI = Core::TypeInfo::Cast<App::Object::UIBase>(a_pObject); _pUI && a_pObject->GetParent())
+		{
+			GameObject::ObjectContext& _context = a_pManager->RefObjectContext();
+
+			std::string _reason = {};
+			const bool _isMergeable = _pUI->CanMergeIntoParent(_context, _reason);
+
+			if (ImGui::MenuItem("Merge Into Parent", nullptr, false, _isMergeable))
+			{
+				GameObject::BaseObject* _pParent = a_pObject->GetParent();
+				if (_pUI->MergeIntoParent(_context) && a_editContext.pGameObject == a_pObject)
+				{
+					// 自分は消えるので、まとめ先を選び直す
+					a_editContext.pGameObject = _pParent;
+				}
+			}
+			if (!_isMergeable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			{
+				ImGui::SetTooltip("まとめられない : %s", _reason.c_str());
+			}
+			Engine::EditorField::Line();
+		}
+
+		//------------------------------------------------------------------
+		// プレハブ
+		//------------------------------------------------------------------
+		if (ImGui::BeginMenu("Save As Prefab"))
+		{
+			// 開いた最初は表示名を入れておく(同じ名前があれば上書きする)
+			if (m_prefabNameOwner != a_pObject)
+			{
+				m_prefabNameOwner = a_pObject;
+				m_prefabName = a_pObject->GetDisplayName();
+			}
+
+			Engine::EditorField::Field("Name", m_prefabName);
+			Engine::EditorField::HelpText("%s/%s.oj%s", PREFAB_DIR, m_prefabName.c_str(), PREFAB_EXT);
+
+			if (!m_prefabName.empty() && ImGui::Button("Save"))
+			{
+				{
+					Engine::Persistence::Archive _ar(
+						Engine::Persistence::Archive::EMode::Save, PREFAB_DIR, m_prefabName, PREFAB_EXT,
+						Engine::Persistence::Archive::EArchiveFormat::Json);
+					a_pManager->SavePrefab(a_pObject, _ar);
+				}
+				ENGINE_LOG("[GameObjectHierarchy] プレハブを書き出しました : %s", m_prefabName.c_str());
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Place Prefab Here"))
+		{
+			if (const auto* _pProp = DrawPrefabList(a_editContext, "##PlacePrefabSearch"))
+			{
+				if (GameObject::BaseObject* _pNew = PlacePrefab(a_pManager, *_pProp, a_pObject))
+				{
+					a_editContext.pGameObject = _pNew;
+					a_editContext.ClearEntitySelection();
+				}
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndMenu();
+		}
+		Engine::EditorField::Line();
 
 		if (a_pObject->GetParent())
 		{

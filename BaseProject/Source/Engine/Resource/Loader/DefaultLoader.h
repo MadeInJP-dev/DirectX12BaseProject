@@ -15,6 +15,7 @@
 #include "../Data/EffectAsset/IO/EffectAssetIO.h"
 #include "../Data/Font/IO/FontIO.h"
 #include "../Data/UIMaterial/IO/UIMaterialIO.h"
+#include "../Data/UIPreset/IO/UIPresetIO.h"
 
 // レンダリングパイプライン : Engine::Resource ではなく Engine::Graphics::Pipeline に居る
 #include "Engine/Graphics/RenderingPipeline/IO/RenderingPipelineAssetIO.h"
@@ -197,6 +198,15 @@ namespace Engine::Resource
 		{
 			// ノイズのテクスチャを引き当てるので、マネージャーを渡す
 			return UIMaterialIO::LoadFromFile(a_path, *a_pContext->pResourceManager);
+		}
+	};
+	// UIプリセット : 中身は文字列のまま預かるだけなので、他のリソースは引かない
+	template<>
+	struct DefaultLoader<UIPreset>
+	{
+		static UIPreset LoadFromFile(const std::string& a_path, const ResourceBuildContext* /*a_pContext*/)
+		{
+			return UIPresetIO::LoadFromFile(a_path);
 		}
 	};
 }

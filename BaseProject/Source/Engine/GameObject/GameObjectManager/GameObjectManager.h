@@ -48,6 +48,28 @@ namespace Engine::GameObject
 		/// </summary>
 		void Archive(Persistence::Archive& a_ar);
 
+		//----------------------------------------------------------------------------------
+		// プレハブ(エディターで使う)
+		//
+		// オブジェクト1つとその下(子・孫)を1つのアセットに書き、置くときに写す。
+		// 置いたものは元のアセットとつながらない(アセットを直しても、置いた分は変わらない)
+		//----------------------------------------------------------------------------------
+
+		/// <summary>
+		/// a_pRoot とその下を、シーンと同じ並びで書き出す
+		/// </summary>
+		/// <remarks>根の親は書かない(置いた先の親へつなぐため)</remarks>
+		void SavePrefab(BaseObject* a_pRoot, Persistence::Archive& a_ar);
+
+		/// <summary>
+		/// プレハブを置く
+		/// </summary>
+		/// <param name="a_prefabJson">SavePrefab で書いた中身</param>
+		/// <param name="a_pParent">根を付ける親(nullptr なら根のまま)</param>
+		/// <returns>置いた根(置けなければ nullptr)</returns>
+		/// <remarks>中に居る全員の GUID を振り直す。中どうしの参照も新しい GUID へ付け替わる</remarks>
+		BaseObject* InstantiatePrefab(const nlohmann::json& a_prefabJson, BaseObject* a_pParent);
+
 		/// <summary>
 		/// GUIDからインスタンスを引く(参照解決用)。無ければ nullptr。
 		/// </summary>
@@ -118,6 +140,41 @@ namespace Engine::GameObject
 
 		// 子・孫を全部消える予定にする(親が消えるときに一緒に消すため)
 		static void ReserveDestroyDescendants(BaseObject* a_pObject);
+
+		//----------------------------------------------------------------------------------
+		// 1体ぶんの並びの保存・読み込み(シーンとプレハブで同じものを使う)
+		//----------------------------------------------------------------------------------
+
+		// 読み込んだ1体ぶんの、つなぐ前の親子の情報
+		// (親は全員を読み終えてからつなぐ。親が配列で後ろに居ることがあるため)
+		struct LoadedLink
+		{
+			BaseObject* pObject = nullptr;
+			Core::GUID parentGUID = {};
+			bool isLocalSpace = false;	// 置き場所を親から見た値(ローカル)で保存してあるか
+		};
+
+		// GUID を持たないものへ発行する(親の GUID を書く前に全員へ行き渡らせる)
+		void IssueMissingGUIDs();
+
+		// a_pObject とその下を、根から下りる順に集める
+		static void CollectSubtree(BaseObject* a_pObject, std::vector<BaseObject*>& a_outVec);
+
+		/// <summary>
+		/// オブジェクトを GameObjects の配列として書く
+		/// </summary>
+		/// <param name="a_pRootWithoutParent">親を書かないもの(プレハブの根)。シーンでは nullptr</param>
+		void SaveRecords(
+			Persistence::Archive& a_ar,
+			const ObjectMetaRegistry& a_registry,
+			const std::vector<BaseObject*>& a_objectVec,
+			const BaseObject* a_pRootWithoutParent);
+
+		// GameObjects の配列を読んで登録する(親はまだつながない・初期化フェーズは回さない)
+		std::vector<LoadedLink> LoadRecords(Persistence::Archive& a_ar, const ObjectMetaRegistry& a_registry);
+
+		// 読んだものを親へつなぐ。親を持たずに書かれていたものは a_pRootParent へ付ける(nullptr なら根)
+		void LinkLoadedParents(const std::vector<LoadedLink>& a_loadedLinkVec, BaseObject* a_pRootParent);
 
 		/// <summary>
 		/// 1体ぶんの基底の値(名前・置き場所をローカルで持っているか)を保存・読み込む

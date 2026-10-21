@@ -3,6 +3,7 @@
 #include "Application/AppCommon.h"
 #include "Application/Object/UI/Decoration/DecorationAnimation.h"
 #include "Application/Object/UI/Decoration/DecorationReaction.h"
+#include "Application/Object/UI/Decoration/DecorationPreset.h"
 
 #include <variant>
 
@@ -27,6 +28,7 @@
 //   DecorationAnimation.h   … トゥイーン・周期運動・イージング
 //   DecorationReaction.h    … 親の状態と、カーソルへの反応
 //   DecorationDraw.h        … 親から受け取る位置・設定、その場かぎりの差し替え、描く関数
+//   DecorationPreset.h      … プリセット(UIPreset)とのつながり。直すと指している飾りが全部変わる
 //
 // 実装は役割ごとにファイルを分けてある :
 //   Decoration.cpp          … 種類の切り替え・アニメーションと反応の進行
@@ -168,6 +170,11 @@ namespace App::Object::Decoration
 		//----------------------------------------------------------------------------------
 		std::optional<UIReaction>				opReaction;			// カーソルに反応させるなら付与
 
+		//----------------------------------------------------------------------------------
+		// プリセット : 指していれば、付いていく部分をプリセットから写す(DecorationPreset.h)
+		//----------------------------------------------------------------------------------
+		PresetLink preset = {};
+
 		//==================================================================================
 
 		// 種類
@@ -240,5 +247,5 @@ namespace App::Object::Decoration
 	/// </summary>
 	/// <param name="a_services">アセットの一覧と、選び直したときの読み込み先</param>
 	/// <returns>値が変わったら true</returns>
-	bool DrawDecorationInspector(Decoration& a_decoration, const Engine::ECS::EngineServices& a_services);
+	bool DrawDecorationInspector(Decoration& a_decoration, const Engine::ECS::EngineServices& a_services, bool a_isShowPreset = true);
 }

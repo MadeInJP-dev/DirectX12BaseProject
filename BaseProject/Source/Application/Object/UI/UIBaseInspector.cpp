@@ -42,7 +42,7 @@ namespace App::Object
 		// 自分は出す指示なのに、上のパネルが隠れているせいで出ていないことが分かるようにする
 		if (m_isVisible && !IsVisibleInHierarchy(a_context))
 		{
-			Engine::EditorField::WarningText("上にある UIPanel が隠れているため出ていません");
+			Engine::EditorField::WarningText("上にある親が隠れているため出ていません");
 		}
 
 		// HUD か : プレイヤーが設定画面で HUD を消すと一緒に消える
@@ -56,8 +56,8 @@ namespace App::Object
 		if (GetParent())
 		{
 			const UIAnchor _worldAnchor = CalcWorldAnchor();
-			Engine::EditorField::HelpText("Screen : Pos(%.1f, %.1f) Rot %.1f Scale %.2f",
-				_worldAnchor.pixelPos.x, _worldAnchor.pixelPos.y, _worldAnchor.rotation, _worldAnchor.scale);
+			Engine::EditorField::HelpText("Screen : Pos(%.1f, %.1f) Rot %.1f Scale %.2f Layer %.1f",
+				_worldAnchor.pixelPos.x, _worldAnchor.pixelPos.y, _worldAnchor.rotation, _worldAnchor.scale, _worldAnchor.layer);
 			Engine::EditorField::Tooltip("上の値は親(%s)から見たもの。こちらは親の行列を掛けた画面での値", GetParent()->GetDisplayName());
 		}
 
@@ -132,7 +132,7 @@ namespace App::Object
 		// 「矩形には入っているのに反応しない」の原因がここだと分かるようにする
 		if (_interaction.isCursorInside && !_interaction.IsCursorOwner(a_context, this))
 		{
-			Engine::EditorField::WarningText("Cursor : 手前の別UIに取られています(Layer %.1f)", m_anchor.layer);
+			Engine::EditorField::WarningText("Cursor : 手前の別UIに取られています(Layer %.1f)", CalcWorldAnchor().layer);
 		}
 	}
 

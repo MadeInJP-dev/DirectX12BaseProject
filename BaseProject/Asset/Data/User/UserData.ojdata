@@ -1,6 +1,6 @@
 {
     "Game": {
-        "FPSRate": 120,
+        "FPSRate": 60,
         "HasFPSRate": true,
         "IsFPSVisible": true
     },

@@ -553,6 +553,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\UIBaseMerge.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\Core\UIAnchor.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -568,7 +573,7 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\Widget\UIPanel\UIPanel.cpp">
+    <ClCompile Include="Source\Application\Object\UI\Widget\UIElement\UIElement.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
@@ -589,6 +594,11 @@
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationInspector.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationPreset.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
@@ -1355,6 +1365,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIPresetEdit\UIPresetEdit.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\AnimatorEdit\AnimatorEdit.cpp">
       <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
@@ -1668,6 +1683,8 @@
     <ClCompile Include="Source\Engine\Resource\Data\UIMaterial\UIMaterial.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\AudioBehavior\IO\AudioBehaviorIO.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\UIMaterial\IO\UIMaterialIO.cpp" />
+    <ClCompile Include="Source\Engine\Resource\Data\UIPreset\UIPreset.cpp" />
+    <ClCompile Include="Source\Engine\Resource\Data\UIPreset\IO\UIPresetIO.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\EffectAsset\EffectAsset.cpp" />
     <ClCompile Include="Source\Engine\Resource\Data\EffectAsset\IO\EffectAssetIO.cpp" />
     <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit\EffectAssetEdit.cpp">
@@ -1928,6 +1945,7 @@
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationAnimation.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationReaction.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationDraw.h" />
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationPreset.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\Internal\DecorationInternal.h" />
     <ClInclude Include="Source\Application\Systems\Combat\ScoreSystem.h" />
     <ClInclude Include="Source\Application\Systems\Combat\DebugKillSystem.h" />
@@ -2008,7 +2026,7 @@
     <ClInclude Include="Source\Application\Object\UI\Core\UIAnchor.h" />
     <ClInclude Include="Source\Application\Object\UI\Core\UIInteraction.h" />
     <ClInclude Include="Source\Application\Object\UI\Core\UITransition.h" />
-    <ClInclude Include="Source\Application\Object\UI\Widget\UIPanel\UIPanel.h" />
+    <ClInclude Include="Source\Application\Object\UI\Widget\UIElement\UIElement.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\UIButton\UIButton.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\UIGauge\UIGauge.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\SideMenu\SideMenu.h" />
@@ -2027,7 +2045,6 @@
     <ClInclude Include="Source\Application\Object\Scene\Boundary\Boundary.h" />
     <ClInclude Include="Source\Application\Object\Scene\PlayerSpawner\PlayerSpawner.h" />
     <ClInclude Include="Source\Application\Object\Scene\TitleRunBackdrop\TitleRunBackdrop.h" />
-    <ClInclude Include="Source\Application\Object\UI\Widget\UIImage\UIImage.h" />
     <ClInclude Include="Source\Application\Systems\Render\AnimationOptionalDraw.h" />
     <ClInclude Include="Source\Application\Systems\Render\DynamicObjectDrawSystem.h" />
     <ClInclude Include="Source\Application\Systems\Render\RegisterAnimatedRayWorldSystem.h" />
@@ -2311,6 +2328,7 @@
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\ShaderEdit\ShaderEdit.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\AudioBehaviorEdit\AudioBehaviorEdit.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit\UIMaterialEdit.h" />
+    <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIPresetEdit\UIPresetEdit.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\AnimatorEdit\AnimatorEdit.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\TextureEdit\TextureEdit.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\ResourceDraw.h" />
@@ -2472,6 +2490,8 @@
     <ClInclude Include="Source\Engine\Resource\Data\UIMaterial\UIMaterial.h" />
     <ClInclude Include="Source\Engine\Resource\Data\AudioBehavior\IO\AudioBehaviorIO.h" />
     <ClInclude Include="Source\Engine\Resource\Data\UIMaterial\IO\UIMaterialIO.h" />
+    <ClInclude Include="Source\Engine\Resource\Data\UIPreset\UIPreset.h" />
+    <ClInclude Include="Source\Engine\Resource\Data\UIPreset\IO\UIPresetIO.h" />
     <ClInclude Include="Source\Engine\Resource\Data\EffectAsset\EffectAsset.h" />
     <ClInclude Include="Source\Engine\Resource\Data\EffectAsset\IO\EffectAssetIO.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit\EffectAssetEdit.h" />

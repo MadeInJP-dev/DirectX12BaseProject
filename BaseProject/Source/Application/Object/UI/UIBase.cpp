@@ -1,7 +1,5 @@
 #include "UIBase.h"
 
-#include "Application/Object/UI/Widget/UIPanel/UIPanel.h"
-
 #include "Engine/ECS/System/SystemContext.h"	// ObjectContext が運ぶサービス群
 #include "Engine/MainEngine.h"
 #include "Engine/Graphics/GraphicsEngine.h"
@@ -17,21 +15,22 @@ namespace App::Object
 	namespace
 	{
 		//----------------------------------------------------------------------------------
-		// 画面の上での置き場所(位置・回転・倍率)
+		// 画面の上での置き場所(位置・回転・倍率・Z順)
 		//
 		// UI の行列は「倍率 → Z軸回り → 平行移動」だけでできているので、
-		// 掛け合わせても必ずこの3つへ戻せる(倍率は縦横同じ)
+		// 掛け合わせても必ずこの4つへ戻せる(倍率は縦横同じ)
 		//----------------------------------------------------------------------------------
 		struct UIPlacement
 		{
 			Math::Vector2 pos = {};		// px
 			float rotation = 0.0f;		// 度(UIAnchor::RotateDeg と同じ向き)
 			float scale = 1.0f;
+			float layer = 0.0f;			// Z順(行列の Z の移動に入れる。倍率は掛からないので親子で足し算になる)
 		};
 
 		// 置き場所から行列を組む。行ベクトルなので点は 倍率 → 回転 → 移動 の順に掛かり、
 		// UIAnchor::ToScreenPos と同じ点へ移る(1行目・2行目の回し方は RotateDeg と同じ向き)。
-		// 奥行き(Z)は伝えない(Z順は UI ごとの layer で決める)
+		// Z は倍率を掛けずに移動だけ持たせるので、子の Z順は「親の Z順 + 自分の Z順」になる
 		Math::Matrix MakeUIMatrix(const UIPlacement& a_placement)
 		{
 			const float _rad = DirectX::XMConvertToRadians(a_placement.rotation);
@@ -42,16 +41,17 @@ namespace App::Object
 				 _cos, _sin, 0.0f, 0.0f,
 				-_sin, _cos, 0.0f, 0.0f,
 				 0.0f, 0.0f, 1.0f, 0.0f,
-				 a_placement.pos.x, a_placement.pos.y, 0.0f, 1.0f);
+				 a_placement.pos.x, a_placement.pos.y, a_placement.layer, 1.0f);
 		}
 
-		// 行列から置き場所へ戻す(画面の xy だけを見る)
+		// 行列から置き場所へ戻す
 		UIPlacement DecomposeUIMatrix(const Math::Matrix& a_matrix)
 		{
 			UIPlacement _placement = {};
 			_placement.pos = { a_matrix._41, a_matrix._42 };
 			_placement.scale = std::sqrt(a_matrix._11 * a_matrix._11 + a_matrix._12 * a_matrix._12);
 			_placement.rotation = DirectX::XMConvertToDegrees(std::atan2(a_matrix._12, a_matrix._11));
+			_placement.layer = a_matrix._43;
 			return _placement;
 		}
 
@@ -94,6 +94,9 @@ namespace App::Object
 	//======================================================================================
 	void UIBase::PreUpdate(Engine::GameObject::ObjectContext& a_context)
 	{
+		// プリセットが変わっていれば、判定の大きさを測る前に写しておく
+		SyncDecorationPresets(a_context);
+
 		if (!m_opInteraction) return;
 
 		bool _isReceivable = m_opInteraction->IsReceivable(a_context, IsVisibleInHierarchy(a_context));
@@ -107,7 +110,8 @@ namespace App::Object
 			if (_isReceivable) _isInside = IsPointInsideSelf(_cursorPos);
 		}
 
-		m_opInteraction->ClaimCursor(a_context, this, m_anchor.layer, _isReceivable, _isInside);
+		// 取り合いは画面での Z順(親の Z順込み)で比べる
+		m_opInteraction->ClaimCursor(a_context, this, CalcWorldAnchor().layer, _isReceivable, _isInside);
 	}
 
 	//======================================================================================
@@ -167,12 +171,12 @@ namespace App::Object
 	}
 
 	//======================================================================================
-	// 実際に出ているか : 自分の指定と、上にある UIPanel の表示
+	// 実際に出ているか : 自分の指定と、上にある親全員の表示
 	//======================================================================================
-	bool UIBase::IsVisibleInHierarchy(const Engine::GameObject::ObjectContext& a_context) const
+	bool UIBase::IsVisibleInHierarchy(const Engine::GameObject::ObjectContext& /*a_context*/) const
 	{
 		if (!m_isVisible) return false;
-		return IsParentPanelsVisible(a_context);
+		return IsParentsVisible();
 	}
 
 	//======================================================================================
@@ -183,29 +187,66 @@ namespace App::Object
 	//======================================================================================
 	bool UIBase::IsDrawnInHierarchy(const Engine::GameObject::ObjectContext& a_context) const
 	{
+		if (!IsSelfDrawn()) return false;
+		return IsParentsDrawn(a_context);
+	}
+
+	bool UIBase::IsSelfDrawn() const
+	{
 		if (!m_isVisible && !m_transition.IsHiding()) return false;
 		if (m_transition.isPulseOnly && !m_transition.IsPulsePlaying()) return false;
-
-		return IsParentPanelsVisible(a_context);
+		return true;
 	}
 
 	//======================================================================================
-	// 上にある UIPanel が全部出ているか
+	// 上にある親が全員出ているか(押せるかの判断用)
 	//--------------------------------------------------------------------------------------
-	// 上へ辿って、途中にある UIPanel が1つでも隠れていれば出ていない。
-	// 親がパネルでないところ(ボタンの下にまとめただけの画像など)は表示を伝えない。
+	// UI に限らず、親の IsVisible を見る(MissionSelect のような進行役も出し入れを持つ)。
+	// 出し入れを持たない親(既定で常に表示)は素通しになる。
 	// (輪は BaseObject::SetParent が作らせないので、根まで辿れば必ず止まる)
 	//======================================================================================
-	bool UIBase::IsParentPanelsVisible(const Engine::GameObject::ObjectContext& /*a_context*/) const
+	bool UIBase::IsParentsVisible() const
 	{
 		for (const Engine::GameObject::BaseObject* _pParent = GetParent(); _pParent; _pParent = _pParent->GetParent())
 		{
-			if (const UIPanel* _pPanel = Core::TypeInfo::Cast<const UIPanel>(_pParent))
-			{
-				if (!_pPanel->IsVisible()) return false;
-			}
+			if (!_pParent->IsVisible()) return false;
 		}
 		return true;
+	}
+
+	//======================================================================================
+	// 上にある親が全員描かれているか(描くかの判断用)
+	//--------------------------------------------------------------------------------------
+	// UI の親は自分と同じ決まりで見る : 消える演出の最中は描かれているので、子も一緒に描いて
+	// 一緒に薄れさせる(ApplyTransition が親の濃さを掛ける)。HUD として隠れている親の子も隠す
+	//======================================================================================
+	bool UIBase::IsParentsDrawn(const Engine::GameObject::ObjectContext& a_context) const
+	{
+		for (const Engine::GameObject::BaseObject* _pParent = GetParent(); _pParent; _pParent = _pParent->GetParent())
+		{
+			if (const UIBase* _pParentUI = Core::TypeInfo::Cast<const UIBase>(_pParent))
+			{
+				if (!_pParentUI->IsSelfDrawn()) return false;
+				if (_pParentUI->IsHiddenAsHUD(a_context)) return false;
+				continue;
+			}
+
+			if (!_pParent->IsVisible()) return false;
+		}
+		return true;
+	}
+
+	float UIBase::CalcParentsTransitionAlpha() const
+	{
+		float _alpha = 1.0f;
+		for (const Engine::GameObject::BaseObject* _pParent = GetParent(); _pParent; _pParent = _pParent->GetParent())
+		{
+			if (const UIBase* _pParentUI = Core::TypeInfo::Cast<const UIBase>(_pParent))
+			{
+				_alpha *= _pParentUI->m_transition.CalcValue().alpha;
+			}
+		}
+		return _alpha;
 	}
 
 	//======================================================================================
@@ -232,6 +273,7 @@ namespace App::Object
 		_world.pixelPos = ToParentScreen(_parent, _world.pixelPos);
 		_world.rotation = m_anchor.rotation + _parent.rotation;
 		_world.scale = m_anchor.scale * _parent.scale;
+		_world.layer = m_anchor.layer + _parent.layer;
 		return _world;
 	}
 
@@ -258,6 +300,7 @@ namespace App::Object
 		_placement.pos = m_anchor.pixelPos + m_runtimeOffset;
 		_placement.rotation = m_anchor.rotation;
 		_placement.scale = m_anchor.scale;
+		_placement.layer = m_anchor.layer;
 		return MakeUIMatrix(_placement);
 	}
 
@@ -265,7 +308,7 @@ namespace App::Object
 	// 親が変わっても画面での置き場所を保つ
 	//--------------------------------------------------------------------------------------
 	// 画面での置き場所を古い親の中で求め、新しい親の中の値へ戻す。
-	// 回転と倍率は差だけを足し引きする(親が回っていなければ入れた値がそのまま残る)
+	// 回転・倍率・Z順は差だけを足し引きする(親が回っていなければ入れた値がそのまま残る)
 	//======================================================================================
 	void UIBase::RebaseLocal(const Math::Matrix& a_oldParentWorld, const Math::Matrix& a_newParentWorld)
 	{
@@ -282,6 +325,7 @@ namespace App::Object
 		m_anchor.pixelPos = _localPos - m_runtimeOffset;
 		m_anchor.rotation = m_anchor.rotation + _oldParent.rotation - _newParent.rotation;
 		m_anchor.scale = m_anchor.scale * _oldParent.scale / _newParent.scale;
+		m_anchor.layer = m_anchor.layer + _oldParent.layer - _newParent.layer;
 	}
 
 	//======================================================================================
@@ -575,6 +619,9 @@ namespace App::Object
 		auto* _pGE = a_context.pServices->pMainEngine->RefGraphicsEngine();
 		if (!_pGE) return;
 
+		// 描くのは PreUpdate を回さない場面(エディターで止めている間など)もあるので、ここでも写す
+		SyncDecorationPresets(a_context);
+
 		const Decoration::ParentTransform _parentTr = MakeParentTransform();
 		Decoration::ParentOption _parentOp = MakeParentOption();
 		_parentOp.pMaterial = FindReadyMaterial(a_context.pServices->pResourceManager);
@@ -607,6 +654,8 @@ namespace App::Object
 		auto* _pGE = a_context.pServices->pMainEngine->RefGraphicsEngine();
 		if (!_pGE) return;
 
+		SyncDecorationPresets(a_context);
+
 		Decoration::ParentOption _parentOp = MakeParentOption();
 		_parentOp.pMaterial = FindReadyMaterial(a_context.pServices->pResourceManager);
 
@@ -623,6 +672,7 @@ namespace App::Object
 	// 演出の値を掛ける
 	//--------------------------------------------------------------------------------------
 	// 継承先が渡した差し替え(位置・UV・色など)はそのまま残し、倍率と色の a にだけ掛ける。
+	// 色の a には親の UI の演出の濃さも掛ける(親が薄れて消えるとき、子も一緒に薄れる)。
 	// 倍率は DrawOverride::scale へ入れるので、飾りの位置のずれにも掛かる
 	// (枠と文字がばらけずに、UI がまとまって伸び縮みする)
 	//======================================================================================
@@ -632,7 +682,7 @@ namespace App::Object
 
 		Decoration::DrawOverride _override = a_override;
 		_override.scale *= _value.scale;
-		_override.tint.a *= _value.alpha;
+		_override.tint.a *= _value.alpha * CalcParentsTransitionAlpha();
 
 		// 消え具合は「残っている割合」を掛け合わせる(継承先が渡した分と演出の分)
 		_override.dissolve = 1.0f - (1.0f - a_override.dissolve) * (1.0f - _value.dissolve);
@@ -704,6 +754,26 @@ namespace App::Object
 			if (m_decorationVec[_i].name == a_name) return static_cast<int>(_i);
 		}
 		return -1;
+	}
+
+	//======================================================================================
+	// プリセット
+	//--------------------------------------------------------------------------------------
+	// 指しているプリセットの番号が変わった飾りだけ写し直す(変わっていなければ番号を見るだけ)。
+	// 写した飾りは見た目(テクスチャ・フォント)が変わっているかもしれないので引き直す
+	//======================================================================================
+	void UIBase::SyncDecorationPresets(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (!a_context.pServices || !a_context.pServices->pResourceManager) return;
+		auto* _pResourceManager = a_context.pServices->pResourceManager;
+
+		for (Decoration::Decoration& _decoration : m_decorationVec)
+		{
+			if (Decoration::SyncPreset(_decoration, _pResourceManager))
+			{
+				Decoration::RequestResources(_decoration, _pResourceManager);
+			}
+		}
 	}
 
 	void UIBase::RequestDecorationResources(Engine::GameObject::ObjectContext& a_context)

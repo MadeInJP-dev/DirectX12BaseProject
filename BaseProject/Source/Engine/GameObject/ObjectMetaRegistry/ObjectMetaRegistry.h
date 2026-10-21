@@ -79,8 +79,13 @@ namespace Engine::GameObject
 		// 登録名を変えるとタイプIDも変わるので、そのままでは旧名で保存された
 		// シーンのオブジェクトが復元できなくなる。RegisterType の直後にこれを呼ぶと、
 		// 旧名のIDも同じクラスへ流れるようになる。
+		//
+		// a_onCreate を渡すと、旧名から作ったときだけ、読み込みの前に呼ばれる。
+		// 複数のクラスを1つへまとめたときに、元のクラスごとの既定値を入れるのに使う
+		// (保存値を持たない古いデータは、ここで入れた値のまま残る)
 		//----------------------------------------------------------------------------------
-		void MigrateName(const std::string& a_oldName, const std::string& a_currentName);
+		using MigrateFunc = std::function<void(BaseObject&)>;
+		void MigrateName(const std::string& a_oldName, const std::string& a_currentName, MigrateFunc a_onCreate = nullptr);
 
 		// タイプIDの取得
 		template<typename T>
@@ -102,6 +107,12 @@ namespace Engine::GameObject
 		// 登録したファクトリで実体を生成する(未登録なら nullptr)
 		std::unique_ptr<BaseObject> Create(ObjectTypeID a_id) const;
 
+		/// <summary>
+		/// シーンから読んだ値で実体を生成する(解決できなければ nullptr)
+		/// </summary>
+		/// <remarks>旧名の値なら、MigrateName で渡した a_onCreate も通す</remarks>
+		std::unique_ptr<BaseObject> CreateFromSaved(uint32_t a_savedValue) const;
+
 		// 全クラス情報(エディターの AddObject 一覧用)
 		const std::unordered_map<ObjectTypeID, ObjectMeta>& GetAllMeta() const { return m_metaMap; }
 
@@ -121,6 +132,9 @@ namespace Engine::GameObject
 
 		// 旧名のタイプID → 現行のタイプID(MigrateName で張る)
 		std::unordered_map<ObjectTypeID, ObjectTypeID> m_aliasMap;
+
+		// 旧名のタイプID → 旧名から作ったときに通す処理(渡されたものだけ)
+		std::unordered_map<ObjectTypeID, MigrateFunc> m_aliasCreateMap;
 	};
 
 	template<typename T>

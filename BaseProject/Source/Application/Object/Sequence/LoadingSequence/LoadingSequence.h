@@ -12,7 +12,7 @@ namespace App::Object
 	/// 読み込みが長引いたときだけ一番上に重ねて出す(SceneManager::SetLoadingScreen)。
 	///
 	/// ここが持つのは「読み込みの進み具合をどのゲージへ流すか」だけ。
-	/// 背景の画像は UIImage、バーの見た目は UIGauge 側が持つ。
+	/// 背景の画像は UIElement、バーの見た目は UIGauge 側が持つ。
 	/// ゲージは値の取り元を Manual にしておくこと(それ以外だと毎フレーム上書きされる)。
 	/// </remarks>
 	class LoadingSequence : public Engine::GameObject::BaseObject

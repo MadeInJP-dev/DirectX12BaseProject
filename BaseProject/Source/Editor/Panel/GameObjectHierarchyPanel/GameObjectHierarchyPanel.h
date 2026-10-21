@@ -50,11 +50,18 @@ namespace Editor
 		/// </remarks>
 		void HandleContextMenu(
 			EditorContext& a_editContext,
+			GameObject::GameObjectManager* a_pManager,
 			GameObject::BaseObject* a_pObject);
 
 		// ドラッグ&ドロップで親を付け替える
 		void HandleDragAndDrop(
 			GameObject::GameObjectManager* a_pManager,
 			GameObject::BaseObject* a_pObject);
+
+	private:
+
+		// プレハブとして書き出すときの名前(右クリックで開いた相手ごとに表示名で入れ直す)
+		std::string m_prefabName = {};
+		const GameObject::BaseObject* m_prefabNameOwner = nullptr;
 	};
 }

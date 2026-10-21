@@ -64,6 +64,9 @@
     <Filter Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit">
       <UniqueIdentifier>{2e3e8123-7f34-42ed-be8f-ba23dc851a7a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIPresetEdit">
+      <UniqueIdentifier>{e1e9f83e-5a05-4989-8427-86a5496ac76e}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit">
       <UniqueIdentifier>{55c82092-9480-4bc1-899c-f8347aa4699d}</UniqueIdentifier>
     </Filter>
@@ -712,10 +715,7 @@
     <Filter Include="Source\Application\Object\UI\Option\InputOptionPanel">
       <UniqueIdentifier>{387e3264-5402-40c5-9273-8285295c8dc3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\Widget\UIImage">
-      <UniqueIdentifier>{c8d2e3f4-9a51-4b62-8d73-1e84f5a6b703}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Application\Object\UI\Widget\UIPanel">
+    <Filter Include="Source\Application\Object\UI\Widget\UIElement">
       <UniqueIdentifier>{dbe1007a-6323-4f3f-ba6a-73afc788c512}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Application\Object\UI\HUD\WaveAnnounceHUD">
@@ -1056,6 +1056,12 @@
     </Filter>
     <Filter Include="Source\Engine\Resource\Data\UIMaterial\IO">
       <UniqueIdentifier>{d2440823-cf00-4e84-b627-5df82ba509d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Resource\Data\UIPreset">
+      <UniqueIdentifier>{1c8de1f9-c5e3-4ed3-b25e-0a07021d4399}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Resource\Data\UIPreset\IO">
+      <UniqueIdentifier>{7fe432b4-fe84-4ed0-a95a-e04412c57ccc}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Resource\Data\EffectAsset">
       <UniqueIdentifier>{c0de0014-1111-4222-8333-0000c0de0014}</UniqueIdentifier>
@@ -1659,10 +1665,16 @@
     <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationInspector.cpp">
       <Filter>Source\Application\Object\UI\Decoration</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationPreset.cpp">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\UIBase.cpp">
       <Filter>Source\Application\Object\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\UIBaseInspector.cpp">
+      <Filter>Source\Application\Object\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\UIBaseMerge.cpp">
       <Filter>Source\Application\Object\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\Core\UIAnchor.cpp">
@@ -1674,8 +1686,8 @@
     <ClCompile Include="Source\Application\Object\UI\Core\UITransition.cpp">
       <Filter>Source\Application\Object\UI\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\Widget\UIPanel\UIPanel.cpp">
-      <Filter>Source\Application\Object\UI\Widget\UIPanel</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Widget\UIElement\UIElement.cpp">
+      <Filter>Source\Application\Object\UI\Widget\UIElement</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\HUD\AimReticleHUD\AimReticleHUD.cpp">
       <Filter>Source\Application\Object\UI\HUD\AimReticleHUD</Filter>
@@ -2196,6 +2208,9 @@
     <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit\UIMaterialEdit.cpp">
       <Filter>Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIPresetEdit\UIPresetEdit.cpp">
+      <Filter>Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIPresetEdit</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit\EffectAssetEdit.cpp">
       <Filter>Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit</Filter>
     </ClCompile>
@@ -2429,6 +2444,12 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Resource\Data\UIMaterial\IO\UIMaterialIO.cpp">
       <Filter>Source\Engine\Resource\Data\UIMaterial\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Resource\Data\UIPreset\UIPreset.cpp">
+      <Filter>Source\Engine\Resource\Data\UIPreset</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Resource\Data\UIPreset\IO\UIPresetIO.cpp">
+      <Filter>Source\Engine\Resource\Data\UIPreset\IO</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Resource\Data\EffectAsset\EffectAsset.cpp">
       <Filter>Source\Engine\Resource\Data\EffectAsset</Filter>
@@ -3401,6 +3422,9 @@
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationDraw.h">
       <Filter>Source\Application\Object\UI\Decoration</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationPreset.h">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\Decoration\Internal\DecorationInternal.h">
       <Filter>Source\Application\Object\UI\Decoration\Internal</Filter>
     </ClInclude>
@@ -3416,8 +3440,8 @@
     <ClInclude Include="Source\Application\Object\UI\Core\UITransition.h">
       <Filter>Source\Application\Object\UI\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\Widget\UIPanel\UIPanel.h">
-      <Filter>Source\Application\Object\UI\Widget\UIPanel</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Widget\UIElement\UIElement.h">
+      <Filter>Source\Application\Object\UI\Widget\UIElement</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\HUD\AimReticleHUD\AimReticleHUD.h">
       <Filter>Source\Application\Object\UI\HUD\AimReticleHUD</Filter>
@@ -3469,9 +3493,6 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\Option\InputOptionPanel\InputOptionPanel.h">
       <Filter>Source\Application\Object\UI\Option\InputOptionPanel</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\Widget\UIImage\UIImage.h">
-      <Filter>Source\Application\Object\UI\Widget\UIImage</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\HUD\WaveAnnounceHUD\WaveAnnounceHUD.h">
       <Filter>Source\Application\Object\UI\HUD\WaveAnnounceHUD</Filter>
@@ -4034,6 +4055,9 @@
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit\UIMaterialEdit.h">
       <Filter>Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIMaterialEdit</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIPresetEdit\UIPresetEdit.h">
+      <Filter>Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\UIPresetEdit</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit\EffectAssetEdit.h">
       <Filter>Source\Editor\Panel\InspectorPanel\AssetInspector\ResourceDraw\EffectAssetEdit</Filter>
     </ClInclude>
@@ -4333,6 +4357,12 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Resource\Data\UIMaterial\IO\UIMaterialIO.h">
       <Filter>Source\Engine\Resource\Data\UIMaterial\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Resource\Data\UIPreset\UIPreset.h">
+      <Filter>Source\Engine\Resource\Data\UIPreset</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Resource\Data\UIPreset\IO\UIPresetIO.h">
+      <Filter>Source\Engine\Resource\Data\UIPreset\IO</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Resource\Data\EffectAsset\EffectAsset.h">
       <Filter>Source\Engine\Resource\Data\EffectAsset</Filter>

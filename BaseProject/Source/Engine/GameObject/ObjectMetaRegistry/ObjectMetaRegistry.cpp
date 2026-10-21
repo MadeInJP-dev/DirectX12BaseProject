@@ -2,7 +2,7 @@
 
 namespace Engine::GameObject
 {
-	void ObjectMetaRegistry::MigrateName(const std::string& a_oldName, const std::string& a_currentName)
+	void ObjectMetaRegistry::MigrateName(const std::string& a_oldName, const std::string& a_currentName, MigrateFunc a_onCreate)
 	{
 		// 現行名が登録されていなければ何もしない(登録前に呼ばれた場合)
 		const ObjectTypeID _currentID = GetTypeID(a_currentName);
@@ -26,6 +26,20 @@ namespace Engine::GameObject
 		// m_metaMap には入れない(AddObject の一覧に同じクラスが二重に並ぶため)
 		m_nameMap.emplace(a_oldName, _currentID);
 		m_aliasMap.emplace(_oldID, _currentID);
+		if (a_onCreate) m_aliasCreateMap.emplace(_oldID, std::move(a_onCreate));
+	}
+
+	std::unique_ptr<BaseObject> ObjectMetaRegistry::CreateFromSaved(uint32_t a_savedValue) const
+	{
+		auto _upObject = Create(ResolveTypeID(a_savedValue));
+		if (!_upObject) return nullptr;
+
+		// 旧名で保存されていたもの : 元のクラスの既定値を入れてから読み込みへ渡す
+		if (auto _it = m_aliasCreateMap.find(static_cast<ObjectTypeID>(a_savedValue)); _it != m_aliasCreateMap.end())
+		{
+			_it->second(*_upObject);
+		}
+		return _upObject;
 	}
 
 	ObjectTypeID ObjectMetaRegistry::GetTypeID(const std::string& a_name) const

@@ -21,7 +21,7 @@ namespace App::Object
 	///   ・シーン上の UIButton を GUID で探し、押されたらシーンを切り替える処理を差し込む
 	///   ・タイトルの間はカーソルの中央固定を切る(固定したままだとカーソルを動かせない)
 	///
-	/// ボタンの見た目・位置は UIButton 側、背景は UIImage 側が持つ。
+	/// ボタンの見た目・位置は UIButton 側、背景は UIElement 側が持つ。
 	/// ここが持つのは「どのボタンを押したらどのシーンへ行くか」だけ。
 	/// </remarks>
 	class TitleSequence : public Engine::GameObject::BaseObject
