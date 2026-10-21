@@ -9,8 +9,9 @@ VSOutput VSMain(VSInput a_input)
 	// 描く一覧から粒を引く
 	//
 	// SV_InstanceID は描く一覧の何番目か(インスタンス数は数えた数。範囲外は読まないよう表の長さで丸める)。
-	//   加算   : 一覧はそのプールの生存リスト(粒の番号)。表の番号はルート定数
-	//   半透明 : 一覧は全アセットの粒を遠い順に並べたもの。1件の上位ビットが表の番号、下位ビットが粒の番号
+	//   ふつう       : 一覧は全アセットの粒(加算・半透明とも)を遠い順に並べたもの。
+	//                  1件の上位ビットが表の番号、下位ビットが粒の番号
+	//   並べられない : 一覧はそのプールの生存リスト(粒の番号)。表の番号はルート定数
 	// 1回の描画でアセット(= 粒バッファ)が粒ごとに変わるので、番号は NonUniformResourceIndex で引く
 	//----------------------------------------------------------------
 	uint _listCount, _listStride;
@@ -27,9 +28,13 @@ VSOutput VSMain(VSInput a_input)
 	StructuredBuffer<ParticleData> _particles = ResourceDescriptorHeap[NonUniformResourceIndex(_draw.particleBufferIndex)];
 	ParticleData _particleData = _particles[_particleIndex];
 
-	// PS が使うもの(絵とぼかす幅)は板ごとに渡す
+	// PS が使うもの(絵とぼかす幅と読み方)は板ごとに渡す
 	_out.texIndex = _draw.texIndex;
 	_out.softDepth = _draw.softDepth;
+	_out.texMode = _draw.texMode;
+	_out.blendMode = _draw.blendMode;
+	_out.frameBlend = 0.0f;
+	_out.emissive = float4(0.0f, 0.0f, 0.0f, 2.0f);
 
 	// パーティクルの寿命判定
 	if (_particleData.life <= 0.0f)
@@ -37,7 +42,7 @@ VSOutput VSMain(VSInput a_input)
 		// 寿命が切れている場合は処理をスキップ
 
 		_out.pos = float4(0, 0, 0, 0);
-		_out.uv = float2(0, 0);
+		_out.uv = float4(0, 0, 0, 0);
 		_out.color = float4(1, 0, 0, 1);
 		_out.viewDepth = 0.0f;
 		return _out;
@@ -175,8 +180,9 @@ VSOutput VSMain(VSInput a_input)
 	float _lifeT = saturate(1.0f - (_particleData.life / _startLife));
 
 	// 寿命に沿ったサイズ変化。
-	// 煙は膨らみ(>1)、火花は縮む(<1)。1 なら変化しない
-	float _sizeScale = lerp(1.0f, _draw.endSizeScale, _lifeT);
+	// 煙は膨らみ(>1)、火花は縮む(<1)。1 なら変化しない。
+	// 曲がり具合が 1 より小さいと頭で一気に膨らんで、あとはゆっくりになる(爆風・煙)
+	float _sizeScale = lerp(1.0f, _draw.endSizeScale, pow(_lifeT, max(_draw.sizeCurvePow, 0.01f)));
 
 	// ビルボード計算
 	float3 _localPos = a_input.pos.xyz * (_particleData.size * _sizeScale);
@@ -196,16 +202,64 @@ VSOutput VSMain(VSInput a_input)
 	// 奥の物との境目をぼかすための奥行き(PS で深度と比べる)
 	_out.viewDepth = mul(float4(_worldPos, 1.0f), g_camera.view).z;
 
-	// UV座標のパススルー
-	_out.uv = a_input.uv;
-	
+	// ---------------------------------------------------------------
+	// フリップブック : 絵を cols x rows のコマに割って、どのコマを出すか決める
+	//
+	// コマは左上から右へ、行が終わったら次の行。
+	//   OverLife : 寿命に沿って最初のコマから最後のコマまで。混ぜる指定なら隣のコマと混ぜる
+	//   Random   : 粒ごとにどれか1コマ(発生時の寿命のビットと粒の番号から引くので、粒の間は変わらない)
+	// ---------------------------------------------------------------
+	const uint _cols = max(_draw.flipbookCols, 1u);
+	const uint _rows = max(_draw.flipbookRows, 1u);
+	const uint _frameCount = _cols * _rows;
+	uint _frameA = 0;
+	uint _frameB = 0;
+	if (_frameCount > 1)
+	{
+		if (_draw.flipbookMode == PARTICLE_FLIPBOOK_OVER_LIFE)
+		{
+			const float _frame = _lifeT * (float)(_frameCount - 1);
+			_frameA = min((uint)_frame, _frameCount - 1);
+			_frameB = min(_frameA + 1, _frameCount - 1);
+			_out.frameBlend = (_draw.isFlipbookBlend != 0) ? frac(_frame) : 0.0f;
+		}
+		else if (_draw.flipbookMode == PARTICLE_FLIPBOOK_RANDOM)
+		{
+			uint _hash = asuint(_particleData.startLife) ^ (_particleIndex * 0x9E3779B9u);
+			_hash ^= _hash >> 16; _hash *= 0x7FEB352Du; _hash ^= _hash >> 15; _hash *= 0x846CA68Bu; _hash ^= _hash >> 16;
+			_frameA = _hash % _frameCount;
+			_frameB = _frameA;
+		}
+	}
+	const float2 _cellSize = float2(1.0f / (float)_cols, 1.0f / (float)_rows);
+	const float2 _cellA = float2((float)(_frameA % _cols), (float)(_frameA / _cols));
+	const float2 _cellB = float2((float)(_frameB % _cols), (float)(_frameB / _cols));
+	_out.uv = float4((_cellA + a_input.uv) * _cellSize, (_cellB + a_input.uv) * _cellSize);
+
 	// ---------------------------------------------------------------
 	// 寿命に沿った色
 	//
 	// 爆発は「白く光る → オレンジ → くすんだ煙」のように色が変わる。
+	// 途中の色があれば 開始 → 途中 → 終わり の3色で変える(火の色から煙の色へ、のような変化)。
 	// RGB は 1 を超えてよく、超えたぶんがブルームのしきい値を抜けて光って見える
 	// ---------------------------------------------------------------
 	float4 _color = lerp(_draw.startColor, _draw.endColor, _lifeT);
+	if (_draw.midColorTime > 0.0f && _draw.midColorTime < 1.0f)
+	{
+		_color = (_lifeT < _draw.midColorTime)
+			? lerp(_draw.startColor, _draw.midColor, _lifeT / _draw.midColorTime)
+			: lerp(_draw.midColor, _draw.endColor, (_lifeT - _draw.midColorTime) / (1.0f - _draw.midColorTime));
+	}
+
+	// ---------------------------------------------------------------
+	// FireSmoke の火 : 冷えたしきい値は寿命の頭で 0、emissiveTime で 1 を超えて光らなくなる。
+	// 爆発の火は出だしは熱いまま膨らみ、後から一気に冷えるので、しきい値は2乗に近い曲線で上げる
+	// ---------------------------------------------------------------
+	if (_draw.texMode == PARTICLE_TEX_MODE_FIRE_SMOKE && _draw.emissiveTime > 0.0f)
+	{
+		const float _coolT = saturate(_lifeT / _draw.emissiveTime);
+		_out.emissive = float4(_draw.emissiveColor.rgb, pow(_coolT, 1.6f) * (1.0f + PARTICLE_HEAT_SOFTNESS) + step(1.0f, _coolT));
+	}
 
 	// 出だしと終わりのフェード。
 	// 割合(0〜1)で指定するので、粒ごとに寿命が違っても同じ見え方になる

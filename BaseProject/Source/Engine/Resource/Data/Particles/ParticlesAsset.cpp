@@ -58,6 +58,22 @@ namespace Engine::Resource
 
 		// ---- 奥の物との境目 ----
 		a_ar.Field("m_softDepth", m_softDepth);
+
+		// ---- 寿命の途中の色・サイズの曲がり具合 ----
+		a_ar.Field("m_midColor", m_midColor);
+		a_ar.Field("m_midColorTime", m_midColorTime);
+		a_ar.Field("m_sizeCurvePow", m_sizeCurvePow);
+
+		// ---- フリップブック ----
+		a_ar.Field("m_flipbookCols", m_flipbookCols);
+		a_ar.Field("m_flipbookRows", m_flipbookRows);
+		a_ar.Field("m_flipbookMode", m_flipbookMode);
+		a_ar.Field("m_isFlipbookBlend", m_isFlipbookBlend);
+
+		// ---- 絵のチャンネルの読み方 ----
+		a_ar.Field("m_texMode", m_texMode);
+		a_ar.Field("m_emissiveTime", m_emissiveTime);
+		a_ar.Field("m_emissiveColor", m_emissiveColor);
 	}
 
 	//======================================================================================
@@ -97,6 +113,18 @@ namespace Engine::Resource
 
 		// ぼかす幅が負だと境目の手前まで透明になる
 		if (m_softDepth < 0.0f) m_softDepth = 0.0f;
+
+		// 途中の色の進み具合は 0〜1 の内側だけ意味がある(端は2色と同じ)
+		m_midColorTime = std::clamp(m_midColorTime, 0.0f, 1.0f);
+
+		// 曲がり具合が 0 以下だと、生まれた瞬間に終わりの大きさへ跳ぶ
+		if (m_sizeCurvePow <= 0.0f) m_sizeCurvePow = 1.0f;
+
+		// コマ数は 1 以上。多すぎると 1コマが潰れるので頭打ちにする
+		m_flipbookCols = std::clamp(m_flipbookCols, 1, 64);
+		m_flipbookRows = std::clamp(m_flipbookRows, 1, 64);
+
+		if (m_emissiveTime < 0.0f) m_emissiveTime = 0.0f;
 
 		// テクスチャのハンドル取得
 		m_texHandle = a_resourceManager.LoadImmediate<Texture>(m_texGUID);

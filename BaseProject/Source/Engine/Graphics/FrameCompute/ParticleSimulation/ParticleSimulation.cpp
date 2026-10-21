@@ -36,6 +36,17 @@ namespace
 		_record.softDepth    = a_particle.GetSoftDepth();
 		_record.startColor   = a_particle.GetStartColor();
 		_record.endColor     = a_particle.GetEndColor();
+		_record.midColor     = a_particle.GetMidColor();
+		_record.midColorTime = a_particle.GetMidColorTime();
+		_record.sizeCurvePow = a_particle.GetSizeCurvePow();
+		_record.flipbookCols = static_cast<uint32_t>(a_particle.GetFlipbookCols());
+		_record.flipbookRows = static_cast<uint32_t>(a_particle.GetFlipbookRows());
+		_record.flipbookMode = static_cast<uint32_t>(a_particle.GetFlipbookMode());
+		_record.isFlipbookBlend = a_particle.IsFlipbookBlend() ? 1u : 0u;
+		_record.texMode       = static_cast<uint32_t>(a_particle.GetTexMode());
+		_record.emissiveTime  = a_particle.GetEmissiveTime();
+		_record.emissiveColor = a_particle.GetEmissiveColor();
+		_record.blendMode     = static_cast<uint32_t>(a_particle.GetBlendMode());
 		return _record;
 	}
 
@@ -318,7 +329,7 @@ namespace Engine::Graphics
 		// 描画設定の表を組む
 		//
 		// 更新するプールのうち、アセットと絵が引けるもの(描けるもの)を全部積む。
-		// 半透明の粒は集めるときに表の番号を持たせ、描くときにその番号で設定を引く
+		// 粒は集めるときに表の番号を持たせ、描くときにその番号で設定を引く
 		//----------------------------------------------------------------------------------
 		auto* _pDrawTable = _pParticleManager->RefDrawTable();
 		if (!_pDrawTable || !m_pResourceManager) return;
@@ -336,7 +347,6 @@ namespace Engine::Graphics
 			_pDrawTable->AddRecord(
 				_handle,
 				MakeDrawRecord(*_pool, *_pParticle, _pTex->GetSRV().GetIndex()),
-				_pParticle->GetBlendMode() == Particle::EParticleBlendMode::AlphaBlend,
 				_pool->GetMaxCapacity(),
 				_pParticle->GetSortOrder(),
 				_pParticle->GetName());
@@ -348,13 +358,13 @@ namespace Engine::Graphics
 			a_pGE->RefRenderDevice()->GetCurrentFrameIndex());
 
 		//----------------------------------------------------------------------------------
-		// 半透明の粒を集める準備
+		// 粒を集める準備(加算も半透明も同じ一覧へ集める)
 		//
 		// 距離は半透明のメッシュと同じく描くカメラの位置から測る
 		// (この時点でカメラは確定している。カメラが何台あっても並びはこのカメラのもの)。
 		// 並べ替えのシェーダーが読めていなければ集めない。ParticlePass はアセットごとに描く(前後は入れ替わる)
 		//----------------------------------------------------------------------------------
-		const bool _isGatherReady = m_sortRootSig.IsValid() && m_sortPSO.IsValid() && _pDrawTable->HasAlphaBlend();
+		const bool _isGatherReady = m_sortRootSig.IsValid() && m_sortPSO.IsValid() && _pDrawTable->HasSortList();
 		Math::Vector3 _cameraPos = {};
 		if (const auto* _pSceneView = a_pGE->GetSceneView())
 		{
@@ -363,7 +373,7 @@ namespace Engine::Graphics
 		}
 		if (_isGatherReady)
 		{
-			BeginGatherAlphaBlend(a_pCtx, *_pDrawTable, _quadIndexCount);
+			BeginGatherSortList(a_pCtx, *_pDrawTable, _quadIndexCount);
 		}
 
 		for (auto& [_handle, _pool] : _pParticleManager->GetPoolMap())
@@ -478,14 +488,14 @@ namespace Engine::Graphics
 				}
 			);
 
-			// 半透明の粒は全アセットぶん1本の一覧へ集める(並べるのは全プールの後)。
-			// 加算は描く順に依存しないので集めない
+			// 粒は全アセットぶん1本の一覧へ集める(並べるのは全プールの後)。
+			// 加算も集める : 煙(半透明)と前後を並べないと、煙の奥の炎が煙の上に乗って見える
 			if (_isGatherReady)
 			{
 				const auto _recordIndex = _pDrawTable->FindRecordIndex(_handle);
-				if (_recordIndex && _pDrawTable->IsAlphaBlendRecord(*_recordIndex))
+				if (_recordIndex)
 				{
-					GatherAlphaBlend(a_pCtx, *_pDrawTable, *_pool, *_recordIndex, _slotSRVIndex, _cameraPos);
+					GatherSortList(a_pCtx, *_pDrawTable, *_pool, *_recordIndex, _slotSRVIndex, _cameraPos);
 				}
 			}
 
@@ -497,20 +507,20 @@ namespace Engine::Graphics
 			_pool->SetArgsReady(true);
 		}
 
-		// 集めた半透明の粒を遠い順に並べて、描く一覧を作る
+		// 集めた粒を遠い順に並べて、描く一覧を作る
 		if (_isGatherReady)
 		{
-			SortAlphaBlend(a_pCtx, *_pDrawTable, _cameraPos);
+			SortParticles(a_pCtx, *_pDrawTable, _cameraPos);
 		}
 	}
 
 	//======================================================================================
-	// 半透明の粒を全アセットぶん1本の一覧へ集め、遠い順に並べる
+	// 粒を加算・半透明を問わず全アセットぶん1本の一覧へ集め、遠い順に並べる
 	// (SortParticleShader.hlsl。並べ方はバイトニックソート)
 	//
-	//   BeginGatherAlphaBlend : 集めた数(引数の[1])を 0 に戻す
-	//   GatherAlphaBlend      : プールごとに、生きている粒を (キー, 表の番号 + 粒の番号) にして積む
-	//   SortAlphaBlend        :
+	//   BeginGatherSortList : 集めた数(引数の[1])を 0 に戻す
+	//   GatherSortList      : プールごとに、生きている粒を (キー, 表の番号 + 粒の番号) にして積む
+	//   SortParticles        :
 	//     LocalSort  : ブロック(PARTICLE_SORT_BLOCK_SIZE)ごとに並べ切る
 	//     段の大きさ k をブロックの2倍から全体まで倍々に :
 	//       GlobalStep : 相手がブロックの外にある比較(j >= ブロック)を1段ずつ
@@ -519,7 +529,7 @@ namespace Engine::Graphics
 	// 並べるのは集める先の全体(2のべき乗)。集めた数より後ろはシェーダーが
 	// 「いちばん後ろへ行く値」で埋めるので、集めた数は GPU から読み戻さなくてよい
 	//======================================================================================
-	void ParticleSimulation::BeginGatherAlphaBlend(RenderContext* a_pCtx, Particle::ParticleDrawTable& a_table, UINT a_quadIndexCount)
+	void ParticleSimulation::BeginGatherSortList(RenderContext* a_pCtx, Particle::ParticleDrawTable& a_table, UINT a_quadIndexCount)
 	{
 		auto* _pCmd = a_pCtx ? a_pCtx->RefCurrentCmdList() : nullptr;
 		if (!_pCmd) return;
@@ -544,7 +554,7 @@ namespace Engine::Graphics
 		D3D12::UAVBarrier(_pCmd, { a_table.GetDrawArgsResource() });
 	}
 
-	void ParticleSimulation::GatherAlphaBlend(
+	void ParticleSimulation::GatherSortList(
 		RenderContext* a_pCtx,
 		Particle::ParticleDrawTable& a_table,
 		Particle::GPUParticlePool& a_pool,
@@ -586,7 +596,7 @@ namespace Engine::Graphics
 		a_pCtx->Dispatch((_threadNum + Particle::PARTICLE_SORT_THREAD_GROUP_SIZE - 1u) / Particle::PARTICLE_SORT_THREAD_GROUP_SIZE, 1, 1);
 	}
 
-	void ParticleSimulation::SortAlphaBlend(RenderContext* a_pCtx, Particle::ParticleDrawTable& a_table, const Math::Vector3& a_cameraPos)
+	void ParticleSimulation::SortParticles(RenderContext* a_pCtx, Particle::ParticleDrawTable& a_table, const Math::Vector3& a_cameraPos)
 	{
 		auto* _pCmd = a_pCtx ? a_pCtx->RefCurrentCmdList() : nullptr;
 		if (!_pCmd) return;
@@ -653,7 +663,7 @@ namespace Engine::Graphics
 
 		// 描画で読むので、引数は間接引数の状態へ、描く一覧は VS が SRV で読む状態へ。
 		// 集める先はここで使い終わり(フレームの頭は COMMON の約束)。
-		// 印を立てると ParticlePass が半透明をまとめて1回で描き、フレームの終わりで COMMON へ戻される
+		// 印を立てると ParticlePass が全部の粒をまとめて1回で描き、フレームの終わりで COMMON へ戻される
 		a_table.RefDrawArgs().Barrier(_pCmd, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
 		a_table.RefDrawList().Barrier(_pCmd, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 		_sortBuffer.Barrier(_pCmd, D3D12_RESOURCE_STATE_COMMON);

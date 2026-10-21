@@ -12,9 +12,10 @@
 //   2 : SRVの番号     深度(グラフが張る。奥の物との境目をぼかすのに使う)
 //
 // 粒バッファと絵はアセットごとに違うので、描画設定の表(ParticleDrawRecord)から番号を引く。
-//   加算   : アセットごとに描く。描く一覧 = そのプールの生存リスト(粒の番号)、表の番号はルート定数
-//   半透明 : 全アセットの粒を遠い順に並べた一覧を1回で描く。一覧の1件の上位ビットが表の番号
-//            (ルート定数は PARTICLE_DRAW_RECORD_FROM_LIST)
+//   ふつう     : 加算・半透明を問わず全アセットの粒を遠い順に並べた一覧を1回で描く。
+//                一覧の1件の上位ビットが表の番号(ルート定数は PARTICLE_DRAW_RECORD_FROM_LIST)
+//   並べられない : アセットごとに描く。描く一覧 = そのプールの生存リスト(粒の番号)、表の番号はルート定数
+// 合成はプリマルチプライド(色 × 1 + 下地 × (1 - α))。PS が加算なら α = 0、半透明なら α を出す
 //==========================================================================================
 #define PARTICLE_ROOT_SIG \
 RS_FLAGS","\
@@ -74,14 +75,37 @@ struct VSOutput
 {
 	float4 pos : SV_Position;		// 射影行列
 
-	float2 uv : TEXCOORD0;
+	// 絵の UV。xy = 今のコマ、zw = 次のコマ(フリップブックで隣のコマと混ぜるとき。それ以外は xy と同じ)
+	float4 uv : TEXCOORD0;
 	float4 color : TEXCOORD1;
 
 	// 板のその点のビュー空間の奥行き(m)。奥の物との境目をぼかすのに使う
 	float viewDepth : TEXCOORD2;
 
 	// 描画設定の表から引いた、PS が使うもの。
-	// 半透明は1回の描画にいろいろなアセットの粒が混ざるので、板ごとに持たせる
+	// 1回の描画にいろいろなアセットの粒が混ざるので、板ごとに持たせる
 	nointerpolation uint texIndex : TEXCOORD3;		// 絵の SRV の番号
 	nointerpolation float softDepth : TEXCOORD4;	// 奥の物との境目をぼかす幅(m。0でぼかさない)
+
+	nointerpolation uint texMode : TEXCOORD5;		// PARTICLE_TEX_MODE_*
+	nointerpolation uint blendMode : TEXCOORD8;		// PARTICLE_BLEND_*(加算なら α = 0 を出す)
+	nointerpolation float frameBlend : TEXCOORD6;	// 次のコマをどれだけ混ぜるか(0〜1)
+
+	// FireSmoke : rgb = 発光色、a = 冷えたしきい値(温度がこれより上のところだけ光る。1 以上で光らない)
+	nointerpolation float4 emissive : TEXCOORD7;
 };
+
+//------------------------------------------------------------------------------
+// FireSmoke の熱いところの光り方
+//
+// 温度(G)が冷えたしきい値を超えたぶんだけ光る。しきい値は寿命に沿って上がるので、
+// 火は外側(温度の低いところ)から冷えて芯だけになり、消える。
+// 芯ほど強く光らせて、同じ火の中にも明暗を付ける
+//------------------------------------------------------------------------------
+#define PARTICLE_HEAT_SOFTNESS 0.25f
+
+float ParticleHeatGlow(float a_temp, float a_cool)
+{
+	const float _glow = saturate((a_temp - a_cool) / PARTICLE_HEAT_SOFTNESS);
+	return _glow * _glow * (0.35f + 0.65f * a_temp);
+}

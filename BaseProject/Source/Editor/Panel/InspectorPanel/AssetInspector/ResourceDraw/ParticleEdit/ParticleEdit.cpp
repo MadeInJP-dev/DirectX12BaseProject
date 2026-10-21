@@ -80,10 +80,15 @@ namespace Editor::Inspector
 		// ---- サイズの変化 ----
 		Engine::EditorField::Field("EndSizeScale", a_pParticles->RefEndSizeScale(), 0.05f, 0.0f);
 		Engine::EditorField::Tooltip("寿命の終わりでのサイズ倍率。煙は 1 より大きく、火花は小さく");
+		Engine::EditorField::Field("SizeCurvePow", a_pParticles->RefSizeCurvePow(), 0.01f, 0.01f, 8.0f);
+		Engine::EditorField::Tooltip("サイズの変化の曲がり具合。1 で一定、1 より小さいと頭で一気に膨らむ(爆風・煙は 0.3〜0.6)");
 
 		// ---- 色の変化 ----
 		// RGB は 1 を超えてよい。超えたぶんがブルームのしきい値を抜けて光る
 		EditorField::Field("StartColor", a_pParticles->RefStartColor());
+		EditorField::Field("MidColor", a_pParticles->RefMidColor());
+		Engine::EditorField::Field("MidColorTime", a_pParticles->RefMidColorTime(), 0.01f, 0.0f, 1.0f);
+		Engine::EditorField::Tooltip("途中の色になる進み具合。0 なら途中の色を使わない(開始→終わりの2色)");
 		EditorField::Field("EndColor", a_pParticles->RefEndColor());
 		Engine::EditorField::Tooltip("RGB は 1 を超えてよい(超えたぶんが光る)。爆発は白→橙→暗い煙");
 
@@ -124,12 +129,12 @@ namespace Editor::Inspector
 		else
 		{
 			Engine::EditorField::HelpText("背景を明るくしない。煙・破片向き");
-			Engine::EditorField::HelpText("※ 粒の前後は並べ替えていないので、重なりが入れ替わって見えることがあります");
 		}
+		Engine::EditorField::HelpText("※ 加算・半透明とも、全アセットの粒をカメラから遠い順に並べて描く");
 
-		// 同じ重ね方どうしで描く順。小さいほど先(下)に描かれ、大きいものが上に乗る
+		// 距離が同じ粒どうしで描く順。小さいほど先(下)に描かれ、大きいものが上に乗る
 		Engine::EditorField::Field("SortOrder", a_pParticles->RefSortOrder(), 1.0f);
-		Engine::EditorField::Tooltip("同じ重ね方どうしの描く順。小さいほど先(下)。同じなら名前順");
+		Engine::EditorField::Tooltip("距離が同じ粒どうしの描く順。小さいほど先(下)。同じなら名前順");
 
 		// 奥の物との境目をぼかす幅。板が地面へ刺さったところで絵がまっすぐ切れるのを隠す
 		Engine::EditorField::Field("SoftDepth (m)", a_pParticles->RefSoftDepth(), 0.05f, 0.0f, 100.0f);
@@ -180,6 +185,46 @@ namespace Editor::Inspector
 			Engine::EditorField::Field("RotationMax (deg)", a_pParticles->RefRotationMax(), 1.0f);
 			Engine::EditorField::Field("AngularVelocityMin (deg/s)", a_pParticles->RefAngularVelocityMin(), 1.0f);
 			Engine::EditorField::Field("AngularVelocityMax (deg/s)", a_pParticles->RefAngularVelocityMax(), 1.0f);
+		}
+
+		Engine::EditorField::Line();
+
+		// ---- フリップブック ----
+		// 絵をコマに割って送る。1x1 ならコマ送りしない
+		Engine::EditorField::Header("Flipbook");
+		Engine::EditorField::Field("Cols", a_pParticles->RefFlipbookCols(), 1, 1, 64);
+		Engine::EditorField::Field("Rows", a_pParticles->RefFlipbookRows(), 1, 1, 64);
+		EditorField::Field("FlipbookMode", a_pParticles->RefFlipbookMode());
+		switch (a_pParticles->GetFlipbookMode())
+		{
+		case Graphics::Particle::EParticleFlipbookMode::OverLife:
+			Engine::EditorField::HelpText("寿命に沿って左上のコマから右下のコマまで送る");
+			Engine::EditorField::Field("Blend", a_pParticles->RefIsFlipbookBlend());
+			Engine::EditorField::Tooltip("隣のコマと混ぜてなめらかに送る");
+			break;
+		case Graphics::Particle::EParticleFlipbookMode::Random:
+			Engine::EditorField::HelpText("粒ごとにどれか1コマを選ぶ(破片の形を散らす)");
+			break;
+		default:
+			Engine::EditorField::HelpText("1コマ目だけを出す");
+			break;
+		}
+
+		// ---- 絵のチャンネルの読み方 ----
+		Engine::EditorField::Header("Texture Channels");
+		EditorField::Field("TexMode", a_pParticles->RefTexMode());
+		if (a_pParticles->GetTexMode() == Graphics::Particle::EParticleTexMode::FireSmoke)
+		{
+			Engine::EditorField::HelpText("R = 煙の明暗 / G = 温度 / A = 濃さ");
+			Engine::EditorField::HelpText("色 = 寿命の色 × R + 発光色 × 熱いところ");
+			EditorField::Field("EmissiveColor", a_pParticles->RefEmissiveColor());
+			Engine::EditorField::Tooltip("熱いところの発光色。1 を超えてよい(超えたぶんが光る)");
+			Engine::EditorField::Field("EmissiveTime", a_pParticles->RefEmissiveTime(), 0.01f, 0.0f, 1.0f);
+			Engine::EditorField::Tooltip("寿命のこの割合までに、火が外側から冷えて消える。0 で光らない");
+		}
+		else
+		{
+			Engine::EditorField::HelpText("RGBA をそのまま色として掛ける");
 		}
 
 		Engine::EditorField::Line();

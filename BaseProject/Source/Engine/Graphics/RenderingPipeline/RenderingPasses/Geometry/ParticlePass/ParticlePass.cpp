@@ -69,34 +69,21 @@ namespace Engine::Graphics::Pipeline
 		const std::string _vsPath = "Asset/Shader/Source/Particle/Draw/ParticleVS.cso";
 		const std::string _psPath = "Asset/Shader/Source/Particle/Draw/ParticlePS.cso";
 
-		// ---- 加算合成 : 光り物。重ねるほど明るくなり、描く順番に依存しない ----
+		//----------------------------------------------------------
+		// プリマルチプライドの合成 : 色 × 1 + 下地 × (1 - α)
+		//
+		// PS が色に α を掛けてから出す。重ね方は PS が出す α で変わる :
+		//   半透明 (色 × α, α) : 下地を α のぶん隠して色を置く(煙・破片)
+		//   加算   (色 × α, 0) : 下地を隠さず色を足す(炎・火花)
+		// 1つの PSO で両方を描けるので、加算と半透明の粒を同じ一覧で遠い順に並べて描ける
+		//----------------------------------------------------------
 		SetupRasterShader(
 			a_context, _vsPath, _psPath, D3D12::Input::PARTICLE_INPUT_LAYOUT,
-			"ParticleDraw_Additive",
+			"ParticleDraw_Premultiplied",
 			[&_setupCommon](D3D12::GraphicsPipelineDesc& a_pso)
 			{
 				a_pso.BlendEnable(true);
-				a_pso.SrcBlend(D3D12_BLEND_SRC_ALPHA, 0);
-				a_pso.DestBlend(D3D12_BLEND_ONE, 0);
-				a_pso.BlendOp(D3D12_BLEND_OP_ADD, 0);
-
-				a_pso.SrcBlendAlpha(D3D12_BLEND_ONE, 0);
-				a_pso.DestBlendAlpha(D3D12_BLEND_ZERO, 0);
-				a_pso.BlendOpAlpha(D3D12_BLEND_OP_ADD, 0);
-
-				_setupCommon(a_pso);
-			},
-			EPassHeapMode::Bindless,
-			&m_additivePSO);
-
-		// ---- 半透明合成 : 煙や破片。背景を明るくせず、前のものが後ろを隠す ----
-		SetupRasterShader(
-			a_context, _vsPath, _psPath, D3D12::Input::PARTICLE_INPUT_LAYOUT,
-			"ParticleDraw_AlphaBlend",
-			[&_setupCommon](D3D12::GraphicsPipelineDesc& a_pso)
-			{
-				a_pso.BlendEnable(true);
-				a_pso.SrcBlend(D3D12_BLEND_SRC_ALPHA, 0);
+				a_pso.SrcBlend(D3D12_BLEND_ONE, 0);
 				a_pso.DestBlend(D3D12_BLEND_INV_SRC_ALPHA, 0);
 				a_pso.BlendOp(D3D12_BLEND_OP_ADD, 0);
 
@@ -107,7 +94,7 @@ namespace Engine::Graphics::Pipeline
 				_setupCommon(a_pso);
 			},
 			EPassHeapMode::Bindless,
-			&m_alphaBlendPSO);
+			&m_particlePSO);
 	}
 
 	void ParticlePass::Update(const PassContext& a_context)
@@ -151,19 +138,20 @@ namespace Engine::Graphics::Pipeline
 		//----------------------------------------------------------
 		// 描く一覧を1回描く
 		//
-		// a_listSRVIndex : 描く一覧(加算ならそのプールの生存リスト、半透明なら全アセットを並べた一覧)
-		// a_recordIndex  : 表の番号(半透明は PARTICLE_DRAW_RECORD_FROM_LIST で、一覧の上位ビットから引く)
+		// a_listSRVIndex : 描く一覧(全アセットを並べた一覧。並べられなかったフレームはそのプールの生存リスト)
+		// a_recordIndex  : 表の番号(並べた一覧は PARTICLE_DRAW_RECORD_FROM_LIST で、一覧の上位ビットから引く)
 		// 引数(インスタンス数など)はシミュレーションが GPU 上に用意したものを読む
 		// (INDIRECT_ARGUMENT 状態にして印を立ててある)。カメラが何台あっても同じ引数を読んで描くだけでよい
 		//----------------------------------------------------------
+		if (!m_particlePSO.IsValid()) return;
+
 		auto _drawList = [&](
-			const Handle<ID3D12PipelineState>& a_psoHandle,
 			UINT a_listSRVIndex,
 			uint32_t a_recordIndex,
 			ID3D12Resource* a_pArgs)
 			{
 				// ヒープとルートシグネチャはグラフが張ってあるので、PSOだけ選び直す
-				_pGE->BindPSO(_pCtx, a_psoHandle);
+				_pGE->BindPSO(_pCtx, m_particlePSO);
 
 				// カメラバインド
 				CameraData _cbCam = _pGE->GetSceneView()->GetCameraData();
@@ -182,13 +170,13 @@ namespace Engine::Graphics::Pipeline
 			};
 
 		//----------------------------------------------------------
-		// アセットごとに描く(加算。半透明を並べられなかったときもこちら)
+		// アセットごとに描く(並べられなかったフレームだけ)
 		//
 		// 同じ重ね方どうしは、アセットの SortOrder が小さい順に描く(後に描いたものが上に乗る)。
 		// プールの一覧は unordered_map なので、並べ替えないとアセットを足しただけで前後が入れ替わる。
 		// SortOrder が同じなら名前順にして、毎回同じ並びになるようにしておく
 		//----------------------------------------------------------
-		auto _drawEachPool = [&](Particle::EParticleBlendMode a_mode, const Handle<ID3D12PipelineState>& a_psoHandle)
+		auto _drawEachPool = [&](Particle::EParticleBlendMode a_mode)
 			{
 				struct DrawEntry
 				{
@@ -238,40 +226,31 @@ namespace Engine::Graphics::Pipeline
 
 				for (const auto& _entry : _entries)
 				{
-					_drawList(a_psoHandle, _entry.pPool->GetAliveListSRV().GetIndex(), _entry.recordIndex, _entry.pPool->GetDrawArgsResource());
+					_drawList(_entry.pPool->GetAliveListSRV().GetIndex(), _entry.recordIndex, _entry.pPool->GetDrawArgsResource());
 				}
 			};
 
 		//----------------------------------------------------------
-		// 半透明 → 加算 の順で回す
+		// 全部の粒を遠い順に1回で描く
 		//
-		// どちらも深度を書かないので、後から描いたものが上に乗る。
-		// 煙(半透明)を先に置いてから炎(加算)を足すと、爆発の芯が煙の手前で光る。
-		// 逆にすると煙が炎を覆い隠してしまう。
-		//
-		// 半透明は奥から順に描かないと正しく重ならない。シミュレーションが全アセットの粒を
-		// 1本の一覧へ集めてカメラから遠い順に並べてあるので、それを1回で描く
+		// 粒は深度を書かないので、後から描いたものが上に乗る。奥から順に描かないと正しく重ならない。
+		// シミュレーションが加算・半透明を問わず全アセットの粒を1本の一覧へ集め、
+		// カメラから遠い順に並べてあるので、それを1回で描く
 		// (アセットごとに描くと、違うアセットの粒どうしの前後が決められない)。
+		// 加算も同じ一覧に入っているので、煙の奥にある炎は手前の煙に隠れ、煙の手前の炎は煙の上で光る。
 		// 距離が同じ粒は SortOrder の小さいアセットが先(下)になる。
-		// 並べられなかったフレーム(並べ替えのシェーダーが読めていない)はアセットごとに描く。
 		//
-		// 加算は描く順に依存しないので、アセットごとに描く
+		// 並べられなかったフレーム(並べ替えのシェーダーが読めていない)はアセットごとに、
+		// 半透明 → 加算 の順で描く(煙を先に置いてから炎を足す。前後は合わないことがある)
 		//----------------------------------------------------------
-		if (m_alphaBlendPSO.IsValid())
+		if (_pDrawTable->IsArgsReady())
 		{
-			if (_pDrawTable->IsArgsReady())
-			{
-				_drawList(m_alphaBlendPSO, _pDrawTable->GetDrawListSRV().GetIndex(), Particle::PARTICLE_DRAW_RECORD_FROM_LIST, _pDrawTable->GetDrawArgsResource());
-			}
-			else
-			{
-				_drawEachPool(Particle::EParticleBlendMode::AlphaBlend, m_alphaBlendPSO);
-			}
+			_drawList(_pDrawTable->GetDrawListSRV().GetIndex(), Particle::PARTICLE_DRAW_RECORD_FROM_LIST, _pDrawTable->GetDrawArgsResource());
 		}
-
-		if (m_additivePSO.IsValid())
+		else
 		{
-			_drawEachPool(Particle::EParticleBlendMode::Additive, m_additivePSO);
+			_drawEachPool(Particle::EParticleBlendMode::AlphaBlend);
+			_drawEachPool(Particle::EParticleBlendMode::Additive);
 		}
 	}
 

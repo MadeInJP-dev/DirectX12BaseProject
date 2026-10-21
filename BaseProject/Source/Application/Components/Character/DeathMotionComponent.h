@@ -41,10 +41,18 @@ namespace App::Component
 	struct DeathMotionComponent
 	{
 		// ---- 爆発(保存) ----
-		// 初回と地面設置時も同じ。単発なのでイベントとして出す
+		// 死んだ瞬間に出す。地面用の爆発(landExplosion)が無ければ、地面についたときもこれ。
+		// 単発なのでイベントとして出す
 		Core::GUID explosionGUID = Core::DEFAULT_GUID;
 		Engine::Handle<Engine::Resource::EffectAsset> explosionHandle = {};		// ランタイム用(Fixup が取る)
 		float explosionScale = 1.0f;
+
+		// ---- 地面についたときの爆発(保存) ----
+		// 地面で爆ぜるので、空中の爆発とは別のもの(上へ噴き上がる火・土煙・土くれ)を出せる。
+		// 未設定なら explosion を使う
+		Core::GUID landExplosionGUID = Core::DEFAULT_GUID;
+		Engine::Handle<Engine::Resource::EffectAsset> landExplosionHandle = {};	// ランタイム用(Fixup が取る)
+		float landExplosionScale = 1.0f;
 
 		// ---- 煙(保存) ----
 		// 落ちているあいだ出し続ける。ループするエフェクトを渡すこと
@@ -96,6 +104,7 @@ struct Engine::ECS::ComponentTraits<App::Component::DeathMotionComponent>
 		auto& _resourceManager = *a_services.pResourceManager;
 
 		_resourceManager.ReleaseHandle(_comp.explosionHandle);
+		_resourceManager.ReleaseHandle(_comp.landExplosionHandle);
 		_resourceManager.ReleaseHandle(_comp.smokeHandle);
 	}
 
@@ -115,6 +124,13 @@ struct Engine::ECS::ComponentTraits<App::Component::DeathMotionComponent>
 		a_ar.Field("maxFallTime", _comp.maxFallTime);
 		a_ar.Field("destroyTime", _comp.destroyTime);
 		a_ar.Field("isDestroyFade", _comp.isDestroyFade);
+
+		// 後から足したもの : 古いバイナリには無いので読まない(既定の「未設定」のまま = 空中の爆発を使う)
+		if (!a_ar.IsLegacyLayout())
+		{
+			a_ar.Field("landExplosionGUID", _comp.landExplosionGUID);
+			a_ar.Field("landExplosionScale", _comp.landExplosionScale);
+		}
 	}
 
 	static void Edit(CompEditContext& a_context)
@@ -130,8 +146,16 @@ struct Engine::ECS::ComponentTraits<App::Component::DeathMotionComponent>
 			Engine::EditorField::Header("Explosion");
 			Engine::EditorField::AssetField<Engine::Resource::EffectAsset>(
 				_services, "Effect", "EffectAsset", _comp.explosionGUID, _comp.explosionHandle);
-			Engine::EditorField::Tooltip("(死んだ瞬間と、地面についた瞬間に出す)");
+			Engine::EditorField::Tooltip("(死んだ瞬間に出す。地面用が無ければ、地面についた瞬間も)");
 			Engine::EditorField::Field("Scale", _comp.explosionScale, 0.05f, 0.0f);
+		}
+		{
+			Engine::EditorField::IDScope _id("LandExplosion");
+			Engine::EditorField::Header("Land Explosion");
+			Engine::EditorField::AssetField<Engine::Resource::EffectAsset>(
+				_services, "Effect", "EffectAsset", _comp.landExplosionGUID, _comp.landExplosionHandle);
+			Engine::EditorField::Tooltip("(地面についた瞬間に出す。未設定なら Explosion を使う)");
+			Engine::EditorField::Field("Scale", _comp.landExplosionScale, 0.05f, 0.0f);
 		}
 		{
 			Engine::EditorField::IDScope _id("Smoke");

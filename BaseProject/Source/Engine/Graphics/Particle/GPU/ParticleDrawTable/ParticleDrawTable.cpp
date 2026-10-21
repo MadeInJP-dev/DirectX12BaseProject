@@ -32,16 +32,14 @@ namespace Engine::Graphics::Particle
 	{
 		m_pending.clear();
 		m_records.clear();
-		m_isAlphaBlendRecords.clear();
 		m_recordIndices.clear();
 		m_isRecordReady = false;
-		m_alphaCapacity = 0;
+		m_sortCapacity = 0;
 	}
 
 	void ParticleDrawTable::AddRecord(
 		const Handle<Resource::ParticlesAsset>& a_handle,
 		const ParticleDrawRecord& a_record,
-		bool a_isAlphaBlend,
 		UINT a_capacity,
 		int a_sortOrder,
 		std::string_view a_name)
@@ -49,7 +47,6 @@ namespace Engine::Graphics::Particle
 		PendingRecord _pending = {};
 		_pending.handle = a_handle;
 		_pending.record = a_record;
-		_pending.isAlphaBlend = a_isAlphaBlend;
 		_pending.capacity = a_capacity;
 		_pending.sortOrder = a_sortOrder;
 		_pending.name = a_name;
@@ -67,7 +64,7 @@ namespace Engine::Graphics::Particle
 		//----------------------------------------------------------------------
 		// 番号を決める
 		//
-		// 半透明で距離が同じ粒は、表の番号の小さい方が先(下)に描かれる(並べ替えのキーの次に比べる)。
+		// 距離が同じ粒は、表の番号の小さい方が先(下)に描かれる(並べ替えのキーの次に比べる)。
 		// そこで SortOrder の小さい順(同じなら名前順、それも同じならハンドル順)に番号を振る。
 		// プールの一覧は unordered_map なので、並べないとアセットを足しただけで番号が入れ替わる
 		//----------------------------------------------------------------------
@@ -91,13 +88,12 @@ namespace Engine::Graphics::Particle
 			m_pending.resize(PARTICLE_DRAW_RECORD_MAX);
 		}
 
-		uint64_t _alphaCapacity = 0;
+		uint64_t _sortCapacity = 0;
 		for (const auto& _pending : m_pending)
 		{
 			m_recordIndices[_pending.handle] = static_cast<uint32_t>(m_records.size());
 			m_records.push_back(_pending.record);
-			m_isAlphaBlendRecords.push_back(_pending.isAlphaBlend);
-			if (_pending.isAlphaBlend) _alphaCapacity += _pending.capacity;
+			_sortCapacity += _pending.capacity;
 		}
 		m_pending.clear();
 
@@ -117,13 +113,13 @@ namespace Engine::Graphics::Particle
 		m_isRecordReady = true;
 
 		//----------------------------------------------------------------------
-		// 半透明の粒を集める先をそろえる。
-		// 集まる粒の数は、半透明のプールの容量の合計を超えない(各プールの生きている粒は容量以下)
+		// 粒を集める先をそろえる。
+		// 集まる粒の数は、プールの容量の合計を超えない(各プールの生きている粒は容量以下)
 		//----------------------------------------------------------------------
-		m_alphaCapacity = static_cast<UINT>((std::min<uint64_t>)(_alphaCapacity, UINT32_MAX / 2));
-		if (m_alphaCapacity > 0)
+		m_sortCapacity = static_cast<UINT>((std::min<uint64_t>)(_sortCapacity, UINT32_MAX / 2));
+		if (m_sortCapacity > 0)
 		{
-			ResizeAlphaBuffers(a_pDevice, a_pHeapManager, m_alphaCapacity);
+			ResizeSortBuffers(a_pDevice, a_pHeapManager, m_sortCapacity);
 		}
 
 		// 間接描画の引数は大きさが変わらないので、最初に1回だけ作る。
@@ -133,7 +129,7 @@ namespace Engine::Graphics::Particle
 			m_drawArgs.Create(a_pDevice, a_pHeapManager, DRAW_ARGS_ELEMENT_NUM);
 			if (m_drawArgs.GetResource())
 			{
-				m_drawArgs.GetResource()->SetName(L"ParticleAlphaDrawArgs");
+				m_drawArgs.GetResource()->SetName(L"ParticleSortedDrawArgs");
 				m_drawArgs.SetMemoryCategory(Graphics::D3D12::EVideoMemoryCategory::Particle);
 			}
 		}
@@ -149,11 +145,6 @@ namespace Engine::Graphics::Particle
 		auto _it = m_recordIndices.find(a_handle);
 		if (_it == m_recordIndices.end()) return std::nullopt;
 		return _it->second;
-	}
-
-	bool ParticleDrawTable::IsAlphaBlendRecord(uint32_t a_recordIndex) const
-	{
-		return a_recordIndex < m_isAlphaBlendRecords.size() && m_isAlphaBlendRecords[a_recordIndex];
 	}
 
 	//======================================================================================
@@ -193,7 +184,7 @@ namespace Engine::Graphics::Particle
 		return true;
 	}
 
-	void ParticleDrawTable::ResizeAlphaBuffers(
+	void ParticleDrawTable::ResizeSortBuffers(
 		Graphics::D3D12::Device* a_pDevice,
 		Graphics::D3D12::DescriptorHeapManager* a_pHeapManager,
 		UINT a_need)
@@ -217,14 +208,14 @@ namespace Engine::Graphics::Particle
 		m_drawList.Create(a_pDevice, a_pHeapManager, _size);
 		if (!m_sortBuffer.GetResource() || !m_drawList.GetResource())
 		{
-			// 作れたぶんも返す(ディスクリプタが漏れないように)。半透明は描かれないだけで壊れはしない
+			// 作れたぶんも返す(ディスクリプタが漏れないように)。アセットごとに描く形へ戻るだけで壊れはしない
 			m_sortBuffer.Release();
 			m_drawList.Release();
 			return;
 		}
 
-		m_sortBuffer.GetResource()->SetName(L"ParticleAlphaSortBuffer");
-		m_drawList.GetResource()->SetName(L"ParticleAlphaDrawList");
+		m_sortBuffer.GetResource()->SetName(L"ParticleSortBuffer");
+		m_drawList.GetResource()->SetName(L"ParticleSortedDrawList");
 		m_sortBuffer.SetMemoryCategory(Graphics::D3D12::EVideoMemoryCategory::Particle);
 		m_drawList.SetMemoryCategory(Graphics::D3D12::EVideoMemoryCategory::Particle);
 		m_sortSize = _size;

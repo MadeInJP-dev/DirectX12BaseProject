@@ -7,7 +7,9 @@ namespace Engine::Resource
 	//==========================================================================================
 	// パーツの上限 : コンポーネント側で使われるため、固定長の要素数
 	//==========================================================================================
-	inline constexpr size_t EFFECT_PARTICLE_MAX = 4;
+	// パーティクルは 8。爆発は閃光・火・煙・火花・破片・火の粉…と層が多く、4 では足りない
+	// (1つ増やすと、出ているエフェクト1個あたり 9 バイト増える)
+	inline constexpr size_t EFFECT_PARTICLE_MAX = 8;
 	inline constexpr size_t EFFECT_MESH_MAX = 4;
 	inline constexpr size_t EFFECT_SOUND_MAX = 4;
 	inline constexpr size_t EFFECT_POINTLIGHT_MAX = 1;

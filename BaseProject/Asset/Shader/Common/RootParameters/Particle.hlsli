@@ -42,8 +42,8 @@ struct ParticleData
 	float4 orientation;
 };
 
-// 描画設定の表の1件(アセット1つぶん)。全アセットぶんが StructuredBuffer に並ぶ。
-// 半透明の粒はアセットをまたいで1回で描くので、粒ごとに表の番号で引く
+// 描画設定の表の1件(アセット1つぶん。144 バイト)。全アセットぶんが StructuredBuffer に並ぶ。
+// 粒はアセットをまたいで1回で描くので、粒ごとに表の番号で引く
 // ※ CPU 側 Engine::Particle::ParticleDrawRecord と並びを合わせること
 struct ParticleDrawRecord
 {
@@ -59,7 +59,40 @@ struct ParticleDrawRecord
 
 	float4	startColor;				// RGBは1を超えてよい(超えたぶんにブルームが乗る)
 	float4	endColor;
+
+	float4	midColor;				// 寿命の途中の色(midColorTime > 0 のときだけ使う)
+	float	midColorTime;			// 途中の色になる進み具合(0〜1。0 で使わない)
+
+	float	sizeCurvePow;			// サイズの変化の曲がり具合(1 で一定。小さいほど頭で一気に膨らむ)
+
+	uint	flipbookCols;			// 横のコマ数
+	uint	flipbookRows;			// 縦のコマ数
+	uint	flipbookMode;			// 下の PARTICLE_FLIPBOOK_*
+	uint	isFlipbookBlend;		// 1 なら隣のコマと混ぜる
+
+	uint	texMode;				// 下の PARTICLE_TEX_MODE_*
+	float	emissiveTime;			// FireSmoke : 寿命のこの割合で火が消える(0 で光らない)
+	float4	emissiveColor;			// FireSmoke : 熱いところの発光色
+
+	uint	blendMode;				// 下の PARTICLE_BLEND_*(PS が出す α を変える)
+	uint3	pad;
 };
+
+// 色の重ね方。どちらもプリマルチプライドの合成(色 × 1 + 下地 × (1 - α))で、遠い順に1回で描く
+// ※ CPU 側 Engine::Particle::EParticleBlendMode と数値を合わせること
+#define PARTICLE_BLEND_ADDITIVE		0	// (色 × α, 0) : 下地を隠さず足す
+#define PARTICLE_BLEND_ALPHA		1	// (色 × α, α) : 下地を α のぶん隠す
+
+// コマ送りの仕方
+// ※ CPU 側 Engine::Particle::EParticleFlipbookMode と数値を合わせること
+#define PARTICLE_FLIPBOOK_NONE			0	// 1コマ目だけ
+#define PARTICLE_FLIPBOOK_OVER_LIFE		1	// 寿命に沿って送る
+#define PARTICLE_FLIPBOOK_RANDOM		2	// 粒ごとにどれか1コマ
+
+// 絵のチャンネルの読み方
+// ※ CPU 側 Engine::Particle::EParticleTexMode と数値を合わせること
+#define PARTICLE_TEX_MODE_COLOR			0	// RGBA をそのまま
+#define PARTICLE_TEX_MODE_FIRE_SMOKE	1	// R = 煙の明暗 / G = 温度 / A = 濃さ
 
 // 描く一覧の1件 : 上位 12bit が描画設定の表の番号、下位 20bit が粒の番号
 // ※ CPU 側 PARTICLE_DRAW_RECORD_SHIFT と合わせること

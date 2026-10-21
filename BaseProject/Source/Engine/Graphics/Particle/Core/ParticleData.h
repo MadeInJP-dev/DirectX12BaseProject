@@ -208,13 +208,17 @@ namespace Engine::Graphics::Particle
 	/// 色の重ね方
 	/// </summary>
 	/// <remarks>
-	/// Additive は「光」を足す。重ねるほど明るくなり、描く順番で結果が変わらないので
-	/// 並べ替えが要らない。火花・炎・爆発の芯はこちら。
+	/// Additive は「光」を足す。重ねるほど明るくなる。火花・炎・爆発の芯はこちら。
 	///
 	/// AlphaBlend は「物」を前に置く。煙や破片のように光っていないものを
 	/// 加算で出すと背景を明るくしてしまうので、そちらはこちらを使う。
-	/// ただし奥から順に描かないと正しく重ならないので、半透明の粒は全アセットぶんを
-	/// まとめてカメラから遠い順に並べてから描く(ParticleSimulation が並べ、ParticlePass が1回で描く)。
+	///
+	/// どちらも全アセットぶんをまとめてカメラから遠い順に並べ、プリマルチプライドの合成
+	/// (色 × 1 + 下地 × (1 - α))で1回で描く(ParticleSimulation が並べ、ParticlePass が描く)。
+	///   AlphaBlend : (色 × α, α)を出す。下地は α のぶん隠れる
+	///   Additive   : (色 × α, 0)を出す。下地は隠れず、色が足されるだけ
+	/// 重ね方が違っても同じ一覧で前後が決まるので、煙の奥にある炎は手前の煙に隠れる
+	/// (加算を後からまとめて足していた頃は、煙の奥の炎まで煙の上に乗って見えていた)。
 	///
 	/// ※ 値は保存されるので、増やすときは必ず末尾に足すこと
 	/// </remarks>
@@ -225,11 +229,50 @@ namespace Engine::Graphics::Particle
 	};
 
 	/// <summary>
+	/// 絵を何コマかに割って、コマを送る(フリップブック)かどうか
+	/// </summary>
+	/// <remarks>
+	/// 絵は左上から右へ、行が終わったら次の行へ並べる(FlipbookCols x FlipbookRows)。
+	/// 1x1 なら何を選んでもコマ送りしない(従来の1枚絵)。
+	///
+	/// ※ 値は保存されるので、増やすときは必ず末尾に足すこと
+	/// ※ HLSL 側 PARTICLE_FLIPBOOK_* と数値を合わせること
+	/// </remarks>
+	enum class EParticleFlipbookMode : uint32_t
+	{
+		None,		// コマ送りしない(1コマ目だけ)
+		OverLife,	// 寿命に沿って最初のコマから最後のコマまで送る(火球・煙が膨らんで消える)
+		Random,		// 粒ごとにどれか1コマを選んで、そのまま(破片の形を散らす)
+	};
+
+	/// <summary>
+	/// 絵のチャンネルの読み方
+	/// </summary>
+	/// <remarks>
+	/// Color    : RGBA をそのまま色として掛ける(従来)。
+	///
+	/// FireSmoke: 火球や煙のように「煙の中で火が燃えて、冷えて煙だけになる」ものを1枚で描く。
+	///            R = 煙の明暗、G = 温度、A = 濃さ として読み、
+	///              色 = 寿命の色 × R + 発光色 × 熱いところ
+	///            熱いところ = 温度(G)が「冷えたしきい値」より上のところ。しきい値は寿命の頭で 0、
+	///            EmissiveTime(寿命に対する割合)で 1 まで上がるので、火は外側から冷えて芯だけになり、消える。
+	///            半透明で描けば、手前の煙が奥の火を正しく隠す。
+	///
+	/// ※ 値は保存されるので、増やすときは必ず末尾に足すこと
+	/// ※ HLSL 側 PARTICLE_TEX_MODE_* と数値を合わせること
+	/// </remarks>
+	enum class EParticleTexMode : uint32_t
+	{
+		Color,			// RGBA をそのまま使う(従来)
+		FireSmoke,		// R = 煙の明暗 / G = 温度 / A = 濃さ
+	};
+
+	/// <summary>
 	/// 描画設定の表の1件(アセット1つぶん)。全アセットぶんを StructuredBuffer に並べて送る
 	/// </summary>
 	/// <remarks>
-	/// 半透明の粒はアセットをまたいで1回で描くので、粒ごとに「どのアセットの設定か」を
-	/// 表の番号で引く(描く一覧の上位ビット)。加算の粒はアセットごとに描き、番号はルート定数で渡す。
+	/// 粒はアセットをまたいで1回で描くので、粒ごとに「どのアセットの設定か」を
+	/// 表の番号で引く(描く一覧の上位ビット)。並べられなかったフレームだけアセットごとに描き、番号はルート定数で渡す。
 	/// ※ HLSL 側 ParticleDrawRecord と並びを合わせること
 	/// ※ 発生源の行列は全アセット共通の EmitterSlotPool の StructuredBuffer から引く
 	/// </remarks>
@@ -247,6 +290,29 @@ namespace Engine::Graphics::Particle
 
 		Math::Color	startColor = { 1.0f, 1.0f, 1.0f, 1.0f };	// 発生時の色
 		Math::Color	endColor = { 1.0f, 1.0f, 1.0f, 1.0f };		// 消える直前の色
+
+		// ---- 寿命の途中の色(midColorTime が 0 より大きいときだけ使う) ----
+		Math::Color	midColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+		float		midColorTime = 0.0f;		// 途中の色になる進み具合(0〜1。0 で使わない = 2色の変化)
+
+		// ---- サイズの変化の曲がり具合 ----
+		float		sizeCurvePow = 1.0f;		// 1 で一定の速さ。1 より小さいと頭で一気に膨らむ
+
+		// ---- フリップブック ----
+		uint32_t	flipbookCols = 1;			// 横のコマ数
+		uint32_t	flipbookRows = 1;			// 縦のコマ数
+		uint32_t	flipbookMode = 0;			// EParticleFlipbookMode
+		uint32_t	isFlipbookBlend = 0;		// 1 なら隣のコマと混ぜてなめらかに送る
+
+		// ---- 絵のチャンネルの読み方 ----
+		uint32_t	texMode = 0;				// EParticleTexMode
+		float		emissiveTime = 0.0f;		// FireSmoke : 寿命のこの割合で火が消える(0 で光らない)
+		Math::Color	emissiveColor = { 0.0f, 0.0f, 0.0f, 1.0f };	// FireSmoke : 熱いところの発光色(1 を超えてよい)
+
+		// ---- 色の重ね方 ----
+		// 加算も半透明も同じ PSO(プリマルチプライド)で描くので、PS が出す α をこれで変える
+		uint32_t	blendMode = 0;				// EParticleBlendMode
+		uint32_t	pad[3] = {};
 	};
-	static_assert(sizeof(ParticleDrawRecord) == 64, "HLSL 側 ParticleDrawRecord と大きさを合わせること");
+	static_assert(sizeof(ParticleDrawRecord) == 144, "HLSL 側 ParticleDrawRecord と大きさを合わせること");
 }

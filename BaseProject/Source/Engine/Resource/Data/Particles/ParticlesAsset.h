@@ -62,6 +62,16 @@ namespace Engine::Resource
 		float GetAngularVelocityMax() const { return m_angularVelocityMax; }	// 板の回転速度の上限(度/秒)
 		int GetSortOrder() const { return m_sortOrder; }						// 同じ重ね方どうしの描く順(小さいほど先 = 下)
 		float GetSoftDepth() const { return m_softDepth; }						// 奥の物との境目をぼかす幅(m)。0 でぼかさない
+		const Math::Color& GetMidColor() const { return m_midColor; }			// 寿命の途中の色
+		float GetMidColorTime() const { return m_midColorTime; }				// 途中の色になる進み具合(0 で使わない)
+		float GetSizeCurvePow() const { return m_sizeCurvePow; }				// サイズの変化の曲がり具合
+		int GetFlipbookCols() const { return m_flipbookCols; }					// フリップブックの横のコマ数
+		int GetFlipbookRows() const { return m_flipbookRows; }					// フリップブックの縦のコマ数
+		Graphics::Particle::EParticleFlipbookMode GetFlipbookMode() const { return m_flipbookMode; }	// コマの送り方
+		bool IsFlipbookBlend() const { return m_isFlipbookBlend; }				// 隣のコマと混ぜるか
+		Graphics::Particle::EParticleTexMode GetTexMode() const { return m_texMode; }	// 絵のチャンネルの読み方
+		float GetEmissiveTime() const { return m_emissiveTime; }				// FireSmoke : 火が消える進み具合
+		const Math::Color& GetEmissiveColor() const { return m_emissiveColor; }	// FireSmoke : 熱いところの発光色
 
 		// ---- 編集用アクセサ : エディターから直接書き換えるためのもの ----
 		std::string& RefName() { return m_name; }
@@ -88,6 +98,16 @@ namespace Engine::Resource
 		float& RefAngularVelocityMax() { return m_angularVelocityMax; }
 		int& RefSortOrder() { return m_sortOrder; }
 		float& RefSoftDepth() { return m_softDepth; }
+		Math::Color& RefMidColor() { return m_midColor; }
+		float& RefMidColorTime() { return m_midColorTime; }
+		float& RefSizeCurvePow() { return m_sizeCurvePow; }
+		int& RefFlipbookCols() { return m_flipbookCols; }
+		int& RefFlipbookRows() { return m_flipbookRows; }
+		Graphics::Particle::EParticleFlipbookMode& RefFlipbookMode() { return m_flipbookMode; }
+		bool& RefIsFlipbookBlend() { return m_isFlipbookBlend; }
+		Graphics::Particle::EParticleTexMode& RefTexMode() { return m_texMode; }
+		float& RefEmissiveTime() { return m_emissiveTime; }
+		Math::Color& RefEmissiveColor() { return m_emissiveColor; }
 
 		// テクスチャの差し替え : GUIDとハンドルを同時に更新する
 		void SetTexture(const Core::GUID& a_guid, const ResourceRef<Texture>& a_handle)
@@ -211,6 +231,42 @@ namespace Engine::Resource
 		// 地面を這う霧や大きな煙のように、板が物へ刺さるものに使う。
 		// 既定は 0 なので、これを入れる前のアセットの見え方は変わらない
 		float m_softDepth = 0.0f;
+
+		//----------------------------------------------------------------------------------
+		// 寿命の途中の色
+		//
+		// 開始と終わりの2色だけだと、火の色から煙の色へ変わる途中が濁った中間色になる。
+		// 途中の色を置くと 開始 → 途中 → 終わり の3色で変えられる。
+		// 進み具合が 0(既定)なら使わないので、これを入れる前のアセットの見え方は変わらない
+		//----------------------------------------------------------------------------------
+		Math::Color m_midColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+		float m_midColorTime = 0.0f;
+
+		// サイズの変化の曲がり具合。サイズ倍率 = lerp(1, endSizeScale, 進み具合 ^ これ)。
+		// 1(既定)で一定の速さ。1 より小さいと頭で一気に膨らんで、あとはゆっくりになる(爆風・煙)
+		float m_sizeCurvePow = 1.0f;
+
+		//----------------------------------------------------------------------------------
+		// フリップブック : 絵を cols x rows のコマに割ってコマを送る
+		//
+		// 1x1(既定)ならコマ送りしないので、これを入れる前のアセットの見え方は変わらない。
+		// 寿命に沿って送るものは、隣のコマと混ぜるとコマ数が少なくてもなめらかに動く
+		//----------------------------------------------------------------------------------
+		int m_flipbookCols = 1;
+		int m_flipbookRows = 1;
+		Graphics::Particle::EParticleFlipbookMode m_flipbookMode = Graphics::Particle::EParticleFlipbookMode::None;
+		bool m_isFlipbookBlend = true;
+
+		//----------------------------------------------------------------------------------
+		// 絵のチャンネルの読み方(EParticleTexMode)
+		//
+		// FireSmoke は R = 煙の明暗、G = 温度、A = 濃さ。色 = 寿命の色 × R + 発光色 × 熱いところ。
+		// 火は寿命の頭で全体が光り、emissiveTime(寿命に対する割合)までに外側から冷えて消える。
+		// 既定は Color(従来)なので、これを入れる前のアセットの見え方は変わらない
+		//----------------------------------------------------------------------------------
+		Graphics::Particle::EParticleTexMode m_texMode = Graphics::Particle::EParticleTexMode::Color;
+		float m_emissiveTime = 0.0f;
+		Math::Color m_emissiveColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 		// ---- ランタイム用データ ----
 		ResourceRef<Texture> m_texHandle;

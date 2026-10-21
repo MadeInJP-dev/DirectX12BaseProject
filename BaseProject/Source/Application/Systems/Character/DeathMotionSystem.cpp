@@ -25,7 +25,7 @@ namespace App::System
 	// DeathMotionComponent を持つキャラクターが死んだら(HealthComponent.isDead)、
 	//
 	//   Alive   → 死んだ瞬間に爆発を積み、煙を子として出して Falling へ
-	//   Falling → 黒くしながら回して落とす。進む向きへレイを打ち、地面についたら爆発を積んで Landed へ
+	//   Falling → 黒くしながら回して落とす。進む向きへレイを打ち、地面についたら爆発(地面用があればそちら)を積んで Landed へ
 	//   Landed  → 着地した位置と向きに留め、destroyTime たったら解放予約(isDestroyFade なら縮めながら)
 	//
 	// ・爆発は OneShotEffectEventResource へ積むだけ。出すのは OneShotEffectSystem。
@@ -62,14 +62,14 @@ namespace App::System
 		}
 
 		// 爆発を積む(出すのは OneShotEffectSystem)
-		void PushExplosion(Engine::ECS::World& a_world, const Component::DeathMotionComponent& a_motion, const Math::Vector3& a_pos)
+		void PushExplosion(Engine::ECS::World& a_world, const Core::GUID& a_guid, float a_scale, const Math::Vector3& a_pos)
 		{
-			if (a_motion.explosionGUID == Core::DEFAULT_GUID) return;
+			if (a_guid == Core::DEFAULT_GUID) return;
 
 			ECS::OneShotEffectEvent _event = {};
-			_event.effectGUID = a_motion.explosionGUID;
+			_event.effectGUID = a_guid;
 			_event.worldMat = Math::Matrix::CreateTranslation(a_pos);
-			_event.scale = a_motion.explosionScale;
+			_event.scale = a_scale;
 
 			a_world.RefResource<ECS::OneShotEffectEventResource>().Push(_event);
 		}
@@ -108,7 +108,7 @@ namespace App::System
 			a_motion.baseEmissiveIntensity = a_model.emissiveIntensity;
 			a_motion.baseScale = a_trans.scale;
 
-			PushExplosion(a_world, a_motion, a_trans.pos);
+			PushExplosion(a_world, a_motion.explosionGUID, a_motion.explosionScale, a_trans.pos);
 
 			// 煙は子として出す(位置だけ付いて行く)。止めるのは DeathSmokeSystem
 			if (a_motion.smokeGUID != Core::DEFAULT_GUID)
@@ -135,7 +135,15 @@ namespace App::System
 			// 黒くなりきる前に落ちきっても、着地した時点で真っ黒にする
 			ApplyBlacken(a_model, a_motion, 1.0f);
 
-			PushExplosion(a_world, a_motion, a_explosionPos);
+			// 地面用の爆発があればそれ、無ければ空中と同じ爆発
+			if (a_motion.landExplosionGUID != Core::DEFAULT_GUID)
+			{
+				PushExplosion(a_world, a_motion.landExplosionGUID, a_motion.landExplosionScale, a_explosionPos);
+			}
+			else
+			{
+				PushExplosion(a_world, a_motion.explosionGUID, a_motion.explosionScale, a_explosionPos);
+			}
 		}
 	}
 
@@ -182,6 +190,7 @@ namespace App::System
 					_motion.velocity = Math::Vector3(0.0f, 0.0f, 0.0f);
 
 					_acquire(_motion.explosionGUID, _motion.explosionHandle);
+					_acquire(_motion.landExplosionGUID, _motion.landExplosionHandle);
 					_acquire(_motion.smokeGUID, _motion.smokeHandle);
 				}
 			}
