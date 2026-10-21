@@ -109,3 +109,26 @@ float ParticleHeatGlow(float a_temp, float a_cool)
 	const float _glow = saturate((a_temp - a_cool) / PARTICLE_HEAT_SOFTNESS);
 	return _glow * _glow * (0.35f + 0.65f * a_temp);
 }
+
+//------------------------------------------------------------------------------
+// カメラの近くの粒を薄くして消す
+//
+// カメラが大きな板(煙・火球)の中へ入ると、板1枚が画面全体を塗る。
+// それが何百枚も重なると塗りが詰まって処理落ちするので、近づいたら薄くし、
+// 消え切ったものは VS で潰してピクセルを出さない。
+//
+// 距離は板の半径(中心から端まで)を単位に測る。
+// 半径の START 倍で薄くし始め、END 倍で消える(カメラが板の半径の内側に入ったら消える)。
+// 小さい粒(火の粉など)も MIN_DIST(m)より近ければ消す(レンズに張り付いて見えないように)
+//------------------------------------------------------------------------------
+#define PARTICLE_CAMERA_FADE_START    1.5f
+#define PARTICLE_CAMERA_FADE_END      1.0f
+#define PARTICLE_CAMERA_FADE_MIN_DIST 0.3f
+
+// 1 = そのまま、0 = 消える
+float ParticleCameraFade(float a_dist, float a_radius)
+{
+	const float _fadeEnd = max(a_radius * PARTICLE_CAMERA_FADE_END, PARTICLE_CAMERA_FADE_MIN_DIST);
+	const float _fadeStart = _fadeEnd * (PARTICLE_CAMERA_FADE_START / PARTICLE_CAMERA_FADE_END);
+	return saturate((a_dist - _fadeEnd) / (_fadeStart - _fadeEnd));
+}

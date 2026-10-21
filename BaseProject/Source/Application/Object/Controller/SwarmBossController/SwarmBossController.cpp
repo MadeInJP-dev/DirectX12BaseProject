@@ -1408,7 +1408,7 @@ namespace App::Object
 	//======================================================================================
 	// 砂埃 : 調整値を ECS 側へ書き写す
 	//--------------------------------------------------------------------------------------
-	// 4000体ぶんのレイとエフェクトの生成は BoidGroundEffectSystem。
+	// 小隊長ぶんのレイとエフェクトの生成は BoidGroundEffectSystem。
 	// 1フレームに出した数はここで毎フレーム0に戻す(上限を数え直す)
 	//======================================================================================
 	void SwarmBossController::UpdateGroundEffect(Engine::GameObject::ObjectContext& a_context)
@@ -1425,6 +1425,8 @@ namespace App::Object
 		_res.farScale         = m_groundEffectFarScale;
 		_res.underScale       = m_groundEffectUnderScale;
 		_res.interval         = m_groundEffectInterval;
+		_res.scatterRadius    = m_groundEffectScatterRadius;
+		_res.scaleJitter      = m_groundEffectScaleJitter;
 		_res.maxSpawnPerFrame = m_groundEffectMaxSpawnPerFrame;
 		_res.spawnedThisFrame = 0;
 
@@ -1655,6 +1657,16 @@ namespace App::Object
 			// 地面との関係(飛んでいるかを見る。レイを打つのは SerchGroundSystem)
 			EnsureRootComponent<Component::SerchGroundComponent>(_world, _instanceVec);
 
+			// 地面の近く・地面の中で砂埃を炊く番を待つ時間(BoidGroundEffectSystem)。
+			// ボイド1体ずつではなく小隊長ごとに炊く。
+			// 最初の番をばらしておき、全員が同じフレームにレイを打たないようにする
+			EditRootComponent<Component::WarmGroundEffectComponent>(_world, _instanceVec,
+				[this](Component::WarmGroundEffectComponent& a_comp)
+				{
+					a_comp.timer = Math::Random::Float(0.0f, std::max(m_groundEffectInterval, 0.01f));
+				}
+			);
+
 			// 飛んでいるときのエフェクト。間引いて付け、再生の入り切りは UpdateFlightEffect
 			if (m_flightEffectGUID != Core::DEFAULT_GUID && (_i % std::max(m_flightEffectStride, 1u)) == 0)
 			{
@@ -1823,15 +1835,6 @@ namespace App::Object
 			// ApplyEmissiveOverrideSystem で、差し替えが立つまではプレハブの発光のまま
 			EnsureRootComponent<Component::BoidWaveStateComponent>(_world, _instanceVec);
 			EnsureRootComponent<Component::EmissiveOverrideComponent>(_world, _instanceVec);
-
-			// 地面の近く・地面の中で砂埃を炊く番を待つ時間(BoidGroundEffectSystem)。
-			// 最初の番をばらしておき、全員が同じフレームにレイを打たないようにする
-			EditRootComponent<Component::WarmGroundEffectComponent>(_world, _instanceVec,
-				[this](Component::WarmGroundEffectComponent& a_comp)
-				{
-					a_comp.timer = Math::Random::Float(0.0f, std::max(m_groundEffectInterval, 0.01f));
-				}
-			);
 
 			// 当たり判定
 			EditRootComponent<Component::ColliderComponent>(_world, _instanceVec,
@@ -2065,6 +2068,13 @@ namespace App::Object
 				a_ar.Field("FlightSoundUnderRatio", m_flightSoundUnderRatio);
 				a_ar.Field("FlightSoundDistanceScaler", m_flightSoundDistanceScaler);
 				a_ar.Field("FlightSoundFadeRate", m_flightSoundFadeRate);
+			}
+
+			// ---- 砂埃のばらし方(小隊長ごとに炊くようにしたときに足した) ----
+			{
+				Engine::Persistence::ArchiveSection _section(a_ar, "SwarmBossGroundEffect");
+				a_ar.Field("GroundEffectScatterRadius", m_groundEffectScatterRadius);
+				a_ar.Field("GroundEffectScaleJitter", m_groundEffectScaleJitter);
 			}
 
 			// ---- 行動(後から足した調整値。中はステートごとに区切る) ----
@@ -2309,6 +2319,11 @@ namespace App::Object
 		Engine::EditorField::Field("上限の高さでの大きさ", m_groundEffectFarScale, 0.01f, 0.0f);
 		Engine::EditorField::Field("地中での大きさ", m_groundEffectUnderScale, 0.01f, 0.0f);
 		Engine::EditorField::Field("炊く間隔", m_groundEffectInterval, 0.05f, 0.01f);
+		Engine::EditorField::Tooltip("(小隊長1体が炊く間隔。実際は ±30% ばらす。砂埃が薄れるより長いと体の所々が途切れる)");
+		Engine::EditorField::Field("炊く位置のばらし", m_groundEffectScatterRadius, 0.1f, 0.0f);
+		Engine::EditorField::Tooltip("(小隊長から水平にこの半径の中へばらす。エフェクトの広さと足して体の太さくらいにすると玉が連ならない)");
+		Engine::EditorField::Field("大きさのばらし", m_groundEffectScaleJitter, 0.01f, 0.0f, 0.95f);
+		Engine::EditorField::Tooltip("(大きさを ±この割合でばらす)");
 		Engine::EditorField::Field("1フレームに出す上限", m_groundEffectMaxSpawnPerFrame);
 
 		Engine::EditorField::Header("潜る/出るときの砂埃(リーダー)");

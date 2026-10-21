@@ -184,6 +184,22 @@ VSOutput VSMain(VSInput a_input)
 	// 曲がり具合が 1 より小さいと頭で一気に膨らんで、あとはゆっくりになる(爆風・煙)
 	float _sizeScale = lerp(1.0f, _draw.endSizeScale, pow(_lifeT, max(_draw.sizeCurvePow, 0.01f)));
 
+	// ---------------------------------------------------------------
+	// カメラの近くで薄くして消す(ParticleCameraFade)
+	// 半径は板の中心から端まで(板ポリの頂点は ±1 なので大きさそのまま)。伸ばす板は長い方で測る。
+	// 消え切ったものは寿命切れと同じく潰して、ピクセルを出さない
+	// ---------------------------------------------------------------
+	const float _radius = _particleData.size * _sizeScale * max(_stretch, 1.0f);
+	const float _cameraFade = ParticleCameraFade(distance(_simPos, g_camera.cameraPos.xyz), _radius);
+	if (_cameraFade <= 0.0f)
+	{
+		_out.pos = float4(0, 0, 0, 0);
+		_out.uv = float4(0, 0, 0, 0);
+		_out.color = float4(0, 0, 0, 0);
+		_out.viewDepth = 0.0f;
+		return _out;
+	}
+
 	// ビルボード計算
 	float3 _localPos = a_input.pos.xyz * (_particleData.size * _sizeScale);
 	//float3 _localPos = a_input.pos.xyz * _debugSize;
@@ -272,6 +288,7 @@ VSOutput VSMain(VSInput a_input)
 	{
 		_alpha *= saturate((1.0f - _lifeT) / _draw.fadeOutRatio);
 	}
+	_alpha *= _cameraFade;
 
 	_out.color = float4(_color.rgb, _alpha);
 

@@ -407,21 +407,25 @@ namespace App::Object
 		//------------------------------------------------------------------------------------------
 		// 砂埃
 		//
-		// ボイドの真下に地面が近ければ、近いほど大きく炊く。地面の中なら真上の地表へ常に炊く。
-		// ここは調整値を持つだけで、4000体ぶんのレイとエフェクトの生成は BoidGroundEffectSystem。
+		// 小隊長の真下に地面が近ければ、近いほど大きく炊く。地面の中なら真上の地表へ常に炊く。
+		// ボイド1体ずつではなく小隊長ごとに炊く。小隊長は体の芯に一列なので、
+		// 炊く位置を体の太さの中へばらし、大きさもばらして玉が連なって見えないようにする。
+		// ここは調整値を持つだけで、レイとエフェクトの生成は BoidGroundEffectSystem。
 		// 1回炊くたびにエフェクトのエンティティが1体増えるので、間隔と1フレームの上限で数を抑える
 		//------------------------------------------------------------------------------------------
 		// 炊くエフェクト(保存用。単発で消えるもの)。既定は Asset/Effect/Dast/Worm_GroundDust
 		Core::GUID m_groundEffectGUID = Core::GUID("a1a7bdfe-2da7-4767-8d22-55844f0a0115");
 		Engine::ResourceRef<Engine::Resource::EffectAsset> m_groundEffectRef = {};		// 読み込んだままにしておく(炊くたびに読み直さない)
 
-		float m_groundEffectMaxHeight  = 20.0f;		// 地面からこの高さまでのボイドが炊く(m)
-		float m_groundEffectMaxDepth   = 150.0f;	// 地表からこの深さまでのボイドが炊く(m)
+		float m_groundEffectMaxHeight  = 20.0f;		// 地面からこの高さまでの小隊長が炊く(m)
+		float m_groundEffectMaxDepth   = 150.0f;	// 地表からこの深さまでの小隊長が炊く(m)
 		float m_groundEffectNearScale  = 1.0f;		// 地表すれすれでの大きさ
 		float m_groundEffectFarScale   = 0.3f;		// 炊く高さぎりぎりでの大きさ
 		float m_groundEffectUnderScale = 1.0f;		// 地面の中に居るときの大きさ
-		float m_groundEffectInterval   = 1.0f;		// 1体が炊く間隔(秒)
-		uint32_t m_groundEffectMaxSpawnPerFrame = 8;	// 1フレームに出す上限
+		float m_groundEffectInterval   = 0.5f;		// 小隊長1体が炊く間隔(秒。砂埃が薄れるより短くして途切れないようにする)
+		float m_groundEffectScatterRadius = 4.0f;	// 炊く位置を小隊長から水平にばらす半径(m。エフェクト自体が ±7m に広がるので小さめ)
+		float m_groundEffectScaleJitter   = 0.3f;	// 大きさを ±この割合でばらす
+		uint32_t m_groundEffectMaxSpawnPerFrame = 16;	// 1フレームに出す上限(超えた分は捨てるので、小隊長の数 ÷ 間隔 ÷ fps より大きく)
 
 		// ---- 実行中の状態(保存しない) ----
 		bool m_isGroundEffectOneShot = false;	// 読み込み済みで、出し切って消える単発のものか(違えば炊かない)
