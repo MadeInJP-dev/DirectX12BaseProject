@@ -7,13 +7,71 @@
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 #include "Engine/Resource/Data/UIMaterial/UIMaterial.h"
-#include "Engine/GameObject/GameObjectManager/GameObjectManager.h"	// 親(パネル)を GUID で引く
+#include "Engine/GameObject/GameObjectManager/GameObjectManager.h"	// 項目移動の前・次を GUID で引く
 
 #include "Application/InstanceResource/UserDataResource.h"	// HUD を出すか(プレイヤーの設定)
 #include "Application/Game/UserData/UserData.h"
 
 namespace App::Object
 {
+	namespace
+	{
+		//----------------------------------------------------------------------------------
+		// 画面の上での置き場所(位置・回転・倍率)
+		//
+		// UI の行列は「倍率 → Z軸回り → 平行移動」だけでできているので、
+		// 掛け合わせても必ずこの3つへ戻せる(倍率は縦横同じ)
+		//----------------------------------------------------------------------------------
+		struct UIPlacement
+		{
+			Math::Vector2 pos = {};		// px
+			float rotation = 0.0f;		// 度(UIAnchor::RotateDeg と同じ向き)
+			float scale = 1.0f;
+		};
+
+		// 置き場所から行列を組む。行ベクトルなので点は 倍率 → 回転 → 移動 の順に掛かり、
+		// UIAnchor::ToScreenPos と同じ点へ移る(1行目・2行目の回し方は RotateDeg と同じ向き)。
+		// 奥行き(Z)は伝えない(Z順は UI ごとの layer で決める)
+		Math::Matrix MakeUIMatrix(const UIPlacement& a_placement)
+		{
+			const float _rad = DirectX::XMConvertToRadians(a_placement.rotation);
+			const float _cos = std::cos(_rad) * a_placement.scale;
+			const float _sin = std::sin(_rad) * a_placement.scale;
+
+			return Math::Matrix(
+				 _cos, _sin, 0.0f, 0.0f,
+				-_sin, _cos, 0.0f, 0.0f,
+				 0.0f, 0.0f, 1.0f, 0.0f,
+				 a_placement.pos.x, a_placement.pos.y, 0.0f, 1.0f);
+		}
+
+		// 行列から置き場所へ戻す(画面の xy だけを見る)
+		UIPlacement DecomposeUIMatrix(const Math::Matrix& a_matrix)
+		{
+			UIPlacement _placement = {};
+			_placement.pos = { a_matrix._41, a_matrix._42 };
+			_placement.scale = std::sqrt(a_matrix._11 * a_matrix._11 + a_matrix._12 * a_matrix._12);
+			_placement.rotation = DirectX::XMConvertToDegrees(std::atan2(a_matrix._12, a_matrix._11));
+			return _placement;
+		}
+
+		// 親の置き場所の中の点(親から見た値)を、画面の点へ
+		Math::Vector2 ToParentScreen(const UIPlacement& a_parent, const Math::Vector2& a_localPos)
+		{
+			return a_parent.pos + UIAnchor::RotateDeg(a_localPos * a_parent.scale, a_parent.rotation);
+		}
+
+		// 画面の点を、親の置き場所の中の点(親から見た値)へ。倍率が0の親の中には戻せないので false
+		bool ToParentLocal(const UIPlacement& a_parent, const Math::Vector2& a_screenPos, Math::Vector2& a_outLocalPos)
+		{
+			constexpr float SCALE_EPSILON = 1e-6f;
+			if (std::fabs(a_parent.scale) < SCALE_EPSILON) return false;
+
+			a_outLocalPos = UIAnchor::RotateDeg(a_screenPos - a_parent.pos, -a_parent.rotation) / a_parent.scale;
+			return true;
+		}
+	}
+
 	UIBase::UIBase() : UIBase(true)
 	{
 	}
@@ -135,31 +193,95 @@ namespace App::Object
 	// 上にある UIPanel が全部出ているか
 	//--------------------------------------------------------------------------------------
 	// 上へ辿って、途中にある UIPanel が1つでも隠れていれば出ていない。
-	// 親がパネルでないところ(ボタンの下にまとめただけの画像など)は何も伝えないので、
-	// エディターの並びのために付けた既存の親子で表示が変わることはない。
-	//
-	// 親子が輪になっていても止まるよう、辿る深さに上限を設けてある
+	// 親がパネルでないところ(ボタンの下にまとめただけの画像など)は表示を伝えない。
+	// (輪は BaseObject::SetParent が作らせないので、根まで辿れば必ず止まる)
 	//======================================================================================
-	bool UIBase::IsParentPanelsVisible(const Engine::GameObject::ObjectContext& a_context) const
+	bool UIBase::IsParentPanelsVisible(const Engine::GameObject::ObjectContext& /*a_context*/) const
 	{
-		if (!a_context.pObjectManager) return true;
-
-		constexpr int DEPTH_MAX = 32;
-
-		Core::GUID _parentGUID = GetParentGUID();
-		for (int _depth = 0; _depth < DEPTH_MAX && _parentGUID.IsValid(); ++_depth)
+		for (const Engine::GameObject::BaseObject* _pParent = GetParent(); _pParent; _pParent = _pParent->GetParent())
 		{
-			const Engine::GameObject::BaseObject* _pParent = a_context.pObjectManager->FindByGUID(_parentGUID);
-			if (!_pParent) break;
-
 			if (const UIPanel* _pPanel = Core::TypeInfo::Cast<const UIPanel>(_pParent))
 			{
 				if (!_pPanel->IsVisible()) return false;
 			}
-
-			_parentGUID = _pParent->GetParentGUID();
 		}
 		return true;
+	}
+
+	//======================================================================================
+	// 画面での置き場所
+	//--------------------------------------------------------------------------------------
+	// 親の行列から親の置き場所を取り出し、自分のアンカーをその中へ置く。
+	// 自分の行列ごと掛けて戻さないのは、回転の値(370度など入れた値)を
+	// 丸めずにそのまま残すため。結果は CalcWorldMatrix を戻したものと同じになる
+	//======================================================================================
+	UIAnchor UIBase::CalcWorldAnchor() const
+	{
+		UIAnchor _world = m_anchor;
+		_world.pixelPos = m_anchor.pixelPos + m_runtimeOffset;
+
+		const Engine::GameObject::BaseObject* _pParent = GetParent();
+		if (!_pParent) return _world;
+
+		const Math::Matrix _parentWorld = _pParent->CalcWorldMatrix();
+
+		// 置き場所を持たない親(進行役など)だけを辿ったときは何も変わらない
+		if (_parentWorld == Math::Matrix::Identity()) return _world;
+
+		const UIPlacement _parent = DecomposeUIMatrix(_parentWorld);
+		_world.pixelPos = ToParentScreen(_parent, _world.pixelPos);
+		_world.rotation = m_anchor.rotation + _parent.rotation;
+		_world.scale = m_anchor.scale * _parent.scale;
+		return _world;
+	}
+
+	void UIBase::SetWorldPixelPos(const Math::Vector2& a_screenPos)
+	{
+		Math::Vector2 _localPos = a_screenPos;
+
+		if (const Engine::GameObject::BaseObject* _pParent = GetParent())
+		{
+			const UIPlacement _parent = DecomposeUIMatrix(_pParent->CalcWorldMatrix());
+			if (!ToParentLocal(_parent, a_screenPos, _localPos)) return;
+		}
+
+		// 実行中だけのずらしは保存しないので、アンカーには入れない
+		m_anchor.pixelPos = _localPos - m_runtimeOffset;
+	}
+
+	//======================================================================================
+	// 行列 : 子の UI はこれに追従する
+	//======================================================================================
+	Math::Matrix UIBase::CalcLocalMatrix() const
+	{
+		UIPlacement _placement = {};
+		_placement.pos = m_anchor.pixelPos + m_runtimeOffset;
+		_placement.rotation = m_anchor.rotation;
+		_placement.scale = m_anchor.scale;
+		return MakeUIMatrix(_placement);
+	}
+
+	//======================================================================================
+	// 親が変わっても画面での置き場所を保つ
+	//--------------------------------------------------------------------------------------
+	// 画面での置き場所を古い親の中で求め、新しい親の中の値へ戻す。
+	// 回転と倍率は差だけを足し引きする(親が回っていなければ入れた値がそのまま残る)
+	//======================================================================================
+	void UIBase::RebaseLocal(const Math::Matrix& a_oldParentWorld, const Math::Matrix& a_newParentWorld)
+	{
+		if (a_oldParentWorld == a_newParentWorld) return;
+
+		const UIPlacement _oldParent = DecomposeUIMatrix(a_oldParentWorld);
+		const UIPlacement _newParent = DecomposeUIMatrix(a_newParentWorld);
+
+		const Math::Vector2 _screenPos = ToParentScreen(_oldParent, m_anchor.pixelPos + m_runtimeOffset);
+
+		Math::Vector2 _localPos = {};
+		if (!ToParentLocal(_newParent, _screenPos, _localPos)) return;
+
+		m_anchor.pixelPos = _localPos - m_runtimeOffset;
+		m_anchor.rotation = m_anchor.rotation + _oldParent.rotation - _newParent.rotation;
+		m_anchor.scale = m_anchor.scale * _oldParent.scale / _newParent.scale;
 	}
 
 	//======================================================================================
@@ -186,11 +308,14 @@ namespace App::Object
 
 		const bool _isHitFollowAnim = m_opInteraction->isHitFollowAnim;
 
-		a_outRect.rotation = m_anchor.rotation;
+		// 画面での置き場所(実行中だけのずらし・親の行列込み)
+		const UIAnchor _anchor = CalcWorldAnchor();
+
+		a_outRect.rotation = _anchor.rotation;
 		a_outRect.padding = m_opInteraction->hitPadding;
 
 		// アンカーに大きさが入っていても、今の絵へ追従させる指示があれば飾りを優先する
-		const bool _isUseDecorationBounds = _isHitFollowAnim || !m_anchor.HasSize();
+		const bool _isUseDecorationBounds = _isHitFollowAnim || !_anchor.HasSize();
 
 		if (_isUseDecorationBounds)
 		{
@@ -198,8 +323,8 @@ namespace App::Object
 			Math::Vector2 _size = {};
 			if (CalcDecorationBounds(_center, _size, _isHitFollowAnim))
 			{
-				a_outRect.pixelPos = m_anchor.ToScreenPos(_center) + m_runtimeOffset;	// 範囲の中心を指す点。回転と倍率はアンカーのものが乗る
-				a_outRect.pixelSize = _size * m_anchor.scale;
+				a_outRect.pixelPos = _anchor.ToScreenPos(_center);	// 範囲の中心を指す点。回転と倍率はアンカーのものが乗る
+				a_outRect.pixelSize = _size * _anchor.scale;
 				a_outRect.pivot = { 0.5f, 0.5f };						// 中心を出しているのでピボットは中央
 				return true;
 			}
@@ -207,11 +332,11 @@ namespace App::Object
 			// 測れる飾りが1つも無ければアンカーの矩形へ戻る(文字だけのUIなど)
 		}
 
-		if (!m_anchor.HasSize()) return false;
+		if (!_anchor.HasSize()) return false;
 
-		a_outRect.pixelPos = m_anchor.pixelPos + m_runtimeOffset;	// 実行中だけのずらしは絵と同じだけ掛ける
-		a_outRect.pixelSize = m_anchor.pixelSize;
-		a_outRect.pivot = m_anchor.pivot;
+		a_outRect.pixelPos = _anchor.pixelPos;
+		a_outRect.pixelSize = _anchor.pixelSize;
+		a_outRect.pivot = _anchor.pivot;
 		return true;
 	}
 
@@ -561,9 +686,8 @@ namespace App::Object
 
 	Decoration::ParentTransform UIBase::MakeParentTransform() const
 	{
-		Decoration::ParentTransform _parentTr = m_anchor.MakeParentTransform();
-		_parentTr.pixelPos = _parentTr.pixelPos + m_runtimeOffset;
-		return _parentTr;
+		// 画面での置き場所(実行中だけのずらし・親の行列込み)から出す
+		return CalcWorldAnchor().MakeParentTransform();
 	}
 
 	Decoration::ParentOption UIBase::MakeParentOption() const

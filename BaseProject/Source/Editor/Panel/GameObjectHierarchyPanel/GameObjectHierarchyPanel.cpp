@@ -12,15 +12,12 @@
 //
 // ECS外オブジェクトの一覧。ドラッグ&ドロップで親子関係を組める。
 //
-// ・親子は**この一覧の並びだけ**に効く
-//     座標も回転も表示状態も親から伝わらない。オブジェクトが増えたときに
-//     「この確認ボックスは MissionSelect のもの」と見て分かるようにするためのもの。
-//     座標が伝わる親子が要るなら ECS の HierarchyComponent を使う。
+// ・親子は BaseObject の親子そのもの
+//     子は親の行列に追従する(UI なら親の位置・回転・倍率に付いて動く)。
+//     付け替えても見た目の置き場所は変わらない(ローカルの値を直す)。
+//     親を消すと子も一緒に消える。
 //
-// ・親はポインタではなく GUID で持つ
-//     読み込み順に縛られないうえ、そのまま保存できる。
-//     親が見つからないもの(消された・型が変わった)は根として出るので、
-//     参照が切れても一覧から消えることはない。
+// ・見出しはオブジェクトの名前。名前が無ければクラス名
 //
 // ・検索中は平らに並べる
 //     階層をたどると、一致した子が閉じた親の中に隠れて見つけられないため。
@@ -32,12 +29,11 @@ namespace Editor
 		// ドラッグ&ドロップで受け渡す種類の名札
 		constexpr const char* DRAG_PAYLOAD_NAME = "GameObject";
 
-		// 一覧に出す見出し : 表示名 + GUIDの頭(同じ型が並んだときに見分けるため)
-		std::string MakeLabel(const GameObject::BaseObject* a_pObject)
+		// 検索に当たるか : 名前とクラス名のどちらかに含まれていればよい
+		bool IsMatchObject(const std::string& a_search, const GameObject::BaseObject* a_pObject)
 		{
-			const std::string _guid = a_pObject->GetGUID().String();
-
-			return std::string(a_pObject->GetEditorName()) + "  [" + _guid.substr(0, 8) + "]";
+			return EditorHelper::IsMatchSearch(a_search, a_pObject->GetDisplayName())
+				|| EditorHelper::IsMatchSearch(a_search, a_pObject->GetEditorName());
 		}
 	}
 
@@ -126,14 +122,7 @@ namespace Editor
 		// 絞り込みで一覧から外れただけの相手を「消えた」と誤判定しないよう、検証は絞り込みの前に行う
 		bool _selectedStillAlive = false;
 
-		//------------------------------------------------------------------
-		// 親子の対応表を作る
-		//
-		// 親を指しているのは子の側なので、そのままでは親から子をたどれない。
-		// 毎フレーム作り直しているのは、オブジェクトの増減や付け替えを
-		// 別に通知してもらわなくて済むようにするため(数十件なら十分安い)
-		//------------------------------------------------------------------
-		ChildMap _childMap;
+		// 根(親の居ないもの)を集める。子は各オブジェクトが持っている一覧から辿る
 		std::vector<GameObject::BaseObject*> _rootVec;
 
 		for (const auto& _upObject : _objects)
@@ -143,17 +132,7 @@ namespace Editor
 
 			if (_pObject == a_editContext.pGameObject) _selectedStillAlive = true;
 
-			const Core::GUID& _parentGUID = _pObject->GetParentGUID();
-
-			// 親を指していない、または親が見つからないものは根として出す。
-			// 参照が切れたものを隠してしまうと、一覧から消えて触れなくなる
-			if (!_parentGUID.IsValid() || _pManager->FindByGUID(_parentGUID) == nullptr)
-			{
-				_rootVec.push_back(_pObject);
-				continue;
-			}
-
-			_childMap[_parentGUID].push_back(_pObject);
+			if (_pObject->GetParent() == nullptr) _rootVec.push_back(_pObject);
 		}
 
 		ImGui::BeginChild("GameObjectList");
@@ -163,7 +142,7 @@ namespace Editor
 				// 階層で出す
 				for (GameObject::BaseObject* _pRoot : _rootVec)
 				{
-					DrawObjectNode(a_editContext, _pManager, _pRoot, _childMap, _selectedStillAlive);
+					DrawObjectNode(a_editContext, _pManager, _pRoot, _selectedStillAlive);
 				}
 			}
 			else
@@ -177,12 +156,12 @@ namespace Editor
 				{
 					GameObject::BaseObject* _pObject = _upObject.get();
 					if (!_pObject) continue;
-					if (!EditorHelper::IsMatchSearch(_search, _pObject->GetEditorName())) continue;
+					if (!IsMatchObject(_search, _pObject)) continue;
 
 					ImGui::PushID(_pObject);
 
 					const bool _isSelected = (a_editContext.pGameObject == _pObject);
-					ImGui::Selectable(MakeLabel(_pObject).c_str(), _isSelected);
+					ImGui::Selectable(_pObject->GetDisplayName(), _isSelected);
 
 					HandleSelect(a_editContext, _pObject, _selectedStillAlive);
 					HandleContextMenu(a_editContext, _pObject);
@@ -209,7 +188,7 @@ namespace Editor
 
 					if (auto* _pChild = _pManager->FindByGUID(_childGUID))
 					{
-						_pChild->SetParentGUID({});
+						_pChild->SetParent(nullptr);
 					}
 				}
 				ImGui::EndDragDropTarget();
@@ -231,17 +210,13 @@ namespace Editor
 		EditorContext& a_editContext,
 		GameObject::GameObjectManager* a_pManager,
 		GameObject::BaseObject* a_pObject,
-		const ChildMap& a_childMap,
 		bool& a_inoutIsSelectedAlive)
 	{
 		if (a_pObject == nullptr) return;
 
-		// 子の一覧(持っていなければ空)
-		static const std::vector<GameObject::BaseObject*> EMPTY = {};
-
-		const auto _it = a_childMap.find(a_pObject->GetGUID());
-		const std::vector<GameObject::BaseObject*>& _children =
-			(_it != a_childMap.end()) ? _it->second : EMPTY;
+		// 子の一覧は写しを取って回す。
+		// 下の項目へのドラッグ&ドロップで付け替えると、回している最中の一覧が書き換わるため
+		const std::vector<GameObject::BaseObject*> _children = a_pObject->GetChildren();
 
 		ImGuiTreeNodeFlags _flags =
 			ImGuiTreeNodeFlags_OpenOnArrow |
@@ -253,8 +228,8 @@ namespace Editor
 		// 子が居ないものは開けない見た目にする(三角が出ない)
 		if (_children.empty()) _flags |= ImGuiTreeNodeFlags_Leaf;
 
-		// ID はポインタで固定する。名前だけだと同じ型が並んだときにぶつかる
-		const bool _isOpen = ImGui::TreeNodeEx(a_pObject, _flags, "%s", MakeLabel(a_pObject).c_str());
+		// ID はポインタで固定する。名前だけだと同じ名前が並んだときにぶつかる
+		const bool _isOpen = ImGui::TreeNodeEx(a_pObject, _flags, "%s", a_pObject->GetDisplayName());
 
 		// ポップアップは直前の項目の状態を消費するので、必ず最後に回す
 		HandleSelect(a_editContext, a_pObject, a_inoutIsSelectedAlive);
@@ -265,7 +240,7 @@ namespace Editor
 
 		for (GameObject::BaseObject* _pChild : _children)
 		{
-			DrawObjectNode(a_editContext, a_pManager, _pChild, a_childMap, a_inoutIsSelectedAlive);
+			DrawObjectNode(a_editContext, a_pManager, _pChild, a_inoutIsSelectedAlive);
 		}
 
 		ImGui::TreePop();
@@ -300,15 +275,16 @@ namespace Editor
 	{
 		if (!ImGui::BeginPopupContextItem()) return;
 
-		if (a_pObject->GetParentGUID().IsValid())
+		if (a_pObject->GetParent())
 		{
 			if (ImGui::MenuItem("Unparent"))
 			{
-				a_pObject->SetParentGUID({});
+				a_pObject->SetParent(nullptr);
 			}
 			Engine::EditorField::Line();
 		}
 
+		// 子も一緒に消える(GameObjectManager::PreUpdate)
 		if (ImGui::MenuItem("Destroy"))
 		{
 			a_pObject->ReserveDestroy();
@@ -334,7 +310,7 @@ namespace Editor
 			const Core::GUID _guid = a_pObject->GetGUID();
 			ImGui::SetDragDropPayload(DRAG_PAYLOAD_NAME, &_guid, sizeof(Core::GUID));
 
-			Engine::EditorField::Text("%s", MakeLabel(a_pObject).c_str());
+			Engine::EditorField::Text("%s", a_pObject->GetDisplayName());
 			ImGui::EndDragDropSource();
 		}
 
@@ -345,50 +321,14 @@ namespace Editor
 		{
 			const Core::GUID _childGUID = *static_cast<const Core::GUID*>(_pPayload->Data);
 
-			auto* _pChild = a_pManager->FindByGUID(_childGUID);
-
-			// 自分自身は親にできない。
-			// 自分の子孫を親にすると輪ができて、一覧の描画が無限に潜る
-			if (_pChild != nullptr &&
-				_pChild != a_pObject &&
-				!IsDescendantOf(a_pManager, a_pObject, _pChild))
+			// 自分自身・自分の子孫を親にする付け替えは SetParent が断る(輪ができるため)。
+			// 見た目の置き場所はそのままで、ローカルの値が新しい親から見たものに直る
+			if (auto* _pChild = a_pManager->FindByGUID(_childGUID))
 			{
-				_pChild->SetParentGUID(a_pObject->GetGUID());
+				_pChild->SetParent(a_pObject);
 			}
 		}
 
 		ImGui::EndDragDropTarget();
-	}
-
-	//======================================================================================
-	// 輪ができないか調べる
-	//--------------------------------------------------------------------------------------
-	// 新しい親からたどって子に行き着くなら、その付け替えは輪を作る。
-	// 参照が壊れていても止まるよう、たどる回数にも上限を置いてある。
-	//======================================================================================
-	bool GameObjectHierarchyPanel::IsDescendantOf(
-		GameObject::GameObjectManager* a_pManager,
-		const GameObject::BaseObject* a_pParent,
-		const GameObject::BaseObject* a_pChild)
-	{
-		if (a_pManager == nullptr || a_pParent == nullptr || a_pChild == nullptr) return false;
-
-		// 万一すでに輪になっていても抜けられるようにする
-		constexpr int DEPTH_LIMIT = 256;
-
-		const GameObject::BaseObject* _pCurrent = a_pParent;
-
-		for (int _i = 0; _i < DEPTH_LIMIT; ++_i)
-		{
-			if (_pCurrent == a_pChild) return true;
-
-			const Core::GUID& _parentGUID = _pCurrent->GetParentGUID();
-			if (!_parentGUID.IsValid()) return false;
-
-			_pCurrent = a_pManager->FindByGUID(_parentGUID);
-			if (_pCurrent == nullptr) return false;
-		}
-
-		return true;
 	}
 }

@@ -116,6 +116,22 @@ namespace Engine::GameObject
 		// 指定フェーズに居るものだけを1回ずつ呼んで、次のフェーズへ送る
 		void RunInitPhase(EObjectInitPhase a_phase);
 
+		// 子・孫を全部消える予定にする(親が消えるときに一緒に消すため)
+		static void ReserveDestroyDescendants(BaseObject* a_pObject);
+
+		/// <summary>
+		/// 1体ぶんの基底の値(名前・置き場所をローカルで持っているか)を保存・読み込む
+		/// </summary>
+		/// <remarks>持たない古いシーンでは何も読まず、渡した値のまま返る</remarks>
+		static void ArchiveBase(Persistence::Archive& a_ar, std::string& a_name, bool& a_isLocalSpace);
+
+		/// <summary>
+		/// 古いシーン(置き場所をワールドの値で持っていたもの)の子を、親から見た値へ直す
+		/// </summary>
+		/// <param name="a_pObject">ここから下を直す(a_pObject 自身は直さない)</param>
+		/// <param name="a_legacySet">直す相手 : 今回読み込んだ古い形式のもの</param>
+		static void RebaseLegacyDescendants(BaseObject* a_pObject, const std::unordered_set<const BaseObject*>& a_legacySet);
+
 	private:
 
 		ObjectContext m_objContext = {};

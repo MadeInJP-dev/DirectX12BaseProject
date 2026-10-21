@@ -52,6 +52,15 @@ namespace App::Object
 		// 置き場所
 		m_anchor.DrawInspector(_w, _h);
 
+		// アンカーの位置・回転・倍率は親から見た値。親が居るときは画面での値も出しておく
+		if (GetParent())
+		{
+			const UIAnchor _worldAnchor = CalcWorldAnchor();
+			Engine::EditorField::HelpText("Screen : Pos(%.1f, %.1f) Rot %.1f Scale %.2f",
+				_worldAnchor.pixelPos.x, _worldAnchor.pixelPos.y, _worldAnchor.rotation, _worldAnchor.scale);
+			Engine::EditorField::Tooltip("上の値は親(%s)から見たもの。こちらは親の行列を掛けた画面での値", GetParent()->GetDisplayName());
+		}
+
 		// カーソルへの反応(押せる UI だけ)
 		if (m_opInteraction) DrawInteractionInspector(a_context);
 
@@ -359,8 +368,8 @@ namespace App::Object
 		DrawDecorationGizmo(a_ctx, _w, _h);
 
 		// ゲーム内ピクセル(左上原点) から シーンビュー上ピクセルへ。
-		// pixelPos はピボットのスクリーン座標なので、ハンドルはそのままピボット位置を指す。
-		Math::Vector2& _pixelPos = m_anchor.pixelPos;
+		// ハンドルは画面でのピボット位置を指す(アンカーの値は親から見たものなので、親の行列を掛けてから)
+		const Math::Vector2 _pixelPos = GetWorldPixelPos();
 
 		Math::Vector2 _handle = {};
 		_handle.x = a_ctx.viewportPos.x + (_pixelPos.x / _w) * a_ctx.viewportSize.x;
@@ -375,8 +384,7 @@ namespace App::Object
 		{
 			const float _u = (_mouse.x - a_ctx.viewportPos.x) / a_ctx.viewportSize.x;	// 0..1
 			const float _v = (_mouse.y - a_ctx.viewportPos.y) / a_ctx.viewportSize.y;	// 0..1
-			_pixelPos.x = std::clamp(_u * _w, 0.0f, _w);
-			_pixelPos.y = std::clamp(_v * _h, 0.0f, _h);
+			SetWorldPixelPos({ std::clamp(_u * _w, 0.0f, _w), std::clamp(_v * _h, 0.0f, _h) });
 		}
 
 		return true;
@@ -427,8 +435,11 @@ namespace App::Object
 
 		Decoration::Decoration& _decoration = m_decorationVec[m_editDecorationIndex];
 
+		// 画面での置き場所(親の行列を掛けたもの)
+		const UIAnchor _worldAnchor = CalcWorldAnchor();
+
 		// 画面上の位置(ゲーム内ピクセル) → シーンビュー上ピクセル
-		const Math::Vector2 _screenPos = m_anchor.ToScreenPos(_decoration.offsetPos);
+		const Math::Vector2 _screenPos = _worldAnchor.ToScreenPos(_decoration.offsetPos);
 
 		Math::Vector2 _handle = {};
 		_handle.x = a_ctx.viewportPos.x + (_screenPos.x / a_screenW) * a_ctx.viewportSize.x;
@@ -446,10 +457,10 @@ namespace App::Object
 		};
 
 		// アンカーからのずれへ戻す : 回転を戻してから倍率で割る
-		const Math::Vector2 _local = UIAnchor::RotateDeg(_dragScreen - m_anchor.pixelPos, -m_anchor.rotation);
-		if (m_anchor.scale > 1e-6f)
+		const Math::Vector2 _local = UIAnchor::RotateDeg(_dragScreen - _worldAnchor.pixelPos, -_worldAnchor.rotation);
+		if (_worldAnchor.scale > 1e-6f)
 		{
-			_decoration.offsetPos = _local / m_anchor.scale;
+			_decoration.offsetPos = _local / _worldAnchor.scale;
 		}
 	}
 

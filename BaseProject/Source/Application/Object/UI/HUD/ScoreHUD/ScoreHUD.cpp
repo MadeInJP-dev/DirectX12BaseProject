@@ -277,7 +277,7 @@ namespace App::Object
 
 		Decoration::DrawOverride _override = {};
 		_override.isUsePos = true;
-		_override.pixelPos = m_anchor.pixelPos;
+		_override.pixelPos = GetWorldPixelPos();	// 差し替える位置は画面の座標
 		_override.pixelPos.x += _step * static_cast<float>(a_index);
 
 		_override.isUseUvScale = true;

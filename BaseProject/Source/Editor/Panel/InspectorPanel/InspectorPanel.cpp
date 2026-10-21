@@ -48,7 +48,19 @@ void Editor::InspectorPanel::OnDrawImGui(EditorContext& a_editContext)
 				break;
 			}
 
-			Engine::EditorField::Text("%s", a_editContext.pGameObject->GetEditorName());
+			GameObject::BaseObject* _pObject = a_editContext.pGameObject;
+
+			// 一番上にクラス名
+			Engine::EditorField::Header(_pObject->GetEditorName());
+
+			//--------------------------------------------------------------
+			// 名前 : ヒエラルキーの見出しになる。空にするとクラス名に戻る
+			//--------------------------------------------------------------
+			{
+				std::string _name = _pObject->GetName();
+				if (Engine::EditorField::Field("Name", _name)) _pObject->SetName(_name);
+				Engine::EditorField::Tooltip("ヒエラルキーに出す名前。空ならクラス名(%s)を出す", _pObject->GetEditorName());
+			}
 
 			//--------------------------------------------------------------
 			// 自身のGUID
@@ -57,29 +69,26 @@ void Editor::InspectorPanel::OnDrawImGui(EditorContext& a_editContext)
 			// 目当てのオブジェクトを開いたときにここから拾えるようにしておく
 			//--------------------------------------------------------------
 			{
-				const std::string _guid = a_editContext.pGameObject->GetGUID().String();
+				const std::string _guid = _pObject->GetGUID().String();
 
 				Engine::EditorField::HelpText("GUID : %s", _guid.c_str());
 				Engine::EditorField::SameLine();
 				if (ImGui::SmallButton("Copy")) ImGui::SetClipboardText(_guid.c_str());
 
-				// ヒエラルキー上の親(並びのまとまりだけ。座標も表示も伝わらない)
-				const Core::GUID& _parentGUID = a_editContext.pGameObject->GetParentGUID();
-				if (_parentGUID.IsValid())
+				// 親(子は親の行列に追従する)。外しても見た目の置き場所は変わらない
+				if (const auto* _pParent = _pObject->GetParent())
 				{
-					const auto* _pParent = _pManager->FindByGUID(_parentGUID);
-
-					Engine::EditorField::HelpText("Parent : %s", _pParent ? _pParent->GetEditorName() : "(missing)");
+					Engine::EditorField::HelpText("Parent : %s", _pParent->GetDisplayName());
 					Engine::EditorField::SameLine();
 					if (ImGui::SmallButton("Unparent"))
 					{
-						a_editContext.pGameObject->SetParentGUID({});
+						_pObject->SetParent(nullptr);
 					}
 				}
 			}
 
 			Engine::EditorField::Line();
-			a_editContext.pGameObject->DrawInspector(_pManager->RefObjectContext());
+			_pObject->DrawInspector(_pManager->RefObjectContext());
 		}
 		else
 		{

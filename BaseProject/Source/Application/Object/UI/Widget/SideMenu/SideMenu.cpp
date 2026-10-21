@@ -11,27 +11,6 @@
 
 namespace App::Object
 {
-	namespace
-	{
-		// a_pObject が a_rootGUID の下(子・孫)に居るか。自分自身も含む
-		bool IsUnder(Engine::GameObject::GameObjectManager& a_objectManager, const Engine::GameObject::BaseObject* a_pObject, const Core::GUID& a_rootGUID)
-		{
-			// 親子が輪になっていても止まるよう、辿る深さに上限を設ける(UIBase::IsVisibleInHierarchy と同じ)
-			constexpr int DEPTH_MAX = 32;
-
-			const Engine::GameObject::BaseObject* _pCurrent = a_pObject;
-			for (int _depth = 0; _depth < DEPTH_MAX && _pCurrent; ++_depth)
-			{
-				if (_pCurrent->GetGUID() == a_rootGUID) return true;
-
-				const Core::GUID& _parentGUID = _pCurrent->GetParentGUID();
-				if (!_parentGUID.IsValid()) return false;
-				_pCurrent = a_objectManager.FindByGUID(_parentGUID);
-			}
-			return false;
-		}
-	}
-
 	//======================================================================================
 	// 更新 : カーソルの位置を見て開閉し、開き具合を進める
 	//--------------------------------------------------------------------------------------
@@ -98,12 +77,13 @@ namespace App::Object
 		if (!a_pUI) return false;
 		if (!a_pUI->IsVisibleInHierarchy(a_context)) return false;
 
-		const UIAnchor& _anchor = a_pUI->GetAnchor();
+		// 画面での置き場所(実行中だけのずらし・親の行列込み)
+		const UIAnchor _anchor = a_pUI->CalcWorldAnchor();
 		if (!_anchor.HasSize()) return false;
 
 		return UIAnchor::IsPointInside(
 			a_cursorPos,
-			_anchor.pixelPos + a_pUI->GetRuntimeOffset(),
+			_anchor.pixelPos,
 			_anchor.pixelSize * _anchor.scale,
 			_anchor.pivot,
 			_anchor.rotation);
@@ -112,7 +92,8 @@ namespace App::Object
 	//======================================================================================
 	// 開き具合を表示と位置へ反映する
 	//--------------------------------------------------------------------------------------
-	// 入れ物の下の UI 全部へ同じずらしを掛ける。置き場所(PixelPos)は開いた形のまま。
+	// 入れ物にずらしを掛ける。下の UI は入れ物の行列に追従するので一緒に動く。
+	// 置き場所(PixelPos)は開いた形のまま。
 	// ずらしは保存されないので、滑っている途中でシーンを保存しても配置は崩れない。
 	//
 	// 動きは出始めが速く、止まり際がゆっくり(OutCubic)。閉じるときは同じ曲線を逆にたどる
@@ -131,14 +112,7 @@ namespace App::Object
 		const float _eased = Decoration::Ease(Decoration::EEase::OutCubic, m_openRate);
 		const Math::Vector2 _offset = { -(1.0f - _eased) * GetSlideDistance(a_context), 0.0f };
 
-		for (const auto& _upObject : _pObjectManager->GetObjects())
-		{
-			UIBase* _pUI = Core::TypeInfo::Cast<UIBase>(_upObject.get());
-			if (!_pUI) continue;
-			if (!IsUnder(*_pObjectManager, _pUI, m_panelGUID)) continue;
-
-			_pUI->SetRuntimeOffset(_offset);
-		}
+		_pPanel->SetRuntimeOffset(_offset);
 	}
 
 	float SideMenu::GetSlideDistance(Engine::GameObject::ObjectContext& a_context) const
@@ -149,7 +123,7 @@ namespace App::Object
 		const UIBase* _pArea = Picker::Find<UIBase>(a_context.pObjectManager, m_areaGUID);
 		if (!_pArea) return 0.0f;
 
-		const UIAnchor& _anchor = _pArea->GetAnchor();
+		const UIAnchor _anchor = _pArea->CalcWorldAnchor();
 		return _anchor.pixelSize.x * _anchor.scale;
 	}
 

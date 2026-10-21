@@ -77,7 +77,8 @@ namespace App::Object
 
 	void OptionHUD::PlaceButtons(Engine::GameObject::ObjectContext& a_context)
 	{
-		const Math::Vector2& _origin = m_anchor.pixelPos;
+		// 並べる先は画面の座標で決める(項目側が親から見た値へ直す)
+		const Math::Vector2 _origin = GetWorldPixelPos();
 
 		// 戻る : 左下
 		if (UIBase* _pBack = ScrollPanelBase::FindUI(a_context, m_backButtonGUID))
@@ -246,7 +247,7 @@ namespace App::Object
 		// アンカーの位置を基準にする : OptionHUD を動かせば範囲も一緒に動く。
 		// 回転・倍率は掛けない(切り抜きが軸に沿った矩形しか扱えないため)
 		PanelLayout _layout = {};
-		_layout.pos = m_anchor.pixelPos + m_panelOffset;
+		_layout.pos = GetWorldPixelPos() + m_panelOffset;
 		_layout.size = m_panelSize;
 		_layout.itemSize = m_itemSize;
 		_layout.itemSpacing = m_itemSpacing;

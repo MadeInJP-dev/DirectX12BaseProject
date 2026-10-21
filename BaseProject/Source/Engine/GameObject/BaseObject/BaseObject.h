@@ -82,7 +82,7 @@ namespace Engine::GameObject
 	//	オブジェクトの名前
 	//	存在フラグ : trueにしたら次フレームの初めにオブジェクトが消去される
 	//	インスタンスGUID(シーン保存時に発行し、読み込み時の参照解決に使う)
-	//	ヒエラルキー上の親(エディターの並びだけに効く)。無効なら根
+	//	親と子(子は親の行列に追従する)。親が居なければ根
 	//	自身の処理ステート
 	//=======================================================================
 	class BaseObject
@@ -162,31 +162,87 @@ namespace Engine::GameObject
 		const Core::GUID& GetGUID() const { return m_guid; }
 
 		//=======================================================================
+		// 名前 : ヒエラルキーに出す名前(保存される)
+		//=======================================================================
+		const std::string& GetName() const { return m_name; }
+		void SetName(const std::string& a_name) { m_name = a_name; }
+
+		// 一覧に出す名前 : 名前を付けていなければクラス名(GetEditorName)
+		const char* GetDisplayName() const { return m_name.empty() ? GetEditorName() : m_name.c_str(); }
+
+		//=======================================================================
 		// 初期化フェーズ : 進めるのは GameObjectManager
 		//=======================================================================
 		EObjectInitPhase GetInitPhase() const { return m_initPhase; }
 		void SetInitPhase(EObjectInitPhase a_phase) { m_initPhase = a_phase; }
 
 		//=======================================================================
-		// ヒエラルキー上の親 : エディターで並びをまとめるためだけのもの
+		// 親子
+		//
+		// 子は親の行列に追従する(ワールド行列 = 自分のローカル行列 × 親のワールド行列)。
+		// 親はポインタで持ち、保存するときだけ親の GUID に直す(GameObjectManager::Archive)。
+		// 親が消えると子も一緒に消える(GameObjectManager::PreUpdate)ので、
+		// 親・子のポインタが消えた相手を指したまま残ることはない
+		//=======================================================================
+
+		// 親(居なければ nullptr = 根)
+		BaseObject* GetParent() const { return m_pParent; }
+
+		// 子の一覧(付けた順)
+		const std::vector<BaseObject*>& GetChildren() const { return m_childVec; }
+
+		/// <summary>
+		/// 親を付け替える(nullptr で根へ戻す)
+		/// </summary>
+		/// <param name="a_isKeepWorld">
+		/// true なら、見た目の置き場所が変わらないように自分のローカルを直す(エディターでの付け替え)。
+		/// false ならローカルの値はそのままで、新しい親の分だけ動く(読み込み)
+		/// </param>
+		/// <returns>自分自身・自分の子孫を親にしようとした(輪ができる)ときは付け替えずに false</returns>
+		bool SetParent(BaseObject* a_pParent, bool a_isKeepWorld = true);
+
+		// a_pAncestor の下(子・孫)に居るか。自分自身は含まない
+		bool IsDescendantOf(const BaseObject* a_pAncestor) const;
+
+		/// <summary>
+		/// 親子のつながりを全部切る : 親の子一覧から抜け、子は全員根になる
+		/// </summary>
+		/// <remarks>消える直前に GameObjectManager が呼ぶ。子のローカルは直さない</remarks>
+		void DetachFromHierarchy();
+
+		//=======================================================================
+		// 行列
 		//=======================================================================
 
 		/// <summary>
-		/// ヒエラルキーでの親
+		/// ローカル行列 : 親から見た自分の置き場所
 		/// </summary>
 		/// <remarks>
-		/// 効くのは**エディターの並びだけ**。座標も回転も表示状態も親から伝わらない。
-		/// 「この確認ボックスは MissionSelect のもの」といったまとまりを付けて、
-		/// オブジェクトが増えたときに一覧から探せるようにするために持たせてある。
-		///
-		/// 親が見つからないもの(消された・まだ読み込んでいない)は根として扱われるので、
-		/// 参照が切れても一覧から消えることはない。
-		///
-		/// 実際の親子(座標が伝わるもの)が要るなら ECS の HierarchyComponent を使うこと。
-		/// (例外 : UIPanel の下に置いた UI は、パネルの表示状態に従う。App 側の UIBase を参照)
+		/// 置き場所を持たないもの(進行役など)は単位行列のままで、子へは親の行列がそのまま伝わる。
+		/// 置き場所を持つ派生(UI のアンカーなど)が自分の値から組み立てて返す
 		/// </remarks>
-		const Core::GUID& GetParentGUID() const { return m_parentGUID; }
-		void SetParentGUID(const Core::GUID& a_guid) { m_parentGUID = a_guid; }
+		virtual Math::Matrix CalcLocalMatrix() const { return Math::Matrix::Identity(); }
+
+		/// <summary>
+		/// ワールド行列 : 自分のローカル行列に、根までの親の行列を順に掛けたもの
+		/// </summary>
+		/// <remarks>
+		/// 持ち越さずに呼ぶたびに組み立てる。UI は Update の中で置き場所を差し替える
+		/// (一覧の並べ直しなど)ので、覚えておくと同じフレームの子が1フレーム遅れて付いてくるため。
+		/// 親子の深さは数段なので、毎回辿っても軽い
+		/// </remarks>
+		Math::Matrix CalcWorldMatrix() const;
+
+		/// <summary>
+		/// 親のワールド行列が変わるとき、ワールドでの置き場所が変わらないよう自分のローカルを直す
+		/// </summary>
+		/// <param name="a_oldParentWorld">これまでの親のワールド行列(親が居なければ単位行列)</param>
+		/// <param name="a_newParentWorld">これからの親のワールド行列(親が居なければ単位行列)</param>
+		/// <remarks>
+		/// 付け替え(SetParent)と、ローカルで持つ前の古いシーンの読み込み(GameObjectManager)から呼ばれる。
+		/// 置き場所を持たないものは何もしなくてよい
+		/// </remarks>
+		virtual void RebaseLocal(const Math::Matrix& /*a_oldParentWorld*/, const Math::Matrix& /*a_newParentWorld*/) {}
 
 		//=======================================================================
 		// 実体の型
@@ -204,9 +260,15 @@ namespace Engine::GameObject
 		// 実体の型の連鎖。刻むのは CreateObject だけ
 		const TypeInfo::TypeChain* m_pTypeChain = TypeInfo::GetTypeChain<BaseObject>();
 
+		// 親(持ち主ではない)。nullptr なら根。書き換えるのは SetParent / DetachFromHierarchy だけ
+		BaseObject* m_pParent = nullptr;
+
+		// 子(持ち主ではない)。並びはヒエラルキーに出す順
+		std::vector<BaseObject*> m_childVec = {};
+
 	protected:
 
-		// オブジェクトの名前
+		// オブジェクトの名前(保存される)。空ならヒエラルキーにはクラス名を出す
 		std::string m_name;
 
 		// 存在フラグ : trueにしたら次フレームの初めにオブジェクトが消去される
@@ -214,9 +276,6 @@ namespace Engine::GameObject
 
 		// インスタンスGUID(シーン保存時に発行し、読み込み時の参照解決に使う)
 		Core::GUID m_guid = {};
-
-		// ヒエラルキー上の親(エディターの並びだけに効く)。無効なら根
-		Core::GUID m_parentGUID = {};
 
 		// どこまで初期化を通したか。生成直後は何も通っていない
 		EObjectInitPhase m_initPhase = EObjectInitPhase::PostDeserialize;

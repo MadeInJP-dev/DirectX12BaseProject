@@ -4,6 +4,18 @@
 
 namespace Engine::GameObject
 {
+	namespace
+	{
+		// 読み込んだ1体ぶんの、つなぐ前の親子の情報
+		// (親は全員を読み終えてからつなぐ。親が配列で後ろに居ることがあるため)
+		struct LoadedLink
+		{
+			BaseObject* pObject = nullptr;
+			Core::GUID parentGUID = {};
+			bool isLocalSpace = false;	// 置き場所を親から見た値(ローカル)で保存してあるか
+		};
+	}
+
 	GameObjectManager::GameObjectManager(Engine::ECS::World* a_pWorld)
 	{
 		// 以降の初期化フェーズ/Update/Draw/Archive へ渡すコンテキストに載せておく。
@@ -26,6 +38,13 @@ namespace Engine::GameObject
 	}
 	void GameObjectManager::PreUpdate()
 	{
+		// 親が消えるなら子も一緒に消す。
+		// 子だけ残すと、親の行列に追従していた置き場所が急に変わってしまうため
+		for (const auto& _upObject : m_upObjectVec)
+		{
+			if (_upObject->IsExpired()) ReserveDestroyDescendants(_upObject.get());
+		}
+
 		// 削除処理 : オブジェクト自身が削除命令を出した場合に配列上から削除する
 		for (size_t _idx = 0; _idx < m_upObjectVec.size(); ++_idx)
 		{
@@ -33,6 +52,9 @@ namespace Engine::GameObject
 			{
 				// 消える前に借りているものを返させる
 				m_upObjectVec[_idx]->Release(m_objContext);
+
+				// 親・子から自分を指すポインタを外す(消えた相手を踏ませないため)
+				m_upObjectVec[_idx]->DetachFromHierarchy();
 
 				// GUID対応表からも取り除く
 				m_guidMap.erase(m_upObjectVec[_idx]->GetGUID());
@@ -74,6 +96,19 @@ namespace Engine::GameObject
 		for (auto& _object : m_upObjectVec)
 		{
 			_object->Draw(m_objContext);
+		}
+	}
+
+	void GameObjectManager::ReserveDestroyDescendants(BaseObject* a_pObject)
+	{
+		if (!a_pObject) return;
+
+		for (BaseObject* _pChild : a_pObject->GetChildren())
+		{
+			if (!_pChild) continue;
+
+			_pChild->ReserveDestroy();
+			ReserveDestroyDescendants(_pChild);
 		}
 	}
 
@@ -202,6 +237,25 @@ namespace Engine::GameObject
 		}
 		auto& _registry = *_pRegistry;
 
+		// 保存 : 親の GUID を書くので、先に全員へ GUID を行き渡らせておく。
+		// 1体ずつ発行していると、配列で子より後ろに居る親がまだ GUID を持っておらず、
+		// 子が空の親を書いてしまう
+		if (a_ar.IsSaving())
+		{
+			for (const auto& _upObject : m_upObjectVec)
+			{
+				if (_upObject->GetGUID().IsValid()) continue;
+
+				Core::GUID _guid = {};
+				_guid.Create();
+				_upObject->SetGUID(_guid);
+				m_guidMap[_guid] = _upObject.get();
+			}
+		}
+
+		// 読み込み : 親は全員を読み終えてからつなぐ(親が配列で後ろに居ることがあるため)
+		std::vector<LoadedLink> _loadedLinkVec;
+
 		// ------------------------------------------------------------------
 		// 配列サイズ : 保存時は現在の個数、読み込み時はファイルから取得
 		// ------------------------------------------------------------------
@@ -231,20 +285,15 @@ namespace Engine::GameObject
 						ENGINE_WARNING("[GameObjectManager] 未登録のクラスを保存しようとしました : %s", std::string(_pTypeChain->name).c_str());
 					}
 
-					// GUIDが未発行なら発行しておく
+					// GUID は上で全員に発行済み
 					Core::GUID _guid = _pObject->GetGUID();
-					if (!_guid.IsValid())
-					{
-						_guid.Create();
-						_pObject->SetGUID(_guid);
-					}
 
 					a_ar.Field("TypeIndex", _typeID);
 					a_ar.GUIDField("GUID", _guid);
 
-					// ヒエラルキー上の親(エディターの並びだけに効く)。
+					// 親。ポインタは保存できないので GUID に直して書く。
 					// 派生の Archive を1つずつ直さずに済むよう、ここでまとめて面倒を見る
-					Core::GUID _parentGUID = _pObject->GetParentGUID();
+					Core::GUID _parentGUID = _pObject->GetParent() ? _pObject->GetParent()->GetGUID() : Core::GUID{};
 					a_ar.GUIDField("ParentGUID", _parentGUID);
 
 					// 個別データ。1体ぶんを区切りで囲む(読み込み側を参照)
@@ -256,6 +305,11 @@ namespace Engine::GameObject
 						}
 						a_ar.EndGroup();
 					}
+
+					// 基底のぶん(名前など)
+					std::string _name = _pObject->GetName();
+					bool _isLocalSpace = true;
+					ArchiveBase(a_ar, _name, _isLocalSpace);
 				}
 				else
 				{
@@ -284,10 +338,6 @@ namespace Engine::GameObject
 					{
 						// GUIDを復元して登録
 						_upObject->SetGUID(_guid);
-
-						// 親はまだ読み込まれていないことがあるが、
-						// 実体ではなくGUIDで持つので順番を気にしなくてよい
-						_upObject->SetParentGUID(_parentGUID);
 						_pObject = Register(std::move(_upObject));
 					}
 
@@ -308,6 +358,17 @@ namespace Engine::GameObject
 						}
 						a_ar.EndGroup();
 					}
+
+					// 基底のぶん(名前など)。持たない古いシーンでは空の名前・ワールドの置き場所のまま
+					std::string _name = {};
+					bool _isLocalSpace = false;
+					ArchiveBase(a_ar, _name, _isLocalSpace);
+
+					if (_pObject)
+					{
+						_pObject->SetName(_name);
+						_loadedLinkVec.push_back({ _pObject, _parentGUID, _isLocalSpace });
+					}
 				}
 
 				a_ar.EndObject();
@@ -315,11 +376,95 @@ namespace Engine::GameObject
 			a_ar.EndArray();
 		}
 
-		// 読み込みは全員ぶんを並べ終えてから初期化フェーズを回す。
-		// ここまで来れば FindByGUID で互いを引けるので、Start でのつなぎが成立する
 		if (a_ar.IsLoading())
 		{
+			// 全員を並べ終えたので親をつなぐ。
+			// 置き場所の値は保存したまま(ローカル)で使うので、ここでは直さない
+			for (const LoadedLink& _link : _loadedLinkVec)
+			{
+				if (!_link.parentGUID.IsValid()) continue;
+
+				BaseObject* _pParent = FindByGUID(_link.parentGUID);
+				if (!_pParent)
+				{
+					ENGINE_WARNING("[GameObjectManager] 親が見つからないので根に置きます : %s (親 %s)",
+						_link.pObject->GetDisplayName(), _link.parentGUID.String().c_str());
+					continue;
+				}
+				if (!_link.pObject->SetParent(_pParent, false))
+				{
+					ENGINE_WARNING("[GameObjectManager] 親子が輪になるので根に置きます : %s", _link.pObject->GetDisplayName());
+				}
+			}
+
+			//--------------------------------------------------------------
+			// 親子が座標を伝える前に保存されたもの(古いシーン)は、置き場所がワールドの値で入っている。
+			// そのまま使うと親の分だけずれるので、親から見た値へ直す。
+			// 直したものは次の保存からローカルで書かれるので、通るのは一度だけ
+			//--------------------------------------------------------------
+			std::unordered_set<const BaseObject*> _legacySet;
+			for (const LoadedLink& _link : _loadedLinkVec)
+			{
+				if (!_link.isLocalSpace) _legacySet.insert(_link.pObject);
+			}
+
+			if (!_legacySet.empty())
+			{
+				for (const auto& _upObject : m_upObjectVec)
+				{
+					if (_upObject->GetParent() == nullptr) RebaseLegacyDescendants(_upObject.get(), _legacySet);
+				}
+			}
+
+			// 初期化フェーズは全員ぶんを並べ終えてから回す。
+			// ここまで来れば FindByGUID で互いを引けるので、Start でのつなぎが成立する
 			RunInitPhases();
+		}
+	}
+
+	//======================================================================================
+	// 基底のぶんの保存
+	//--------------------------------------------------------------------------------------
+	// 後から足したので、1体ぶんの個別データ(Data)の後ろへ区切りで囲んで置く。
+	// 区切りを持たない古い .ob* では、ここに次のものの頭が来る。目印が無いので
+	// IsLegacyLayout が立ち、何も読まずに既定値のまま残る
+	//======================================================================================
+	void GameObjectManager::ArchiveBase(Persistence::Archive& a_ar, std::string& a_name, bool& a_isLocalSpace)
+	{
+		if (!a_ar.BeginGroup("Base")) return;
+		{
+			Persistence::ArchiveSection _section(a_ar, "BaseObject");
+			if (!a_ar.IsLegacyLayout())
+			{
+				a_ar.StringField("Name", a_name);
+
+				// 置き場所を親から見た値で書いたか。これを持たないシーンはワールドの値で入っている
+				a_ar.Field("IsLocalSpace", a_isLocalSpace);
+			}
+		}
+		a_ar.EndGroup();
+	}
+
+	//======================================================================================
+	// 古いシーンの置き場所を、親から見た値へ直す
+	//--------------------------------------------------------------------------------------
+	// 根から順に下りる。子を直すときには親がもう直してあるので、
+	// 親の CalcWorldMatrix がこれからの(直した後の)ワールド行列になる。
+	// 古い値はワールドそのものなので、「これまでの親」は単位行列として渡す
+	//======================================================================================
+	void GameObjectManager::RebaseLegacyDescendants(BaseObject* a_pObject, const std::unordered_set<const BaseObject*>& a_legacySet)
+	{
+		if (!a_pObject) return;
+
+		const Math::Matrix _parentWorld = a_pObject->CalcWorldMatrix();
+
+		for (BaseObject* _pChild : a_pObject->GetChildren())
+		{
+			if (!_pChild) continue;
+
+			if (a_legacySet.contains(_pChild)) _pChild->RebaseLocal(Math::Matrix::Identity(), _parentWorld);
+
+			RebaseLegacyDescendants(_pChild, a_legacySet);
 		}
 	}
 }

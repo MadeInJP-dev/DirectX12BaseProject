@@ -78,6 +78,19 @@ namespace Core::Math
 		Matrix operator*(const Matrix& a_other) const noexcept;
 		Matrix& operator*=(const Matrix& a_other) noexcept;
 
+		// 成分がすべて同じか(誤差は見ない)
+		bool operator==(const Matrix& a_other) const noexcept
+		{
+			for (int _row = 0; _row < 4; ++_row)
+			{
+				for (int _col = 0; _col < 4; ++_col)
+				{
+					if (m[_row][_col] != a_other.m[_row][_col]) return false;
+				}
+			}
+			return true;
+		}
+
 		//-----------------------------------------------------------------------------------------------------
 		// 行の読み書き : 軸の取り出しに使う
 		//-----------------------------------------------------------------------------------------------------

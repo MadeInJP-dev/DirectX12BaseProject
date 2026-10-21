@@ -60,13 +60,13 @@ namespace App::Object::Picker
 	// エディター用
 	//======================================================================================
 
-	/// 一覧に出す見出し : 型名 + GUIDの頭だけ(生のGUIDは長すぎて見分けられない)
+	/// 一覧に出す見出し : 名前(無ければ型名) + GUIDの頭だけ(生のGUIDは長すぎて見分けられない)
 	inline std::string MakeLabel(const Engine::GameObject::BaseObject* a_pObject)
 	{
 		if (a_pObject == nullptr) return "None";
 
 		const std::string _guid = a_pObject->GetGUID().String();
-		return std::string(a_pObject->GetEditorName()) + " [" + _guid.substr(0, 8) + "]";
+		return std::string(a_pObject->GetDisplayName()) + " [" + _guid.substr(0, 8) + "]";
 	}
 
 	/// <summary>

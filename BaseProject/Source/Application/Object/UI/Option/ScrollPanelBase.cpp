@@ -104,11 +104,12 @@ namespace App::Object
 
 		// 大きさは項目ごとに違ってよいので、ここでは位置だけ入れる(判定はその UI の設定のまま)。
 		// ピボットのずらしには行の大きさ(itemSize)を使う
-		UIAnchor& _anchor = _pUI->RefAnchor();
-		_anchor.pixelPos = {
+		// 位置は画面の座標で決め、親から見た値へ直して入れる
+		const UIAnchor& _anchor = _pUI->GetAnchor();
+		_pUI->SetWorldPixelPos({
 			_topLeft.x + m_layout.itemSize.x * _anchor.pivot.x,
 			_topLeft.y + m_layout.itemSize.y * _anchor.pivot.y
-		};
+		});
 
 		_pUI->SetClipRect(MakeContentClipRect());
 	}
@@ -478,12 +479,13 @@ namespace App::Object
 
 	void ScrollPanelBase::PlaceUIRect(UIBase& a_ui, const Math::Vector2& a_topLeft, const Math::Vector2& a_size)
 	{
+		// 位置は画面の座標で決め、親から見た値へ直して入れる
 		UIAnchor& _anchor = a_ui.RefAnchor();
-		_anchor.pixelPos = {
+		_anchor.pixelSize = a_size;
+		a_ui.SetWorldPixelPos({
 			a_topLeft.x + a_size.x * _anchor.pivot.x,
 			a_topLeft.y + a_size.y * _anchor.pivot.y
-		};
-		_anchor.pixelSize = a_size;
+		});
 	}
 
 	InstanceResource::UserDataResource* ScrollPanelBase::FindUserData(Engine::GameObject::ObjectContext& a_context)
@@ -574,7 +576,7 @@ namespace App::Object
 		std::string _current = "None";
 		if (UIBase* _pCurrent = FindUI(a_context, a_inoutGUID))
 		{
-			_current = std::string(_pCurrent->GetEditorName()) + " " + a_inoutGUID.String();
+			_current = std::string(_pCurrent->GetDisplayName()) + " " + a_inoutGUID.String();
 		}
 		else if (a_inoutGUID.IsValid())
 		{
@@ -603,7 +605,7 @@ namespace App::Object
 			// 同名でもIDがぶつからないようにする
 			Engine::EditorField::IDScope _id(static_cast<int>(_i));
 
-			const std::string _name = std::string(_pUI->GetEditorName()) + " " + _pUI->GetGUID().String();
+			const std::string _name = std::string(_pUI->GetDisplayName()) + " " + _pUI->GetGUID().String();
 			const bool _isSelected = (a_inoutGUID == _pUI->GetGUID());
 			if (Engine::EditorField::Selectable(_name.c_str(), _isSelected))
 			{

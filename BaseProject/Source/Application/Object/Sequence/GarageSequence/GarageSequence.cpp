@@ -974,7 +974,7 @@ namespace App::Object
 			Math::Vector2 _point = {};
 			if (!WorldToScreen(a_context, _mountPos, _point)) continue;
 
-			const UIAnchor& _anchor = _pBox->GetAnchor();
+			const UIAnchor _anchor = _pBox->CalcWorldAnchor();	// 画面での置き場所(親の行列込み)
 			const Math::Vector2 _edge = ClipToRectEdge(_anchor.pixelPos, _anchor.pixelSize * 0.5f * _anchor.scale, _point);
 
 			const Math::Vector2 _d = _edge - _point;
