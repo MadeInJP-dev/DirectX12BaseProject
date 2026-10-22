@@ -503,6 +503,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\Scene\ControllNavigation\ControllNavigation.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Object\Scene\SceneInitializer\SceneInitializer.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1940,6 +1945,7 @@
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\SwarmCharge\ChargeState.h" />
     <ClInclude Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossStates\UperAttack\UperAttack.h" />
     <ClInclude Include="Source\Application\Object\Scene\InputBinding\InputBinding.h" />
+    <ClInclude Include="Source\Application\Object\Scene\ControllNavigation\ControllNavigation.h" />
     <ClInclude Include="Source\Application\Object\Scene\SceneInitializer\SceneInitializer.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\Decoration.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationAnimation.h" />

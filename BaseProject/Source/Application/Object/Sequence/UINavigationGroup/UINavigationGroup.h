@@ -13,7 +13,7 @@ namespace App::Object
 	// 選んでいる UI を移す。つながりは UI 側が持つので、ここが保存するのは最初の UI だけ。
 	// 今どれを選んでいるかは実行中だけ覚える(保存しない)。
 	//
-	//   Tab / RB(NextItem)                             … 次へ
+	//   RB(NextItem。キーボードは割り当て無し)          … 次へ
 	//   LB(PrevItem)                                   … 前へ
 	//   矢印キー / 左スティック / 十字キー(BottonMove) … 上・左で前、下・右で次
 	//   Enter / A(Decide)                              … 選んでいる UI を押す(押すのは UIInteraction)

@@ -199,6 +199,13 @@ namespace App::Object
 
 		TryBindButtons(a_context);
 
+		// 戻るのキー : 戻るボタンを押したときと同じ(エディター操作中・文字入力中は受けない)
+		if (m_isBound && a_context.pServices && a_context.pServices->pInputManager)
+		{
+			const auto& _input = *a_context.pServices->pInputManager;
+			if (_input.IsGameInputEnable() && _input.IsPress(m_backAction)) OnBack(a_context);
+		}
+
 		// 箱の中身(機体が出たあと・付け替えたあと)
 		if (m_isBoxDirty)
 		{
@@ -1110,6 +1117,8 @@ namespace App::Object
 			m_stanceBoneVec = MakeDefaultStance();
 		}
 
+		Game::ActionField(a_ar, "BackActionName", m_backAction);
+
 		if (a_ar.IsLoading())
 		{
 			// 指し先が変わったので差し込み直す。開くのは全体から
@@ -1160,6 +1169,8 @@ namespace App::Object
 
 		Engine::EditorField::Header("UI");
 		if (Picker::DrawCombo<UIButton>("Back", _pObjectManager, m_backButtonGUID)) m_isBound = false;
+		Engine::EditorField::Field("BackAction", m_backAction);
+		Engine::EditorField::Tooltip("押すと Back ボタンと同じく、寄りなら全体へ・全体ならホームへ戻る");
 		if (Picker::DrawCombo<Engine::GameObject::BaseObject>("OverviewPanel", _pObjectManager, m_overviewPanelGUID)) m_isBound = false;
 		if (Picker::DrawCombo<Engine::GameObject::BaseObject>("ListPanel", _pObjectManager, m_listPanelGUID)) m_isBound = false;
 		for (size_t _i = 0; _i < MOUNT_COUNT; ++_i)

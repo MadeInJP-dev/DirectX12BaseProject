@@ -11,6 +11,9 @@
 #include "../../ObjectPicker.h"
 #include "Application/Object/UI/UIBase.h"
 #include "Application/Object/UI/Widget/UIButton/UIButton.h"
+#include "Application/Object/UI/Widget/SideMenu/SideMenu.h"
+#include "Application/Object/Sequence/MissionSelect/MissionSelect.h"
+#include "Application/Object/Scene/ControllNavigation/ControllNavigation.h"
 
 //==========================================================================================
 // HomeSequence
@@ -55,6 +58,10 @@ namespace App::Object
 
 		// ボタンへの差し込み(済んでいれば何もしない)
 		TryBindButtons(a_context);
+
+		// 戻るのキーと、今できる操作の説明
+		UpdateBackInput(a_context);
+		UpdateControllNavigation(a_context);
 
 		// BGM : 初回で鳴らし始め、フェードを進める
 		m_bgm.Update(a_context);
@@ -120,6 +127,76 @@ namespace App::Object
 
 		// そろったところで、今のモードの見た目にしておく
 		ApplyVisible(_pObjectManager);
+	}
+
+	//======================================================================================
+	// 戻る : 手前にあるものから1つ閉じる
+	//--------------------------------------------------------------------------------------
+	// 1回押して閉じるのは1つだけ。重なっている順(メニュー → 出撃の確認 → ミッションセレクト)に見る。
+	// 閉じる処理はそれぞれのボタン(CANCEL・BACK)を押したときと同じものを呼ぶ
+	//======================================================================================
+	void HomeSequence::UpdateBackInput(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (m_isLeaving) return;
+		if (!a_context.pServices || !a_context.pServices->pInputManager) return;
+
+		// エディター操作中・文字入力中は受けない
+		const auto& _input = *a_context.pServices->pInputManager;
+		if (!_input.IsGameInputEnable()) return;
+		if (!_input.IsPress(m_backAction)) return;
+
+		auto* _pObjectManager = a_context.pObjectManager;
+
+		if (auto* _pSideMenu = Picker::Find<SideMenu>(_pObjectManager, m_sideMenuGUID); _pSideMenu && _pSideMenu->IsOpen())
+		{
+			_pSideMenu->Close();
+			return;
+		}
+
+		if (auto* _pMissionSelect = FindMissionSelect(_pObjectManager); _pMissionSelect && _pMissionSelect->IsConfirmOpen())
+		{
+			_pMissionSelect->CancelConfirm();
+			return;
+		}
+
+		if (m_mode == EHomeMode::MissionSelect)
+		{
+			SetMode(EHomeMode::Home, _pObjectManager);
+		}
+	}
+
+	//======================================================================================
+	// 操作説明 : 決定・戻るを、今できるかどうかで出し入れする
+	//--------------------------------------------------------------------------------------
+	// メニュー(SideMenu の開閉)はどこでもできるので、操作説明の側で出しっぱなしにしてある
+	//======================================================================================
+	void HomeSequence::UpdateControllNavigation(Engine::GameObject::ObjectContext& a_context)
+	{
+		auto* _pObjectManager = a_context.pObjectManager;
+
+		auto* _pNavigation = Picker::Find<ControllNavigation>(_pObjectManager, m_controllNavigationGUID);
+		if (!_pNavigation) return;
+
+		const auto* _pSideMenu = Picker::Find<SideMenu>(_pObjectManager, m_sideMenuGUID);
+		const bool _isMenuOpen = _pSideMenu && _pSideMenu->IsOpen();
+
+		const auto* _pMissionSelect = FindMissionSelect(_pObjectManager);
+		const bool _isConfirmOpen = _pMissionSelect && _pMissionSelect->IsConfirmOpen();
+
+		// 決定 : キーで項目を選べる(UINavigationGroup を置いてある)のはトップとメニューだけ
+		_pNavigation->SetActionEnabled(Game::EGameAction::Decide, _isMenuOpen || (m_mode == EHomeMode::Home));
+
+		// 戻る : 閉じる相手があるとき(UpdateBackInput と同じものを見る)
+		_pNavigation->SetActionEnabled(m_backAction, _isMenuOpen || _isConfirmOpen || (m_mode == EHomeMode::MissionSelect));
+	}
+
+	MissionSelect* HomeSequence::FindMissionSelect(Engine::GameObject::GameObjectManager* a_pObjectManager) const
+	{
+		for (const Core::GUID& _guid : m_missionObjectGUIDVec)
+		{
+			if (auto* _pMissionSelect = Picker::Find<MissionSelect>(a_pObjectManager, _guid)) return _pMissionSelect;
+		}
+		return nullptr;
 	}
 
 	//======================================================================================
@@ -320,6 +397,9 @@ namespace App::Object
 			a_ar.GUIDField("OptionSceneGUID", m_optionSceneGUID);
 			a_ar.GUIDField("TitleSceneGUID", m_titleSceneGUID);
 			a_ar.GUIDField("GarageSceneGUID", m_garageSceneGUID);
+			Game::ActionField(a_ar, "BackActionName", m_backAction);
+			a_ar.GUIDField("SideMenuGUID", m_sideMenuGUID);
+			a_ar.GUIDField("ControllNavigationGUID", m_controllNavigationGUID);
 		}
 
 		if (a_ar.IsLoading())
@@ -383,6 +463,18 @@ namespace App::Object
 		Engine::EditorField::Tooltip("Option を押したときに重ねる設定画面のシーン");
 		Engine::EditorField::AssetField(*a_context.pServices, "Scene", "TitleScene", m_titleSceneGUID);
 		Engine::EditorField::Tooltip("Title を押したときに切り替えるタイトルのシーン");
+
+		//----------------------------------------------------------------------
+		// 戻る・操作説明
+		//----------------------------------------------------------------------
+		Engine::EditorField::Header("Back");
+
+		Engine::EditorField::Field("BackAction", m_backAction);
+		Engine::EditorField::Tooltip("押すと手前にあるものから1つ閉じる : メニュー → 出撃の確認 → ミッションセレクト");
+		Picker::DrawCombo<SideMenu>("SideMenu", _pObjectManager, m_sideMenuGUID);
+		Engine::EditorField::Tooltip("左上のメニュー。開いていれば戻るで閉じる");
+		Picker::DrawCombo<ControllNavigation>("ControllNavigation", _pObjectManager, m_controllNavigationGUID);
+		Engine::EditorField::Tooltip("画面下部の操作説明。決定・戻るの項目を、今できるかどうかで出し入れする");
 
 		//----------------------------------------------------------------------
 		// 出し分け

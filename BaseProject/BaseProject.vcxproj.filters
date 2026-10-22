@@ -1429,6 +1429,9 @@
     <Filter Include="Source\Application\Object\Scene\InputBinding">
       <UniqueIdentifier>{7827d0cb-3aba-428c-90a2-0a205540d230}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Object\Scene\ControllNavigation">
+      <UniqueIdentifier>{23b991b8-b4bb-489f-9669-92ac88fe10f9}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Application\Game\InputActions\InputManager">
       <UniqueIdentifier>{cd2a8b37-fc10-494e-a304-a675badd8309}</UniqueIdentifier>
     </Filter>
@@ -2783,6 +2786,9 @@
     </ClCompile>
     <ClCompile Include="Source\Application\Object\Scene\InputBinding\InputBinding.cpp">
       <Filter>Source\Application\Object\Scene\InputBinding</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\Scene\ControllNavigation\ControllNavigation.cpp">
+      <Filter>Source\Application\Object\Scene\ControllNavigation</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Game\InputActions\InputManager\InputActionManager.cpp">
       <Filter>Source\Application\Game\InputActions\InputManager</Filter>
@@ -4813,6 +4819,9 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Object\Scene\InputBinding\InputBinding.h">
       <Filter>Source\Application\Object\Scene\InputBinding</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\Scene\ControllNavigation\ControllNavigation.h">
+      <Filter>Source\Application\Object\Scene\ControllNavigation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Game\InputActions\InputManager\InputActionManager.h">
       <Filter>Source\Application\Game\InputActions\InputManager</Filter>

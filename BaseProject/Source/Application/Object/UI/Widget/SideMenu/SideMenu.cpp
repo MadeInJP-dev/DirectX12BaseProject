@@ -25,8 +25,16 @@ namespace App::Object
 		// プレイ中以外(エディター操作中・文字入力中)はカーソルを見ずに閉じておく
 		const bool _isInputEnable = _pInputManager && _pInputManager->IsGameInputEnable();
 
+		// キーで開閉する : カーソルの位置によらない
+		if (_isInputEnable && _pInputManager->IsPress(m_toggleAction))
+		{
+			m_isOpen = !m_isOpen;
+			m_isOpenedByKey = m_isOpen;
+		}
+
+		// キーで開いている間はカーソルで閉じない(マウスを触らずに開いたので、カーソルは外に居ることが多い)
 		Math::Vector2 _cursorPos = {};
-		if (_isInputEnable && _pObjectManager && UIInteraction::CalcCursorUIPos(a_context, _cursorPos))
+		if (!m_isOpenedByKey && _isInputEnable && _pObjectManager && UIInteraction::CalcCursorUIPos(a_context, _cursorPos))
 		{
 			const UIBase* _pTrigger = Picker::Find<UIBase>(_pObjectManager, m_triggerGUID);
 			const UIBase* _pArea = Picker::Find<UIBase>(_pObjectManager, m_areaGUID);
@@ -46,9 +54,9 @@ namespace App::Object
 				m_isOpen = _isOnTrigger || _isOnArea;
 			}
 		}
-		else if (!_isInputEnable)
+		if (!_isInputEnable)
 		{
-			m_isOpen = false;
+			Close();
 		}
 
 		//------------------------------------------------------------------
@@ -141,6 +149,7 @@ namespace App::Object
 		{
 			a_ar.Field("SlideTime", m_slideTime);
 			a_ar.Field("SlideDistance", m_slideDistance);
+			Game::ActionField(a_ar, "ToggleActionName", m_toggleAction);
 		}
 	}
 
@@ -167,11 +176,13 @@ namespace App::Object
 		Engine::EditorField::Tooltip("滑り込む/滑り出るのにかかる時間(秒)。0 で一瞬");
 		Engine::EditorField::Field("SlideDistance", m_slideDistance, 1.0f, 0.0f, 4096.0f);
 		Engine::EditorField::Tooltip("滑る距離(px)。0 なら Area の幅(画面の左端の外から出てくる)");
+		Engine::EditorField::Field("ToggleAction", m_toggleAction);
+		Engine::EditorField::Tooltip("押すたびに開閉するアクション。キーで開いたときはカーソルが外に居ても閉じない");
 
 		// エディターでは乗せて開けないので、ここで開いて配置を見る(保存はされない)
 		Engine::EditorField::Field("PreviewOpen", m_isPreviewOpen);
 		Engine::EditorField::Tooltip("配置を見るために開いておく(保存はされない)");
 
-		Engine::EditorField::Value("Open", "%s (%.2f)", m_isOpen ? "yes" : "no", m_openRate);
+		Engine::EditorField::Value("Open", "%s (%.2f)%s", m_isOpen ? "yes" : "no", m_openRate, m_isOpenedByKey ? " by key" : "");
 	}
 }

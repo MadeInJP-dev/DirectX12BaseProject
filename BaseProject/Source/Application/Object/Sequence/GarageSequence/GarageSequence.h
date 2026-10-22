@@ -4,6 +4,7 @@
 
 #include "Application/Components/Attachment/WeaponMountComponent.h"
 #include "../../SequenceBgm.h"
+#include "Application/Game/Core/InputSettings.h"	// 戻るのキー(アクション)
 
 namespace App::Object
 {
@@ -253,6 +254,9 @@ namespace App::Object
 
 		// ホームの間と同じく、カーソルの中央固定を切るか
 		bool m_isReleaseCursorLock = true;
+
+		// 戻るのアクション(既定は Esc / 右クリック / B)。押すと戻るボタンと同じく、寄りなら全体へ・全体ならホームへ
+		Game::EGameAction m_backAction = Game::EGameAction::Back;
 
 		//-------------------------------------------------------------------
 		// 状態(保存しない)

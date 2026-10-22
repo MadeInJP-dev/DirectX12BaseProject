@@ -40,6 +40,7 @@
 #include "../../Object/Scene/AmbientDustObject/AmbientDustObject.h"
 #include "../../Object/Scene/PlayerSpawner/PlayerSpawner.h"
 #include "Application/Object/Scene/TitleRunBackdrop/TitleRunBackdrop.h"
+#include "Application/Object/Scene/ControllNavigation/ControllNavigation.h"
 #include "Application/Object/Scene/Boundary/Boundary.h"
 #include "Application/Object/Sequence/SceneSequence/SceneSequence.h"
 #include "Application/Object/Controller/SwarmBossController/SwarmBossController.h"
@@ -155,6 +156,7 @@ namespace App::Game
 			_objRegistry.RegisterType<App::Object::SideMenu>("SideMenu");						// カーソルを乗せると開く横のメニュー(ホームの左上)。開閉だけを持ち、中のボタンは進行役が差し込む
 			_objRegistry.RegisterType<App::Object::TitleRunBackdrop>("TitleRunBackdrop");		// タイトルの背景。出した機体を床の上でブーストさせ続け、板1枚の床を足元へ寄せてカメラで追う
 			_objRegistry.RegisterType<App::Object::UINavigationGroup>("UINavigationGroup");		// キー・パッドで UI を順に選ぶ。最初の UI だけを持ち、各 UI の前・次をたどる
+			_objRegistry.RegisterType<App::Object::ControllNavigation>("ControllNavigation");	// 画面下部の操作説明(Enter で決定など)。今できる操作の項目だけを帯の左端から詰めて並べる
 		}
 
 		// ------------------------------------------------------------------

@@ -3,6 +3,7 @@
 #include "../../../../Engine/GameObject/BaseObject/BaseObject.h"
 
 #include "../../SequenceBgm.h"
+#include "Application/Game/Core/InputSettings.h"	// 戻るのキー(アクション)
 
 namespace Engine
 {
@@ -16,6 +17,8 @@ namespace Engine::Scene
 
 namespace App::Object
 {
+	class MissionSelect;
+
 	//==============================================================================
 	// ホーム画面のモード
 	//==============================================================================
@@ -56,6 +59,14 @@ namespace App::Object
 	/// ・左上のメニュー(SideMenu)のボタン : 設定 / タイトルへ戻る / ゲームを終了
 	///     開閉は SideMenu が持ち、押されて何をするかはここが差し込む。
 	///     ゲームの終了は、起動モード(エディターの有無)によらずアプリを閉じる。
+	///
+	/// ・戻る(BackAction。既定は Esc / 右クリック / B)
+	///     手前にあるものから1つ閉じる : 左上のメニュー → 出撃の確認 → ミッションセレクト(トップへ)。
+	///     トップでは何もしない。
+	///
+	/// ・操作説明(ControllNavigation)
+	///     今できる操作だけを出すよう、決定・戻るの項目を毎フレーム出し入れする。
+	///     決定はキーで項目を選べる場所(UINavigationGroup を置いたトップとメニュー)だけ。
 	//==============================================================================
 	class HomeSequence : public Engine::GameObject::BaseObject
 	{
@@ -106,6 +117,15 @@ namespace App::Object
 		// ガレージのシーンへ切り替える
 		void ReserveOpenGarage(Engine::Scene::SceneManager& a_sceneManager);
 
+		// 戻るを押したら、手前にあるものから1つ閉じる
+		void UpdateBackInput(Engine::GameObject::ObjectContext& a_context);
+
+		// 操作説明の決定・戻るを、今できるかどうかで出し入れする
+		void UpdateControllNavigation(Engine::GameObject::ObjectContext& a_context);
+
+		// ミッションセレクトで出すもの(MissionObjects)の中から MissionSelect を引く(無ければ nullptr)
+		MissionSelect* FindMissionSelect(Engine::GameObject::GameObjectManager* a_pObjectManager) const;
+
 	private:
 
 		//-------------------------------------------------------------------
@@ -143,6 +163,15 @@ namespace App::Object
 
 		// ホームの間はカーソルの中央固定を切るか(固定したままだと狙えない)
 		bool m_isReleaseCursorLock = true;
+
+		// 戻るのアクション
+		Game::EGameAction m_backAction = Game::EGameAction::Back;
+
+		//-------------------------------------------------------------------
+		// 設定(保存される) : 戻るで閉じる相手と、操作説明。どれも任意
+		//-------------------------------------------------------------------
+		Core::GUID m_sideMenuGUID = {};				// 左上のメニュー(開いていれば戻るで閉じる)
+		Core::GUID m_controllNavigationGUID = {};	// 画面下部の操作説明
 
 		//-------------------------------------------------------------------
 		// 状態(保存しない)

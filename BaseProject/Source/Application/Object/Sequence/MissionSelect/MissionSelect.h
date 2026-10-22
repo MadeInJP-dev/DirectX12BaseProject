@@ -40,7 +40,7 @@ namespace App::Object
 	///     ボックスの UI に Text の飾りを1つ置き、その名前(既定 "MissionName")を指す。
 	///     書き込む文字は m_nameFormat の形で作る(「OPERATION : {name}」など)。
 	/// </remarks>
-	class MissionSelect : public Engine::GameObject::BaseObject
+	class MissionSelect final : public Engine::GameObject::BaseObject
 	{
 	public:
 
@@ -67,6 +67,12 @@ namespace App::Object
 		/// 次の更新まで待つと、ボタンを押してから1フレーム遅れて出てくる
 		/// </remarks>
 		void SetVisible(bool a_isVisible) override;
+
+		// 出撃の確認ボックスを出しているか
+		bool IsConfirmOpen() const { return m_confirmIndex >= 0; }
+
+		// 出撃の確認ボックスを閉じる(戻るを押したとき。CANCEL と同じ)
+		void CancelConfirm() { CloseConfirm(); }
 
 		//=======================================================================
 		// エディター用

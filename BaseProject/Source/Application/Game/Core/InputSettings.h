@@ -28,10 +28,10 @@ namespace App::Game
 		//--------------------------------------------------------------------------
 		// UIアクション
 		Select,			// 選択
-		Back,			// 一つ戻る
-		Menu,			// オプションやタイトルに戻るが出てくる
+		Back,			// 一つ戻る(Esc / 右クリック / B)。HomeSequence・GarageSequence・設定画面が読む
+		Menu,			// オプションやタイトルに戻るが出てくる(ホームの左上のメニュー SideMenu を開閉する。Tab / Start)
 		BottonMove,		// 選択できる項目のみを順番に移動できる(上・左で前、下・右で次。UINavigationGroup が読む)
-		NextItem,		// 次の項目へ移る(Tab / RB)。UINavigationGroup が読む
+		NextItem,		// 次の項目へ移る(RB。キーボードは Tab をメニューへ回したので割り当て無し)。UINavigationGroup が読む
 		PrevItem,		// 前の項目へ移る(LB)。UINavigationGroup が読む
 		Decide,			// 項目の移動で選んでいるものを決める(Select はカーソルで押すほう)
 		//--------------------------------------------------------------------------
@@ -124,11 +124,14 @@ namespace App::Game
 
 		// ---- UI ----
 		_settings.keyboard[EGameAction::Select]     = ButtonInputData{ VK_LBUTTON };			// 決定
-		_settings.keyboard[EGameAction::Back]       = ButtonInputData{ VK_BACK };			// 戻る
-		_settings.keyboard[EGameAction::Menu]       = ButtonInputData{ VK_ESCAPE };			// メニュー
+		_settings.keyboard[EGameAction::Back]       = ButtonInputData{ VK_ESCAPE };			// 戻る(一時停止と同じキー。ゲーム中は戻るを読む相手が居ない)
+		_settings.keyboard[EGameAction::Menu]       = ButtonInputData{ VK_TAB };				// メニュー(ホームの左上のメニューを開閉する)
 		_settings.keyboard[EGameAction::BottonMove] = AxisInputData{ VK_UP, VK_RIGHT, VK_DOWN, VK_LEFT };	// 項目の移動
-		_settings.keyboard[EGameAction::NextItem]   = ButtonInputData{ VK_TAB };				// 次の項目へ
 		_settings.keyboard[EGameAction::Decide]     = ButtonInputData{ VK_RETURN };			// 選んでいる項目を決める
+		// 次の項目へ(NextItem)はキーボードでは割り当てない(Tab はメニューへ回した。項目移動は矢印キーで)
+
+		// ---- マウス(キーボードと別に、もう1つ割り当てられる) ----
+		_settings.mouse[EGameAction::Back] = ButtonInputData{ VK_RBUTTON };					// 戻る(右クリック)
 
 		// ---- コントローラー ----
 		namespace Pad = Engine::Input::GamepadKey;

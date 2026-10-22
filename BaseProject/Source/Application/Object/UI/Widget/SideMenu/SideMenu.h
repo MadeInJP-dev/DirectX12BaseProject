@@ -2,6 +2,8 @@
 
 #include "Engine/GameObject/BaseObject/BaseObject.h"
 
+#include "Application/Game/Core/InputSettings.h"	// 開閉のキー(アクション)
+
 namespace App::Object
 {
 	class UIBase;
@@ -24,8 +26,10 @@ namespace App::Object
 	// ・プレイ中以外(エディター操作中)は閉じておく。配置を見るときはインスペクターの PreviewOpen を使う。
 	// ・開閉は横から滑り込む/滑り出る。Panel に実行中だけのずらし(UIBase::SetRuntimeOffset)を掛け、
 	//   下の UI は Panel の行列に付いて動く。置き場所(PixelPos)は開いた形のまま書き換えない。
+	// ・キー(ToggleAction。既定は Menu = Tab / Start)でも開閉できる。キーで開いたときはカーソルが
+	//   外に居ても閉じない(閉じるのはもう一度押す・Close)。中のボタンを選ぶのは Panel の下に置いた UINavigationGroup。
 	//===============================================================================================
-	class SideMenu : public Engine::GameObject::BaseObject
+	class SideMenu final : public Engine::GameObject::BaseObject
 	{
 	public:
 
@@ -38,8 +42,8 @@ namespace App::Object
 		// 開いているか(滑り出ている途中も、閉じると決まっていれば false)
 		bool IsOpen() const { return m_isOpen; }
 
-		// 閉じる(メニューのボタンで別の画面へ移るときなど)。滑り出てから隠れる
-		void Close() { m_isOpen = false; }
+		// 閉じる(メニューのボタンで別の画面へ移るとき・戻るを押したときなど)。滑り出てから隠れる
+		void Close() { m_isOpen = false; m_isOpenedByKey = false; }
 
 		//=======================================================================
 		// エディター用
@@ -73,11 +77,13 @@ namespace App::Object
 
 		float m_slideTime = 0.2f;			// 滑り込む/滑り出るのにかかる時間(秒)。0 で一瞬
 		float m_slideDistance = 0.0f;		// 滑る距離(px)。0 なら Area の幅(画面の外から出てくる)
+		Game::EGameAction m_toggleAction = Game::EGameAction::Menu;	// 押すたびに開閉するアクション
 
 		//------------------------------------------------------------------------------
 		// 状態(保存しない)
 		//------------------------------------------------------------------------------
 		bool m_isOpen = false;			// 開いているか(目指している側)
+		bool m_isOpenedByKey = false;	// キーで開いたか(カーソルが外に居ても閉じない)
 		float m_openRate = 0.0f;		// 開き具合(0 で隠れている、1 で出きっている)
 		bool m_isPreviewOpen = false;	// エディターで配置を見るために開いておくか
 	};
