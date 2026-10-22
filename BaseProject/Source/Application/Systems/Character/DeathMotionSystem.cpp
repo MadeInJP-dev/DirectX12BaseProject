@@ -49,6 +49,9 @@ namespace App::System
 		// 回転の速さを個体ごとにばらす幅(±)
 		constexpr float SPIN_JITTER = 0.25f;
 
+		// 落下中の煙を同時に出す数の上限(ボスの爆散で千体が一気に落ちても重くならないように)
+		constexpr uint32_t MAX_DEATH_SMOKE = 48;
+
 		// 向きがそろわない回転軸(単位ベクトル)
 		Math::Vector3 RandomAxis()
 		{
@@ -110,9 +113,14 @@ namespace App::System
 
 			PushExplosion(a_world, a_motion.explosionGUID, a_motion.explosionScale, a_trans.pos);
 
-			// 煙は子として出す(位置だけ付いて行く)。止めるのは DeathSmokeSystem
-			if (a_motion.smokeGUID != Core::DEFAULT_GUID)
+			// 煙は子として出す(位置だけ付いて行く)。止めるのは DeathSmokeSystem。
+			// 千体が一気に落ちても重くならないよう、同時に出す数には上限がある
+			auto& _events = a_world.RefResource<ECS::OneShotEffectEventResource>();
+			a_motion.hasSmoke = false;
+			if (a_motion.smokeGUID != Core::DEFAULT_GUID && _events.activeDeathSmoke < MAX_DEATH_SMOKE)
 			{
+				a_motion.hasSmoke = true;
+				++_events.activeDeathSmoke;
 				App::Utility::ReserveSpawnChildEffect(
 					a_world, a_motion.smokeGUID, a_self, a_motion.smokeScale,
 					{ a_world.GetCompTypeID<Component::DeathSmokeTag>() });
@@ -131,6 +139,14 @@ namespace App::System
 			a_motion.timer = 0.0f;
 			a_motion.velocity = Math::Vector3(0.0f, 0.0f, 0.0f);
 			a_motion.landedPos = a_trans.pos;
+
+			// 煙は落ちているあいだだけ。枠を返す
+			if (a_motion.hasSmoke)
+			{
+				a_motion.hasSmoke = false;
+				auto& _events = a_world.RefResource<ECS::OneShotEffectEventResource>();
+				if (_events.activeDeathSmoke > 0) --_events.activeDeathSmoke;
+			}
 
 			// 黒くなりきる前に落ちきっても、着地した時点で真っ黒にする
 			ApplyBlacken(a_model, a_motion, 1.0f);

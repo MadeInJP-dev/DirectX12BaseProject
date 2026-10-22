@@ -52,6 +52,11 @@ namespace App::ECS
 		std::vector<OneShotEffectRecent> recent = {};	// 間引く時間のあいだに出したもの
 		float time = 0.0f;								// 出す側が毎フレーム進める時刻(秒)
 
+		// ---- 煙の同時数(DeathMotionSystem が増減する) ----
+		// ボスの爆散で千体が一気に死ぬと、落下中の煙(ループするエフェクト)が千個並ぶため、
+		// 同時に出せる数に上限を設ける(上限を超えた個体は煙なしで落ちる)
+		uint32_t activeDeathSmoke = 0;
+
 		// 単発エフェクトを追加する
 		void Push(const OneShotEffectEvent& a_event)
 		{

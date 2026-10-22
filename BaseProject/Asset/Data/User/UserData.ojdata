@@ -2,7 +2,7 @@
     "Game": {
         "FPSRate": 0,
         "HasFPSRate": true,
-        "IsFPSVisible": true
+        "IsFPSVisible": false
     },
     "Graphics": {
         "Brightness": 100,

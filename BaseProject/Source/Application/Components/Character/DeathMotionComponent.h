@@ -80,6 +80,7 @@ namespace App::Component
 		// ---- ランタイム(保存しない) ----
 		EDeathMotionPhase phase = EDeathMotionPhase::Alive;
 		float timer = 0.0f;										// 今の段に入ってからの秒数
+		bool hasSmoke = false;									// 煙を出した(同時数の枠を使っている)
 		Math::Vector3 velocity = { 0.0f, 0.0f, 0.0f };			// 落ちる速さ
 		Math::Vector3 spinAxis = { 0.0f, 1.0f, 0.0f };			// 回転の軸(単位ベクトル)
 		float spinSpeedDeg = 0.0f;								// 回転の速さ(度/秒)

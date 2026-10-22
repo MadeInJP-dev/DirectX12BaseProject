@@ -29,6 +29,10 @@ namespace App::System
 		// 同じエフェクトを出さない距離(m。大きさ倍率 1 のとき。倍率の大きい方を掛ける)
 		constexpr float MERGE_RADIUS = 4.0f;
 
+		// 1フレームに出す数の上限。千体が一気に死んでも、爆発のエンティティと粒が1フレームに集中しないように。
+		// 超えたぶんは出さずに捨てる(同じ瞬間の爆発は多すぎて見分けがつかないため)
+		constexpr uint32_t MAX_SPAWN_PER_FRAME = 8;
+
 		// 近くで出たばかりか
 		bool IsRecentlySpawned(const ECS::OneShotEffectEventResource& a_res, const Core::GUID& a_guid, const Math::Vector3& a_pos, float a_scale)
 		{
@@ -66,8 +70,11 @@ namespace App::System
 				std::erase_if(_effectEvents.recent,
 					[_now](const ECS::OneShotEffectRecent& a_recent) { return (_now - a_recent.time) >= MERGE_TIME; });
 
+				uint32_t _spawnedCount = 0;
 				for (const ECS::OneShotEffectEvent& _event : _effectEvents.events)
 				{
+					if (_spawnedCount >= MAX_SPAWN_PER_FRAME) break;
+
 					const Math::Vector3 _pos = _event.worldMat.Translation();
 					if (IsRecentlySpawned(_effectEvents, _event.effectGUID, _pos, _event.scale)) continue;
 
@@ -78,6 +85,7 @@ namespace App::System
 					}
 
 					_effectEvents.recent.push_back({ _event.effectGUID, _pos, _event.scale, _now });
+					++_spawnedCount;
 				}
 
 				_effectEvents.Clear();
