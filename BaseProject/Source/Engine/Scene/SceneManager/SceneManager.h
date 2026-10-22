@@ -196,7 +196,30 @@ namespace Engine::Scene
 		// ロード画面を出しているか
 		bool IsLoadingScreenVisible() const;
 
+		//------------------------------------------------------------------------------------------
+		// シーン遷移のフェード
+		//
+		// シーンの切り替え(Replace)のとき、今のシーンの設定(SceneConfig)に従って画面を染めてから
+		// 切り替え、行き先のシーンの読み込みが済んだら行き先の設定で染めた画面から戻す。
+		// 重ねる / 外す(ポーズ画面など)ではかけない。最初のシーンを開くときはフェードインだけ。
+		// 染めている間も今のシーンは動き続ける
+		//------------------------------------------------------------------------------------------
+		bool IsFading() const { return m_fadeAlpha > 0.0f; }
+
 	private:
+
+		enum class EFadeState
+		{
+			None,		// かけていない
+			Out,		// 染めている最中(終わったら切り替える)
+			WaitReady,	// 染まったまま行き先の読み込みを待っている
+			In,			// 戻している最中
+		};
+
+		void UpdateFade(float a_dt);					// 毎フレーム
+		bool TryBeginFadeOut();							// 今のシーンの設定でフェードアウトを始める(始めたら true)
+		void BeginFadeInWait(bool a_wasFadedOut);		// 切り替えた直後に、行き先のフェードインに備える
+		void SubmitFade();								// 染めている色を画面全体に積む
 
 		//------------------------------------------------------------------------------------------
 		// シーン
@@ -256,6 +279,14 @@ namespace Engine::Scene
 
 		// 先読み一覧を計測しているシーン(閉じるまで)。計測していなければ nullptr
 		BaseScene* m_pPreLoadRecordingScene = nullptr;
+
+		// シーン遷移のフェード
+		EFadeState m_fadeState = EFadeState::None;
+		float m_fadeTimer = 0.0f;
+		float m_fadeDuration = 0.0f;
+		float m_fadeAlpha = 0.0f;			// 染めている濃さ(0〜1)
+		Math::Color m_fadeColor = Math::Color(0.0f, 0.0f, 0.0f, 1.0f);
+		bool m_isFadeOutDone = false;		// フェードアウトが済んで、切り替えを待っている
 
 		// 更新するのは一番上のシーンだけか(重ねたシーンの後ろを止めるための既定)
 		bool m_isUpdateTopSceneOnly = true;

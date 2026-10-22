@@ -10,6 +10,10 @@
 #include "../../Resource/Manager/ResourceManager/ResourceManager.h"
 
 #include "../../Audio/AudioManager.h"
+#include "../../Option/OptionManager.h"
+#include "../../ECS/System/SystemContext.h"	// EngineServices
+#include "../../Graphics/Frame/DrawSubmitter/DrawSubmitter.h"
+#include "../../Resource/Data/Texture/IO/TextureIO.h"
 
 #include "Engine/DevTool/IDevTool.h"
 
@@ -102,6 +106,9 @@ namespace Engine::Scene
 			_pDevTool->UpdateScenePreview(a_dt);
 			return;
 		}
+
+		// フェード : 切り替えより前に進める(フェードアウトが済んだフレームのうちに切り替える)
+		UpdateFade(a_dt);
 
 		// シーンの切り替え
 		ApplyReservedSceneChanges(a_resourceManager);
@@ -202,11 +209,143 @@ namespace Engine::Scene
 			_scene->Draw();
 		}
 
+		// フェードはシーンの上。ロード画面は染めた画面の上に出したいので、その手前で積む
+		SubmitFade();
+
 		// ロード画面は一番上に重ねる
 		if (IsLoadingScreenVisible())
 		{
 			m_upLoadingScreen->Draw();
 		}
+	}
+
+	//======================================================================================
+	// シーン遷移のフェード
+	//======================================================================================
+	void SceneManager::UpdateFade(float a_dt)
+	{
+		// 読み込みで長いフレームが出ても、染める時間が飛ばないように
+		const float _dt = std::min(a_dt, 0.1f);
+
+		switch (m_fadeState)
+		{
+		case EFadeState::Out:
+			m_fadeTimer += _dt;
+			if (m_fadeTimer >= m_fadeDuration)
+			{
+				// 染め切った : 画面は染めたまま、この後の切り替えを通す
+				m_fadeAlpha = 1.0f;
+				m_fadeState = EFadeState::None;
+				m_isFadeOutDone = true;
+			}
+			else
+			{
+				m_fadeAlpha = m_fadeTimer / m_fadeDuration;
+			}
+			break;
+
+		case EFadeState::WaitReady:
+		{
+			// 行き先が動き出すまで染めたまま
+			const BaseScene* _pTop = RefCurrentTopScene();
+			if (!_pTop || !_pTop->IsReady()) break;
+
+			const SceneFadeSetting& _fadeIn = _pTop->GetConfig().GetFadeIn();
+			if (!_fadeIn.IsActive())
+			{
+				m_fadeState = EFadeState::None;
+				m_fadeAlpha = 0.0f;
+				break;
+			}
+
+			m_fadeState = EFadeState::In;
+			m_fadeTimer = 0.0f;
+			m_fadeDuration = _fadeIn.duration;
+			m_fadeColor = _pTop->GetConfig().GetFadeColor();
+			break;
+		}
+
+		case EFadeState::In:
+			m_fadeTimer += _dt;
+			if (m_fadeTimer >= m_fadeDuration)
+			{
+				m_fadeAlpha = 0.0f;
+				m_fadeState = EFadeState::None;
+			}
+			else
+			{
+				m_fadeAlpha = 1.0f - m_fadeTimer / m_fadeDuration;
+			}
+			break;
+
+		default:
+			break;
+		}
+	}
+
+	bool SceneManager::TryBeginFadeOut()
+	{
+		// 開き終わっていないシーンは染める相手にならない(そのまま切り替える)
+		const BaseScene* _pTop = RefCurrentTopScene();
+		if (!_pTop || !_pTop->IsReady()) return false;
+
+		const SceneFadeSetting& _fadeOut = _pTop->GetConfig().GetFadeOut();
+		if (!_fadeOut.IsActive()) return false;
+
+		m_fadeState = EFadeState::Out;
+		m_fadeTimer = 0.0f;
+		m_fadeDuration = _fadeOut.duration;
+		m_fadeColor = _pTop->GetConfig().GetFadeColor();
+		m_fadeAlpha = 0.0f;
+		return true;
+	}
+
+	void SceneManager::BeginFadeInWait(bool a_wasFadedOut)
+	{
+		const BaseScene* _pTop = RefCurrentTopScene();
+		const bool _isFadeIn = _pTop && _pTop->GetConfig().GetFadeIn().IsActive();
+
+		// 染めていないし、行き先も染め戻さないなら何もしない
+		if (!a_wasFadedOut && !_isFadeIn)
+		{
+			m_fadeState = EFadeState::None;
+			m_fadeAlpha = 0.0f;
+			return;
+		}
+
+		// 染まったまま行き先の読み込みを待つ。染めていなかった場合は、ここから染めた状態で始める
+		if (!a_wasFadedOut && _pTop) m_fadeColor = _pTop->GetConfig().GetFadeColor();
+		m_fadeState = EFadeState::WaitReady;
+		m_fadeAlpha = 1.0f;
+	}
+
+	void SceneManager::SubmitFade()
+	{
+		// ロード画面が出ている間は積まない(染めた色でロード画面を隠さない)
+		if (m_fadeAlpha <= 0.0f || IsLoadingScreenVisible()) return;
+
+		auto* _pGE = m_pEngine->RefGraphicsEngine();
+		if (!_pGE) return;
+
+		const auto& _services = m_pEngine->GetEngineServices();
+		if (!_services.pOptionManager || !_services.pResourceManager) return;
+
+		// 画面全体 : 描画解像度(UIの座標系)で覆う。縁に隙間が出ないよう少し大きくする
+		const auto& _winOp = _services.pOptionManager->GetWindowOption();
+		const float _w = static_cast<float>(_winOp.windowWidth);
+		const float _h = static_cast<float>(_winOp.windowHeight);
+		if (_w <= 0.0f || _h <= 0.0f) return;
+
+		const auto _context = Resource::MakeManagerOnlyContext(
+			_services.pResourceManager, &_services.pResourceManager->RefAssetDatabase());
+
+		Graphics::SpriteSubmitDesc _desc = {};
+		_desc.texHandle = Resource::TextureIO::LoadTexture(Core::GUID(), TexColor::WHITE, &_context);
+		_desc.pixelPos = Math::Vector2(_w * 0.5f, _h * 0.5f);
+		_desc.pixelSize = Math::Vector2(_w + 4.0f, _h + 4.0f);
+		_desc.color = Math::Color(m_fadeColor.r, m_fadeColor.g, m_fadeColor.b, m_fadeAlpha);
+		_desc.Zlayer = 50000.0f;
+		_pGE->RefDrawSubmitter()->SubmitUI(_desc);
 	}
 
 	void SceneManager::SetWorldFactory(WorldFactory a_factory)
@@ -655,6 +794,17 @@ namespace Engine::Scene
 		// 命令がある間
 		while (!m_sceneChangeCmd.empty())
 		{
+			// フェードアウト中は切り替えを待つ。終わるまで命令は積んだまま
+			if (m_fadeState == EFadeState::Out) break;
+
+			// 切り替えの前に、今のシーンの設定で染める(染め終えた後の再入では通す)
+			if (m_sceneChangeCmd.front().changeType == ESceneChangeType::Replace
+				&& !m_isFadeOutDone
+				&& TryBeginFadeOut())
+			{
+				break;
+			}
+
 			//----------------------------------------------------------------------
 			// 実行前にエディターの選択を捨てる
 			//
@@ -671,13 +821,22 @@ namespace Engine::Scene
 			switch (_cmd.changeType)
 			{
 			case ESceneChangeType::Push:			// シーンを重ねる
-				PushScene(a_resourceManager, _cmd.sceneGUID);
+			{
+				// 最初のシーンを開くときだけ、フェードインに備える(ポーズ画面などの重ねはかけない)
+				const bool _isFirstScene = m_upBaseSceneVec.empty();
+				if (PushScene(a_resourceManager, _cmd.sceneGUID) && _isFirstScene)
+				{
+					BeginFadeInWait(false);
+				}
 				break;
+			}
 			case ESceneChangeType::Pop:				// 最上面のシーンを消去
 				PopScene(a_resourceManager);
 				break;
 			case ESceneChangeType::Replace:			// 現在のシーンと切り替える
 				ReplaceScene(a_resourceManager, _cmd.sceneGUID);
+				BeginFadeInWait(m_isFadeOutDone);
+				m_isFadeOutDone = false;
 				break;
 			case ESceneChangeType::Clear:			// すべてのシーンを消去
 				// 1つずつ Pop に通す。最後の1つを外したところで

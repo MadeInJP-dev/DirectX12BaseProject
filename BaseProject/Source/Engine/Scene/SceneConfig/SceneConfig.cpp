@@ -19,10 +19,27 @@ namespace Engine::Scene
 	//======================================================================================
 	void SceneConfig::Archive(Persistence::Archive& a_ar)
 	{
-		Persistence::ArchiveSection _section(a_ar, "SceneConfig");
+		{
+			Persistence::ArchiveSection _section(a_ar, "SceneConfig");
 
-		a_ar.Field("IsRecordPreLoadAssets", m_isRecordPreLoadAssets);
-		a_ar.GUIDVectorField("PreLoadAssetGUIDs", m_preLoadAssetGUIDVec);
+			a_ar.Field("IsRecordPreLoadAssets", m_isRecordPreLoadAssets);
+			a_ar.GUIDVectorField("PreLoadAssetGUIDs", m_preLoadAssetGUIDVec);
+		}
+
+		ArchiveFade(a_ar);
+	}
+
+	// フェードは後から足した項目なので、先読み一覧の区切りとは別の区切りに置く
+	// (古い .ob* / .oj* はこの区切りが無く、既定のフェードのまま読める)
+	void SceneConfig::ArchiveFade(Persistence::Archive& a_ar)
+	{
+		Persistence::ArchiveSection _section(a_ar, "SceneFade");
+
+		a_ar.Field("FadeOutEnabled", m_fadeOut.isEnabled);
+		a_ar.Field("FadeOutDuration", m_fadeOut.duration);
+		a_ar.Field("FadeInEnabled", m_fadeIn.isEnabled);
+		a_ar.Field("FadeInDuration", m_fadeIn.duration);
+		a_ar.Field("FadeColor", m_fadeColor);
 	}
 
 	bool SceneConfig::LoadFile(const std::string& a_fileDir, const std::string& a_fileName)
@@ -53,6 +70,16 @@ namespace Engine::Scene
 	//======================================================================================
 	void SceneConfig::DrawEdit(const ECS::EngineServices& a_services, bool a_isRecording)
 	{
+		Engine::EditorField::Header("Scene Fade");
+		Engine::EditorField::Field("Fade Out", m_fadeOut.isEnabled);
+		Engine::EditorField::Tooltip("このシーンから別のシーンへ切り替えるとき、切り替える前に画面を染めます");
+		Engine::EditorField::Field("Fade Out Time", m_fadeOut.duration, 0.05f, 0.0f, 10.0f);
+		Engine::EditorField::Field("Fade In", m_fadeIn.isEnabled);
+		Engine::EditorField::Tooltip("このシーンの読み込みが済んだとき、染めた画面から戻します");
+		Engine::EditorField::Field("Fade In Time", m_fadeIn.duration, 0.05f, 0.0f, 10.0f);
+		Engine::EditorField::ColorField("Fade Color", m_fadeColor, false);
+
+		Engine::EditorField::Header("PreLoad");
 		Engine::EditorField::Field("Record PreLoad Assets", m_isRecordPreLoadAssets);
 		Engine::EditorField::Tooltip(
 			"立てて保存すると、次にこのシーンを開いてから閉じるまでに読み込まれたアセットを数え、\n"
