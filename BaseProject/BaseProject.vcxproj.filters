@@ -1495,6 +1495,12 @@
     <Filter Include="Source\Application\Object\Controller\SwarmBossController\SwarmBossPhase">
       <UniqueIdentifier>{eb8d3e52-fee4-4816-b60f-d43abb61bb8f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\Panel\BuildPanel\Converter">
+      <UniqueIdentifier>{7b3c1a52-4d6e-4f08-9a21-5e8d0c6b2f41}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\BuildPanel">
+      <UniqueIdentifier>{1be9d6a4-7f47-4a40-b94b-82b28c6f2d9e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Application\AppPCH.cpp">
@@ -2921,6 +2927,57 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Input\InputDeviceManager.cpp">
       <Filter>Source\Engine\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\AnimationConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\AnimatorConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\AssetConverterRegistry.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\AudioBehaviorConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\EffectAssetConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\EffectPrefabConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\MaterialConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\MeshConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\ModelAssetConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\ParticlesConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\PrefabConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\SceneConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\ShaderConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\TextureConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\UIMaterialConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\Converter\UIPresetConverter.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildPanel.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -5167,6 +5224,18 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Input\Core\GamepadKey.h">
       <Filter>Source\Engine\Input\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\Converter\AssetConverterRegistry.h">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\Converter\IAssetConverter.h">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\Converter\ResourceSaveConverter.h">
+      <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPanel.h">
+      <Filter>Source\Editor\Panel\BuildPanel</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

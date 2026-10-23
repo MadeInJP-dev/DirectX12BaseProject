@@ -430,6 +430,9 @@ namespace Engine::Resource
 		// 読み込み要求を1件記録する(記録中のときだけ呼ばれる)
 		void RecordRequest(const Core::GUID& a_guid);
 
+		// 読み込み要求をシーンマネージャーの「使ったアセットの記録」へ流す(ローダーの中の要求も含む)
+		void ReportAssetUsage(const Core::GUID& a_guid);
+
 		/// <summary>
 		/// スロットを、指定の添え字まで伸ばす
 		///
@@ -642,6 +645,8 @@ namespace Engine::Resource
 		auto& _data = RefData<T>();
 
 		a_outIsOwner = false;
+
+		ReportAssetUsage(a_guid);
 
 		// 読み込み要求の記録 : 読込済みでも数えるので、キャッシュを見る前に通す
 		if (m_isRecordingRequests.load(std::memory_order_acquire) && BuildDepth() == 0)

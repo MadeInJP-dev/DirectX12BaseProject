@@ -12,6 +12,7 @@
 #include "../Panel/SceneConfigPanel/SceneConfigPanel.h"
 #include "../Panel/ProfilerPanel/ProfilerPanel.h"
 #include "../Panel/LogPanel/LogPanel.h"
+#include "../Panel/BuildPanel/BuildPanel.h"
 
 #include "Engine/Scene/SceneManager/SceneManager.h"
 #include "Engine/ECS/World/World.h"
@@ -32,6 +33,7 @@ namespace Editor
 		RegisterPanel<SceneConfigPanel>();
 		RegisterPanel<ProfilerPanel>();
 		RegisterPanel<LogPanel>();
+		RegisterPanel<BuildPanel>();
 
 		m_editContext.pEditorCamera = a_pEditorCamera;
 		m_editContext.pEffectEditor = a_pEffectEditor;

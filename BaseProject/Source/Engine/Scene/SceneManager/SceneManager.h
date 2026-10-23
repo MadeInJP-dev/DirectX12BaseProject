@@ -168,6 +168,22 @@ namespace Engine::Scene
 		const BaseScene* GetPreLoadRecordingScene() const { return m_pPreLoadRecordingScene; }
 
 		//------------------------------------------------------------------------------------------
+		// 使ったアセットの記録(起動から終了まで)
+		//
+		// Shipping 以外のとき、ResourceManager へ読み込みが要求されたアセットのGUIDを
+		// 初めて要求された順に重複なく溜める。一括コンバートやビルド用フォルダへの移動に使う想定
+		// (それらはまだ無く、ここは溜めるところまで)。
+		//
+		// ・シーンの先読み一覧の計測(BeginRecordPreLoadAssets)とは別物で、止めない・捨てない
+		// ・ローダーの中から読まれたもの(モデルの中のメッシュなど)も数える。持ち出す対象を漏らさないため
+		// ・ワーカースレッドからの要求も入るので、受け取りは複製で返す
+		// ・Shipping では溜めない(空のまま)
+		//------------------------------------------------------------------------------------------
+		void RecordUsedAsset(const Core::GUID& a_guid);					// 1件記録する(ResourceManager が呼ぶ。スレッドセーフ)
+		std::vector<Core::GUID> GetUsedAssetGUIDs() const;				// ここまでの記録を複製して返す
+		bool IsRecordingUsedAssets() const { return m_isRecordUsedAssets; }
+
+		//------------------------------------------------------------------------------------------
 		// 読み込みとロード画面
 		//
 		// シーンは積んだ(Push / Replace)フレームでは組み立てず、毎フレーム少しずつ読み込む
@@ -290,6 +306,12 @@ namespace Engine::Scene
 
 		// 更新するのは一番上のシーンだけか(重ねたシーンの後ろを止めるための既定)
 		bool m_isUpdateTopSceneOnly = true;
+
+		// 使ったアセットの記録 : 記録するかどうかは生成時に決まり(Shipping 以外)、以降変わらない
+		bool m_isRecordUsedAssets = false;
+		mutable std::mutex m_usedAssetMutex;							// 下の2つを守る
+		std::vector<Core::GUID> m_usedAssetGUIDVec = {};				// 初めて要求された順
+		std::unordered_set<Core::GUID> m_usedAssetGUIDSet = {};			// 重複を弾く
 
 		// シーン切り替え命令スタック
 		std::queue<SceneChangeCmd> m_sceneChangeCmd = {};

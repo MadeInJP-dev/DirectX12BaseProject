@@ -1,4 +1,5 @@
 ﻿#include "ResourceManager.h"
+#include "Engine/Scene/SceneManager/SceneManager.h"
 
 namespace Engine::Resource
 {
@@ -209,6 +210,14 @@ namespace Engine::Resource
 		if (m_recordedGUIDSet.insert(a_guid).second)
 		{
 			m_recordedGUIDVec.push_back(a_guid);
+		}
+	}
+
+	void ResourceManager::ReportAssetUsage(const Core::GUID& a_guid)
+	{
+		if (auto* _pSceneManager = m_pSceneManager.load(std::memory_order_acquire))
+		{
+			_pSceneManager->RecordUsedAsset(a_guid);
 		}
 	}
 

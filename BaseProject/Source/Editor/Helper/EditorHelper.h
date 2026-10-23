@@ -86,5 +86,10 @@ namespace Editor
 
 		// ノードのタイトルバー表示
 		static void DrawNodeTitleBar(const std::string& a_name);
+
+		//--------------------------------------------------------------------------------------
+		// エクスプローラーを開いてフォルダ名を取得
+		//--------------------------------------------------------------------------------------
+		static bool GetDirectoryNameOpenExplorer(std::string& a_dirName);
 	};
 }

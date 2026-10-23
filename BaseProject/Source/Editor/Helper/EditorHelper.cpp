@@ -4,6 +4,8 @@
 #include "Engine/MainEngine.h"
 #include "Engine/Graphics/GraphicsEngine.h"
 
+#include <ShObjIdl.h>
+
 namespace Editor
 {
 	//======================================================================================
@@ -105,5 +107,76 @@ namespace Editor
 		ImNodes::BeginNodeTitleBar();
 		ImGui::Text("%s", a_name.c_str());
 		ImNodes::EndNodeTitleBar();
+	}
+
+	//--------------------------------------------------------------------------------------
+	// エクスプローラーを開いてフォルダ名を取得
+	//--------------------------------------------------------------------------------------
+	bool EditorHelper::GetDirectoryNameOpenExplorer(std::string& a_dirName)
+	{
+		a_dirName = "";
+		IFileDialog* _pDialog = nullptr;
+
+		// ダイアログインスタンス作成
+		HRESULT _hr = CoCreateInstance(
+			CLSID_FileOpenDialog,
+			nullptr,
+			CLSCTX_INPROC_SERVER,
+			IID_PPV_ARGS(&_pDialog)
+		);
+		if (FAILED(_hr))
+		{
+			ENGINE_LOG("ダイアログインスタンス作成失敗");
+			return false;
+		}
+
+		// フォルダ選択モードにする
+		DWORD _options = 0;
+		_pDialog->GetOptions(&_options);
+
+		_pDialog->SetOptions(
+			_options |
+			FOS_PICKFOLDERS |
+			FOS_FORCEFILESYSTEM |
+			FOS_PATHMUSTEXIST
+		);
+
+		// ダイアログを表示
+		_hr = _pDialog->Show(nullptr);
+
+		if (FAILED(_hr))
+		{
+			ENGINE_LOG("ダイアログを開くのに失敗");
+			_pDialog->Release();
+			return false;
+		}
+
+		// 選択したフォルダのアイテムを取得
+		IShellItem* _pItem = nullptr;
+		_hr = _pDialog->GetResult(&_pItem);
+
+		if (SUCCEEDED(_hr))
+		{
+			// アイテムからパスを取得
+			PWSTR _path = nullptr;
+			_hr = _pItem->GetDisplayName(
+				SIGDN_FILESYSPATH,
+				&_path
+			);
+
+			if (SUCCEEDED(_hr))
+			{
+				// Unicodeパスを文字列に変換
+				a_dirName = std::filesystem::path(_path).string();
+
+				// 解放
+				CoTaskMemFree(_path);
+			}
+
+			_pItem->Release();
+		}
+		_pDialog->Release();
+
+		return SUCCEEDED(_hr);
 	}
 }

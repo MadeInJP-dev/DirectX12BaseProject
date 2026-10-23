@@ -858,7 +858,27 @@ namespace Engine::Scene
 	// コンストラクタ・デストラクタ
 	SceneManager::SceneManager(MainEngine* a_pEngine)
 		: m_pEngine(a_pEngine)
-	{}
+	{
+		// ビルドモードは MainEngine が生成前に決めている
+		m_isRecordUsedAssets = m_pEngine && m_pEngine->GetBuildMode() != EBuildConfiguration::Shipping;
+	}
+
+	void SceneManager::RecordUsedAsset(const Core::GUID& a_guid)
+	{
+		if (!m_isRecordUsedAssets || !a_guid.IsValid()) return;
+
+		std::lock_guard _lock(m_usedAssetMutex);
+		if (m_usedAssetGUIDSet.insert(a_guid).second)
+		{
+			m_usedAssetGUIDVec.push_back(a_guid);
+		}
+	}
+
+	std::vector<Core::GUID> SceneManager::GetUsedAssetGUIDs() const
+	{
+		std::lock_guard _lock(m_usedAssetMutex);
+		return m_usedAssetGUIDVec;
+	}
 	SceneManager::~SceneManager()
 	{}
 }
