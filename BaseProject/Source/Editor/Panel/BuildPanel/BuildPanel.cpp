@@ -15,13 +15,30 @@ namespace Editor
 	{}
 	void BuildPanel::OnDrawImGui(EditorContext& a_editContext)
 	{
+		// ポップアップ準備
+		m_assetConvertPopup.SetContent(
+			[this, &a_editContext]()
+			{
+				UseAssetConvert(a_editContext);
+			}
+		);
+
 		// ビルド書き出しディレクトリ選択
 		SelectBuildDirectory();
 
 		ImGui::Separator();
 
-		// 使用アセットのコンバート
-		UseAssetConvert(a_editContext);
+		ImGui::Text("AssetConvertPopup");
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Open"))
+		{
+			m_assetConvertPopup.Open();
+		}
+
+		// ポップアップ描画
+		m_assetConvertPopup.Draw();
 	}
 	void BuildPanel::SelectBuildDirectory()
 	{

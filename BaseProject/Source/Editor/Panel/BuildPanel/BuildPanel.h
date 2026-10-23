@@ -40,6 +40,10 @@ namespace Editor
 		// 書き出し先親フォルダ
 		std::string m_buildDirectory = "";
 
+		// ビルド設定
+		bool m_isSourceCopy = false;		// ソースファイルとライブラリファイルを作成するかどうか
 
+		// アセットコンバート用ポップアップ
+		Popup m_assetConvertPopup{"AssetConvertPanel"};
 	};
 }

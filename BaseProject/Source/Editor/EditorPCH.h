@@ -38,3 +38,4 @@
 // エディター内部の共通部品
 //---------------------------------------------------------
 #include "Helper/EditorHelper.h"	// 検索欄・SRV表示・ノード部品
+#include "Widget/PopUp/Popup.h"		// パップアップ
