@@ -150,22 +150,28 @@ namespace App::Object
 	//======================================================================================
 	void UIGauge::ApplyFillPivot()
 	{
-		const int _fillIndex = FindDecorationIndexById(m_fillDecorationId);
-		if (_fillIndex < 0) return;
+		// 一度だけ合わせるので、コントローラー用の組の中身(同じ番号)にも合わせておく
+		ForEachDecorationSet([this](std::vector<Decoration::Decoration>& a_decorationVec)
+			{
+				for (Decoration::Decoration& _fill : a_decorationVec)
+				{
+					if (m_fillDecorationId == 0 || _fill.id != m_fillDecorationId) continue;
 
-		// 動かさない場所を固定する。
-		// 横幅(縦のゲージなら高さ)に残量を掛けるだけなので、ピボットを置いた場所がそのまま
-		// 「減っても動かない点」になる。縮めない側のピボットは触らない
-		switch (m_fillAnchor)
-		{
-		case EGaugeAnchor::Right:  m_decorationVec[_fillIndex].pivot.x = 1.0f; break;	// 右端を固定 : 左から減る
-		case EGaugeAnchor::Center: m_decorationVec[_fillIndex].pivot.x = 0.5f; break;	// 中央を固定 : 両側から減る
-		case EGaugeAnchor::Bottom: m_decorationVec[_fillIndex].pivot.y = 1.0f; break;	// 下端を固定 : 上から減る(下が +Y)
-		case EGaugeAnchor::Top:    m_decorationVec[_fillIndex].pivot.y = 0.0f; break;	// 上端を固定 : 下から減る
+					// 動かさない場所を固定する。
+					// 横幅(縦のゲージなら高さ)に残量を掛けるだけなので、ピボットを置いた場所がそのまま
+					// 「減っても動かない点」になる。縮めない側のピボットは触らない
+					switch (m_fillAnchor)
+					{
+					case EGaugeAnchor::Right:  _fill.pivot.x = 1.0f; break;	// 右端を固定 : 左から減る
+					case EGaugeAnchor::Center: _fill.pivot.x = 0.5f; break;	// 中央を固定 : 両側から減る
+					case EGaugeAnchor::Bottom: _fill.pivot.y = 1.0f; break;	// 下端を固定 : 上から減る(下が +Y)
+					case EGaugeAnchor::Top:    _fill.pivot.y = 0.0f; break;	// 上端を固定 : 下から減る
 
-		case EGaugeAnchor::Left:
-		default:                   m_decorationVec[_fillIndex].pivot.x = 0.0f; break;	// 左端を固定 : 右から減る
-		}
+					case EGaugeAnchor::Left:
+					default:                   _fill.pivot.x = 0.0f; break;	// 左端を固定 : 右から減る
+					}
+				}
+			});
 	}
 
 	//======================================================================================
@@ -284,7 +290,8 @@ namespace App::Object
 		_fillOverride.sizeScale = IsVerticalFill() ? Math::Vector2(1.0f, _ratio) : Math::Vector2(_ratio, 1.0f);
 		_fillOverride.tint = CalcGaugeColor(_ratio);
 
-		for (size_t _i = 0; _i < m_decorationVec.size(); ++_i)
+		// 添え字は出している組のもの(FindDecorationIndexById と DrawDecorationAt も同じ組を見る)
+		for (size_t _i = 0; _i < GetDecorations().size(); ++_i)
 		{
 			if (static_cast<int>(_i) == _fillIndex)
 			{

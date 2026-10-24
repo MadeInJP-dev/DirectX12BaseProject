@@ -64,7 +64,7 @@ namespace App::Object
 	//======================================================================================
 	bool TargetBoxHUD::HasDecorationGroup(uint32_t a_group) const
 	{
-		for (const Decoration::Decoration& _decoration : m_decorationVec)
+		for (const Decoration::Decoration& _decoration : GetDecorations())
 		{
 			if (_decoration.group == a_group) return true;
 		}

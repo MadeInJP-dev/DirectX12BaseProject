@@ -141,10 +141,14 @@ namespace App::Object
 	//======================================================================================
 	void WaveAnnounceHUD::ApplyLabel(const std::string& a_label)
 	{
-		for (Decoration::Decoration& _decoration : RefDecorations())
-		{
-			if (Decoration::TextData* _pText = _decoration.RefText()) _pText->text = a_label;
-		}
+		// 一度だけ書くので、出していない組(コントローラー用)へも入れておく
+		ForEachDecorationSet([&a_label](std::vector<Decoration::Decoration>& a_decorationVec)
+			{
+				for (Decoration::Decoration& _decoration : a_decorationVec)
+				{
+					if (Decoration::TextData* _pText = _decoration.RefText()) _pText->text = a_label;
+				}
+			});
 	}
 
 	void WaveAnnounceHUD::OnWaveSpawned(

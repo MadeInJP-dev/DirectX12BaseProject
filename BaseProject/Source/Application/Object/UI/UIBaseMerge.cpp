@@ -96,6 +96,13 @@ namespace App::Object
 			return false;
 		}
 
+		// 片方だけが組を2つ持つと、移した飾りがデバイスによって消える(または両方に出る)
+		if (HasGamepadDecorations() || _pParent->HasGamepadDecorations())
+		{
+			a_outReason = "自分か親がコントローラー用の飾りを持っている";
+			return false;
+		}
+
 		if (!(m_materialGUID == _pParent->m_materialGUID))
 		{
 			a_outReason = "親と違う UIマテリアルを付けている";

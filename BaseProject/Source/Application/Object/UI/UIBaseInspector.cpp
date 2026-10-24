@@ -243,33 +243,38 @@ namespace App::Object
 		Engine::EditorField::Header("Decorations");
 		Engine::EditorField::HelpText("配列の順に描きます(下にあるものほど手前)");
 
+		// どちらの組を編集するか(コントローラー用を持つときだけ選べる)
+		DrawDecorationSetInspector(a_context);
+
+		std::vector<Decoration::Decoration>& _decorationVec = RefEditDecorationVec();
+
 		// ---- 追加 ----
 		if (Engine::EditorField::CreateButton("Add Polygon"))
 		{
-			AddDecoration(Decoration::EDecorationType::Polygon);
-			m_editDecorationIndex = static_cast<int>(m_decorationVec.size()) - 1;
+			AddDecorationTo(_decorationVec, Decoration::EDecorationType::Polygon);
+			m_editDecorationIndex = static_cast<int>(_decorationVec.size()) - 1;
 		}
 		Engine::EditorField::SameLine();
 		if (Engine::EditorField::CreateButton("Add Image"))
 		{
-			AddDecoration(Decoration::EDecorationType::Image);
-			m_editDecorationIndex = static_cast<int>(m_decorationVec.size()) - 1;
+			AddDecorationTo(_decorationVec, Decoration::EDecorationType::Image);
+			m_editDecorationIndex = static_cast<int>(_decorationVec.size()) - 1;
 		}
 		Engine::EditorField::SameLine();
 		if (Engine::EditorField::CreateButton("Add Text"))
 		{
-			AddDecoration(Decoration::EDecorationType::Text);
-			m_editDecorationIndex = static_cast<int>(m_decorationVec.size()) - 1;
+			AddDecorationTo(_decorationVec, Decoration::EDecorationType::Text);
+			m_editDecorationIndex = static_cast<int>(_decorationVec.size()) - 1;
 		}
 
 		// ---- 全削除 ----
 		// 戻せないので Ctrl を押している間だけ効かせる
-		if (!m_decorationVec.empty())
+		if (!_decorationVec.empty())
 		{
 			Engine::EditorField::SameLine();
 			if (Engine::EditorField::DeleteButton("Clear All") && Engine::EditorField::IsCtrlDown())
 			{
-				m_decorationVec.clear();
+				_decorationVec.clear();
 				m_editDecorationIndex = -1;
 			}
 			Engine::EditorField::Tooltip("Ctrl+クリックで全部消す");
@@ -279,9 +284,9 @@ namespace App::Object
 		int _removeIndex = -1;
 		int _swapIndex = -1;		// この番号と次の番号を入れ替える
 
-		for (int _i = 0; _i < static_cast<int>(m_decorationVec.size()); ++_i)
+		for (int _i = 0; _i < static_cast<int>(_decorationVec.size()); ++_i)
 		{
-			Decoration::Decoration& _decoration = m_decorationVec[_i];
+			Decoration::Decoration& _decoration = _decorationVec[_i];
 
 			Engine::EditorField::IDScope _id(_i);
 
@@ -300,7 +305,7 @@ namespace App::Object
 
 			Engine::EditorField::SameLine();
 			if (Engine::EditorField::ArrowButton("##Down", Engine::EditorField::EArrowDir::Down) &&
-				_i + 1 < static_cast<int>(m_decorationVec.size()))
+				_i + 1 < static_cast<int>(_decorationVec.size()))
 			{
 				_swapIndex = _i;
 			}
@@ -328,7 +333,7 @@ namespace App::Object
 
 		if (_swapIndex >= 0)
 		{
-			std::swap(m_decorationVec[_swapIndex], m_decorationVec[_swapIndex + 1]);
+			std::swap(_decorationVec[_swapIndex], _decorationVec[_swapIndex + 1]);
 
 			// 開いていたものを追いかける
 			if (m_editDecorationIndex == _swapIndex)          m_editDecorationIndex = _swapIndex + 1;
@@ -337,12 +342,77 @@ namespace App::Object
 
 		if (_removeIndex >= 0)
 		{
-			m_decorationVec.erase(m_decorationVec.begin() + _removeIndex);
+			_decorationVec.erase(_decorationVec.begin() + _removeIndex);
 
 			// 消したぶん番号がずれる
 			if (m_editDecorationIndex == _removeIndex)     m_editDecorationIndex = -1;
 			else if (m_editDecorationIndex > _removeIndex) --m_editDecorationIndex;
 		}
+	}
+
+	//======================================================================================
+	// 飾りの組(キーボード用 / コントローラー用)
+	//--------------------------------------------------------------------------------------
+	// コントローラー用は既定の組の写しから作る(番号ごと写すので、ゲージの中身などを
+	// 番号で指したまま出し分けられる)。外すと戻せないので Ctrl を押している間だけ効かせる。
+	//
+	// 編集する組を切り替えると、確かめ用の表示もその組へ合わせる(編集している絵が見えるように)。
+	// 実行時と同じく最後に触ったデバイスに従わせたいときは Preview を Auto へ戻す
+	//======================================================================================
+	void UIBase::DrawDecorationSetInspector(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (!m_opGamepadDecorationVec)
+		{
+			if (Engine::EditorField::CreateButton("Add Gamepad Decorations"))
+			{
+				CreateGamepadDecorations();
+				m_isEditGamepadSet = true;
+				m_editDecorationIndex = -1;
+				m_decorationPreview = EDecorationPreview::Gamepad;
+				UpdateShownDecorationSet(a_context);
+			}
+			Engine::EditorField::Tooltip("コントローラーを触っている間だけ出す飾りの組を作る(今の飾りの写しから)");
+			return;
+		}
+
+		// ---- 編集する組 ----
+		bool _isEditGamepadSet = m_isEditGamepadSet;
+		if (Engine::EditorField::RadioButton("Keyboard", !_isEditGamepadSet)) _isEditGamepadSet = false;
+		Engine::EditorField::SameLine();
+		if (Engine::EditorField::RadioButton("Gamepad", _isEditGamepadSet)) _isEditGamepadSet = true;
+		Engine::EditorField::Tooltip("編集する飾りの組。Gamepad はコントローラーを触っている間だけ出る");
+
+		if (_isEditGamepadSet != m_isEditGamepadSet)
+		{
+			m_isEditGamepadSet = _isEditGamepadSet;
+			m_editDecorationIndex = -1;
+			m_decorationPreview = m_isEditGamepadSet ? EDecorationPreview::Gamepad : EDecorationPreview::KeyboardMouse;
+		}
+
+		// ---- 外す ----
+		Engine::EditorField::SameLine();
+		if (Engine::EditorField::DeleteButton("Remove Gamepad") && Engine::EditorField::IsCtrlDown())
+		{
+			RemoveGamepadDecorations();
+			m_decorationPreview = EDecorationPreview::Auto;
+			UpdateShownDecorationSet(a_context);
+			return;
+		}
+		Engine::EditorField::Tooltip("Ctrl+クリックでコントローラー用の組を外す(どちらのデバイスでも既定の組を出す)");
+
+		// ---- 確かめ用の表示(保存しない) ----
+		Engine::EditorField::Field("Preview", m_decorationPreview);
+		Engine::EditorField::Tooltip("Auto は実行時と同じく、最後に触ったデバイスに従う");
+
+		// 止めている間は PreUpdate が回らないので、ここでも決め直す
+		UpdateShownDecorationSet(a_context);
+
+		Engine::EditorField::HelpText("Showing : %s", IsShowingGamepadDecorations() ? "Gamepad" : "Keyboard");
+	}
+
+	std::vector<Decoration::Decoration>& UIBase::RefEditDecorationVec()
+	{
+		return (m_isEditGamepadSet && m_opGamepadDecorationVec) ? *m_opGamepadDecorationVec : m_decorationVec;
 	}
 
 	//======================================================================================
@@ -431,9 +501,10 @@ namespace App::Object
 	//======================================================================================
 	void UIBase::DrawDecorationGizmo(const Engine::GameObject::ObjectGizmoContext& a_ctx, float a_screenW, float a_screenH)
 	{
-		if (m_editDecorationIndex < 0 || m_editDecorationIndex >= static_cast<int>(m_decorationVec.size())) return;
+		std::vector<Decoration::Decoration>& _decorationVec = RefEditDecorationVec();
+		if (m_editDecorationIndex < 0 || m_editDecorationIndex >= static_cast<int>(_decorationVec.size())) return;
 
-		Decoration::Decoration& _decoration = m_decorationVec[m_editDecorationIndex];
+		Decoration::Decoration& _decoration = _decorationVec[m_editDecorationIndex];
 
 		// 画面での置き場所(親の行列を掛けたもの)
 		const UIAnchor _worldAnchor = CalcWorldAnchor();
@@ -478,10 +549,14 @@ namespace App::Object
 				return std::to_string(a_decoration.id) + " : " + (a_decoration.name.empty() ? "(no name)" : a_decoration.name);
 			};
 
+		// 並べるのは既定の組(番号は組をまたいで共有するので、コントローラー用の同じ役の飾りも同じ番号で指せる)
+		const auto _itSelected = std::find_if(m_decorationVec.begin(), m_decorationVec.end(),
+			[a_inoutId](const Decoration::Decoration& a_decoration) { return a_inoutId != 0 && a_decoration.id == a_inoutId; });
+
 		std::string _preview = "(none)";
-		if (const Decoration::Decoration* _pSelected = FindDecorationById(a_inoutId))
+		if (_itSelected != m_decorationVec.end())
 		{
-			_preview = _makeLabel(*_pSelected);
+			_preview = _makeLabel(*_itSelected);
 		}
 		else if (a_inoutId != 0)
 		{

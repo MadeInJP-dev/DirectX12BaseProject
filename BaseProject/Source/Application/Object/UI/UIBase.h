@@ -16,6 +16,7 @@ namespace App::Object
 	//
 	//   UIAnchor      … 画面のどこに、どの向き・どの大きさで置くか(位置・大きさ・回転・倍率・色・Z順・湾曲)
 	//   Decoration    … そこから相対で出す絵(板ポリ・画像・文字)。配列で何枚でも重ねられる
+	//                   コントローラー用の配列を別に持たせると、コントローラーを触っている間はそちらを出す
 	//   UIInteraction … カーソルへの反応(当たり判定の設定・押下・音・項目移動の前と次)。押せる UI だけが持つ
 	//   UITransition  … 出し入れと合図の演出(拡大して戻る・薄くなって消える など)。全部の飾りの上から掛かる
 	//   UIMaterial    … 飾り全部に掛ける効果(ディゾルブなど)。アセットを GUID で指す。無くてもよい
@@ -328,9 +329,44 @@ namespace App::Object
 			uint32_t& a_inoutId,
 			std::optional<Decoration::EDecorationType> a_opFilterType = std::nullopt) const;
 
-		// 中身の取得
-		std::vector<Decoration::Decoration>& RefDecorations() { return m_decorationVec; }
-		const std::vector<Decoration::Decoration>& GetDecorations() const { return m_decorationVec; }
+		// 中身の取得 : いま出している組(下の「コントローラー用の飾り」)
+		std::vector<Decoration::Decoration>& RefDecorations() { return RefShownDecorationVec(); }
+		const std::vector<Decoration::Decoration>& GetDecorations() const { return GetShownDecorationVec(); }
+
+		//-----------------------------------------------------------------------
+		// コントローラー用の飾り(任意)
+		//
+		// 飾りの組は2つまで持てる : 既定(キーボード・マウス)と、コントローラー用。
+		// コントローラー用を持つ UI は、最後に触ったデバイス(InputDeviceManager)が
+		// コントローラーの間だけそちらを出す(押すボタンの絵を Enter と A で出し分ける など)。
+		// 持たない UI は、どちらのデバイスでも既定の組を出す。
+		//
+		// 上の飾りの操作(探す・Ref/GetDecorations・DrawDecorationAt・判定の大きさ)は、
+		// いま出している組に掛かる。出す組を切り替えるのは PreUpdate だけなので、
+		// 1フレームの中で探した添え字が別の組を指すことはない。
+		// AddDecoration は既定の組へ足す(コードが作る既定の飾り用)。
+		//
+		// 飾りの番号は組をまたいで共有する : コントローラー用は既定の組の写しから作るので、
+		// 同じ役の飾りは同じ番号を持つ(ゲージの中身・値の文字などを番号で指したまま出し分けられる)。
+		// 一度だけ書き込む値(ウェーブの見出しなど)は、ForEachDecorationSet で両方の組へ入れること
+		//-----------------------------------------------------------------------
+
+		// コントローラー用の組を持つか
+		bool HasGamepadDecorations() const { return m_opGamepadDecorationVec.has_value(); }
+
+		// いまコントローラー用の組を出しているか(持たなければ常に false)
+		bool IsShowingGamepadDecorations() const { return m_isShowGamepad && m_opGamepadDecorationVec.has_value(); }
+
+		/// <summary>
+		/// 持っている飾りの組を全部回す(既定と、あればコントローラー用)
+		/// </summary>
+		/// <param name="a_func">std::vector&lt;Decoration::Decoration&gt;&amp; を1つ受け取る関数</param>
+		template<class Func>
+		void ForEachDecorationSet(Func&& a_func)
+		{
+			a_func(m_decorationVec);
+			if (m_opGamepadDecorationVec) a_func(*m_opGamepadDecorationVec);
+		}
 
 	protected:
 
@@ -445,7 +481,11 @@ namespace App::Object
 		bool m_isHUD = false;
 
 		// 飾り(保存される) : 配列の順に描くので、後ろにあるものほど手前に出る
+		// キーボード・マウスのとき(コントローラー用を持たなければ常に)出す組
 		std::vector<Decoration::Decoration> m_decorationVec = {};
+
+		// コントローラー用の飾り(保存される)。持つ UI だけ、コントローラーを触っている間こちらを出す
+		std::optional<std::vector<Decoration::Decoration>> m_opGamepadDecorationVec = std::nullopt;
 
 		// 出し入れと合図の演出(保存される)。全部の飾りの上から掛かる
 		UITransition m_transition = {};
@@ -472,8 +512,38 @@ namespace App::Object
 		/// </remarks>
 		void AssignDecorationIds();
 
-		// まだ使われていない番号
+		// 1つの組の中で、番号を持たない・重なっている飾りへ番号を振る
+		void AssignDecorationIdsIn(std::vector<Decoration::Decoration>& a_decorationVec);
+
+		// まだ使われていない番号(両方の組を通して)
 		uint32_t MakeNewDecorationId() const;
+
+		// 飾りを1つ、指した組へ足す(番号・名前を付けて)
+		Decoration::Decoration& AddDecorationTo(std::vector<Decoration::Decoration>& a_decorationVec, Decoration::EDecorationType a_type);
+
+		// 飾りの配列1つぶんの保存(要素ごとに区切る)。配列が無ければ(古いデータ) false
+		static bool ArchiveDecorationVec(Engine::Persistence::Archive& a_ar, const std::string& a_name, std::vector<Decoration::Decoration>& a_decorationVec);
+
+		//-----------------------------------------------------------------------
+		// コントローラー用の飾りの出し分け
+		//-----------------------------------------------------------------------
+
+		// いま出している組
+		std::vector<Decoration::Decoration>& RefShownDecorationVec();
+		const std::vector<Decoration::Decoration>& GetShownDecorationVec() const;
+
+		// 最後に触ったデバイスから出す組を決める(PreUpdate から。エディターの確かめ用の指定があればそちら)
+		void UpdateShownDecorationSet(const Engine::GameObject::ObjectContext& a_context);
+
+		// コントローラー用の組を既定の組の写しから作る / 外す(エディター用)
+		void CreateGamepadDecorations();
+		void RemoveGamepadDecorations();
+
+		// インスペクターで編集している組
+		std::vector<Decoration::Decoration>& RefEditDecorationVec();
+
+		// インスペクター : どちらの組を編集するか・どちらを出して確かめるか
+		void DrawDecorationSetInspector(Engine::GameObject::ObjectContext& a_context);
 
 		// 飾りへ渡す親の設定 : アンカーの設定に、実行中だけの切り抜きを足したもの
 		Decoration::ParentOption MakeParentOption() const;
@@ -540,6 +610,23 @@ namespace App::Object
 
 		// エディターで開いている飾りの番号(-1 で未選択)。保存しない
 		int m_editDecorationIndex = -1;
+
+		// コントローラー用の組を出しているか(最後に触ったデバイスから PreUpdate で決める)。保存しない
+		bool m_isShowGamepad = false;
+
+		//-----------------------------------------------------------------------
+		// エディターでの出し分けの確かめ(保存しない)
+		//-----------------------------------------------------------------------
+		enum class EDecorationPreview : uint32_t
+		{
+			Auto,			// 最後に触ったデバイスに従う(実行時と同じ)
+			KeyboardMouse,	// 既定の組を出す
+			Gamepad,		// コントローラー用の組を出す
+		};
+		EDecorationPreview m_decorationPreview = EDecorationPreview::Auto;
+
+		// インスペクターでコントローラー用の組を編集しているか
+		bool m_isEditGamepadSet = false;
 
 		// 切り抜き(px)。持ち主(スクロールする一覧など)が毎フレーム入れる。保存しない
 		std::optional<Engine::Graphics::UIClipRect> m_opClipRect = std::nullopt;
