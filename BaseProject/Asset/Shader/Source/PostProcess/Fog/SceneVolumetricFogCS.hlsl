@@ -20,6 +20,18 @@
 // 影が届く範囲(シャドウマップは最後のカスケードの奥、レイトレは VolumeShadow の g)より先は
 // 遮るものが無いので、光は一定になる。
 //
+// 演出の点光源(1つだけ。FogPointLightData)も媒質を照らす。光の届く球とレイが重なる区間だけを歩く。
+//   ・点光源の光は光源に近いほど強い(逆二乗)ので、歩く位置は光源に近いところへ集める
+//     (等角サンプリング : 光源から見た角度で等分する)。歩数が少なくても光源の周りが粗くならない
+//   ・影は1歩ごとに光源へレイを1本飛ばす(インラインレイトレ。TLAS はパスが張る)。
+//     体の隙間から光の筋が全方位へこぼれる
+//   ・照らすのはシーンのフォグだけで、ダストは照らさない。
+//     ダストは地面の近くに濃く溜まっているので、影を引かずに照らすと画面の下半分が一面に光ってしまい、
+//     1歩ごとに影のレイを飛ばすと層の中は歩数が多くて重い。地面の照り返しは面の点光源に任せる
+//
+// 点光源の届いた光は、媒質の照らされ方(環境光・平行光)に掛ける lightScale を掛けない。
+// 強さは点光源の intensity だけで決める。
+//
 // シーンのフォグは一様なので、光が一定の区間は式で一度に求める。
 // レイマーチするのは、影の届く範囲とダストの層の中だけ(歩数をそこへ集めるため)。
 // 1歩目の位置は画素ごと・フレームごとにずらし、残る縞は TAA に均させる。
@@ -58,6 +70,8 @@
 //   6 : CBV(b3)            環境光(AmbientData)
 //   7 : CBV(b4)            主光源のシャドウマップ(カスケードの行列・区切り・バイアス)
 //   8 : CBV(b5)            主光源(平行光の向き・色・強さ)
+//   9 : CBV(b6)            演出の点光源(FogPointLightData)
+//  10 : SRV(t0)            TLAS(点光源の影。パスが張る。isShadowValid が 0 なら中身は読まない)
 //
 // サンプラー
 //   s0 : ノイズ・グラウンドフィールド用(WRAP)
@@ -76,6 +90,8 @@
 "CBV(b3, visibility = SHADER_VISIBILITY_ALL)," \
 "CBV(b4, visibility = SHADER_VISIBILITY_ALL)," \
 "CBV(b5, visibility = SHADER_VISIBILITY_ALL)," \
+"CBV(b6, visibility = SHADER_VISIBILITY_ALL)," \
+"SRV(t0)," \
 RS_STATIC_SAMPLER "," \
 "StaticSampler(s1, " \
 "    filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, " \
@@ -121,6 +137,16 @@ RS_STATIC_SAMPLER "," \
 #define VOLUME_SHADOW_RANGE_TOLERANCE_RATE 0.1f
 #define VOLUME_SHADOW_RANGE_TOLERANCE_MIN  0.1f
 
+// 点光源の影を引かないとき(歩数 0 / ワールドが組めていない)に、光の届く区間を歩く歩数。
+// 等角サンプリングなので、遮るものが無ければ少ない歩数でほぼ正しく求まる
+#define POINT_LIGHT_UNSHADOWED_STEPS 8
+
+// 点光源の影を引くときの歩数の上限(積む側の値をここで頭打ちにする)
+#define POINT_LIGHT_MAX_SHADOW_STEPS 128
+
+// 出力の色の上限。色は濃さで割り戻すので、点光源が強いと半精度(R16G16B16A16_FLOAT)の上限を超えることがある
+#define FOG_COLOR_MAX 60000.0f
+
 // シャドウマップのアトラスの1辺あたりのタイル数(ShadowMapMaskCS と合わせる)
 static const uint kShadowAtlasTiles = 2;
 
@@ -153,6 +179,14 @@ cbuffer CBSunLight : register(b5)
 {
 	SunLightData g_sun;
 }
+
+cbuffer CBPointLight : register(b6)
+{
+	FogPointLightData g_pointLight;
+}
+
+// 点光源の影を引くレイトレのワールド
+RaytracingAccelerationStructure g_raytracingWorld : register(t0);
 
 // 入力
 // SRVの番号(ResourceDescriptorHeap の添字)。ルート定数で届く
@@ -213,6 +247,14 @@ struct FogLighting
 	float viewZPerDistance;	// レイを 1m 進んだときのビュー空間の奥行きの増え方
 	float shadowTileSize;	// カスケード1枚ぶんのタイルの解像度
 	float jitter;		// 歩く位置のずらし(0..1)
+
+	// 演出の点光源 : 光の届く球とレイが重なる区間(カメラからの距離)。重ならなければ start >= end
+	float pointStart;
+	float pointEnd;
+	float pointClosestT;		// レイの上で光源に一番近い点(カメラからの距離)
+	float pointClosestDist;	// その点と光源の距離に、減衰の分母の +1 を足したもの(sqrt(d^2 + 1))
+	uint pointSteps;		// 区間を歩く歩数
+	bool isPointShadow;		// 1歩ごとに影のレイを飛ばすか
 };
 
 // 画素の UV と深度からワールド座標を戻す
@@ -364,6 +406,87 @@ float3 CalcLightAt(FogLighting a_light, float3 a_rayStart, float3 a_rayDir, floa
 	return a_light.ambient + a_light.sun * _visibility;
 }
 
+// 点光源が見えるか : 1 = 届く / 0 = 遮られる。
+// 当たったかどうかだけ分かればよいので、最初に当たった時点で打ち切る
+float TracePointLightVisibility(float3 a_origin, float3 a_toLight, float a_distance)
+{
+	RayDesc _ray;
+	_ray.Origin = a_origin;
+	_ray.Direction = a_toLight;
+	_ray.TMin = 0.001f;
+	_ray.TMax = a_distance;
+
+	RayQuery<RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_FORCE_OPAQUE> _query;
+	_query.TraceRayInline(g_raytracingWorld, RAY_FLAG_NONE, 0xFF, _ray);
+
+	// 全部不透明扱いなので、候補を自分で判定する必要は無い(1回で走査が終わる)
+	_query.Proceed();
+
+	return (_query.CommittedStatus() == COMMITTED_NOTHING) ? 1.0f : 0.0f;
+}
+
+// 点光源から a_pos に届く光(減衰と位相関数込み)。
+// 減衰はディファードのポイントライトと同じ式(逆二乗に「range で 0 になる窓」を掛ける)なので、
+// 同じ強さを面の点光源へ渡すと、面とフォグが同じくらいに照らされる
+float3 CalcPointLightAt(float3 a_pos, float3 a_rayDir, bool a_isShadow)
+{
+	const float3 _toLight = g_pointLight.position - a_pos;
+	const float _distSq = dot(_toLight, _toLight);
+	if (_distSq >= g_pointLight.range * g_pointLight.range) return 0.0f;
+
+	const float _dist = sqrt(_distSq);
+	const float3 _dirToLight = (_dist > 1e-4f) ? _toLight / _dist : float3(0.0f, 1.0f, 0.0f);
+
+	const float _window = saturate(1.0f - pow(_dist / g_pointLight.range, 4.0f));
+	const float _atten = (_window * _window) / (_distSq + 1.0f);
+
+	// 光の進む向き(光源 → この点)と、カメラへ向かう向きのなす角
+	const float _phase = PhaseHenyeyGreenstein(dot(-_dirToLight, -a_rayDir), g_sceneFog.anisotropy);
+
+	float _visibility = 1.0f;
+	if (a_isShadow) _visibility = TracePointLightVisibility(a_pos, _dirToLight, _dist);
+
+	return g_pointLight.color * g_pointLight.intensity * _atten * _phase * _visibility;
+}
+
+// シーンのフォグだけが漂う区間 [a_start, a_end] のうち、点光源の届くところで散る光を足す。
+// 透過率は区間の入り口の値から、一様な濃さで減っていくものとして求める(透過率そのものは変えない)。
+//
+// 歩く位置は等角サンプリング : 光源から見た角度を等分して、その角度の位置を歩く。
+// 光源に近いところほど細かく歩くので、逆二乗で強くなる光源の周りを少ない歩数で拾える。
+//   t     = 一番近い点 + D × tan(θ)
+//   確率密度 = D / ((θb - θa) × (D^2 + (t - 一番近い点)^2))
+// D に減衰の分母の +1 を含めてあるので、確率密度は減衰と同じ形になり、遮るものが無ければほぼ一定の値を足すだけになる
+void IntegratePointLight(FogLighting a_light, float3 a_rayStart, float3 a_rayDir, float a_start, float a_end,
+	inout float3 a_inoutColor, float a_transmittance)
+{
+	const float _start = max(a_start, a_light.pointStart);
+	const float _end = min(a_end, a_light.pointEnd);
+	if (_end <= _start || a_light.pointSteps == 0) return;
+
+	const float _d = a_light.pointClosestDist;
+	const float _thetaA = atan((_start - a_light.pointClosestT) / _d);
+	const float _thetaB = atan((_end - a_light.pointClosestT) / _d);
+	const float _thetaRange = _thetaB - _thetaA;
+	if (_thetaRange <= 1e-6f) return;
+
+	float3 _sum = 0.0f;
+	for (uint _i = 0; _i < a_light.pointSteps; ++_i)
+	{
+		const float _theta = _thetaA + _thetaRange * ((_i + a_light.jitter) / (float) a_light.pointSteps);
+		const float _offset = _d * tan(_theta);
+		const float _t = clamp(a_light.pointClosestT + _offset, _start, _end);
+
+		// 1歩ぶんの長さ = 1 / (歩数 × 確率密度)
+		const float _stepLength = _thetaRange * (_d * _d + _offset * _offset) / (_d * (float) a_light.pointSteps);
+
+		const float _transmittance = a_transmittance * exp(-g_sceneFog.density * (_t - a_start));
+		_sum += _transmittance * _stepLength * CalcPointLightAt(a_rayStart + a_rayDir * _t, a_rayDir, a_light.isPointShadow);
+	}
+
+	a_inoutColor += g_sceneFog.density * g_sceneFog.fogColor * _sum;
+}
+
 // 光が一定の区間(長さ a_length)を、シーンのフォグだけで式で一度に積分する
 void IntegrateSceneFogConstant(float a_length, float3 a_light, inout float3 a_inoutColor, inout float a_inoutTransmittance)
 {
@@ -383,6 +506,9 @@ void IntegrateSceneFog(FogLighting a_light, float3 a_rayStart, float3 a_rayDir, 
 {
 	if (a_end <= a_start || g_sceneFog.density <= 0.0f) return;
 	if (a_inoutTransmittance < MIN_TRANSMITTANCE) return;	// 手前でもう見えなくなっている
+
+	// 演出の点光源 : 光が一定にならないので別に歩く(透過率は入り口の値から求めるので、先に足しておく)
+	IntegratePointLight(a_light, a_rayStart, a_rayDir, a_start, a_end, a_inoutColor, a_inoutTransmittance);
 
 	// 影の届く範囲の中 : シャドウマップは歩く
 	const float _marchEnd = (a_light.shadowMethod == SUN_SHADOW_SHADOW_MAP) ? min(a_end, a_light.shadowEnd) : a_start;
@@ -481,6 +607,34 @@ void CSMain(uint3 DTid : SV_DispatchThreadID)
 	_light.shadowTileSize = 1.0f;
 	// 1歩目のずらし : フレームごとに変えて TAA に均させる
 	_light.jitter = InterleavedGradientNoise(float2(_coord), fmod(floor(g_groundDust.time * 60.0f), 64.0f));
+
+	// 演出の点光源 : 光の届く球とレイが重なる区間
+	_light.pointStart = 0.0f;
+	_light.pointEnd = 0.0f;
+	_light.pointClosestT = 0.0f;
+	_light.pointClosestDist = 1.0f;
+	_light.pointSteps = 0;
+	_light.isPointShadow = false;
+	if (g_pointLight.enable != 0 && g_pointLight.intensity > 0.0f && g_pointLight.range > 0.0f)
+	{
+		const float3 _toLight = g_pointLight.position - _rayStart;
+		const float _closestT = dot(_toLight, _rayDir);
+		const float _closestDistSq = max(dot(_toLight, _toLight) - _closestT * _closestT, 0.0f);
+		const float _halfChordSq = g_pointLight.range * g_pointLight.range - _closestDistSq;
+		if (_halfChordSq > 0.0f)
+		{
+			const float _halfChord = sqrt(_halfChordSq);
+			_light.pointStart = max(_closestT - _halfChord, 0.0f);
+			_light.pointEnd = min(_closestT + _halfChord, _rayLength);
+			_light.pointClosestT = _closestT;
+			_light.pointClosestDist = sqrt(_closestDistSq + 1.0f);
+
+			_light.isPointShadow = (g_pointLight.isShadowValid != 0) && (g_pointLight.shadowStepCount > 0);
+			_light.pointSteps = _light.isPointShadow
+				? min(g_pointLight.shadowStepCount, (uint) POINT_LIGHT_MAX_SHADOW_STEPS)
+				: (uint) POINT_LIGHT_UNSHADOWED_STEPS;
+		}
+	}
 
 	if (g_sun.enable != 0)
 	{
@@ -657,7 +811,7 @@ void CSMain(uint3 DTid : SV_DispatchThreadID)
 	// 出力 : 合成側は lerp(元の色, rgb, a) で重ねるので、色は濃さで割り戻しておく
 	//------------------------------------------------------------------------------
 	const float _fogAmount = 1.0f - _transmittance;
-	const float3 _fogColor = (_fogAmount > 0.00001f) ? _color / _fogAmount : g_sceneFog.fogColor;
+	const float3 _fogColor = (_fogAmount > 0.00001f) ? min(_color / _fogAmount, FOG_COLOR_MAX) : g_sceneFog.fogColor;
 
 	g_outTex[_coord] = float4(_fogColor, _fogAmount);
 }

@@ -25,6 +25,10 @@ namespace App::Object
 	/// ・入った瞬間に断末魔を頼み、m_cryShakeTime 秒の間は画面を震わせる(roarWeight)。
 	/// ・BGM は入ってから m_bgmFadeTime 秒かけて m_bgmDuck 倍まで下げていく(bgmDuck)。
 	///   爆散した後も下げたまま(戻すのはコントローラーが消えるとき)。
+	/// ・球の中心に大きく強い点光源を置くよう頼む(deathLight)。まとまる割合の2乗で強くなり、
+	///   体(ボイド)の隙間から光の筋(ゴッドレイ)が全方位へこぼれる。
+	///   あわせて入ってから m_darkFadeInTime 秒かけて空間を暗くし、フォグを濃くする。
+	///   爆散した後はステートが回らないので、閃光と消え方はコントローラーが引き継ぐ。
 	/// </remarks>
 	class SwarmBossDeathState : public IState
 	{
@@ -65,6 +69,22 @@ namespace App::Object
 		float m_bgmDuck           = 0.15f;		// BGM をここまで下げる(音量の倍率。1 で下げない)
 		float m_bgmFadeTime       = 6.0f;		// BGM を下げきるまでの時間(秒)
 
+		// 球の中心の光(爆散の直前で一番強い。まとまる割合の2乗で立ち上がる)
+		Math::Vector3 m_lightColor = { 1.0f, 0.75f, 0.45f };	// 色
+		float m_lightIntensity    = 2000.0f;	// 爆散の直前の強さ(色に掛ける。距離の2乗で弱まる)
+		float m_lightRange        = 250.0f;		// 光の届く距離(m)
+		int   m_lightShadowSteps  = 24;			// フォグの中を歩く歩数(1歩ごとに影のレイを1本。0 で遮らない)
+		float m_lightSurfaceScale = 1.0f;		// 面(地面・体)も照らす強さの倍率(0 で照らさない)
+		float m_lightBurstFlash   = 3.0f;		// 爆散の瞬間の強さの倍率(ここから消えていく)
+		float m_lightFadeOutTime  = 2.5f;		// 爆散してから光が消えるまでの時間(秒)
+
+		// 空間の暗さとフォグ(光の筋を目立たせる)
+		float m_darkLightScale    = 0.5f;		// 明るさの倍率(環境光・太陽・空。1 で暗くしない)
+		float m_darkFogDensity    = 0.015f;		// フォグの濃さ(1m あたり)
+		float m_darkFogComposite  = 0.5f;		// フォグを重ねる強さ
+		float m_darkFadeInTime    = 2.0f;		// 入ってから暗くしきるまでの時間(秒)
+		float m_darkFadeOutTime   = 4.0f;		// 爆散してから元に戻るまでの時間(秒)
+
 		//------------------------------------------------------------------------------------------
 		// 実行中の状態(保存しない)
 		//------------------------------------------------------------------------------------------
@@ -74,5 +94,7 @@ namespace App::Object
 		float m_elapsed = 0.0f;					// 入ってからの経過時間(秒。爆散した後も数える)
 		float m_shakeWeight = 0.0f;				// 今頼んでいる震えの強さ(表示用)
 		float m_bgmScale = 1.0f;				// 今頼んでいる BGM の倍率(表示用)
+		float m_lightRate = 0.0f;				// 今頼んでいる光の強さの割合(表示用)
+		float m_darkWeight = 0.0f;				// 今頼んでいる暗さの掛かり具合(表示用)
 	};
 }

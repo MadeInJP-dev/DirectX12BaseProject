@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "Engine/Scene/SceneAmbient/SceneAmbientMood.h"
+
 namespace Engine
 {
 	class MainEngine;
@@ -157,6 +159,16 @@ namespace Engine::Scene
 		/// 1つも無ければ nullptr(環境光・フォグ・空・平行光なしで描かれる)
 		/// </remarks>
 		BaseScene* RefAmbientSourceScene();
+
+		/// <summary>
+		/// 環境設定に演出(暗くする・フォグを濃くする)を掛けるよう頼む
+		/// </summary>
+		/// <remarks>
+		/// 今フレームだけ効く。掛けている間は毎フレーム頼むこと(頼まなくなれば次のフレームからシーンの値に戻る)。
+		/// 後ろに重ねたシーンは更新が止まっても描画は回るので、頼むのは描画(GameObject::Draw など)の中でよい。
+		/// 頼む側が複数あると最後に頼んだものが勝つ
+		/// </remarks>
+		void RequestAmbientMood(const SceneAmbientMood& a_mood) { m_ambientMood = a_mood; }
 
 		/// <summary>
 		/// 先読み一覧を計測しているシーン
@@ -322,6 +334,9 @@ namespace Engine::Scene
 		// 環境設定の平行光が借りている LightManager の席。
 		// シーンごとではなくここで1つだけ持つ : 重ねたシーンの数だけ太陽が並ばないように
 		Handle<Graphics::DirectionalLight> m_ambientDLHandle = {};
+
+		// 今フレーム頼まれた環境設定の演出。流し込んだら空に戻す(Draw)
+		SceneAmbientMood m_ambientMood = {};
 
 		// 持ち主(借り物)。描画・リソース・開発ツールへの通知はここから引く
 		MainEngine* m_pEngine = nullptr;

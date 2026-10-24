@@ -8,6 +8,12 @@
 #include "Engine/Resource/Data/EffectPrefab/EffectPrefab.h"
 #include "Engine/EditorField/EditorField.h"	// コンポーネントの Traits が使うので先に置く
 #include "Engine/Audio/AudioManager.h"
+#include "Engine/MainEngine.h"
+#include "Engine/Graphics/GraphicsEngine.h"
+#include "Engine/Graphics/Frame/SceneView/SceneView.h"
+#include "Engine/Graphics/LightManager/LightManager.h"
+#include "Engine/Graphics/Raytracing/RayEngine.h"
+#include "Engine/Scene/SceneManager/SceneManager.h"
 
 // App
 #include "../../../ECS/World/APPWorld.h"
@@ -32,6 +38,9 @@
 #include "Application/Components/Boid/BoidSteeringParamsComponent.h"
 #include "Application/Components/Boid/BoidWaveStateComponent.h"
 #include "Application/Components/Render/EmissiveOverrideComponent.h"
+#include "Application/Components/Render/ModelComponent.h"
+#include "Application/Components/Render/RayTag.h"
+#include "Application/Components/Transform/WorldMatrixComponent.h"
 #include "Application/Components/Movement/LookAngleComponent.h"
 #include "Application/Components/Movement/MoveIntentComponent.h"
 #include "Application/Components/Boid/BoidLeaderComponent.h"
@@ -283,6 +292,18 @@ namespace App::Object
 		{
 			a_context.pWorld->RefResource<InstanceResource::RadialBlurShakeResource>().Clear();
 		}
+
+		// 面の点光源は LightManager の席なので返す(フォグの点光源と暗さは積まなくなれば消える)
+		m_deathLightRequest = {};
+		m_deathLight = {};
+		ReleaseDeathLight(a_context);
+	}
+
+	void SwarmBossController::Draw(Engine::GameObject::ObjectContext& a_context)
+	{
+		SequenceActor::Draw(a_context);
+
+		SubmitDeathLight(a_context);
 	}
 	void SwarmBossController::Update(Engine::GameObject::ObjectContext& a_context)
 	{
@@ -324,6 +345,9 @@ namespace App::Object
 
 		// BGM の絞り(爆散した後も、死亡で下げた値のまま)
 		UpdateBgmDuck();
+
+		// 死亡の光(爆散した後はここで消していく)
+		UpdateDeathLight(a_context.dt);
 
 		// 飛んでいるときのエフェクトと飛行音
 		UpdateFlightEffect(a_context);
@@ -380,6 +404,9 @@ namespace App::Object
 		{
 			BurstBody(a_context, _stateContext.burst);
 		}
+
+		// 死亡の光(今の値を決めるのは UpdateDeathLight、積むのは Draw)
+		m_deathLightRequest = _stateContext.deathLight;
 
 		// 鳴き声は頼まれた瞬間に鳴らし、画面の震えと BGM の倍率は覚えておく
 		// (書くのは UpdateRoarBlur / UpdateBgmDuck)
@@ -1051,6 +1078,182 @@ namespace App::Object
 	}
 
 	//======================================================================================
+	// 死亡の光 : 今の値
+	//--------------------------------------------------------------------------------------
+	// 爆散するまでは行動(Death)が毎フレーム頼んだ値をそのまま使う(頼まれなければ消える)。
+	// 爆散した後は行動が回らないので、最後に頼まれた値から消していく。
+	//   光   : 閃光(burstFlashScale 倍)から lightFadeOutTime 秒で 0 へ(2乗で速く落ちる)
+	//   暗さ : moodFadeOutTime 秒で戻す(なめらかに)
+	//======================================================================================
+	void SwarmBossController::UpdateDeathLight(float a_dt)
+	{
+		if (!m_isBurst)
+		{
+			m_deathLight = m_deathLightRequest;
+			m_deathLightBurstTime = 0.0f;
+			return;
+		}
+
+		m_deathLight = m_deathLightRequest;
+		if (!m_deathLightRequest.isRequested) return;
+
+		const float _time = m_deathLightBurstTime;
+		m_deathLightBurstTime += a_dt;
+
+		const float _lightRest = (m_deathLightRequest.lightFadeOutTime > 0.0f)
+			? std::clamp(1.0f - _time / m_deathLightRequest.lightFadeOutTime, 0.0f, 1.0f)
+			: 0.0f;
+		m_deathLight.intensity = m_deathLightRequest.intensity * m_deathLightRequest.burstFlashScale * _lightRest * _lightRest;
+
+		const float _moodRest = (m_deathLightRequest.moodFadeOutTime > 0.0f)
+			? std::clamp(1.0f - _time / m_deathLightRequest.moodFadeOutTime, 0.0f, 1.0f)
+			: 0.0f;
+		m_deathLight.moodWeight = m_deathLightRequest.moodWeight * (_moodRest * _moodRest * (3.0f - 2.0f * _moodRest));
+
+		// 消えきったら頼むのをやめる(面の点光源の席も返る)
+		if (m_deathLight.intensity <= 0.0f && m_deathLight.moodWeight <= 0.0f)
+		{
+			m_deathLightRequest.isRequested = false;
+			m_deathLight.isRequested = false;
+		}
+	}
+
+	//======================================================================================
+	// 死亡の光 : 描画へ積む
+	//--------------------------------------------------------------------------------------
+	// フォグの点光源と暗さは今フレームだけ効くので、点けている間は毎フレーム積む。
+	// 面の点光源は LightManager の席を借りているので、消したら返す
+	//======================================================================================
+	void SwarmBossController::SubmitDeathLight(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (!a_context.pServices || !a_context.pServices->pMainEngine) return;
+		auto* _pGE = a_context.pServices->pMainEngine->RefGraphicsEngine();
+		if (!_pGE) return;
+
+		if (!m_deathLight.isRequested)
+		{
+			ReleaseDeathLight(a_context);
+			return;
+		}
+
+		const auto& _light = m_deathLight;
+		const bool _isLightOn = (_light.intensity > 0.0f) && (_light.range > 0.0f);
+
+		//----------------------------------------------------------------------
+		// フォグの点光源(光の筋)
+		//----------------------------------------------------------------------
+		if (_isLightOn)
+		{
+			Engine::Graphics::FogPointLightCB _fogLight = {};
+			_fogLight.position        = _light.center;
+			_fogLight.range           = _light.range;
+			_fogLight.color           = _light.color;
+			_fogLight.intensity       = _light.intensity;
+			_fogLight.enable          = 1;
+			_fogLight.shadowStepCount = _light.shadowStepCount;
+			_pGE->RefSceneView()->SetFogPointLight(_fogLight);
+
+			// 影に使う体をレイトレのワールドへ
+			if (_light.shadowStepCount > 0) RegisterBodyToRayWorld(a_context);
+		}
+
+		//----------------------------------------------------------------------
+		// 面(地面・体)を照らす点光源
+		//----------------------------------------------------------------------
+		auto* _pLightManager = _pGE->RefLightManager();
+		const float _surfaceBrightness = _light.intensity * _light.surfaceScale;
+		if (_isLightOn && _surfaceBrightness > 0.0f)
+		{
+			if (!m_deathLightHandle.IsValid()) m_deathLightHandle = _pLightManager->AllocatePL();
+
+			if (auto* _pPoint = _pLightManager->RefLight(m_deathLightHandle))
+			{
+				_pPoint->pos        = _light.center;
+				_pPoint->brightness = _surfaceBrightness;
+				_pPoint->color      = Math::Color(_light.color.x, _light.color.y, _light.color.z, 1.0f);
+				_pPoint->range      = _light.range;
+			}
+		}
+		else
+		{
+			ReleaseDeathLight(a_context);
+		}
+
+		//----------------------------------------------------------------------
+		// 空間の暗さとフォグ
+		//----------------------------------------------------------------------
+		if (_light.moodWeight > 0.0f && a_context.pServices->pSceneManager)
+		{
+			Engine::Scene::SceneAmbientMood _mood = {};
+			_mood.weight                = _light.moodWeight;
+			_mood.lightScale            = _light.moodLightScale;
+			_mood.fogDensity            = _light.moodFogDensity;
+			_mood.fogCompositeIntensity = _light.moodFogComposite;
+			a_context.pServices->pSceneManager->RequestAmbientMood(_mood);
+		}
+	}
+
+	//======================================================================================
+	// 死亡の光 : 体をレイトレのワールドへ載せる
+	//--------------------------------------------------------------------------------------
+	// 点光源の影は、球にまとまった体の隙間から光をこぼすためのもの。
+	// ボイドのプレハブには RayTag を付けていない(普段は載せない)ので、点けている間だけここで載せる。
+	// ワールドは毎フレーム描画の初めに空になるので、描画の中(Draw)で毎フレーム載せ直す。
+	// RayTag を持つものは RegisterRayWorldSystem が載せるので、二重にしない
+	//======================================================================================
+	void SwarmBossController::RegisterBodyToRayWorld(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (!a_context.pWorld || !a_context.pServices || !a_context.pServices->pRayEngine) return;
+
+		auto& _world = *a_context.pWorld;
+		auto& _rayEngine = *a_context.pServices->pRayEngine;
+		const Core::GUID _self = m_guid;
+
+		_world.ForEach<const Component::ActiveTag, const Component::SwarmBossBoidTag, const Component::SpawnerComponent,
+			const Component::ModelComponent, const Component::WorldMatrixComponent>(
+			[&_world, &_rayEngine, &_self](
+				Engine::ECS::Chunk* a_pChunk,
+				uint32_t a_count,
+				const Component::ActiveTag* /*a_activeTagArray*/,
+				const Component::SwarmBossBoidTag* /*a_boidTagArray*/,
+				const Component::SpawnerComponent* a_spawnerArray,
+				const Component::ModelComponent* a_modelArray,
+				const Component::WorldMatrixComponent* a_worldMatArray)
+			{
+				// チャンクは同じ構成のものだけが並ぶので、1体目で見れば足りる
+				if (a_count == 0 || _world.HasComponent<Component::RayTag>(a_pChunk->entityData[0])) return;
+
+				for (uint32_t _i = 0; _i < a_count; ++_i)
+				{
+					if (a_spawnerArray[_i].spawnerGUID != _self) continue;
+
+					const auto& _model = a_modelArray[_i];
+					_rayEngine.RegisterModel(
+						a_worldMatArray[_i].worldMat,
+						_model.handle,
+						_model.colorScale,
+						_model.emissiveScale,
+						_model.GetEmissiveAdd());
+				}
+			}
+		);
+	}
+
+	void SwarmBossController::ReleaseDeathLight(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (!m_deathLightHandle.IsValid()) return;
+
+		if (a_context.pServices && a_context.pServices->pMainEngine)
+		{
+			if (auto* _pGE = a_context.pServices->pMainEngine->RefGraphicsEngine())
+			{
+				_pGE->RefLightManager()->RemoveLight(m_deathLightHandle);
+			}
+		}
+		m_deathLightHandle = {};
+	}
+
+	//======================================================================================
 	// 小隊長の整理 : 体力が区切りを切ったか
 	//--------------------------------------------------------------------------------------
 	// 区切りは「最大体力から m_reorganizeHpInterval 減るごと」。一度に複数の区切りを
@@ -1491,6 +1694,9 @@ namespace App::Object
 		m_spinRadiusRatio  = 0.0f;
 		m_isSpinWritten    = false;
 		m_isFlightSoundFailed = false;
+		m_deathLightRequest   = {};
+		m_deathLight          = {};
+		m_deathLightBurstTime = 0.0f;
 
 		// 地面から出すなら、最初の行動を出現にする(切り替わるのは最初の行動の更新)
 		if (m_isEmergeOnSpawn)

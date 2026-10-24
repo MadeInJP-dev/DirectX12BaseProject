@@ -5,6 +5,7 @@
 #include "Engine/Graphics/Frame/SceneView/AmbientData.h"
 #include "Engine/Graphics/Frame/SceneView/SceneFogData.h"
 #include "Engine/Graphics/Frame/SceneView/SkyData.h"
+#include "Engine/Scene/SceneAmbient/SceneAmbientMood.h"
 
 namespace Engine
 {
@@ -76,8 +77,10 @@ namespace Engine::Scene
 		// GraphicsEngine へ流し込む
 		//
 		// a_inoutDLHandle : 平行光の席。無効なら取る(取れなければそのフレームは平行光なし)
+		// a_mood          : 演出(既定は何も掛けない)。シーンの値に混ぜて流す
 		//----------------------------------------------------------------------------------
-		void Apply(Graphics::GraphicsEngine& a_ge, Handle<Graphics::DirectionalLight>& a_inoutDLHandle) const;
+		void Apply(Graphics::GraphicsEngine& a_ge, Handle<Graphics::DirectionalLight>& a_inoutDLHandle,
+			const SceneAmbientMood& a_mood = {}) const;
 
 		// 環境設定を使うシーンが無いとき : 環境光・フォグ・空を消し、平行光の席を返す
 		static void ApplyNone(Graphics::GraphicsEngine& a_ge, Handle<Graphics::DirectionalLight>& a_inoutDLHandle);

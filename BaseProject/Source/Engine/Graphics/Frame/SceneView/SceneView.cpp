@@ -107,6 +107,8 @@ namespace Engine::Graphics
 		m_isFishEyeOverride = false;
 
 		m_groundImpulseVec.clear();
+
+		m_cbFogPointLight = {};
 	}
 
 	void SceneView::AddGroundImpulse(const GroundImpulse& a_impulse)

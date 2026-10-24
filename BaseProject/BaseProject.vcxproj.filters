@@ -4553,6 +4553,9 @@
     <ClInclude Include="Source\Engine\Scene\SceneAmbient\SceneAmbient.h">
       <Filter>Source\Engine\Scene\SceneAmbient</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Scene\SceneAmbient\SceneAmbientMood.h">
+      <Filter>Source\Engine\Scene\SceneAmbient</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Scene\SceneConfig\SceneConfig.h">
       <Filter>Source\Engine\Scene\SceneConfig</Filter>
     </ClInclude>

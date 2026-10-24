@@ -198,16 +198,19 @@ namespace Engine::Scene
 			return;
 		}
 
-		// シーンの環境設定を流し込む。
-		// 各シーンの描画より前に置くが、レンダーグラフが回るのはこの後なので順番はどちらでもよい
-		ApplySceneAmbient();
-
 		// すべてのシーンを描画(読み込み中のシーンは BaseScene::Draw の中で弾く)
 		for (auto& _scene : m_upBaseSceneVec)
 		{
 			// 命令のスタック
 			_scene->Draw();
 		}
+
+		// シーンの環境設定を流し込む。
+		// 演出(RequestAmbientMood)は各シーンの描画の中で頼まれるので、その後に置く。
+		// レンダーグラフが回るのはこの後なので、描画命令より後でも間に合う。
+		// 演出は今フレームだけ効くので、流したら空に戻す
+		ApplySceneAmbient();
+		m_ambientMood = {};
 
 		// フェードはシーンの上。ロード画面は染めた画面の上に出したいので、その手前で積む
 		SubmitFade();
@@ -729,7 +732,7 @@ namespace Engine::Scene
 
 		if (BaseScene* _pScene = RefAmbientSourceScene())
 		{
-			_pScene->GetAmbient().Apply(*_pGE, m_ambientDLHandle);
+			_pScene->GetAmbient().Apply(*_pGE, m_ambientDLHandle, m_ambientMood);
 		}
 		else
 		{

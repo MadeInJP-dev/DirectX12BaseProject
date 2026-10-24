@@ -22,6 +22,8 @@ namespace App::Object
 		m_elapsed        = 0.0f;
 		m_shakeWeight    = 0.0f;
 		m_bgmScale       = 1.0f;
+		m_lightRate      = 0.0f;
+		m_darkWeight     = 0.0f;
 
 		// 断末魔(画面の震えは Update で頼み続ける)
 		a_context.cry = ESwarmBossCry::Death;
@@ -66,6 +68,30 @@ namespace App::Object
 
 		m_ball.Update(a_context, _dt, std::lerp(1.0f, std::max(m_endRadiusScale, 0.0f), _ease));
 		m_ball.Draw(a_context);
+
+		//--------------------------------------------------------------
+		// 球の中心の光と、空間の暗さ・フォグ。
+		// 光は締めるのと同じ割合の2乗で強くし、暗さは入ってからの時間で掛けていく。
+		// 爆散するフレームも頼む(コントローラーはこの値から消していく)
+		//--------------------------------------------------------------
+		m_lightRate  = _ease;
+		m_darkWeight = (m_darkFadeInTime > 0.0f) ? std::clamp(m_elapsed / m_darkFadeInTime, 0.0f, 1.0f) : 1.0f;
+
+		auto& _light = a_context.deathLight;
+		_light.isRequested      = true;
+		_light.center           = m_ball.GetCenter();
+		_light.color            = m_lightColor;
+		_light.intensity        = std::max(m_lightIntensity, 0.0f) * m_lightRate;
+		_light.range            = std::max(m_lightRange, 0.0f);
+		_light.shadowStepCount  = static_cast<uint32_t>(std::max(m_lightShadowSteps, 0));
+		_light.surfaceScale     = std::max(m_lightSurfaceScale, 0.0f);
+		_light.moodWeight       = m_darkWeight;
+		_light.moodLightScale   = std::max(m_darkLightScale, 0.0f);
+		_light.moodFogDensity   = std::max(m_darkFogDensity, 0.0f);
+		_light.moodFogComposite = std::max(m_darkFogComposite, 0.0f);
+		_light.burstFlashScale  = std::max(m_lightBurstFlash, 0.0f);
+		_light.lightFadeOutTime = std::max(m_lightFadeOutTime, 0.0f);
+		_light.moodFadeOutTime  = std::max(m_darkFadeOutTime, 0.0f);
 
 		if (_t < 1.0f) return;
 
@@ -121,6 +147,19 @@ namespace App::Object
 		a_ar.Field("DeathCryShakeFadeOut", m_cryShakeFadeOut);
 		a_ar.Field("DeathBgmDuck", m_bgmDuck);
 		a_ar.Field("DeathBgmFadeTime", m_bgmFadeTime);
+
+		a_ar.Field("DeathLightColor", m_lightColor);
+		a_ar.Field("DeathLightIntensity", m_lightIntensity);
+		a_ar.Field("DeathLightRange", m_lightRange);
+		a_ar.Field("DeathLightShadowSteps", m_lightShadowSteps);
+		a_ar.Field("DeathLightSurfaceScale", m_lightSurfaceScale);
+		a_ar.Field("DeathLightBurstFlash", m_lightBurstFlash);
+		a_ar.Field("DeathLightFadeOutTime", m_lightFadeOutTime);
+		a_ar.Field("DeathDarkLightScale", m_darkLightScale);
+		a_ar.Field("DeathDarkFogDensity", m_darkFogDensity);
+		a_ar.Field("DeathDarkFogComposite", m_darkFogComposite);
+		a_ar.Field("DeathDarkFadeInTime", m_darkFadeInTime);
+		a_ar.Field("DeathDarkFadeOutTime", m_darkFadeOutTime);
 	}
 
 	void SwarmBossDeathState::DrawInspector()
@@ -155,9 +194,36 @@ namespace App::Object
 		Engine::EditorField::Tooltip("BGM の音量に掛ける。0 で消える / 1 で下げない。爆散した後も下げたまま");
 		Engine::EditorField::Field("BGM を下げきるまでの時間", m_bgmFadeTime, 0.1f, 0.0f);
 
+		Engine::EditorField::Line();
+		Engine::EditorField::ColorField("中心の光 : 色", m_lightColor);
+		Engine::EditorField::Field("中心の光 : 強さ", m_lightIntensity, 10.0f, 0.0f);
+		Engine::EditorField::Tooltip("爆散の直前の強さ。まとまる割合の2乗で立ち上がる。距離の2乗で弱まる(ポイントライトと同じ)");
+		Engine::EditorField::Field("中心の光 : 届く距離", m_lightRange, 1.0f, 0.0f);
+		Engine::EditorField::Field("中心の光 : 影の歩数", m_lightShadowSteps, 1.0f, 0, 128);
+		Engine::EditorField::Tooltip("フォグの中を歩く歩数。1歩ごとに光源へ影のレイを飛ばす(多いほど筋が細かく、重い)。0 で体に遮られない");
+		Engine::EditorField::Field("中心の光 : 面を照らす倍率", m_lightSurfaceScale, 0.01f, 0.0f);
+		Engine::EditorField::Tooltip("地面や体を照らす点光源の強さの倍率。0 でフォグだけを照らす");
+		Engine::EditorField::Field("中心の光 : 爆散の閃光", m_lightBurstFlash, 0.1f, 0.0f);
+		Engine::EditorField::Tooltip("爆散の瞬間の強さの倍率。ここから消えていく");
+		Engine::EditorField::Field("中心の光 : 消えるまでの時間", m_lightFadeOutTime, 0.1f, 0.0f);
+		Engine::EditorField::Tooltip("爆散してから光が消えるまで(秒)");
+
+		Engine::EditorField::Line();
+		Engine::EditorField::Field("暗さ : 明るさの倍率", m_darkLightScale, 0.01f, 0.0f, 1.0f);
+		Engine::EditorField::Tooltip("環境光・太陽・空に掛ける。1 で暗くしない");
+		Engine::EditorField::Field("暗さ : フォグの濃さ", m_darkFogDensity, 0.001f, 0.0f, 0.0f, "%.4f");
+		Engine::EditorField::Tooltip("シーンのフォグの濃さ(1m あたり)をこの値へ寄せる");
+		Engine::EditorField::Field("暗さ : フォグを重ねる強さ", m_darkFogComposite, 0.01f, 0.0f);
+		Engine::EditorField::Tooltip("フォグをメインカラーへ重ねる強さをこの値へ寄せる");
+		Engine::EditorField::Field("暗さ : 掛けきるまでの時間", m_darkFadeInTime, 0.1f, 0.0f);
+		Engine::EditorField::Tooltip("死亡に入ってから(秒)");
+		Engine::EditorField::Field("暗さ : 戻るまでの時間", m_darkFadeOutTime, 0.1f, 0.0f);
+		Engine::EditorField::Tooltip("爆散してから(秒)");
+
 		// 実行中の状態は表示のみ
 		Engine::EditorField::Value("フェーズ", "%s (%.1f 秒)", std::string(magic_enum::enum_name(m_phase)).c_str(), m_phaseTime);
 		Engine::EditorField::Value("ウェーブの倍率", "x %.2f", m_waveSpeedScale);
 		Engine::EditorField::Value("震え / BGM", "%.2f / x %.2f", m_shakeWeight, m_bgmScale);
+		Engine::EditorField::Value("光 / 暗さ", "%.2f / %.2f", m_lightRate, m_darkWeight);
 	}
 }

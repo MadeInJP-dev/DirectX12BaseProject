@@ -7,6 +7,11 @@
 
 #include "Application/Components/Boss/SwarmBossWave.h"
 
+namespace Engine::Graphics
+{
+	struct PointLight;
+}
+
 namespace App::Object
 {
 	/// <summary>
@@ -54,6 +59,10 @@ namespace App::Object
 		// 更新
 		//------------------------------------------------------------------------------------------
 		void Update(Engine::GameObject::ObjectContext& a_context) override;
+
+		// 死亡の光(点光源・空間の暗さ・体のレイトレ登録)を描画へ積む。
+		// 後ろのシーンになって更新が止まっても描画は回るので、ここで毎フレーム積む
+		void Draw(Engine::GameObject::ObjectContext& a_context) override;
 
 		//------------------------------------------------------------------------------------------
 		// シリアライズ / エディター
@@ -167,6 +176,21 @@ namespace App::Object
 		// 体のボイドを中心から外へ飛び散らせる(落とすのは SwarmBurstSystem)。
 		// リーダーと小隊長はもう要らないので消す。死亡の行動が頼んできたとき(burst)に呼ぶ
 		void BurstBody(Engine::GameObject::ObjectContext& a_context, const SwarmBossBurstRequest& a_request);
+
+		// 死亡の光の「今の値」を決める。爆散するまでは行動が頼んだ値のまま、
+		// 爆散した後は最後に頼まれた値から閃光を焚いて消していく(行動はもう回らない)
+		void UpdateDeathLight(float a_dt);
+
+		// 死亡の光を積む : フォグの点光源(SceneView)・面の点光源(LightManager)・空間の暗さ(SceneManager)。
+		// 影を引くなら体(ボイド)をレイトレのワールドへ載せる。点けていなければ面の点光源を返す
+		void SubmitDeathLight(Engine::GameObject::ObjectContext& a_context);
+
+		// 体(自分のボイド)をレイトレのワールドへ載せる(今フレームだけ。描画の中で呼ぶ)。
+		// RayTag を持つものはシステムが載せるので飛ばす
+		void RegisterBodyToRayWorld(Engine::GameObject::ObjectContext& a_context);
+
+		// 面の点光源を返す
+		void ReleaseDeathLight(Engine::GameObject::ObjectContext& a_context);
 
 		// 体(ボイド)の防御比率を書き換える。行動からの依頼が変わったときだけ呼ぶ
 		// (4000体を走査するので毎フレームは呼ばない)。切り離したミサイルは 1 のまま
@@ -376,6 +400,12 @@ namespace App::Object
 		bool m_isDying = false;					// 死亡の行動へ入ったか
 		bool m_isBurst = false;					// 爆散したか(以降はリーダーの行動を回さない)
 		float m_waveSpeedScale = 1.0f;			// 行動から頼まれているウェーブの倍率
+
+		// 死亡の光(球の中心の点光源と、空間の暗さ・フォグ)。調整値は死亡の行動が持つ
+		SwarmBossDeathLightRequest m_deathLightRequest = {};	// 最後に頼まれた値(爆散した後はこれから消していく)
+		SwarmBossDeathLightRequest m_deathLight = {};			// 今積んでいる値
+		float m_deathLightBurstTime = 0.0f;						// 爆散してからの経過時間(秒)
+		Engine::Handle<Engine::Graphics::PointLight> m_deathLightHandle = {};	// 面を照らす点光源の席
 
 		//------------------------------------------------------------------------------------------
 		// ウェーブ

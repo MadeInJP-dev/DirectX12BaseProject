@@ -7,6 +7,7 @@
 #include "Engine/Graphics/Frame/SceneView/AmbientData.h"
 #include "Engine/Graphics/Frame/SceneView/CameraData.h"
 #include "Engine/Graphics/Frame/SceneView/SceneFogData.h"
+#include "Engine/Graphics/Raytracing/RayEngine.h"
 
 namespace Engine::Graphics::Pipeline
 {
@@ -106,12 +107,46 @@ namespace Engine::Graphics::Pipeline
 		const auto _sunCB = _pLightManager->GetSunLightCB();
 		_pCtx->BindCB()->BindAndAttachDataComputeRootCBV(_pCmd, ROOT_SUN_LIGHT_CB, _sunCB);
 
+		// 演出の点光源と、その影を引くレイトレのワールド
+		BindPointLight(a_context);
+
 		// 出力の大きさで回す(描画解像度より小さいことがある)
 		const Slot* _pOut = FindOutputSlot(MakeSlotID("Fog"));
 		if (_pOut) DispatchForSlot(a_context, *_pOut);
 	}
 
 
+
+	//======================================================================================
+	// 演出の点光源
+	//--------------------------------------------------------------------------------------
+	// 影はシーンの影の求め方(シャドウマップ / レイトレ)によらず、インラインレイトレで引く。
+	// 点光源の影は全方位なので、平行光のシャドウマップでは引けないため。
+	//
+	// TLAS のルートSRVは点光源が無いフレームも必ず張る(張らないまま回すと検証で止まる)。
+	// 組めていないフレームの中身は読まない(isShadowValid = 0 でシェーダーがレイを飛ばさない)
+	//======================================================================================
+	void SceneVolumetricFogPass::BindPointLight(const PassContext& a_context)
+	{
+		RenderContext* _pCtx = a_context.pRenderContext;
+		GraphicsEngine* _pGE = a_context.pGraphicsEngine;
+		auto* _pCmd = a_context.pCmdList;
+
+		FogPointLightCB _cb = _pGE->GetSceneView()->GetFogPointLight();
+		_cb.isShadowValid = 0;
+
+		auto* _pRayEngine = a_context.pRayEngine;
+		if (_cb.enable != 0 && _cb.intensity > 0.0f && _cb.shadowStepCount > 0 && _pRayEngine)
+		{
+			// レイワールド更新(同じフレームで先に誰かが済ませていれば何もしない)
+			_pRayEngine->Commit(_pCmd, _pGE->RefRenderDevice()->GetCurrentFrameIndex());
+			_cb.isShadowValid = _pRayEngine->GetInstanceVec().empty() ? 0 : 1;
+		}
+
+		_pCtx->BindCB()->BindAndAttachDataComputeRootCBV(_pCmd, ROOT_POINT_LIGHT_CB, _cb);
+
+		if (_pRayEngine) _pRayEngine->BindTLAS(_pCtx, ROOT_TLAS);
+	}
 
 	void SceneVolumetricFogPass::Archive(Engine::Persistence::Archive& a_arch)
 	{

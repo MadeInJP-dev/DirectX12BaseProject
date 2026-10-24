@@ -137,6 +137,17 @@ namespace Engine::Graphics
 		void SetSceneFogCompositeData(const SceneFogCompositeCB& a_data) { m_cbSceneFogComposite = a_data; }
 		const SceneFogCompositeCB& GetSceneFogCompositeData() const { return m_cbSceneFogComposite; }
 
+		//--------------------------------------------------------------------------------------------
+		// フォグを照らす点光源(1つだけ)
+		//
+		// シーンの環境設定ではなく演出(ボスの死亡など)の持ち物。積む側が毎フレーム積み、
+		// EndFrame で消える(積まなくなれば次のフレームから消える)。
+		// 積む側が複数あると最後に積んだものが勝つ。
+		// 環境設定より後(シーンの描画の中)で積んでよい。読むのはレンダーグラフが回るとき
+		//--------------------------------------------------------------------------------------------
+		void SetFogPointLight(const FogPointLightCB& a_data) { m_cbFogPointLight = a_data; }
+		const FogPointLightCB& GetFogPointLight() const { return m_cbFogPointLight; }
+
 		// 環境設定を「何も無い」状態へ戻す : 環境光なし・フォグなし・空なし。
 		// 環境設定を使うシーンが1つも無いときと、持ち主のシーンが消えたときに通す
 		void ClearAmbient();
@@ -193,6 +204,9 @@ namespace Engine::Graphics
 		GroundDustCB m_cbGroundDust = {};
 		SceneFogCompositeCB m_cbSceneFogComposite = {};
 		Handle<Resource::Texture> m_fogNoiseTexHandle = {};
+
+		// フォグを照らす点光源(EndFrame で消す)
+		FogPointLightCB m_cbFogPointLight = {};
 
 		// 被写界深度データ(アクティブカメラの FocusParamComponent から毎フレーム設定)
 		DoFOptionCB m_cbDoF = {};

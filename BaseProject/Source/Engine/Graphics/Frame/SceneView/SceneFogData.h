@@ -35,6 +35,29 @@ namespace Engine::Graphics
 		float stepSize = 0.5f;		// チリの層の中をレイマーチする1歩の長さ(m)
 	};
 
+	// フォグを照らす点光源(1つだけ)。光の筋(ゴッドレイ)を点から全方位へこぼすのに使う。
+	//
+	// シーンの持ち物ではなく、演出(ボスの死亡など)が毎フレーム SceneView へ積む。
+	// SceneView::EndFrame で消えるので、点けている間は毎フレーム積み直すこと。
+	// 面(地面・物体)は照らさない。面も照らしたいときは LightManager のポイントライトを別に置く。
+	//
+	// 遮るものはレイトレのワールド(RayTag を持つもの / 演出側が登録したもの)。
+	// shadowStepCount が 0 なら遮らずに照らす。
+	// ※ HLSL 側(Asset/Shader/Common/RootParameters/SceneFogData.hlsli の FogPointLightData)と並びを合わせること
+	struct FogPointLightCB
+	{
+		Math::Vector3 position = {};				// 位置(ワールド)
+		float range = 100.0f;						// 光の届く距離(m)。ここで 0 になる
+
+		Math::Vector3 color = { 1.0f, 1.0f, 1.0f };	// 色
+		float intensity = 0.0f;						// 色に掛ける強さ(減衰はディファードのポイントライトと同じ式)
+
+		int enable = 0;								// 0 なら点光源なし
+		uint32_t shadowStepCount = 0;				// 視線のうち光の届く範囲を歩く歩数(1歩ごとに影のレイを1本)。0 なら遮らない
+		int isShadowValid = 0;						// レイトレのワールドが組めたか(パスが書く。積む側は触らない)
+		float pad0 = 0.0f;
+	};
+
 	// フォグをメインカラーへ重ねるときの調整値(SceneFogCompositePass が送る)
 	// ※ HLSL 側(SceneFogCompositeCS の SceneFogCompositeData)と並びを合わせること
 	struct SceneFogCompositeCB

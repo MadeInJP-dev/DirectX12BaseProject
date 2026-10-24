@@ -34,6 +34,40 @@ namespace App::Object
 	};
 
 	/// <summary>
+	/// 死亡の光の依頼 : 球の中心に大きく強い点光源を置き、体の隙間から光の筋(ゴッドレイ)を全方位へこぼす。
+	/// あわせて空間を暗くし、フォグを濃くして光の筋を目立たせる
+	/// </summary>
+	/// <remarks>
+	/// ステートは毎フレーム「今の値」を頼む(立ち上がりはステートが掛ける)。
+	/// 爆散した後はステートが回らないので、残りの消え方(閃光・消えるまでの時間)も一緒に渡し、
+	/// 爆散からはコントローラーが最後に頼まれた値から消していく。
+	/// 点光源の影には体(ボイド)を使う。点けている間、体はコントローラーがレイトレのワールドへ載せる
+	/// </remarks>
+	struct SwarmBossDeathLightRequest
+	{
+		bool isRequested = false;					// 点けてほしい(点けている間、毎フレーム立てる)
+		Math::Vector3 center = {};					// 光源の位置(ワールド)
+
+		// 光源
+		Math::Vector3 color = { 1.0f, 0.75f, 0.45f };	// 色
+		float intensity = 0.0f;						// 今の強さ(色に掛ける。減衰はディファードのポイントライトと同じ)
+		float range = 250.0f;						// 光の届く距離(m)
+		uint32_t shadowStepCount = 24;				// フォグの中を歩く歩数(1歩ごとに影のレイを1本。0 で遮らない)
+		float surfaceScale = 1.0f;					// 面(地面・体)も照らす点光源の強さの倍率(0 で照らさない)
+
+		// 空間の暗さとフォグ(Engine::Scene::SceneAmbientMood へ写す)
+		float moodWeight = 0.0f;					// 今の掛かり具合(0〜1)
+		float moodLightScale = 0.5f;				// 明るさの倍率(環境光・太陽・空)
+		float moodFogDensity = 0.015f;				// フォグの濃さ(1m あたり)
+		float moodFogComposite = 0.5f;				// フォグを重ねる強さ
+
+		// 爆散の後(コントローラーが引き継ぐ)
+		float burstFlashScale = 3.0f;				// 爆散の瞬間の強さの倍率(ここから消えていく)
+		float lightFadeOutTime = 2.5f;				// 爆散してから光が消えるまでの時間(秒)
+		float moodFadeOutTime = 4.0f;				// 爆散してから暗さ・フォグが戻るまでの時間(秒)
+	};
+
+	/// <summary>
 	/// 体を渦巻きの円陣に並べる依頼(円陣ミサイル)。
 	/// 小隊長ごとの置き場所を決めて書くのはコントローラー(並べている間、毎フレーム頼む)
 	/// </summary>
@@ -96,6 +130,7 @@ namespace App::Object
 		float bodyDefenseRatio   = 1.0f;	// 体(ボイド)の防御比率。1 : そのまま食らう / 0 : 無敵
 		float waveSpeedScale     = 1.0f;	// 発光のウェーブを速める倍率(速さに掛け、出す間隔を割る)
 		SwarmBossBurstRequest burst = {};	// 体を爆散させてほしい(死亡の最後)
+		SwarmBossDeathLightRequest deathLight = {};	// 球の中心の光と、空間の暗さ・フォグ(死亡)
 
 		// 鳴き声と、画面のラジアルブラーの震え。鳴らす音とブラーの調整値はコントローラーが持つ。
 		// 震わせるかどうかは鳴き声とは別に頼む(攻撃の鳴き声は震わせない)

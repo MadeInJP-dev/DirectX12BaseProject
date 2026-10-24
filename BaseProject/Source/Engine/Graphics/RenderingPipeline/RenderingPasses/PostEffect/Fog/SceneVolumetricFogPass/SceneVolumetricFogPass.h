@@ -24,6 +24,11 @@ namespace Engine::Graphics::Pipeline
 	// どちらも引けないフレーム(どちらの入力も繋がっていない)は、平行光を遮らずに照らす。
 	// 影を引くのはシーンの影の距離(ShadowDistance)まで。その先は遮らない。
 	//
+	// 演出が点光源を1つ積んでいれば(SceneView::GetFogPointLight)、それもフォグを照らす。
+	// 点光源の影はシーンの影の求め方によらずインラインレイトレ(RayQuery)で引くので、
+	// 影の歩数があるフレームはこのパスがレイトレのワールドを組む(同じフレームで組まれていれば何もしない)。
+	// ワールドが空・レイトレが無いときは遮らずに照らす。
+	//
 	// フォグは低周波なので、描画解像度より小さく回せる(既定 1/2)。
 	// フォグの1画素は、覆う範囲の中の代表の1画素を通るレイを積分する。
 	// 合成(SceneFogCompositePass)は代表の深度を見ながら引き伸ばすので、
@@ -61,6 +66,11 @@ namespace Engine::Graphics::Pipeline
 
 	private:
 
+		// 演出の点光源を送る。影を引くなら、レイトレのワールドを組んで TLAS を張る
+		void BindPointLight(const PassContext& a_context);
+
+	private:
+
 		// ルートパラメータの番号 : シェーダー(SceneVolumetricFogCS)の並びと合わせる
 		static constexpr int ROOT_CAMERA_CB = 0;
 		static constexpr int ROOT_SCENE_FOG_CB = 1;
@@ -71,6 +81,8 @@ namespace Engine::Graphics::Pipeline
 		static constexpr int ROOT_AMBIENT_CB = 6;
 		static constexpr int ROOT_SHADOW_CB = 7;
 		static constexpr int ROOT_SUN_LIGHT_CB = 8;
+		static constexpr int ROOT_POINT_LIGHT_CB = 9;
+		static constexpr int ROOT_TLAS = 10;
 
 		// ノイズが張られていないときに渡す番号(シェーダーの DESCRIPTOR_INDEX_NONE と合わせる)
 		static constexpr UINT DESCRIPTOR_INDEX_NONE = 0xFFFFFFFF;

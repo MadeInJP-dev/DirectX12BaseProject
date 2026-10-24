@@ -136,16 +136,43 @@ namespace Engine::Scene
 	//   フォグ・ダスト・合成   … SceneVolumetricFogPass / SceneFogCompositePass
 	//   平行光・影の設定       … LightManager(影 / GI / ディファード)
 	//======================================================================================
-	void SceneAmbient::Apply(Graphics::GraphicsEngine& a_ge, Handle<Graphics::DirectionalLight>& a_inoutDLHandle) const
+	void SceneAmbient::Apply(Graphics::GraphicsEngine& a_ge, Handle<Graphics::DirectionalLight>& a_inoutDLHandle,
+		const SceneAmbientMood& a_mood) const
 	{
+		//----------------------------------------------------------------------------
+		// 演出を混ぜる(シーンの値は書き換えない)
+		//----------------------------------------------------------------------------
+		const float _moodWeight = std::clamp(a_mood.weight, 0.0f, 1.0f);
+		const float _lightScale = std::lerp(1.0f, std::max(a_mood.lightScale, 0.0f), _moodWeight);
+
+		Graphics::AmbientData _ambient = m_ambient;
+		_ambient.ambientColorScale = _ambient.ambientColorScale * _lightScale;
+		_ambient.heightFogColor    = _ambient.heightFogColor * _lightScale;
+		_ambient.distanceFogColor  = _ambient.distanceFogColor * _lightScale;
+
+		Graphics::SkyData _sky = m_sky;
+		_sky.exposure *= _lightScale;
+
+		Graphics::SceneFogCB _sceneFog = m_sceneFog;
+		if (a_mood.fogDensity >= 0.0f)
+		{
+			_sceneFog.density = std::lerp(_sceneFog.density, a_mood.fogDensity, _moodWeight);
+		}
+
+		Graphics::SceneFogCompositeCB _fogComposite = m_fogComposite;
+		if (a_mood.fogCompositeIntensity >= 0.0f)
+		{
+			_fogComposite.intensity = std::lerp(_fogComposite.intensity, a_mood.fogCompositeIntensity, _moodWeight);
+		}
+
 		auto* _pView = a_ge.RefSceneView();
-		_pView->SetAmbientData(m_ambient);
-		_pView->SetSkyData(m_sky);
+		_pView->SetAmbientData(_ambient);
+		_pView->SetSkyData(_sky);
 		_pView->SetSkyTexture(m_skyTexRef);
-		_pView->SetSceneFogData(m_sceneFog);
+		_pView->SetSceneFogData(_sceneFog);
 		_pView->SetGroundDustData(m_groundDust);
 		_pView->SetFogNoiseTexture(m_fogNoiseTexRef);
-		_pView->SetSceneFogCompositeData(m_fogComposite);
+		_pView->SetSceneFogCompositeData(_fogComposite);
 
 		//----------------------------------------------------------------------------
 		// 平行光
@@ -163,9 +190,9 @@ namespace Engine::Scene
 			_pLight->dir   = { m_dlDir.x, m_dlDir.y, m_dlDir.z };
 			_pLight->color = { m_dlColor.x, m_dlColor.y, m_dlColor.z, 1.0f };
 
-			// 色を 1.0 超えで持たせる従来の形をそのまま残すため、強さは掛けない。
+			// 色を 1.0 超えで持たせる従来の形をそのまま残すため、強さには演出の明るさの倍率だけを掛ける。
 			// (ポイントライトのように色と明るさを分けたくなったらここへ欄を足す)
-			_pLight->brightness = 1.0f;
+			_pLight->brightness = _lightScale;
 		}
 
 		//----------------------------------------------------------------------------
