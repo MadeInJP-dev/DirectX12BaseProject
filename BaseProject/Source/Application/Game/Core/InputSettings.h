@@ -69,6 +69,10 @@ namespace App::Game
 
 		// 視点の上下反転。未選択(nullopt)なら作り手の値(エンジンの InputOption)のまま
 		std::optional<bool> opIsInvertLookY = std::nullopt;
+
+		// コントローラーの視点(スティック)。マウスとは別に持つ
+		float stickSensitivity = 1.0f;		// スティック感度 : 視点の速さ(InputActionManager の STICK_LOOK_SPEED)へ掛ける倍率
+		bool isInvertStickY = false;		// スティックの上下反転
 	};
 
 	//------------------------------------------------------------------------------

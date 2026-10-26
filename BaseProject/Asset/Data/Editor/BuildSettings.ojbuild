@@ -1,0 +1,54 @@
+{
+    "alwaysIncludeDirectories": [
+        "Asset/Shader",
+        "Asset/RenderingPipeline"
+    ],
+    "dataDirectories": [
+        "Asset/Data/Engine",
+        "Asset/Data/Game",
+        "Asset/Data/User"
+    ],
+    "excludeDirectories": [
+        ""
+    ],
+    "excludeTypes": [
+        "ObjectPrefab"
+    ],
+    "exeName": "VECTOR_REIGN",
+    "exePath": "x64/Release/BaseProject.exe",
+    "executeBuildMode": 2,
+    "executeDirectoryName": "実行",
+    "extraFiles": [],
+    "isConvertBeforeBuild": true,
+    "isCopyDll": true,
+    "isIncludeAllScenes": false,
+    "isIncludeRecordedAssets": true,
+    "isScanSourceReferences": true,
+    "isWriteExecute": true,
+    "isWriteLibrary": true,
+    "isWriteSource": true,
+    "jsonKeepExtensions": [
+        ".ojoptn",
+        ".ojrpipe"
+    ],
+    "libraryDirectory": "../Library",
+    "libraryDirectoryName": "Library",
+    "libraryExcludeDirectories": [
+        "_Backup"
+    ],
+    "outputDirectory": "C:\\_Development\\Project\\提出パッケージ",
+    "packageName": "名前",
+    "projectFiles": [
+        "BaseProject.sln",
+        "BaseProject.vcxproj",
+        "BaseProject.vcxproj.filters",
+        ".editorconfig"
+    ],
+    "shaderDirectory": "Asset/Shader",
+    "shaderSourceExtensions": [
+        ".hlsl",
+        ".hlsli"
+    ],
+    "sourceDirectory": "Source",
+    "sourceDirectoryName": "ソース"
+}

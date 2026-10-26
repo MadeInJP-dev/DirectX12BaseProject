@@ -75,7 +75,8 @@ namespace App::Input
 		void AddControllerBinding(
 			Engine::Input::InputCollector& a_collector,
 			Game::EGameAction a_action,
-			const Game::InputBindingData& a_binding)
+			const Game::InputBindingData& a_binding,
+			const Game::InputSettings& a_settings)
 		{
 			namespace Pad = Engine::Input::GamepadKey;
 
@@ -92,11 +93,13 @@ namespace App::Input
 				}
 
 				auto _upAxis = std::make_unique<Engine::Input::InputAxisForXInput>(CONTROLLER_USER_INDEX, _isLeft);
-				// 視点は1秒あたりの角度にする(FPS で速さが変わらないように)
+				// 視点は1秒あたりの角度にする(FPS で速さが変わらないように)。
+				// 感度と上下反転はプレイヤーの設定(マウスとは別に持つ)
 				if (a_action == Game::EGameAction::Look)
 				{
-					_upAxis->SetValueRate(STICK_LOOK_SPEED);
+					_upAxis->SetValueRate(STICK_LOOK_SPEED * a_settings.stickSensitivity);
 					_upAxis->SetPerSecond(true);
+					_upAxis->SetInvertY(a_settings.isInvertStickY);
 				}
 
 				// UI の項目移動は十字キーでも動かせるようにする。
@@ -386,7 +389,7 @@ namespace App::Input
 
 			for (const auto& [_action, _binding] : _settings.controller)
 			{
-				AddControllerBinding(*_upController, _action, _binding);
+				AddControllerBinding(*_upController, _action, _binding, _settings);
 			}
 
 			_inputManager.AddDevice(DEVICE_CONTROLLER, std::move(_upController));

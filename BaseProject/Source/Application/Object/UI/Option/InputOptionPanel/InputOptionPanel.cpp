@@ -2,9 +2,12 @@
 
 #include "Engine/ECS/System/SystemContext.h"	// ObjectContext が運ぶサービス群
 #include "Engine/Input/InputManager/InputManager.h"
+#include "Engine/Input/InputDeviceManager.h"		// 最後に触ったデバイスと、コントローラーのボタンの待ち受け
 #include "Engine/EditorField/EditorField.h"
 
+#include "Application/ECS/World/APPWorld.h"
 #include "Application/InstanceResource/UserDataResource.h"
+#include "Application/InstanceResource/UINavigationResource.h"	// 待ち受けの間は項目移動を止める
 #include "Application/Game/UserData/UserData.h"
 #include "Application/Game/InputActions/InputManager/InputActionManager.h"
 #include "Application/Game/DebugKeys/DebugKeys.h"
@@ -43,6 +46,67 @@ namespace App::Object
 			Game::AxisInputData _axis = *_pAxis;
 			const int* _pKey = RefAxisKey(_axis, a_direction);
 			return _pKey ? *_pKey : -1;
+		}
+
+		// コントローラーの行が今指しているもの(無ければ -1)。軸はスティック1本なので上の値で表す
+		int FindPadBindingKey(const Game::InputBindingData& a_binding, EAxisDirection a_direction)
+		{
+			if (a_direction == EAxisDirection::None)
+			{
+				const auto* _pButton = std::get_if<Game::ButtonInputData>(&a_binding);
+				return _pButton ? _pButton->key : -1;
+			}
+
+			const auto* _pAxis = std::get_if<Game::AxisInputData>(&a_binding);
+			return _pAxis ? _pAxis->up : -1;
+		}
+
+		// スティック1本ぶんの軸の割り当て
+		Game::AxisInputData MakeStickAxis(bool a_isLeft)
+		{
+			namespace Pad = Engine::Input::GamepadKey;
+			return a_isLeft
+				? Game::AxisInputData{ Pad::LThumbUp, Pad::LThumbRight, Pad::LThumbDown, Pad::LThumbLeft }
+				: Game::AxisInputData{ Pad::RThumbUp, Pad::RThumbRight, Pad::RThumbDown, Pad::RThumbLeft };
+		}
+
+		// コントローラーの番号 : 割り当てを流す InputActionManager と同じ1台目
+		constexpr UINT GAMEPAD_USER_INDEX = 0;
+
+		// スティックを倒したとみなす量(XInput の値)。遊びより大きく、はっきり倒したときだけ拾う
+		constexpr float STICK_CAPTURE_THRESHOLD = 32767.0f * 0.6f;
+
+		// ボタンの印(XInput)と GamepadKey の対応
+		struct PadButtonMap
+		{
+			WORD mask;
+			int padKey;
+		};
+
+		constexpr PadButtonMap PAD_BUTTON_MAP_ARRAY[] =
+		{
+			{ XINPUT_GAMEPAD_A,					Engine::Input::GamepadKey::A },
+			{ XINPUT_GAMEPAD_B,					Engine::Input::GamepadKey::B },
+			{ XINPUT_GAMEPAD_X,					Engine::Input::GamepadKey::X },
+			{ XINPUT_GAMEPAD_Y,					Engine::Input::GamepadKey::Y },
+			{ XINPUT_GAMEPAD_RIGHT_SHOULDER,	Engine::Input::GamepadKey::RShoulder },
+			{ XINPUT_GAMEPAD_LEFT_SHOULDER,		Engine::Input::GamepadKey::LShoulder },
+			{ XINPUT_GAMEPAD_DPAD_UP,			Engine::Input::GamepadKey::DPadUp },
+			{ XINPUT_GAMEPAD_DPAD_DOWN,			Engine::Input::GamepadKey::DPadDown },
+			{ XINPUT_GAMEPAD_DPAD_LEFT,			Engine::Input::GamepadKey::DPadLeft },
+			{ XINPUT_GAMEPAD_DPAD_RIGHT,		Engine::Input::GamepadKey::DPadRight },
+			{ XINPUT_GAMEPAD_START,				Engine::Input::GamepadKey::Start },
+			{ XINPUT_GAMEPAD_BACK,				Engine::Input::GamepadKey::Back },
+			{ XINPUT_GAMEPAD_LEFT_THUMB,		Engine::Input::GamepadKey::LThumbPress },
+			{ XINPUT_GAMEPAD_RIGHT_THUMB,		Engine::Input::GamepadKey::RThumbPress },
+		};
+
+		// スティックをはっきり倒しているか
+		bool IsStickTilted(SHORT a_x, SHORT a_y)
+		{
+			const float _x = static_cast<float>(a_x);
+			const float _y = static_cast<float>(a_y);
+			return (_x * _x + _y * _y) > (STICK_CAPTURE_THRESHOLD * STICK_CAPTURE_THRESHOLD);
 		}
 	}
 
@@ -88,15 +152,25 @@ namespace App::Object
 
 		m_moveSensitivity = _settings.mouseSensitivity;
 		m_opIsInvertLookY = _settings.opIsInvertLookY;
+		m_stickSensitivity = _settings.stickSensitivity;
+		m_isInvertStickY = _settings.isInvertStickY;
 
 		for (ButtonElement& _element : m_buttonVec)
 		{
 			_element.currentActionKey = -1;
+			_element.currentPadKey = -1;
 
 			const auto _it = _settings.keyboard.find(_element.action);
-			if (_it == _settings.keyboard.end()) continue;
+			if (_it != _settings.keyboard.end())
+			{
+				_element.currentActionKey = FindBindingKey(_it->second, _element.axisDirection);
+			}
 
-			_element.currentActionKey = FindBindingKey(_it->second, _element.axisDirection);
+			const auto _padIt = _settings.controller.find(_element.action);
+			if (_padIt != _settings.controller.end())
+			{
+				_element.currentPadKey = FindPadBindingKey(_padIt->second, _element.axisDirection);
+			}
 		}
 	}
 
@@ -105,6 +179,9 @@ namespace App::Object
 	//======================================================================================
 	void InputOptionPanel::LayoutItems(Engine::GameObject::ObjectContext& a_context)
 	{
+		// どちらの設定を出すかで並ぶ行が変わるので、並べる前に決める
+		UpdateGamepadMode(a_context);
+
 		LayoutAxisSettings(a_context);
 		AdvanceSpace(m_sectionSpace);
 		LayoutButtonSettings(a_context);
@@ -129,6 +206,14 @@ namespace App::Object
 
 		for (const ButtonElement& _element : m_buttonVec)
 		{
+			// 出さない行は隠して詰める(移動の行はコントローラーではスティック1本ぶんの1行)
+			const bool _isShown = IsRowShown(_element);
+			if (_element.axisDirection != EAxisDirection::None)
+			{
+				if (UIBase* _pRow = FindUI(a_context, _element.rowUI.guid)) _pRow->SetVisible(_isShown);
+			}
+			if (!_isShown) continue;
+
 			PlaceItem(a_context, _element.rowUI);
 			AdvanceRow();
 		}
@@ -147,9 +232,30 @@ namespace App::Object
 	{
 		// ボタンで1刻みずつ上げ下げする
 		const int _step = UpdateStepper(a_context, m_sensitivityStepper);
+		const float _stepValue = SENSITIVITY_STEP * static_cast<float>(_step);
+
+		//------------------------------------------------------------------
+		// コントローラーの表示 : スティック(視点)の感度と上下反転
+		//------------------------------------------------------------------
+		if (m_isGamepadMode)
+		{
+			if (_step != 0) ApplyStickSensitivity(a_context, m_stickSensitivity + _stepValue);
+			SetStepperValue(a_context, m_sensitivityStepper, m_stickSensitivity, SENSITIVITY_MAX);
+
+			if (UpdateSelector(a_context, m_invertLookYSelector) != 0)
+			{
+				ApplyInvertStickY(a_context, !m_isInvertStickY);
+			}
+			SetSelectorText(a_context, m_invertLookYSelector, m_isInvertStickY ? "On" : "Off");
+			return;
+		}
+
+		//------------------------------------------------------------------
+		// キーボード・マウスの表示 : マウスの感度と上下反転
+		//------------------------------------------------------------------
 		if (_step != 0)
 		{
-			ApplySensitivity(a_context, m_moveSensitivity + SENSITIVITY_STEP * static_cast<float>(_step));
+			ApplySensitivity(a_context, m_moveSensitivity + _stepValue);
 		}
 
 		// 表示 : 感度そのものを上限に対する割合で出す。
@@ -193,6 +299,8 @@ namespace App::Object
 
 			for (size_t _i = 0; _i < m_buttonVec.size() && m_isRowClickArmed; ++_i)
 			{
+				if (!IsRowShown(m_buttonVec[_i])) continue;
+
 				UIBase* _pRow = FindUI(a_context, m_buttonVec[_i].rowUI.guid);
 				if (!_pRow || !_pRow->IsClicked()) continue;
 
@@ -201,7 +309,32 @@ namespace App::Object
 				// 今押されているキーは割り当てない。押された瞬間だけを拾うので、
 				// 行を押したクリックも、押された扱いのまま戻らないキーも、ここで覚えておけば拾われない
 				CaptureKeyState();
+				CapturePadState(a_context);
 				break;
+			}
+		}
+		else if (m_isGamepadMode)
+		{
+			//--------------------------------------------------------------
+			// 待ち受け中(コントローラー) : 待ち受けに入った後に新しく押されたボタンを割り当てる
+			//
+			// 移動の行はスティックを倒して選ぶ(ボタンは拾わない)。ほかの行はボタンだけを拾う。
+			// スティック・十字キー・LB/RB で項目が動かないよう、待っている間は項目移動を止める
+			//--------------------------------------------------------------
+			LockNavigation(a_context);
+
+			if (_isInputEnable)
+			{
+				ButtonElement& _element = m_buttonVec[static_cast<size_t>(m_waitingIndex)];
+				const bool _isStickWanted = (_element.axisDirection != EAxisDirection::None);
+
+				const int _padKey = FindNewlyPressedPadKey(a_context, _isStickWanted);
+				if (_padKey >= 0)
+				{
+					ApplyPadBinding(a_context, _element, _padKey);
+					m_waitingIndex = -1;
+					m_isRowClickArmed = false;
+				}
 			}
 		}
 		else if (_isInputEnable)
@@ -334,12 +467,195 @@ namespace App::Object
 		}
 
 		a_element.currentActionKey = a_key;
+		ApplyBindings(a_context);
+	}
 
-		// 入力デバイスへ流し直す。通さないと UserData の値だけ変わって、操作は前のキーのまま
-		if (_pUserDataResource->pInputActionManager)
+	// 入力デバイスへ流し直す。通さないと UserData の値だけ変わって、操作は前のキーのまま
+	void InputOptionPanel::ApplyBindings(Engine::GameObject::ObjectContext& a_context)
+	{
+		auto* _pUserDataResource = FindUserData(a_context);
+		if (!_pUserDataResource || !_pUserDataResource->pInputActionManager) return;
+
+		_pUserDataResource->pInputActionManager->Apply();
+	}
+
+	//======================================================================================
+	// コントローラーの表示
+	//--------------------------------------------------------------------------------------
+	// 見るのは InputDeviceManager の最後に触ったデバイス(UI のコントローラー用の飾りと同じ)。
+	// 待ち受けの間は変えない : 入ったデバイスのボタンを待っているのに、表示だけ替わらないように
+	//======================================================================================
+	void InputOptionPanel::UpdateGamepadMode(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (m_waitingIndex >= 0) return;
+		if (!a_context.pServices || !a_context.pServices->pInputManager) return;
+
+		using Engine::Input::EInputDevice;
+		const EInputDevice _device = a_context.pServices->pInputManager->GetInputDeviceManager().GetActiveDevice();
+		m_isGamepadMode = (_device == EInputDevice::Gamepad);
+	}
+
+	bool InputOptionPanel::IsRowShown(const ButtonElement& a_element) const
+	{
+		if (!m_isGamepadMode) return true;
+
+		// スティックは向きごとには変えられないので、軸の行は上(前)の1行で1本ぶんを持つ
+		return a_element.axisDirection == EAxisDirection::None
+			|| a_element.axisDirection == EAxisDirection::Up;
+	}
+
+	void InputOptionPanel::ApplyStickSensitivity(Engine::GameObject::ObjectContext& a_context, float a_sensitivity)
+	{
+		// マウスと同じく 0.01 単位に丸める
+		const float _rounded = std::round(a_sensitivity / SENSITIVITY_STEP) * SENSITIVITY_STEP;
+		m_stickSensitivity = std::clamp(_rounded, SENSITIVITY_MIN, SENSITIVITY_MAX);
+
+		auto* _pUserDataResource = FindUserData(a_context);
+		if (!_pUserDataResource || !_pUserDataResource->pUserData) return;
+
+		// スティックの速さは割り当てと一緒に軸へ積むので、割り当てごと流し直す
+		_pUserDataResource->pUserData->RefInputSettings().stickSensitivity = m_stickSensitivity;
+		ApplyBindings(a_context);
+	}
+
+	void InputOptionPanel::ApplyInvertStickY(Engine::GameObject::ObjectContext& a_context, bool a_isInvert)
+	{
+		m_isInvertStickY = a_isInvert;
+
+		auto* _pUserDataResource = FindUserData(a_context);
+		if (!_pUserDataResource || !_pUserDataResource->pUserData) return;
+
+		_pUserDataResource->pUserData->RefInputSettings().isInvertStickY = m_isInvertStickY;
+		ApplyBindings(a_context);
+	}
+
+	//======================================================================================
+	// コントローラーの割り当てを書く
+	//--------------------------------------------------------------------------------------
+	// 移動の行   : スティック1本ごと入れる。視点が同じスティックを使っていれば、視点はもう片方へ
+	//              (同じスティックで移動と視点が両方動くと遊べないため)。
+	// ボタンの行 : ボタン1つ。軸で持っているアクションはボタン1つでは置き換えない(キーボードと同じ)
+	//======================================================================================
+	void InputOptionPanel::ApplyPadBinding(Engine::GameObject::ObjectContext& a_context, ButtonElement& a_element, int a_padKey)
+	{
+		auto* _pUserDataResource = FindUserData(a_context);
+		if (!_pUserDataResource || !_pUserDataResource->pUserData) return;
+
+		auto& _controller = _pUserDataResource->pUserData->RefInputSettings().controller;
+		const auto _it = _controller.find(a_element.action);
+
+		if (a_element.axisDirection == EAxisDirection::None)
 		{
-			_pUserDataResource->pInputActionManager->Apply();
+			if (_it != _controller.end() && std::holds_alternative<Game::AxisInputData>(_it->second))
+			{
+				const std::string _actionName{ magic_enum::enum_name(a_element.action) };
+				ENGINE_WARNING("[InputOptionPanel] %s はスティックで割り当てられているため、ボタン1つでは変えられません", _actionName.c_str());
+				return;
+			}
+
+			_controller[a_element.action] = Game::ButtonInputData{ a_padKey };
+			a_element.currentPadKey = a_padKey;
 		}
+		else
+		{
+			if (_it != _controller.end() && !std::holds_alternative<Game::AxisInputData>(_it->second))
+			{
+				const std::string _actionName{ magic_enum::enum_name(a_element.action) };
+				ENGINE_WARNING("[InputOptionPanel] %s はボタンで割り当てられているため、スティックでは変えられません", _actionName.c_str());
+				return;
+			}
+
+			const bool _isLeft = (a_padKey == Engine::Input::GamepadKey::LThumbUp);
+			const Game::AxisInputData _stick = MakeStickAxis(_isLeft);
+			_controller[a_element.action] = _stick;
+
+			// 視点が同じスティックなら、もう片方へ入れ替える
+			const auto _lookIt = _controller.find(Game::EGameAction::Look);
+			const auto* _pLook = (_lookIt != _controller.end()) ? std::get_if<Game::AxisInputData>(&_lookIt->second) : nullptr;
+			if (_pLook && _pLook->up == _stick.up)
+			{
+				_controller[Game::EGameAction::Look] = MakeStickAxis(!_isLeft);
+			}
+
+			// 同じアクションの軸の行(向きごとの行)は全部同じスティックを指す
+			for (ButtonElement& _element : m_buttonVec)
+			{
+				if (_element.action == a_element.action && _element.axisDirection != EAxisDirection::None)
+				{
+					_element.currentPadKey = _stick.up;
+				}
+			}
+		}
+
+		ApplyBindings(a_context);
+	}
+
+	void InputOptionPanel::CapturePadState(Engine::GameObject::ObjectContext& a_context)
+	{
+		m_padDownKeyVec = ReadPadKeys(a_context);
+	}
+
+	int InputOptionPanel::FindNewlyPressedPadKey(Engine::GameObject::ObjectContext& a_context, bool a_isStickWanted)
+	{
+		const std::vector<int> _downKeyVec = ReadPadKeys(a_context);
+
+		int _found = -1;
+		for (int _padKey : _downKeyVec)
+		{
+			if (IsStickKey(_padKey) != a_isStickWanted) continue;
+
+			// 前のフレームから押されていたもの(押しっぱなし・倒しっぱなし)は拾わない
+			if (std::find(m_padDownKeyVec.begin(), m_padDownKeyVec.end(), _padKey) != m_padDownKeyVec.end()) continue;
+
+			_found = _padKey;
+			break;
+		}
+
+		// 全部覚え直す : 途中で抜けると、残りが古いまま次のフレームに拾われる
+		m_padDownKeyVec = _downKeyVec;
+		return _found;
+	}
+
+	void InputOptionPanel::LockNavigation(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (!a_context.pWorld || !a_context.pWorld->HasResource<InstanceResource::UINavigationResource>()) return;
+		a_context.pWorld->RefResource<InstanceResource::UINavigationResource>().LockMove(a_context.frameIndex);
+	}
+
+	//======================================================================================
+	// 今押されているボタン・倒されているスティック
+	//--------------------------------------------------------------------------------------
+	// スティックは倒した側の LThumbUp / RThumbUp で表す(割り当てはスティック1本ごとのため)。
+	// トリガーはしきい値を超えていれば押したとする(InputButtonForXInput と同じ)
+	//======================================================================================
+	std::vector<int> InputOptionPanel::ReadPadKeys(Engine::GameObject::ObjectContext& a_context)
+	{
+		std::vector<int> _keyVec = {};
+		if (!a_context.pServices || !a_context.pServices->pInputManager) return _keyVec;
+
+		const XINPUT_GAMEPAD* _pPad =
+			a_context.pServices->pInputManager->GetInputDeviceManager().GetGamepadState(GAMEPAD_USER_INDEX);
+		if (!_pPad) return _keyVec;
+
+		for (const PadButtonMap& _map : PAD_BUTTON_MAP_ARRAY)
+		{
+			if (_pPad->wButtons & _map.mask) _keyVec.push_back(_map.padKey);
+		}
+
+		namespace Pad = Engine::Input::GamepadKey;
+		if (_pPad->bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD)  _keyVec.push_back(Pad::LTrigger);
+		if (_pPad->bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD) _keyVec.push_back(Pad::RTrigger);
+
+		if (IsStickTilted(_pPad->sThumbLX, _pPad->sThumbLY)) _keyVec.push_back(Pad::LThumbUp);
+		if (IsStickTilted(_pPad->sThumbRX, _pPad->sThumbRY)) _keyVec.push_back(Pad::RThumbUp);
+
+		return _keyVec;
+	}
+
+	bool InputOptionPanel::IsStickKey(int a_padKey)
+	{
+		namespace Pad = Engine::Input::GamepadKey;
+		return a_padKey == Pad::LThumbUp || a_padKey == Pad::RThumbUp;
 	}
 
 	//======================================================================================
@@ -361,7 +677,13 @@ namespace App::Object
 		Decoration::TextData* _pText = _pDecoration->RefText();
 		if (!_pText) return;
 
-		const std::string _name = a_isWaiting ? "..." : MakeKeyName(a_element.currentActionKey);
+		std::string _name = "...";
+		if (!a_isWaiting)
+		{
+			_name = m_isGamepadMode
+				? std::string(Engine::Input::GamepadKey::GetName(a_element.currentPadKey))
+				: MakeKeyName(a_element.currentActionKey);
+		}
 		if (_pText->text != _name) _pText->text = _name;
 	}
 
@@ -563,6 +885,7 @@ namespace App::Object
 				}
 
 				Engine::EditorField::Value("Key", "%s", MakeKeyName(_element.currentActionKey).c_str());
+				Engine::EditorField::Value("Pad", "%s", Engine::Input::GamepadKey::GetName(_element.currentPadKey));
 
 				if (Engine::EditorField::DeleteSmallButton("Remove")) _removeIndex = static_cast<int>(_i);
 			}

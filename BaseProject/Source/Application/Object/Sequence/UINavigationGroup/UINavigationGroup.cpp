@@ -103,6 +103,10 @@ namespace App::Object
 			if (_input.IsPress(Game::EGameAction::NextItem)) a_nav.step = 1;
 			if (_input.IsPress(Game::EGameAction::PrevItem)) a_nav.step = -1;
 
+			// 入力を別の用途に使っている間(キー割り当ての待ち受けなど)は動かさない。
+			// 倒している向きは覚えたままにするので、止めが外れても倒しっぱなしで急に動き出さない
+			if (a_nav.IsMoveLocked(a_context.frameIndex)) a_nav.step = 0;
+
 			//------------------------------------------------------------------
 			// 操作の切り替え
 			//------------------------------------------------------------------

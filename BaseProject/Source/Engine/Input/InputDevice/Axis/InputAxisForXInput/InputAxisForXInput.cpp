@@ -59,6 +59,8 @@ namespace Engine::Input
 			m_axis = ApplyDeadzone(_pPad->sThumbRX, _pPad->sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
 		}
 
+		if (m_isInvertY) m_axis.y = -m_axis.y;
+
 		// 十字キー : 押されている間はスティックより優先する
 		if (m_isUseDPad)
 		{

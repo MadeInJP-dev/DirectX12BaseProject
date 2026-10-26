@@ -48,6 +48,10 @@ namespace App::InstanceResource
 		int holdDir = 0;				// 倒している向き(押しっぱなしで繰り返すため)
 		float repeatTimer = 0.0f;		// 次に繰り返すまでの残り時間(秒)
 
+		// 移動を止めるよう頼まれた最後のフレーム(UINT64_MAX で頼まれていない)。
+		// キー割り当ての待ち受けのように、スティック・十字キー・LB/RB を別の用途に使っている間に立てる
+		uint64_t moveLockFrameIndex = UINT64_MAX;
+
 		//--------------------------------------------------------------------------------------
 		// グループの取り合い
 		//--------------------------------------------------------------------------------------
@@ -103,6 +107,21 @@ namespace App::InstanceResource
 
 			if (_prevFrameIndex == UINT64_MAX) return false;
 			return (_prevFrameIndex + 1 == a_frameIndex) && (_pPrevOwner == a_pOwner);
+		}
+
+		/// <summary>
+		/// 項目の移動を止める(毎フレーム頼む)
+		/// </summary>
+		/// <remarks>
+		/// 頼んだフレームと次のフレームの移動量を 0 にする。移動量は次のフレームの頭(PreUpdate)で作るので、
+		/// Update から頼んでも次のフレームに効くように1つ先まで止める。選んでいる UI はそのまま
+		/// </remarks>
+		void LockMove(uint64_t a_frameIndex) { moveLockFrameIndex = a_frameIndex; }
+
+		// 移動を止めているか
+		bool IsMoveLocked(uint64_t a_frameIndex) const
+		{
+			return moveLockFrameIndex != UINT64_MAX && a_frameIndex <= moveLockFrameIndex + 1;
 		}
 
 		/// <summary>その UI が選ばれていて、選択を見せるか(Update から)</summary>

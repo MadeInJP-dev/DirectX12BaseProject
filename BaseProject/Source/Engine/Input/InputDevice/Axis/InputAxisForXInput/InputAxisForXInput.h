@@ -34,12 +34,18 @@ namespace Engine::Input
 		/// </remarks>
 		void SetUseDPad(bool a_isUse) { m_isUseDPad = a_isUse; }
 
+		// 上下を反転するか(視点の上下反転。十字キーには掛けない)
+		void SetInvertY(bool a_isInvert) { m_isInvertY = a_isInvert; }
+
 	private:
 		// 左かどうか
 		bool m_isLeft = false;
 
 		// 十字キーも読むか
 		bool m_isUseDPad = false;
+
+		// 上下を反転するか
+		bool m_isInvertY = false;
 
 		UINT m_userIndex = 0;
 	};

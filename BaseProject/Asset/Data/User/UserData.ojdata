@@ -111,6 +111,7 @@
         ],
         "HasIsInvertLookY": false,
         "IsInvertLookY": false,
+        "IsInvertStickY": false,
         "Keyboard": [
             {
                 "Action": "Look",
@@ -204,7 +205,8 @@
                 "Type": "Button"
             }
         ],
-        "MouseSensitivity": 1.0
+        "MouseSensitivity": 1.0,
+        "StickSensitivity": 1.0
     },
     "Sound": {
         "BgmVol": 100,

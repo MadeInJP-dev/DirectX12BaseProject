@@ -29,6 +29,7 @@ namespace App::Object
 		uint32_t keyTextId = 0;			// 今のキー名を書き込む文字の飾り(行の UI の飾りの番号)。0 で書かない
 
 		int currentActionKey = -1;		// 今の割り当て(仮想キーコード)。表示用の写しで保存しない。-1 で未設定
+		int currentPadKey = -1;			// 今のコントローラーの割り当て(GamepadKey。軸ならスティックの上)。表示用の写しで保存しない
 	};
 
 	//===============================================================================================
@@ -43,6 +44,15 @@ namespace App::Object
 	//   ファイルへの保存は OptionHUD が閉じたときにまとめて行う。
 	// ・キーの割り当ては「行を押す → その後に新しく押されたキー」で決める。
 	//   移動のように軸(4方向のキー)で持つアクションは、向きごとの行でその向きのキーだけを変える。
+	//
+	// ・最後に触ったデバイスがコントローラーなら、同じ行でコントローラーの設定を出す(コントローラーの表示)。
+	//     感度・上下反転 … スティック(視点)のもの。マウスとは別に持つ
+	//     ボタンの行     … コントローラーの割り当て。待ち受けではコントローラーのボタンを拾う
+	//     移動の行       … スティック1本で持つので、上(前)の行だけを出し、倒したスティックを割り当てる。
+	//                      視点が同じスティックなら、視点はもう片方へ入れ替える
+	//   見出しなどの文字の出し分けは、シーンの UI のコントローラー用の飾りで行う。
+	//   待ち受けの間はデバイスを切り替えない(キーボードで入ったらキー、コントローラーで入ったらボタンを待つ)。
+	//   コントローラーの待ち受けの間は、スティックや十字キーで項目が動かないよう項目移動を止める。
 	//===============================================================================================
 	class InputOptionPanel final : public ScrollPanelBase
 	{
@@ -118,6 +128,46 @@ namespace App::Object
 		// キーの表示名
 		static std::string MakeKeyName(int a_key);
 
+		//------------------------------------------------------------------------------
+		// コントローラーの表示
+		//------------------------------------------------------------------------------
+
+		// 最後に触ったデバイスから、どちらの設定を出すかを決める(待ち受け中は変えない)
+		void UpdateGamepadMode(Engine::GameObject::ObjectContext& a_context);
+
+		// 行を出すか : コントローラーの表示では、移動の行は上(前)の1行だけ
+		bool IsRowShown(const ButtonElement& a_element) const;
+
+		// スティックの感度を書き込む(刻み・範囲はマウスと同じ)
+		void ApplyStickSensitivity(Engine::GameObject::ObjectContext& a_context, float a_sensitivity);
+
+		// スティックの上下反転を書き込む
+		void ApplyInvertStickY(Engine::GameObject::ObjectContext& a_context, bool a_isInvert);
+
+		// コントローラーの割り当てを書き込む : 移動の行ならスティック1本ごと、ほかはボタン1つ
+		void ApplyPadBinding(Engine::GameObject::ObjectContext& a_context, ButtonElement& a_element, int a_padKey);
+
+		// キーの割り当てを入力デバイスへ流し直す
+		void ApplyBindings(Engine::GameObject::ObjectContext& a_context);
+
+		// 今押されているボタン・倒されているスティックを覚え直す(待ち受けに入った瞬間)
+		void CapturePadState(Engine::GameObject::ObjectContext& a_context);
+
+		/// <summary>
+		/// 前のフレームから新しく押されたボタンを1つ探す。無ければ -1
+		/// </summary>
+		/// <param name="a_isStickWanted">true ならスティック(倒した側の LThumbUp / RThumbUp)だけ、false ならボタンだけを返す</param>
+		int FindNewlyPressedPadKey(Engine::GameObject::ObjectContext& a_context, bool a_isStickWanted);
+
+		// 待ち受けの間、項目移動を止める
+		void LockNavigation(Engine::GameObject::ObjectContext& a_context);
+
+		// 今押されているボタン・倒されているスティック(GamepadKey)。繋がっていなければ空
+		static std::vector<int> ReadPadKeys(Engine::GameObject::ObjectContext& a_context);
+
+		// スティックの向きのキーか
+		static bool IsStickKey(int a_padKey);
+
 	private:
 
 		// 感度の刻みと範囲
@@ -138,6 +188,10 @@ namespace App::Object
 
 		// 上下反転(表示用の写し。未選択なら作り手の値のまま)
 		std::optional<bool> m_opIsInvertLookY = std::nullopt;
+
+		// コントローラーの視点(表示用の写し。実体は UserData)
+		float m_stickSensitivity = 1.0f;
+		bool m_isInvertStickY = false;
 		OptionSelectorUI m_invertLookYSelector = {};	// 上下反転(オン/オフ)
 
 		//------------------------------------------------------------------------------
@@ -161,5 +215,13 @@ namespace App::Object
 		// 「押された瞬間」だけを拾うために持つ。押しっぱなしのキーや、
 		// 押された扱いのまま戻らないキー(日本語キーボードの IME のキー)を拾わないため
 		std::bitset<KEY_CODE_COUNT> m_keyDownBits = {};
+
+		// 前のフレームに押されていたコントローラーのボタン・倒されていたスティック(GamepadKey)
+		std::vector<int> m_padDownKeyVec = {};
+
+		//------------------------------------------------------------------------------
+		// コントローラーの表示(保存しない)
+		//------------------------------------------------------------------------------
+		bool m_isGamepadMode = false;			// コントローラーの設定を出しているか
 	};
 }

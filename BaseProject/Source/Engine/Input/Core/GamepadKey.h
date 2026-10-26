@@ -41,5 +41,35 @@ namespace Engine::Input
 		constexpr int RThumbDown	= 0x5831;
 		constexpr int RThumbRight	= 0x5832;
 		constexpr int RThumbLeft	= 0x5833;
+
+		/// <summary>
+		/// 画面に出す名前(設定画面のキー名など)
+		/// </summary>
+		/// <remarks>スティックの向きは、どちらのスティックかだけを返す(軸の割り当てはスティック1本ごとのため)</remarks>
+		inline const char* GetName(int a_key)
+		{
+			switch (a_key)
+			{
+			case A:				return "A";
+			case B:				return "B";
+			case X:				return "X";
+			case Y:				return "Y";
+			case RShoulder:		return "RB";
+			case LShoulder:		return "LB";
+			case LTrigger:		return "LT";
+			case RTrigger:		return "RT";
+			case DPadUp:		return "D-Pad Up";
+			case DPadDown:		return "D-Pad Down";
+			case DPadLeft:		return "D-Pad Left";
+			case DPadRight:		return "D-Pad Right";
+			case Start:			return "Start";
+			case Back:			return "Back";
+			case LThumbPress:	return "LS";
+			case RThumbPress:	return "RS";
+			case LThumbUp: case LThumbDown: case LThumbRight: case LThumbLeft:	return "L Stick";
+			case RThumbUp: case RThumbDown: case RThumbRight: case RThumbLeft:	return "R Stick";
+			default:			return "-";
+			}
+		}
 	}
 }
