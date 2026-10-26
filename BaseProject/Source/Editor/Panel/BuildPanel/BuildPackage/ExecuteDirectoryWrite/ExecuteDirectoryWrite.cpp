@@ -93,6 +93,7 @@ namespace Editor::Build
 	{
 		const BuildSettings& _settings = *a_context.pSettings;
 
+		// ビルド済みのものをコピーするのみなので実行済みエグゼを探す
 		std::error_code _ec;
 		if (!std::filesystem::is_regular_file(a_context.srcExePath, _ec))
 		{

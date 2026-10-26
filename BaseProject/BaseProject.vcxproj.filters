@@ -1504,6 +1504,9 @@
     <Filter Include="Source\Editor\Panel\BuildPanel\BuildPackage">
       <UniqueIdentifier>{a2e3766a-1709-470f-90ff-a5b5d46b7ed4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\Panel\BuildPanel\AssetConvertView">
+      <UniqueIdentifier>{e7c24b19-5d8a-4f3e-b061-9a4c2d7e5f38}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\Panel\BuildPanel\BuildPackage\BuildPlan">
       <UniqueIdentifier>{6d0b3e4a-2c1f-4b7e-9a58-3f2e1c7d8b90}</UniqueIdentifier>
     </Filter>
@@ -2995,6 +2998,9 @@
       <Filter>Source\Editor\Panel\BuildPanel</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Widget\PopUp\Popup.cpp" />
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\AssetConvertView\AssetConvertView.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\AssetConvertView</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildSettings.cpp">
       <Filter>Source\Editor\Panel\BuildPanel</Filter>
     </ClCompile>
@@ -5272,6 +5278,9 @@
       <Filter>Source\Editor\Panel\BuildPanel</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Widget\PopUp\Popup.h" />
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\AssetConvertView\AssetConvertView.h">
+      <Filter>Source\Editor\Panel\BuildPanel\AssetConvertView</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildSettings.h">
       <Filter>Source\Editor\Panel\BuildPanel</Filter>
     </ClInclude>

@@ -283,6 +283,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\AssetConvertView\AssetConvertView.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildSettings.cpp">
       <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
@@ -1976,6 +1981,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\AssetConvertView\AssetConvertView.h" />
     <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildSettings.h" />
     <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPackage\BuildPlan\BuildPlan.h" />
     <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPackage\AssetCollector\AssetCollector.h" />

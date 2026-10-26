@@ -5,6 +5,7 @@
 
 #include "BuildSettings.h"
 #include "BuildContext.h"
+#include "AssetConvertView/AssetConvertView.h"
 
 namespace Editor
 {
@@ -46,12 +47,6 @@ namespace Editor
 
 		// 書き出し設定の編集。変えたら true
 		bool DrawSettings(EditorContext& a_editContext);
-
-		// 使用するアセット全部を再コンバートする
-		void UseAssetConvert(EditorContext& a_editContext);
-
-		// 1件コンバートする : アセット種別ごとの処理は Converter/ 以下。成功したら true
-		bool ConvertAsset(EditorContext& a_editContext, const Core::GUID& a_guid);
 
 		//-------------------------------------------------------------------------------------------
 		// ビルド書き出し : 選択された親ディレクトリ以下に作成する
@@ -113,8 +108,9 @@ namespace Editor
 		// ポップアップ
 		//-------------------------------------------------------------------------------------------
 
-		// アセットコンバート用ポップアップ
+		// アセットコンバート用ポップアップと、その中身(一覧・まとめてのコンバート)
 		Popup m_assetConvertPopup{"AssetConvertPanel"};
+		Build::AssetConvertView m_assetConvertView = {};
 
 		// 書き出し先が空でないときの確認
 		Popup m_overwritePopup{"書き出し先の確認"};
