@@ -275,6 +275,9 @@ rg -o "(MainEngine|SceneManager|ResourceManager|AssetDatabase|InputManager|Audio
 - Option の押し込み（フェーズ5 の 3）は、受け手が引数で受け取る形にした。
   `InputManager::Init(InputOption*)` / `AudioOption::Apply(AudioManager&)` / `DebugDraw::SetWireEnabled`（MainEngine が毎フレーム）/
   エディターで動かしたときは `IOption::DrawEdit` の `EngineServices` から。
+- 2026-10-26 : `OptionManager` を廃止した。設定は持ち主(`NativeWindow` / `TimeManager` / `InputManager` / `SceneView` /
+  `DebugDraw` / `MainEngine` / App の `MouseCursor`)が `XxxConfig` で持ち、`ConfigRegistry` は読み書きと設定画面への一覧だけを受け持つ。
+  上の「MainEngine が毎フレーム流し込む」形(`SetWireEnabled` / `SetJitterEnabled`)も無くなった。詳細は CodingStandards.md の 6.3。
 - `NativeWindow` は `InputManager` を知らなくなった。フォーカスの出入りは MainEngine がつないだ通知先（`SetFocusCallback`）を呼ぶ。
 - `SoundInstance` は発行元の `AudioManager` を持つ。`SoundIO` は `ResourceBuildContext::pAudioEngine` から作る
   （ResourceManager が起動時に `SetAudioEngine` で預かり、ローダーのコンテキストへ載せる。`SetJobSystem` と同じ形）。

@@ -1568,7 +1568,7 @@
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Panel\OptionPanel\OptionPanel.cpp">
+    <ClCompile Include="Source\Editor\Panel\ConfigPanel\ConfigPanel.cpp">
       <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
@@ -1707,16 +1707,15 @@
     <ClCompile Include="Source\Engine\Graphics\BackBuffer\BackBuffer.cpp" />
     <ClCompile Include="Source\Engine\Graphics\Frame\DrawList\DrawList.cpp" />
     <ClCompile Include="Source\Engine\Graphics\Device\GraphicsDevice\GraphicsDevice.cpp" />
-    <ClCompile Include="Source\Engine\Option\GraphicsOptions\RenderingOption.cpp" />
-    <ClCompile Include="Source\Engine\Option\GraphicsOptions\WindowOption.cpp" />
-    <ClCompile Include="Source\Engine\Option\OptionManager.cpp" />
-    <ClCompile Include="Source\Engine\Option\ProjectOptions\BuildConfig.cpp" />
-    <ClCompile Include="Source\Engine\Option\ProjectOptions\InputOption.cpp" />
-    <ClCompile Include="Source\Engine\Option\ProjectOptions\CursorOption.cpp" />
     <ClCompile Include="Source\Engine\Scene\SceneAudio\SceneAudio.cpp" />
     <ClCompile Include="Source\Engine\Scene\ScenePhysics\ScenePhysics.cpp" />
     <ClCompile Include="Source\Engine\Graphics\DebugDraw\DebugDraw.cpp" />
     <ClCompile Include="Source\Engine\Graphics\Profile\GraphicsProfiler.cpp" />
+    <ClCompile Include="Source\Application\Game\MouseCursor\CursorConfig.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Game\MouseCursor\MouseCursor.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -1908,6 +1907,13 @@
       <ForcedIncludeFiles>Core/CorePCH.h</ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="Source\Engine\Window\NativeWindow.cpp" />
+    <ClCompile Include="Source\Engine\Config\ConfigRegistry.cpp" />
+    <ClCompile Include="Source\Engine\Config\BuildConfig.cpp" />
+    <ClCompile Include="Source\Engine\Window\WindowConfig.cpp" />
+    <ClCompile Include="Source\Engine\Time\TimeConfig.cpp" />
+    <ClCompile Include="Source\Engine\Input\InputManager\InputConfig.cpp" />
+    <ClCompile Include="Source\Engine\Graphics\DebugDraw\DebugDrawConfig.cpp" />
+    <ClCompile Include="Source\Engine\Graphics\Frame\SceneView\SceneViewConfig.cpp" />
     <ClCompile Include="Source\main.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -2496,7 +2502,7 @@
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\EntityInspector\EntityInspector.h" />
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\InspectorPanel.h" />
     <ClInclude Include="Source\Editor\Panel\IPanel.h" />
-    <ClInclude Include="Source\Editor\Panel\OptionPanel\OptionPanel.h" />
+    <ClInclude Include="Source\Editor\Panel\ConfigPanel\ConfigPanel.h" />
     <ClInclude Include="Source\Editor\Panel\SceneAmbientPanel\SceneAmbientPanel.h" />
     <ClInclude Include="Source\Editor\Panel\SceneConfigPanel\SceneConfigPanel.h" />
     <ClInclude Include="Source\Editor\Panel\RenderGraphResourceViewPanel\RenderGraphResourceViewPanel.h" />
@@ -2551,14 +2557,6 @@
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\DrawCommand.h" />
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\DrawList.h" />
     <ClInclude Include="Source\Engine\Graphics\Device\GraphicsDevice\GraphicsDevice.h" />
-    <ClInclude Include="Source\Engine\Option\GraphicsOptions\RenderingOption.h" />
-    <ClInclude Include="Source\Engine\Option\DebugOptions\DebugDrawOption.h" />
-    <ClInclude Include="Source\Engine\Option\GraphicsOptions\WindowOption.h" />
-    <ClInclude Include="Source\Engine\Option\IOption.h" />
-    <ClInclude Include="Source\Engine\Option\OptionManager.h" />
-    <ClInclude Include="Source\Engine\Option\ProjectOptions\BuildConfig.h" />
-    <ClInclude Include="Source\Engine\Option\ProjectOptions\InputOption.h" />
-    <ClInclude Include="Source\Engine\Option\ProjectOptions\CursorOption.h" />
     <ClInclude Include="Source\Engine\Scene\SceneAudio\SceneAudio.h" />
     <ClInclude Include="Source\Engine\Scene\ScenePhysics\ScenePhysics.h" />
     <ClInclude Include="Source\Engine\Audio\SoundGroup.h" />
@@ -2702,6 +2700,14 @@
     <ClInclude Include="Source\Engine\Utility\Pool\ItemPool\ItemPool.h" />
     <ClInclude Include="Source\Engine\Utility\Pool\RangePool\RangePool.h" />
     <ClInclude Include="Source\Engine\Window\NativeWindow.h" />
+    <ClInclude Include="Source\Engine\Config\ConfigRegistry.h" />
+    <ClInclude Include="Source\Engine\Config\BuildConfig.h" />
+    <ClInclude Include="Source\Engine\Window\WindowConfig.h" />
+    <ClInclude Include="Source\Engine\Time\TimeConfig.h" />
+    <ClInclude Include="Source\Engine\Input\InputManager\InputConfig.h" />
+    <ClInclude Include="Source\Engine\Graphics\DebugDraw\DebugDrawConfig.h" />
+    <ClInclude Include="Source\Engine\Graphics\Frame\SceneView\SceneViewConfig.h" />
+    <ClInclude Include="Source\Application\Game\MouseCursor\CursorConfig.h" />
     <ClInclude Include="Source\Pch.h" />
     <ClInclude Include="Source\Application\Systems\Render\ModelReadyGateSystem.h" />
     <ClInclude Include="Source\Application\InstanceResource\ResourceWaitResource.h" />

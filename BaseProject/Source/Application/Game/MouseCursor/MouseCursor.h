@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "CursorConfig.h"
+
 namespace Engine::Resource
 {
 	class Texture;
@@ -22,7 +24,7 @@ namespace App::Game
 	/// </summary>
 	/// <remarks>
 	/// ゲームモードの間だけ、OSのカーソルをクライアント領域で消して
-	/// 代わりに設定された画像をカーソル位置へ描く。設定は CursorOption。
+	/// 代わりに設定された画像をカーソル位置へ描く。設定は CursorConfig(持ち主はこのクラス)。
 	/// エディター(デバッグプレイを含む)の間は何もしない = OSのカーソルがそのまま出る。
 	///
 	/// OSのカーソルを消すのは「自前の絵を出せているとき」だけにしてある。
@@ -34,10 +36,14 @@ namespace App::Game
 	public:
 
 		// 初期化・解放
-		// a_pServices : カーソル画像の読み込み先・入力・ウィンドウを引く(借り物)
+		// a_pServices : カーソル画像の読み込み先・入力・ウィンドウ・設定の登録先を引く(借り物)。
+		// 設定はエンジン設定へ登録し、解放で外す
 		void Init(const Engine::ECS::EngineServices* a_pServices);
 		// テクスチャの参照を握っているので、リソースの解放より前に呼ぶこと
 		void Release();
+
+		// 設定(画像・大きさ・ホットスポット)
+		const CursorConfig& GetConfig() const { return m_config; }
 
 		/// <summary>
 		/// 毎フレームの更新 : 設定の反映と、このフレームの位置・可否を決める
@@ -62,6 +68,8 @@ namespace App::Game
 	private:
 
 		const Engine::ECS::EngineServices* m_pServices = nullptr;	// 借り物
+
+		CursorConfig m_config = {};
 
 		// 描画に使うテクスチャ。設定のGUIDが変わったら読み直す
 		Engine::ResourceRef<Engine::Resource::Texture> m_texRef = {};

@@ -172,15 +172,15 @@ namespace Engine::Graphics
 
 	bool DebugDraw::IsEnabled() const
 	{
-		return m_isWireEnabled && m_lineDataVec.size() < m_capacity;
+		return m_config.drawWire && m_lineDataVec.size() < m_capacity;
 	}
 
 	bool DebugDraw::CanPush()
 	{
-		// オプションで切られていれば1本も積まない。
+		// 設定で切られていれば1本も積まない。
 		// 空のままなら RenderContext::DrawShape も早期リターンするので、
 		// 描画コマンドごと止まる
-		if (!m_isWireEnabled) return false;
+		if (!m_config.drawWire) return false;
 
 		if (m_lineDataVec.size() >= m_capacity)
 		{

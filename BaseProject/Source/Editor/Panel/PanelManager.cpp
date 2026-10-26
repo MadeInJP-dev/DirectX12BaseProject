@@ -7,7 +7,7 @@
 #include "../Panel/HierarchyPanel/HierarchyPanel.h"
 #include "../Panel/GameObjectHierarchyPanel/GameObjectHierarchyPanel.h"
 #include "../Panel/SceneViewPanel/SceneViewPanel.h"
-#include "../Panel/OptionPanel/OptionPanel.h"
+#include "../Panel/ConfigPanel/ConfigPanel.h"
 #include "../Panel/SceneAmbientPanel/SceneAmbientPanel.h"
 #include "../Panel/SceneConfigPanel/SceneConfigPanel.h"
 #include "../Panel/ProfilerPanel/ProfilerPanel.h"
@@ -28,7 +28,7 @@ namespace Editor
 		RegisterPanel<HierarchyPanel>();
 		RegisterPanel<GameObjectHierarchyPanel>();
 		RegisterPanel<SceneViewPanel>();
-		RegisterPanel<OptionPanel>();
+		RegisterPanel<ConfigPanel>();
 		RegisterPanel<SceneAmbientPanel>();
 		RegisterPanel<SceneConfigPanel>();
 		RegisterPanel<ProfilerPanel>();

@@ -5,6 +5,7 @@
 #include "Engine/Graphics/Frame/SceneView/GroundImpulse.h"
 #include "Engine/Graphics/Frame/SceneView/SceneFogData.h"
 #include "Engine/Graphics/Frame/SceneView/SkyData.h"
+#include "Engine/Graphics/Frame/SceneView/SceneViewConfig.h"
 
 namespace Engine::Resource
 {
@@ -68,8 +69,9 @@ namespace Engine::Graphics
 		// カリング用カメラのビュー×射影(転置前・ジッターなし)。視錐台をワイヤーで出すとき用
 		const Math::Matrix& GetCullViewProjMat() const { return m_cullViewProjMat; }
 
-		// TAA用のジッターを掛けるか。設定の持ち主(オプション)から毎フレーム流し込んでもらう
-		void SetJitterEnabled(bool a_isEnabled) { m_isJitterEnabled = a_isEnabled; }
+		// 設定(TAA用のジッター)
+		const SceneViewConfig& GetConfig() const { return m_config; }
+		SceneViewConfig& RefConfig() { return m_config; }
 
 		//--------------------------------------------------------------------------------------------
 		// カメラ発の画面効果(被写界深度 / ラジアルブラー / 魚眼レンズ)
@@ -185,8 +187,9 @@ namespace Engine::Graphics
 		bool m_isCullCameraSeparated = false;
 		Math::Matrix m_cullViewProjMat = Math::Matrix::Identity();
 
-		// TAA : ジッターを掛けるかと、モーションベクター用の前フレームの行列
-		bool m_isJitterEnabled = true;
+		SceneViewConfig m_config = {};
+
+		// TAA : モーションベクター用の前フレームの行列
 		Math::Matrix m_prevViewMat = {};
 		Math::Matrix m_prevProjMat = {};
 		Math::Matrix m_prevNonJitteredViewProj = {};

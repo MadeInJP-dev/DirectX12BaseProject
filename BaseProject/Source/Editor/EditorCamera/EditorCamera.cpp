@@ -1,12 +1,13 @@
 ﻿#include "EditorCamera.h"
 
-#include "Engine/Option/OptionManager.h"
+#include "Engine/Graphics/GraphicsEngine.h"
+#include "Engine/MainEngine.h"
 
 namespace Editor
 {
-	void EditorCamera::Init(const Option::OptionManager* a_pOptionManager)
+	void EditorCamera::Init(const Engine::Graphics::GraphicsEngine* a_pGraphicsEngine)
 	{
-		m_pOptionManager = a_pOptionManager;
+		m_pGraphicsEngine = a_pGraphicsEngine;
 		BuildMatrix();
 	}
 
@@ -130,15 +131,11 @@ namespace Editor
 			Math::Matrix::CreateFromQuaternion(CalcRotation()) *
 			Math::Matrix::CreateTranslation(m_pos);
 
-		// 射影行列。アスペクトはウィンドウ設定から取る(ECS側のカメラと同じ作り方)
+		// 射影行列。アスペクトは描画解像度から取る(ECS側のカメラと同じ作り方)
 		float _aspect = 16.0f / 9.0f;
-		if (m_pOptionManager)
+		if (m_pGraphicsEngine && m_pGraphicsEngine->GetRenderHeight() > 0)
 		{
-			const auto& _winOp = m_pOptionManager->GetWindowOption();
-			if (_winOp.windowHeight > 0)
-			{
-				_aspect = static_cast<float>(_winOp.windowWidth) / static_cast<float>(_winOp.windowHeight);
-			}
+			_aspect = static_cast<float>(m_pGraphicsEngine->GetRenderWidth()) / static_cast<float>(m_pGraphicsEngine->GetRenderHeight());
 		}
 
 		m_projMat = Math::Matrix::CreatePerspectiveFieldOfView(
@@ -189,8 +186,8 @@ namespace Editor
 	Math::Ray EditorCamera::ScreenPointToRay(const Math::Vector2& a_mousePos, float a_maxDistance)
 	{
 		// スクリーン情報取得
-		if (!m_pOptionManager) return {};
-		const auto& _windowOp = m_pOptionManager->GetWindowOption();
+		if (!m_pGraphicsEngine) return {};
+		const auto* _pGraphicsEngine = m_pGraphicsEngine;
 
 		// スクリーン座標を逆射影して、近平面と遠平面のワールド座標を取る。
 		// XMVector3Unproject に相当するものは Math 側に無いので、
@@ -204,8 +201,8 @@ namespace Editor
 			DirectX::XMVectorSet(a_mousePos.x, a_mousePos.y, 0.0f, 1.0f),
 			0,
 			0,
-			static_cast<float>(_windowOp.windowWidth),
-			static_cast<float>(_windowOp.windowHeight),
+			static_cast<float>(_pGraphicsEngine->GetRenderWidth()),
+			static_cast<float>(_pGraphicsEngine->GetRenderHeight()),
 			0.0f,
 			1.0f,
 			_proj,
@@ -218,8 +215,8 @@ namespace Editor
 			DirectX::XMVectorSet(a_mousePos.x, a_mousePos.y, 1.0f, 1.0f),
 			0,
 			0,
-			static_cast<float>(_windowOp.windowWidth),
-			static_cast<float>(_windowOp.windowHeight),
+			static_cast<float>(_pGraphicsEngine->GetRenderWidth()),
+			static_cast<float>(_pGraphicsEngine->GetRenderHeight()),
 			0.0f,
 			1.0f,
 			_proj,

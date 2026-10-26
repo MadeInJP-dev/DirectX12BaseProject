@@ -103,7 +103,7 @@
     <Filter Include="Source\Editor\Panel\LogPanel">
       <UniqueIdentifier>{b47bd218-0c11-43b8-a329-423beecfc184}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Editor\Panel\OptionPanel">
+    <Filter Include="Source\Editor\Panel\ConfigPanel">
       <UniqueIdentifier>{a7029d46-62c4-4536-8f66-4c887b29dbe7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Editor\Panel\ProfilerPanel">
@@ -973,17 +973,8 @@
     <Filter Include="Source\Engine\JobSystem\Profile">
       <UniqueIdentifier>{686bb404-88ad-474d-bf51-b8d4bba2d2b8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Engine\Option">
-      <UniqueIdentifier>{881cff70-bcd4-4e3e-b84b-26111ec77600}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Engine\Option\DebugOptions">
-      <UniqueIdentifier>{3f6b90c2-5d47-4a18-8e73-1c94a2f60db5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Engine\Option\GraphicsOptions">
-      <UniqueIdentifier>{0d25129d-d165-4472-aff5-df486ed58360}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Engine\Option\ProjectOptions">
-      <UniqueIdentifier>{85c28754-0169-46eb-a78c-4b7f7853703d}</UniqueIdentifier>
+    <Filter Include="Source\Engine\Config">
+      <UniqueIdentifier>{60ad8d7f-b991-43de-afa2-4db8ec3429b5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Graphics\Particle">
       <UniqueIdentifier>{a713eca4-b2af-417a-8ff3-856d78d05d2b}</UniqueIdentifier>
@@ -2271,8 +2262,8 @@
     <ClCompile Include="Source\Editor\Panel\SceneConfigPanel\SceneConfigPanel.cpp">
       <Filter>Source\Editor\Panel\SceneConfigPanel</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Panel\OptionPanel\OptionPanel.cpp">
-      <Filter>Source\Editor\Panel\OptionPanel</Filter>
+    <ClCompile Include="Source\Editor\Panel\ConfigPanel\ConfigPanel.cpp">
+      <Filter>Source\Editor\Panel\ConfigPanel</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerPanel.cpp">
       <Filter>Source\Editor\Panel\ProfilerPanel</Filter>
@@ -2388,29 +2379,11 @@
     <ClCompile Include="Source\Engine\JobSystem\Profile\ThreadProfiler.cpp">
       <Filter>Source\Engine\JobSystem\Profile</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Option\OptionManager.cpp">
-      <Filter>Source\Engine\Option</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Option\GraphicsOptions\RenderingOption.cpp">
-      <Filter>Source\Engine\Option\GraphicsOptions</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Option\GraphicsOptions\WindowOption.cpp">
-      <Filter>Source\Engine\Option\GraphicsOptions</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Scene\SceneAudio\SceneAudio.cpp">
       <Filter>Source\Engine\Scene\SceneAudio</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Scene\ScenePhysics\ScenePhysics.cpp">
       <Filter>Source\Engine\Scene\ScenePhysics</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Option\ProjectOptions\BuildConfig.cpp">
-      <Filter>Source\Engine\Option\ProjectOptions</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Option\ProjectOptions\CursorOption.cpp">
-      <Filter>Source\Engine\Option\ProjectOptions</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Option\ProjectOptions\InputOption.cpp">
-      <Filter>Source\Engine\Option\ProjectOptions</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\Particle\ParticleBufferManager.cpp">
       <Filter>Source\Engine\Graphics\Particle</Filter>
@@ -2627,6 +2600,30 @@
     </ClCompile>
     <ClCompile Include="Source\Core\Math\Vector\Vector4.cpp">
       <Filter>Source\Core\Math\Vector</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Config\ConfigRegistry.cpp">
+      <Filter>Source\Engine\Config</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Config\BuildConfig.cpp">
+      <Filter>Source\Engine\Config</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Window\WindowConfig.cpp">
+      <Filter>Source\Engine\Window</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Time\TimeConfig.cpp">
+      <Filter>Source\Engine\Time</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Input\InputManager\InputConfig.cpp">
+      <Filter>Source\Engine\Input\InputManager</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Graphics\DebugDraw\DebugDrawConfig.cpp">
+      <Filter>Source\Engine\Graphics\DebugDraw</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Graphics\Frame\SceneView\SceneViewConfig.cpp">
+      <Filter>Source\Engine\Graphics\Frame\SceneView</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Game\MouseCursor\CursorConfig.cpp">
+      <Filter>Source\Application\Game\MouseCursor</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Window\NativeWindow.cpp">
       <Filter>Source\Engine\Window</Filter>
@@ -4194,8 +4191,8 @@
     <ClInclude Include="Source\Editor\Panel\SceneConfigPanel\SceneConfigPanel.h">
       <Filter>Source\Editor\Panel\SceneConfigPanel</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Panel\OptionPanel\OptionPanel.h">
-      <Filter>Source\Editor\Panel\OptionPanel</Filter>
+    <ClInclude Include="Source\Editor\Panel\ConfigPanel\ConfigPanel.h">
+      <Filter>Source\Editor\Panel\ConfigPanel</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerPanel.h">
       <Filter>Source\Editor\Panel\ProfilerPanel</Filter>
@@ -4347,35 +4344,11 @@
     <ClInclude Include="Source\Engine\JobSystem\Profile\ThreadProfiler.h">
       <Filter>Source\Engine\JobSystem\Profile</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Option\IOption.h">
-      <Filter>Source\Engine\Option</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Option\OptionManager.h">
-      <Filter>Source\Engine\Option</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Option\DebugOptions\DebugDrawOption.h">
-      <Filter>Source\Engine\Option\DebugOptions</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Option\GraphicsOptions\RenderingOption.h">
-      <Filter>Source\Engine\Option\GraphicsOptions</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Option\GraphicsOptions\WindowOption.h">
-      <Filter>Source\Engine\Option\GraphicsOptions</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Scene\SceneAudio\SceneAudio.h">
       <Filter>Source\Engine\Scene\SceneAudio</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Scene\ScenePhysics\ScenePhysics.h">
       <Filter>Source\Engine\Scene\ScenePhysics</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Option\ProjectOptions\BuildConfig.h">
-      <Filter>Source\Engine\Option\ProjectOptions</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Option\ProjectOptions\CursorOption.h">
-      <Filter>Source\Engine\Option\ProjectOptions</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Option\ProjectOptions\InputOption.h">
-      <Filter>Source\Engine\Option\ProjectOptions</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\Particle\ParticleBufferManager.h">
       <Filter>Source\Engine\Graphics\Particle</Filter>
@@ -4703,6 +4676,30 @@
     </ClInclude>
     <ClInclude Include="Source\Core\TypeInfo\TypeInfo.h">
       <Filter>Source\Core\TypeInfo</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Config\ConfigRegistry.h">
+      <Filter>Source\Engine\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Config\BuildConfig.h">
+      <Filter>Source\Engine\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Window\WindowConfig.h">
+      <Filter>Source\Engine\Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Time\TimeConfig.h">
+      <Filter>Source\Engine\Time</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Input\InputManager\InputConfig.h">
+      <Filter>Source\Engine\Input\InputManager</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\DebugDraw\DebugDrawConfig.h">
+      <Filter>Source\Engine\Graphics\DebugDraw</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\Frame\SceneView\SceneViewConfig.h">
+      <Filter>Source\Engine\Graphics\Frame\SceneView</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Game\MouseCursor\CursorConfig.h">
+      <Filter>Source\Application\Game\MouseCursor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Window\NativeWindow.h">
       <Filter>Source\Engine\Window</Filter>

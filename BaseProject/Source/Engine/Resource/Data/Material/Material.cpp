@@ -8,7 +8,6 @@
 
 #include "Core/BinaryHelper/BinaryHelper.h"
 
-#include "../../../Option/OptionManager.h"
 
 void Engine::Resource::Material::Release()
 {

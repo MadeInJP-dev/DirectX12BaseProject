@@ -3,16 +3,28 @@
 #include "Engine/MainEngine.h"
 #include "Engine/Window/NativeWindow.h"
 #include "Engine/Input/InputManager/InputManager.h"
-#include "Engine/Option/OptionManager.h"
+#include "Engine/Config/ConfigRegistry.h"
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 #include "Engine/Resource/Data/Texture/Texture.h"
 
 namespace App::Game
 {
+	namespace
+	{
+		// エンジン設定での保存のグループ名
+		constexpr const char* CONFIG_NAME = "CursorConfig";
+	}
+
 	void MouseCursor::Init(const Engine::ECS::EngineServices* a_pServices)
 	{
 		m_pServices = a_pServices;
+
+		// 設定はエンジン設定のファイルに一緒に置く(登録した時点で保存されている値が入る)
+		if (m_pServices && m_pServices->pConfigRegistry)
+		{
+			m_pServices->pConfigRegistry->Register(CONFIG_NAME, "App::Game::MouseCursor", Engine::Config::EConfigCategory::Game, m_config);
+		}
 
 		// 実際の読み込み要求は Update で出す。
 		// 設定はエディターから触れるので、初回だけでなく「変わったら読み直す」形に
@@ -30,6 +42,12 @@ namespace App::Game
 		m_loadedGUID = {};
 		m_isHideOSCursor = false;
 		m_isDraw = false;
+
+		// 設定は外す(値は登録先が覚えていて、エンジンの終了時に保存される)
+		if (m_pServices && m_pServices->pConfigRegistry)
+		{
+			m_pServices->pConfigRegistry->Unregister(CONFIG_NAME);
+		}
 
 		// 消したまま終わらないように戻しておく
 		if (m_pServices && m_pServices->pMainEngine)
@@ -63,11 +81,10 @@ namespace App::Game
 		m_isHideOSCursor = false;
 		m_isDraw = false;
 
-		const auto& _cursorOp = m_pServices->pOptionManager->GetCursorOption();
 		auto& _resourceManager = *m_pServices->pResourceManager;
 
 		// 切られている / 画像が未設定なら、OSのカーソルをそのまま出す
-		if (!_cursorOp.isEnable || !_cursorOp.textureGUID.IsValid())
+		if (!m_config.isEnable || !m_config.textureGUID.IsValid())
 		{
 			if (m_loadedGUID.IsValid())
 			{
@@ -79,10 +96,10 @@ namespace App::Game
 
 		// 設定が差し替わっていたら読み直す。
 		// エディター中も読み込みだけは進めておき、ゲームへ切り替えた瞬間から出せるようにする
-		if (!(m_loadedGUID == _cursorOp.textureGUID))
+		if (!(m_loadedGUID == m_config.textureGUID))
 		{
-			m_texRef = _resourceManager.RequestLoad<Engine::Resource::Texture>(_cursorOp.textureGUID);
-			m_loadedGUID = _cursorOp.textureGUID;
+			m_texRef = _resourceManager.RequestLoad<Engine::Resource::Texture>(m_config.textureGUID);
+			m_loadedGUID = m_config.textureGUID;
 		}
 
 		// 自前のカーソルはゲームモードの間だけ。
@@ -143,15 +160,13 @@ namespace App::Game
 	{
 		if (!m_isDraw || !a_pDrawSubmitter) return;
 
-		const auto& _cursorOp = m_pServices->pOptionManager->GetCursorOption();
-
 		// クライアント領域(実際のウィンドウの大きさ) → 描画解像度(UIの座標系)。
 		// バックバッファは描画解像度で作られ、クライアント領域へ引き伸ばして
 		// 表示されるので、比率を掛ければよい
 		// (UIの当たり判定でも同じ変換をしている : UIInteraction::CalcCursorUIPos)
-		const auto& _winOp = m_pServices->pOptionManager->GetWindowOption();
-		const float _renderW = static_cast<float>(_winOp.windowWidth);
-		const float _renderH = static_cast<float>(_winOp.windowHeight);
+		const auto* _pGraphicsEngine = m_pServices->pMainEngine->RefGraphicsEngine();
+		const float _renderW = static_cast<float>(_pGraphicsEngine->GetRenderWidth());
+		const float _renderH = static_cast<float>(_pGraphicsEngine->GetRenderHeight());
 		if (_renderW <= 0.0f || _renderH <= 0.0f) return;
 
 		const auto* _pWindow = m_pServices->pMainEngine->GetNativeWindow();
@@ -176,10 +191,10 @@ namespace App::Game
 		Engine::Graphics::SpriteSubmitDesc _desc = {};
 		_desc.texHandle = m_texRef;
 		_desc.pixelPos = _renderPos;
-		_desc.pixelSize = Math::Vector2(_cursorOp.sizePixel, _cursorOp.sizePixel);
-		_desc.color = _cursorOp.color;
+		_desc.pixelSize = Math::Vector2(m_config.sizePixel, m_config.sizePixel);
+		_desc.color = m_config.color;
 		_desc.Zlayer = CURSOR_LAYER;
-		_desc.pivot = _cursorOp.hotspot;
+		_desc.pivot = m_config.hotspot;
 		a_pDrawSubmitter->SubmitUI(_desc);
 	}
 }

@@ -9,7 +9,7 @@
         "isWatchAssetFolder": true,
         "maxThreadCount": 30
     },
-    "CursorOption": {
+    "CursorConfig": {
         "color": [
             1.0,
             1.0,
@@ -24,26 +24,27 @@
         "sizePixel": 64.0,
         "textureGUID": "eaa92474-cfe9-4399-bc6e-9078675e454b"
     },
-    "DebugDrawOption": {
+    "DebugDrawConfig": {
         "drawWire": false
     },
-    "InputOption": {
+    "InputConfig": {
         "isCursorLockedToCenter": true,
         "isInvertLookY": false,
         "lookSensitivityX": 0.125,
         "lookSensitivityY": 0.125,
         "mouseDpi": 800
     },
-    "RenderingOption": {
-        "isZPre": true,
+    "SceneViewConfig": {
         "useJitter": true
     },
-    "WindowOption": {
-        "WindowTitle": "VECTOR REIGN",
-        "fpsRate": 60,
+    "TimeConfig": {
+        "fpsRate": 60
+    },
+    "WindowConfig": {
         "isTitleFPS": true,
         "windowHeight": 1080,
         "windowMode": 2,
+        "windowTitle": "VECTOR REIGN",
         "windowWidth": 1920
     }
 }

@@ -227,8 +227,8 @@ namespace Engine::Graphics
 		float _jitterX = 0.0f;
 		float _jitterY = 0.0f;
 
-		// ジッターオンオフ(SetJitterEnabled で切り替え。OFFならジッター0でTAAはブレンドのみ)
-		if (m_isJitterEnabled && m_renderWidth > 0 && m_renderHeight > 0)
+		// ジッターオンオフ(SceneViewConfig::useJitter。OFFならジッター0でTAAはブレンドのみ)
+		if (m_config.useJitter && m_renderWidth > 0 && m_renderHeight > 0)
 		{
 			// ハルトンシーケンスのテーブル（ピクセル中心地からのオフセット値 -0.5f ～ 0.5f）
 			static const float HALTON_X[16] = {

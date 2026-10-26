@@ -1,6 +1,8 @@
-﻿#include "InputOption.h"
+﻿#include "InputConfig.h"
 
-#include "../../Input/InputManager/InputManager.h"
+#include "InputManager.h"
+#include "Engine/ECS/System/SystemContext.h"	// EngineServices
+#include "Engine/EditorField/EditorField.h"
 
 namespace
 {
@@ -26,7 +28,7 @@ namespace
 	}
 }
 
-void Engine::Option::ProjectOptions::InputOption::DrawEdit(const ECS::EngineServices& a_services)
+void Engine::Input::InputConfig::DrawEdit(const ECS::EngineServices& a_services)
 {
 	//======================================================================
 	// カーソル
@@ -86,7 +88,7 @@ void Engine::Option::ProjectOptions::InputOption::DrawEdit(const ECS::EngineServ
 	Engine::EditorField::HelpText("Windows側のポインター速度・加速は影響しない(生の入力を使用)");
 }
 
-void Engine::Option::ProjectOptions::InputOption::Archive(Persistence::Archive& a_archive)
+void Engine::Input::InputConfig::Archive(Persistence::Archive& a_archive)
 {
 	a_archive.Field("isCursorLockedToCenter", isCursorLockedToCenter);
 

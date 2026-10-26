@@ -2,11 +2,7 @@
 
 #include "../Core/InputAction.h"
 #include "../InputDevice/Button/InputButtonBase.h"
-
-namespace Engine::Option::ProjectOptions
-{
-	struct InputOption;
-}
+#include "InputConfig.h"
 
 namespace Engine::Input
 {
@@ -51,9 +47,12 @@ namespace Engine::Input
 		~InputManager();
 		NON_COPYABLE_NON_MOVABLE(InputManager);
 
-		// 初期化
-		// a_pInputOption : 感度とカーソル固定の設定(借り物。持ち主は OptionManager)
-		void Init(const Option::ProjectOptions::InputOption* a_pInputOption);
+		// 初期化 : 設定(RefConfig)は読み終えてから呼ぶ
+		void Init();
+
+		// 設定(作り手の感度・カーソル固定)
+		const InputConfig& GetConfig() const { return m_config; }
+		InputConfig& RefConfig() { return m_config; }
 
 		// 更新
 		// 毎フレーム必須
@@ -76,8 +75,8 @@ namespace Engine::Input
 		/// プレイヤーの視点の設定(保存はアプリ側のユーザーデータ)
 		/// </summary>
 		/// <remarks>
-		/// 感度は作り手の感度(InputOption::lookSensitivityX/Y)へさらに掛ける倍率。
-		/// 上下反転は選ばれていればそちらを使う(nullopt で作り手の InputOption::isInvertLookY のまま)。
+		/// 感度は作り手の感度(InputConfig::lookSensitivityX/Y)へさらに掛ける倍率。
+		/// 上下反転は選ばれていればそちらを使う(nullopt で作り手の InputConfig::isInvertLookY のまま)。
 		/// エンジン設定は書き換えないので、EngineData を保存してもプレイヤーの値は混ざらない
 		/// </remarks>
 		void SetUserLookSensitivity(float a_scale) { m_userLookSensitivity = a_scale; }
@@ -202,7 +201,7 @@ namespace Engine::Input
 		float m_userLookSensitivity = 1.0f;					// 感度へ掛ける倍率
 		std::optional<bool> m_opUserInvertLookY = std::nullopt;	// 上下反転(未選択なら作り手の値)
 
-		// 入力設定(感度・カーソル固定)。毎フレーム読むので借りたまま持つ
-		const Option::ProjectOptions::InputOption* m_pInputOption = nullptr;
+		// 入力設定(作り手の感度・カーソル固定)
+		InputConfig m_config = {};
 	};
 }

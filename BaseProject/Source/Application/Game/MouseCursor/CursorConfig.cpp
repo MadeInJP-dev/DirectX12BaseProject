@@ -1,4 +1,4 @@
-#include "CursorOption.h"
+#include "CursorConfig.h"
 
 #include "Engine/EditorField/EditorField.h"
 
@@ -9,7 +9,7 @@ namespace
 	constexpr float MAX_SIZE = 512.0f;
 }
 
-void Engine::Option::ProjectOptions::CursorOption::DrawEdit(const ECS::EngineServices& a_services)
+void App::Game::CursorConfig::DrawEdit(const Engine::ECS::EngineServices& a_services)
 {
 	Engine::EditorField::Field("Enable", isEnable);
 	Engine::EditorField::Tooltip("切るとOSのカーソルがそのまま出る");
@@ -39,7 +39,7 @@ void Engine::Option::ProjectOptions::CursorOption::DrawEdit(const ECS::EngineSer
 	Engine::EditorField::ColorField("Color", color);
 }
 
-void Engine::Option::ProjectOptions::CursorOption::Archive(Persistence::Archive& a_archive)
+void App::Game::CursorConfig::Archive(Engine::Persistence::Archive& a_archive)
 {
 	a_archive.Field("isEnable", isEnable);
 	a_archive.GUIDField("textureGUID", textureGUID);

@@ -122,10 +122,10 @@ namespace Editor
 		//   積む   : SystemContext / ObjectContext の pServices->pDebugDraw
 		//            エンジン内部なら GraphicsEngine::RefDebugDraw()
 		//   出す   : DebugLinePass が RenderContext 経由で読む
-		//   オンオフ: DebugDrawOption::drawWire(オプションパネルから触る)
+		//   オンオフ: DebugDrawConfig::drawWire(設定パネルから触る)
 		//
 		// エディットはエディターの仕事なので、表示設定はここではなく
-		// OptionManager が持っている
+		// DebugDraw が持っている
 		//=======================================================================
 
 		//=======================================================================

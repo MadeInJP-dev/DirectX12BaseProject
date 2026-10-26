@@ -2,8 +2,9 @@
 
 #include "Engine/MainEngine.h"
 #include "Engine/ECS/System/SystemContext.h"	// EngineServices
+#include "Engine/EditorField/EditorField.h"
 
-namespace Engine::Option::ProjectOptions
+namespace Engine::Config
 {
 	namespace
 	{
@@ -172,7 +173,7 @@ namespace Engine::Option::ProjectOptions
 	{
 		// 古い設定 : buildMode(0=Debug / 1=Development / 2=Shipping)しか無いので、
 		// そのモードのプリセットで埋めてから、書いてある項目で上書きする。
-		// エンジン設定は JSON 固定で読む(OptionManager)ので、無いキーは読み飛ばされる
+		// エンジン設定は JSON 固定で読む(ConfigRegistry)ので、無いキーは読み飛ばされる
 		if (a_archive.IsLoading())
 		{
 			int _legacyMode = -1;

@@ -10,7 +10,6 @@
 #include "../../Resource/Manager/ResourceManager/ResourceManager.h"
 
 #include "../../Audio/AudioManager.h"
-#include "../../Option/OptionManager.h"
 #include "../../ECS/System/SystemContext.h"	// EngineServices
 #include "../../Graphics/Frame/DrawSubmitter/DrawSubmitter.h"
 #include "../../Resource/Data/Texture/IO/TextureIO.h"
@@ -331,12 +330,11 @@ namespace Engine::Scene
 		if (!_pGE) return;
 
 		const auto& _services = m_pEngine->GetEngineServices();
-		if (!_services.pOptionManager || !_services.pResourceManager) return;
+		if (!_services.pResourceManager) return;
 
 		// 画面全体 : 描画解像度(UIの座標系)で覆う。縁に隙間が出ないよう少し大きくする
-		const auto& _winOp = _services.pOptionManager->GetWindowOption();
-		const float _w = static_cast<float>(_winOp.windowWidth);
-		const float _h = static_cast<float>(_winOp.windowHeight);
+		const float _w = static_cast<float>(_pGE->GetRenderWidth());
+		const float _h = static_cast<float>(_pGE->GetRenderHeight());
 		if (_w <= 0.0f || _h <= 0.0f) return;
 
 		const auto _context = Resource::MakeManagerOnlyContext(

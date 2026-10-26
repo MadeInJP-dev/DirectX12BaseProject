@@ -18,7 +18,7 @@
 #include "Engine/Graphics/Particle/ParticleBufferManager.h"
 
 
-#include "Option/OptionManager.h"
+#include "Config/ConfigRegistry.h"
 
 
 #include "Audio/AudioManager.h"
@@ -45,6 +45,12 @@
 
 namespace Engine
 {
+	namespace
+	{
+		// エンジン設定のファイル(JSON 固定。ConfigRegistry を参照)
+		constexpr const char* ENGINE_CONFIG_FILE_PATH = "Asset/Data/Engine/EngineData.ojoptn";
+	}
+
 	MainEngine::MainEngine()
 	{}
 
@@ -57,22 +63,23 @@ namespace Engine
 		// 誰よりも先に作る : ResourceRef は作られた時点からこれを見に来る
 		m_upResourceManager = std::make_unique<Resource::ResourceManager>();
 
-		// オプションマネージャーの初期化と読込
-		m_upOptionManager = std::make_unique<Option::OptionManager>();
-		auto& _optionManager = *m_upOptionManager;
-		_optionManager.Init();
-		_optionManager.Deserialize();
-		const auto& _winOp = _optionManager.GetWindowOption();
+		// エンジン設定の読み込み。
+		// 値は各システムが持ち、持ち主を作った直後に登録すると読んである値が流し込まれる
+		m_upConfigRegistry = std::make_unique<Config::ConfigRegistry>();
+		auto& _configRegistry = *m_upConfigRegistry;
+		_configRegistry.Load(ENGINE_CONFIG_FILE_PATH);
 
-		// 設定を保存
 		m_appMode = EAppMode::Game;
+
 		// 起動設定 : 次の起動から効く項目はここで決まり、終わるまで変わらない
-		m_buildConfig = _optionManager.GetBuildConfig();
+		_configRegistry.Register("BuildConfig", "Engine::MainEngine", Config::EConfigCategory::Project, m_editBuildConfig);
+		m_buildConfig = m_editBuildConfig;
 		LogBuildConfig();
 
 		// インプット初期化
 		m_upInputManager = std::make_unique<Input::InputManager>();
-		m_upInputManager->Init(&_optionManager.GetInputOption());
+		_configRegistry.Register("InputConfig", "Engine::Input::InputManager", Config::EConfigCategory::Input, m_upInputManager->RefConfig());
+		m_upInputManager->Init();
 
 		// D3D のデバッグレイヤーはデバイスを作る前に有効にする
 		const bool _isD3DDebug = m_buildConfig.isD3DDebugLayer;
@@ -87,6 +94,8 @@ namespace Engine
 
 		// ウィンドウクラスの生成
 		m_upWindow = std::make_unique<Window::NativeWindow>();
+		_configRegistry.Register("WindowConfig", "Engine::Window::NativeWindow", Config::EConfigCategory::Window, m_upWindow->RefConfig());
+		const auto& _winConfig = m_upWindow->GetConfig();
 
 		// フォーカスの出入りで入力を止める・戻す。
 		// ウィンドウは入力を知らないので、作る前にここでつないでおく(作った瞬間にも届くため)
@@ -97,11 +106,11 @@ namespace Engine
 			});
 
 		Window::WindowDesc _desc = {};
-		_desc.width = static_cast<UINT>(_winOp.windowWidth);
-		_desc.height = static_cast<UINT>(_winOp.windowHeight);
-		_desc.titleName = Core::String::ToWideString(_winOp.windowTitle);
+		_desc.width = static_cast<UINT>(_winConfig.windowWidth);
+		_desc.height = static_cast<UINT>(_winConfig.windowHeight);
+		_desc.titleName = Core::String::ToWideString(_winConfig.windowTitle);
 		_desc.className = L"AppWindow";
-		_desc.windowMode = _winOp.windowMode;
+		_desc.windowMode = _winConfig.windowMode;
 		if (!m_upWindow->Create(_desc))
 		{
 			ENGINE_ERRLOG(false, "ウィンドウ作成失敗");
@@ -110,6 +119,7 @@ namespace Engine
 
 		// タイムマネージャークラスの生成
 		m_upTimeManager = std::make_unique<Time::TimeManager>();
+		_configRegistry.Register("TimeConfig", "Engine::Time::TimeManager", Config::EConfigCategory::Window, m_upTimeManager->RefConfig());
 		m_upTimeManager->Init();
 
 		// 描画周りの器を先に作る。
@@ -180,22 +190,26 @@ namespace Engine
 
 		// バックバッファの生成
 		// バックバッファは「描画解像度」で作る。
-		// レンダーグラフのテクスチャも windowWidth/Height 基準で、
+		// レンダーグラフのテクスチャも WindowConfig の windowWidth/Height 基準で、
 		// 最終段がバックバッファへ CopyResource するためサイズを一致させておく必要がある。
 		// クライアント領域へはスワップチェインの STRETCH で伸ばされる。
 		// スワップチェインは描画キューに紐づくので、InitDevice の後でないと作れない
 		m_upGraphicsEngine->CreateBackBuffer(
 			m_upWindow->GetWindowHandle(),
-			static_cast<UINT>(_winOp.windowWidth),
-			static_cast<UINT>(_winOp.windowHeight)
+			static_cast<UINT>(_winConfig.windowWidth),
+			static_cast<UINT>(_winConfig.windowHeight)
 		);
 
 		// 描画周り初期化(パイプラインステート管理・パーティクル・レイトレワールドもここで作られる)
 		Graphics::GraphicsEngineDesc _geDesc = {};
-		_geDesc.width = static_cast<UINT>(_winOp.windowWidth);
-		_geDesc.height = static_cast<UINT>(_winOp.windowHeight);
+		_geDesc.width = static_cast<UINT>(_winConfig.windowWidth);
+		_geDesc.height = static_cast<UINT>(_winConfig.windowHeight);
 		_geDesc.pResourceManager = m_upResourceManager.get();
 		m_upGraphicsEngine->Init(_pCmdList,_geDesc);
+
+		// 描画の設定は、持ち主(SceneView・DebugDraw)が Init で作られてから登録する
+		_configRegistry.Register("SceneViewConfig", "Engine::Graphics::SceneView", Config::EConfigCategory::Graphics, m_upGraphicsEngine->RefSceneView()->RefConfig());
+		_configRegistry.Register("DebugDrawConfig", "Engine::Graphics::DebugDraw", Config::EConfigCategory::Debug, m_upGraphicsEngine->RefDebugDraw()->RefConfig());
 
 		// アプリ寿命のサービス一式 : エディターもワールドもここを見る
 		BuildEngineServices();
@@ -213,8 +227,8 @@ namespace Engine
 
 	void MainEngine::Release()
 	{
-		// 設定を保存
-		m_upOptionManager->Serialize();
+		// 設定を保存(持ち主が壊れる前に)
+		m_upConfigRegistry->Save();
 
 		// シーンはアプリ側が先に解放している(SceneManager::Release)。ここからはプレハブを読まない
 		m_upResourceManager->SetSceneManager(nullptr);
@@ -314,8 +328,6 @@ namespace Engine
 
 	bool MainEngine::BeginFrame()
 	{
-		auto& _optionManager = *m_upOptionManager;
-
 		// フレーム開始
 		m_upTimeManager->BeginFrame();
 
@@ -332,9 +344,10 @@ namespace Engine
 		}
 
 		// タイトルにFPSを表示するかどうか
-		if (_optionManager.GetWindowOption().isTitleFPS)
+		const auto& _winConfig = m_upWindow->GetConfig();
+		if (_winConfig.isTitleFPS)
 		{
-			std::string _titleName = _optionManager.GetWindowOption().windowTitle;
+			std::string _titleName = _winConfig.windowTitle;
 			_titleName += std::string(": FPS = ") + std::to_string(m_upTimeManager->GetNowFPS());
 			_titleName += std::string(": DELTATIME = ") + std::to_string(m_upTimeManager->GetDeltaTime());
 			m_upWindow->ChangeTitle(_titleName);
@@ -348,15 +361,12 @@ namespace Engine
 		// 音を鳴らしていなくても毎フレーム呼ぶ必要がある
 		m_upAudioManager->Update();
 
-		// デバッグ線のオンオフ。グラフィックスエンジンはオプションを直接引かないので、ここから流し込む
-		m_upGraphicsEngine->RefDebugDraw()->SetWireEnabled(_optionManager.GetDebugDrawOption().drawWire);
-
 		m_upGraphicsEngine->RefParticleManager()->BeginFrame(m_upTimeManager->GetDeltaTime());	// パーティクルデータの更新
 
 		m_upResourceManager->RefAssetDatabase().Update();
 
-		// 起動設定のうち、すぐ効く項目へオプション画面の直しを写す
-		m_buildConfig.ApplyLiveValues(_optionManager.GetBuildConfig());
+		// 起動設定のうち、すぐ効く項目へ設定画面の直しを写す
+		m_buildConfig.ApplyLiveValues(m_editBuildConfig);
 
 		return true;
 	}
@@ -364,7 +374,7 @@ namespace Engine
 	EFPSRate MainEngine::GetFPSRate() const
 	{
 		if (m_opUserFPSRate) return m_opUserFPSRate.value();
-		return m_upOptionManager->GetWindowOption().fpsRate;
+		return m_upTimeManager->GetConfig().fpsRate;
 	}
 
 	void MainEngine::EndFrame()
@@ -532,11 +542,6 @@ namespace Engine
 			m_upGraphicsEngine->RefSceneView()->ClearCameraOverride();
 		}
 
-		// 描画の設定はここ(オプションの持ち主を知っている側)から流し込む。
-		// グラフィックスエンジンはオプションを直接引かない
-		m_upGraphicsEngine->RefSceneView()->SetJitterEnabled(
-			m_upOptionManager->GetRenderingOption().useJitter);
-
 		m_upGraphicsEngine->Execute();
 	}
 	const Window::NativeWindow* MainEngine::GetNativeWindow() const
@@ -585,7 +590,7 @@ namespace Engine
 		_services.pAudioManager		= m_upAudioManager.get();
 		_services.pJobSystem		= m_upJobSystem.get();
 		_services.pPhysicsEngine	= m_upPhysicsEngine.get();
-		_services.pOptionManager	= m_upOptionManager.get();
+		_services.pConfigRegistry	= m_upConfigRegistry.get();
 		_services.pDebugDraw		= m_upGraphicsEngine ? m_upGraphicsEngine->RefDebugDraw() : nullptr;
 		_services.pObjectRegistry	= m_upObjectRegistry.get();
 		_services.pSceneManager		= m_upSceneManager.get();
@@ -602,11 +607,11 @@ namespace Engine
 	void MainEngine::LogBuildConfig() const
 	{
 		const auto _preset = m_buildConfig.FindMatchingPreset();
-		ENGINE_LOG("[Option] 起動設定 : %s", _preset ? Option::ProjectOptions::GetBuildPresetName(*_preset) : "プリセットと違う組み合わせ");
+		ENGINE_LOG("[Config] 起動設定 : %s", _preset ? Config::GetBuildPresetName(*_preset) : "プリセットと違う組み合わせ");
 
-		for (const auto& _item : Option::ProjectOptions::GetBuildConfigItems())
+		for (const auto& _item : Config::GetBuildConfigItems())
 		{
-			ENGINE_LOG("[Option]   %s : %s", _item.label, (m_buildConfig.*_item.pValue) ? "ON" : "OFF");
+			ENGINE_LOG("[Config]   %s : %s", _item.label, (m_buildConfig.*_item.pValue) ? "ON" : "OFF");
 		}
 	}
 

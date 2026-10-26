@@ -6,7 +6,6 @@
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 #include "Engine/Resource/Manager/AssetDatabase/AssetDatabase.h"
 #include "Engine/Common/Color.h"
-#include "Engine/Option/OptionManager.h"	// ウィンドウ解像度(px)取得用
 
 #include "Application/ECS/World/APPWorld.h"
 

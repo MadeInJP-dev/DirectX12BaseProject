@@ -5,7 +5,6 @@
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 #include "Engine/Audio/AudioManager.h"
-#include "Engine/Option/OptionManager.h"			// ウィンドウ解像度(px)取得用
 
 #include "Application/ECS/World/APPWorld.h"
 
@@ -49,7 +48,7 @@ namespace App::Object
 
 	void HitEffectHUD::PostDeserialize(Engine::GameObject::ObjectContext& a_context)
 	{
-		if (!a_context.pServices || !a_context.pServices->pOptionManager) return;
+		if (!a_context.pServices || !a_context.pServices->pMainEngine) return;
 
 		// サイズが0のままだと何も見えないので、既定サイズと画面中央を入れておく。
 		// 保存値を読み終えた後に見るので、シーンに入っている値は潰さない
@@ -58,10 +57,10 @@ namespace App::Object
 			m_anchor.pixelSize = { DEFAULT_MARK_SIZE, DEFAULT_MARK_SIZE };
 			m_anchor.editSize  = m_anchor.pixelSize;
 
-			const auto& _winOp = a_context.pServices->pOptionManager->GetWindowOption();
+			const auto* _pGraphicsEngine = a_context.pServices->pMainEngine->RefGraphicsEngine();
 			m_anchor.pixelPos = {
-				static_cast<float>(_winOp.windowWidth) * 0.5f,
-				static_cast<float>(_winOp.windowHeight) * 0.5f
+				static_cast<float>(_pGraphicsEngine->GetRenderWidth()) * 0.5f,
+				static_cast<float>(_pGraphicsEngine->GetRenderHeight()) * 0.5f
 			};
 		}
 	}

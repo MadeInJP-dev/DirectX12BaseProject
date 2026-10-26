@@ -5,7 +5,6 @@
 #include "Engine/ECS/Component/GUIDComponent.h"
 #include "Engine/GameObject/GameObjectManager/GameObjectManager.h"
 #include "Engine/Input/InputManager/InputManager.h"
-#include "Engine/Option/OptionManager.h"
 #include "Engine/Scene/SceneManager/SceneManager.h"
 #include "Engine/MainEngine.h"
 #include "Engine/Graphics/GraphicsEngine.h"
@@ -931,7 +930,7 @@ namespace App::Object
 
 	bool GarageSequence::WorldToScreen(Engine::GameObject::ObjectContext& a_context, const Math::Vector3& a_world, Math::Vector2& a_outScreen) const
 	{
-		if (!a_context.pWorld || !a_context.pServices || !a_context.pServices->pOptionManager) return false;
+		if (!a_context.pWorld || !a_context.pServices || !a_context.pServices->pMainEngine) return false;
 		auto& _world = *a_context.pWorld;
 
 		const Engine::ECS::Entity _camera = _world.GetEntity(m_cameraGUID);
@@ -942,9 +941,9 @@ namespace App::Object
 		if (!_pProj || !_pWorldMat) return false;
 
 		// HUD の SubmitUI が座標を解釈する基準(MissileSalvoSystem と同じ)
-		const auto& _winOp = a_context.pServices->pOptionManager->GetWindowOption();
-		const float _w = static_cast<float>(_winOp.windowWidth);
-		const float _h = static_cast<float>(_winOp.windowHeight);
+		const auto* _pGraphicsEngine = a_context.pServices->pMainEngine->RefGraphicsEngine();
+		const float _w = static_cast<float>(_pGraphicsEngine->GetRenderWidth());
+		const float _h = static_cast<float>(_pGraphicsEngine->GetRenderHeight());
 
 		const Math::Matrix _viewProj = Math::Matrix(_pWorldMat->worldMat).Invert() * Math::Matrix(_pProj->projMat);
 		const Math::Vector4 _clip = Math::Vector4::Transform(a_world, _viewProj);
@@ -1014,9 +1013,9 @@ namespace App::Object
 
 		if (!m_isReleaseCursorLock) return;
 		if (!a_context.pServices) return;
-		if (!a_context.pServices->pInputManager || !a_context.pServices->pOptionManager) return;
+		if (!a_context.pServices->pInputManager) return;
 
-		const bool _isLocked = a_context.pServices->pOptionManager->GetInputOption().isCursorLockedToCenter;
+		const bool _isLocked = a_context.pServices->pInputManager->GetConfig().isCursorLockedToCenter;
 		a_context.pServices->pInputManager->SetCursorCentered(_isLocked);
 	}
 

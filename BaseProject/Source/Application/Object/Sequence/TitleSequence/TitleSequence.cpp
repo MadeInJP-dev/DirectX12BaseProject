@@ -3,7 +3,6 @@
 #include "Engine/ECS/System/SystemContext.h"	// ObjectContext が運ぶサービス群
 #include "Engine/GameObject/GameObjectManager/GameObjectManager.h"
 #include "Engine/Input/InputManager/InputManager.h"
-#include "Engine/Option/OptionManager.h"
 #include "Engine/Scene/SceneManager/SceneManager.h"
 #include "Engine/EditorField/EditorField.h"
 
@@ -114,12 +113,12 @@ namespace App::Object
 
 		if (!m_isReleaseCursorLock) return;
 		if (!a_context.pServices) return;
-		if (!a_context.pServices->pInputManager || !a_context.pServices->pOptionManager) return;
+		if (!a_context.pServices->pInputManager) return;
 
 		// タイトルで切ったぶんを戻す。切りっぱなしにすると、
 		// 遷移先で視点操作のカーソル固定が効かなくなる
 		const bool _isLocked =
-			a_context.pServices->pOptionManager->GetInputOption().isCursorLockedToCenter;
+			a_context.pServices->pInputManager->GetConfig().isCursorLockedToCenter;
 
 		a_context.pServices->pInputManager->SetCursorCentered(_isLocked);
 	}

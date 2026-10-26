@@ -1,11 +1,14 @@
 #pragma once
 
-#include "../IOption.h"
+namespace Engine::ECS
+{
+	struct EngineServices;
+}
 
-namespace Engine::Option::ProjectOptions
+namespace App::Game
 {
 	/// <summary>
-	/// 自前で描くマウスカーソルの設定
+	/// 自前で描くマウスカーソルの設定(エンジン設定の "CursorConfig")。持ち主は MouseCursor
 	/// </summary>
 	/// <remarks>
 	/// OSのカーソルはウィンドウのクライアント領域の上では消して、代わりに
@@ -15,7 +18,7 @@ namespace Engine::Option::ProjectOptions
 	/// 画像が未設定だったり読み込みが終わっていないフレームまで消してしまうと、
 	/// カーソルが1つも無い状態になってウィンドウを操作できなくなるため。
 	/// </remarks>
-	struct CursorOption : IOption
+	struct CursorConfig
 	{
 		// 自前のカーソルを使うか。
 		// 切るとOSのカーソルがそのまま出る(絵は描かない)
@@ -36,18 +39,8 @@ namespace Engine::Option::ProjectOptions
 		// 乗算する色
 		Math::Color color = Engine::Color::WHITE;
 
-		const std::string& GetName() const override
-		{
-			static const std::string NAME = "CursorOption";
-			return NAME;
-		}
-
-		EOptionCategory GetCategory() override
-		{
-			return EOptionCategory::Project;
-		}
-
-		void DrawEdit(const ECS::EngineServices& a_services) override;
-		void Archive(Persistence::Archive& a_archive) override;
+		// 設定画面・保存(ConfigRegistry から呼ばれる)
+		void DrawEdit(const Engine::ECS::EngineServices& a_services);
+		void Archive(Engine::Persistence::Archive& a_archive);
 	};
 }

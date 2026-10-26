@@ -11,7 +11,6 @@
 #include "../../MainEngine.h"
 #include "../../Resource/Manager/ResourceManager/ResourceManager.h"
 #include "../../Resource/Manager/AssetDatabase/AssetDatabase.h"
-#include "../../Option/OptionManager.h"
 #include "../../Physics/PhysicsWorld.h"
 #include "../../Input/InputManager/InputManager.h"
 #include "Engine/Graphics/GraphicsEngine.h"

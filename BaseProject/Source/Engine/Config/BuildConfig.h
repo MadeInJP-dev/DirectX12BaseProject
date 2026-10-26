@@ -1,8 +1,11 @@
 ﻿#pragma once
 
-#include "../IOption.h"
+namespace Engine::ECS
+{
+	struct EngineServices;
+}
 
-namespace Engine::Option::ProjectOptions
+namespace Engine::Config
 {
 	// 項目を変えてから効くまで
 	enum class EApplyTiming
@@ -23,7 +26,7 @@ namespace Engine::Option::ProjectOptions
 	};
 
 	//==========================================================================================
-	// 起動設定(エンジン設定の "BuildConfig")
+	// 起動設定(エンジン設定の "BuildConfig")。持ち主は MainEngine
 	//
 	// 以前のビルドモード(Debug / Development / Shipping)は、何が変わるかがコードの中にしか無かった。
 	// いまは機能ごとの真偽値で持ち、何をするか・いつ効くか・各プリセットでの値は
@@ -31,9 +34,9 @@ namespace Engine::Option::ProjectOptions
 	//
 	// ・最適化や _DEBUG のようにコンパイルで決まるものは VS の構成(Debug / Release)で決め、ここには置かない
 	// ・使う側は MainEngine::GetBuildConfig()(今効いている値)を見る。
-	//   OptionManager の値はオプション画面で直したもので、次の起動から効く項目はまだ効いていない
+	//   MainEngine::GetEditBuildConfig() は設定画面で直した値で、次の起動から効く項目はまだ効いていない
 	//==========================================================================================
-	struct BuildConfig : IOption
+	struct BuildConfig
 	{
 		//-------------------------------------------------------------------------------------------
 		// 機能 : 中身の説明は GetBuildConfigItems() の一覧
@@ -67,24 +70,13 @@ namespace Engine::Option::ProjectOptions
 		void ApplyLiveValues(const BuildConfig& a_edited);
 
 		//-------------------------------------------------------------------------------------------
-		// IOption
+		// 設定画面・保存(ConfigRegistry から呼ばれる)
 		//-------------------------------------------------------------------------------------------
 
-		const std::string& GetName() const override
-		{
-			static const std::string NAME = "BuildConfig";
-			return NAME;
-		}
-
-		EOptionCategory GetCategory() override
-		{
-			return EOptionCategory::Project;
-		}
-
-		void DrawEdit(const ECS::EngineServices& a_services) override;
+		void DrawEdit(const ECS::EngineServices& a_services);
 
 		// 古い設定(buildMode だけのもの)は、そのモードのプリセットへ置き換えて読む
-		void Archive(Persistence::Archive& a_archive) override;
+		void Archive(Persistence::Archive& a_archive);
 	};
 
 	//==========================================================================================

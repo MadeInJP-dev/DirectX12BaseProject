@@ -11,7 +11,6 @@
 #include "Engine/Physics/PhysicsWorld.h"
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Graphics/DebugDraw/DebugDraw.h"
-#include "Engine/Option/OptionManager.h"
 #include "Engine/Resource/Manager/AssetDatabase/AssetDatabase.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 #include "Engine/Resource/Data/Prefab/Prefab.h"
@@ -165,7 +164,7 @@ namespace Editor
 		if (!m_upCamera)
 		{
 			m_upCamera = std::make_unique<EditorCamera>();
-			m_upCamera->Init(m_pServices->pOptionManager);
+			m_upCamera->Init(m_pServices->pMainEngine->RefGraphicsEngine());
 		}
 
 		if (m_upWorld) return;
@@ -514,7 +513,7 @@ namespace Editor
 		auto* _pGE = MainEngine::Instance().RefGraphicsEngine();
 		if (!_pGE) return;
 
-		const auto& _winOp = m_pServices->pOptionManager->GetWindowOption();
+		const auto* _pGraphicsEngine = m_pServices->pMainEngine->RefGraphicsEngine();
 
 		// isMain を立てるのは、ゲームのカメラが1台も積まれないあいだに
 		// 画面を作る役が居なくなるのを防ぐため(エフェクトエディターと同じ)
@@ -524,8 +523,8 @@ namespace Editor
 		_desc.pipelineHandle	= m_pipelineHandle;
 		_desc.worldMat			= m_upCamera->GetWorldMatrix();
 		_desc.projMat			= m_upCamera->GetProjMatrix();
-		_desc.viewportWidth		= static_cast<UINT>(_winOp.windowWidth);
-		_desc.viewportHeight	= static_cast<UINT>(_winOp.windowHeight);
+		_desc.viewportWidth		= static_cast<UINT>(_pGraphicsEngine->GetRenderWidth());
+		_desc.viewportHeight	= static_cast<UINT>(_pGraphicsEngine->GetRenderHeight());
 		_desc.order				= 0;
 		_desc.isMain			= true;
 
@@ -741,7 +740,7 @@ namespace Editor
 		Engine::EditorField::SameLine();
 		Engine::EditorField::Field("Gizmo", m_isUseGizmo);
 		Engine::EditorField::Tooltip("選んでいる子ノードを移動ギズモで動かす(Ctrl でスナップ)");
-		if ((m_isDrawGrid || m_isDrawAxis) && !m_pServices->pOptionManager->GetDebugDrawOption().drawWire)
+		if ((m_isDrawGrid || m_isDrawAxis) && !m_pServices->pDebugDraw->GetConfig().drawWire)
 		{
 			Engine::EditorField::SameLine();
 			Engine::EditorField::HelpText("(Option の Draw Debug Wire が off のため格子と軸は出ません)");
@@ -873,9 +872,9 @@ namespace Editor
 		const auto* _pTex = _pGE->GetCameraPipelines()->GetCameraFinalTexture(m_upWorld.get(), PREVIEW_CAMERA_ENTITY);
 		if (!_pTex) { Engine::EditorField::HelpText("出力テクスチャがまだありません"); return; }
 
-		const auto& _winOp = m_pServices->pOptionManager->GetWindowOption();
-		const float _aspect = (_winOp.windowHeight > 0)
-			? static_cast<float>(_winOp.windowWidth) / static_cast<float>(_winOp.windowHeight)
+		const auto* _pGraphicsEngine = m_pServices->pMainEngine->RefGraphicsEngine();
+		const float _aspect = (_pGraphicsEngine->GetRenderHeight() > 0)
+			? static_cast<float>(_pGraphicsEngine->GetRenderWidth()) / static_cast<float>(_pGraphicsEngine->GetRenderHeight())
 			: 16.0f / 9.0f;
 
 		// 情報欄のぶんを残して、収まる大きさへ合わせる

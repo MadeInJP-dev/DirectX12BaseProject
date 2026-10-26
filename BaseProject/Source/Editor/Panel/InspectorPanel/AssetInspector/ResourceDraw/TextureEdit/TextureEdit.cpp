@@ -1,7 +1,8 @@
 ﻿#include "TextureEdit.h"
 #include "Engine/Resource/Manager/AssetDatabase/AssetDatabase.h"
 
-#include "Engine/Option/OptionManager.h"
+#include "Engine/Graphics/GraphicsEngine.h"
+#include "Engine/MainEngine.h"
 #include "../../../../../../Editor/Helper/EditorHelper.h"
 
 namespace Editor::Inspector
@@ -66,8 +67,8 @@ namespace Editor::Inspector
 		Engine::EditorField::Line();
 
 		// ---- 画像の描画 ----
-		const auto& _winOp = a_editContext.pServices->pOptionManager->GetWindowOption();
+		const auto* _pGraphicsEngine = a_editContext.pServices->pMainEngine->RefGraphicsEngine();
 		auto _gpuHandle = EditorHelper::GetImGuiTexHandle(a_pTexture->GetImGuiSRV());
-		EditorHelper::DrawSRVView(_gpuHandle, static_cast<float>(_winOp.windowWidth), static_cast<float>(_winOp.windowHeight));
+		EditorHelper::DrawSRVView(_gpuHandle, static_cast<float>(_pGraphicsEngine->GetRenderWidth()), static_cast<float>(_pGraphicsEngine->GetRenderHeight()));
 	}
 }

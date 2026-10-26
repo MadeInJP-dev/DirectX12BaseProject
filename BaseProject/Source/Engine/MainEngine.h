@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Engine/Option/ProjectOptions/BuildConfig.h"
+#include "Engine/Config/BuildConfig.h"
 
 namespace Engine::DevTool
 {
@@ -50,9 +50,9 @@ namespace Engine
 		class ObjectMetaRegistry;
 	}
 
-	namespace Option
+	namespace Config
 	{
-		class OptionManager;
+		class ConfigRegistry;
 	}
 
 	namespace Input
@@ -150,12 +150,11 @@ namespace Engine
 		// リソースマネージャー(アセットデータベースもこの中)
 		Resource::ResourceManager* RefResourceManager() { return m_upResourceManager.get(); }
 
-		// エンジン設定(EngineData.ojoptn の中身)
-		const Option::OptionManager* GetOptionManager() const { return m_upOptionManager.get(); }
-		Option::OptionManager* RefOptionManager() { return m_upOptionManager.get(); }
+		// エンジン設定(EngineData.ojoptn)の読み書きと設定画面への一覧。値は各システムが持つ
+		Config::ConfigRegistry* RefConfigRegistry() { return m_upConfigRegistry.get(); }
 
 		/// <summary>
-		/// プレイヤーが選んだ FPS の上限(nullopt で作り手の値 WindowOption::fpsRate のまま)
+		/// プレイヤーが選んだ FPS の上限(nullopt で作り手の値 TimeConfig::fpsRate のまま)
 		/// </summary>
 		/// <remarks>
 		/// 保存はアプリ側(ユーザーデータ)。エンジン設定は書き換えないので、
@@ -197,9 +196,10 @@ namespace Engine
 		//
 		// 次の起動から効く項目は起動したときの値のまま、すぐ効く項目は
 		// オプション画面で直した値が毎フレーム写される。使う側は時期を気にせずここを見る。
-		// オプション画面で直した値そのものは OptionManager::GetBuildConfig()
+		// 設定画面で直した値そのものは GetEditBuildConfig()(保存されるのはこちら)
 		//----------------------------------------------------------------------------
-		const Option::ProjectOptions::BuildConfig& GetBuildConfig() const { return m_buildConfig; }
+		const Config::BuildConfig& GetBuildConfig() const { return m_buildConfig; }
+		const Config::BuildConfig& GetEditBuildConfig() const { return m_editBuildConfig; }
 
 		// ============================================================================
 		// 遅延開放処理
@@ -226,8 +226,9 @@ namespace Engine
 		// 後ろのメンバ(オーディオのサウンドインスタンス・シーンなど)が持つ ResourceRef は、破棄のときに参照を返しに来る
 		std::unique_ptr<Resource::ResourceManager> m_upResourceManager = nullptr;		// リソース(とアセットデータベース)の持ち主
 
-		// エンジン設定 : 何よりも先に読む(起動設定やウィンドウの大きさがここで決まる)
-		std::unique_ptr<Option::OptionManager> m_upOptionManager = nullptr;
+		// エンジン設定の読み書き : 何よりも先に読む(起動設定やウィンドウの大きさがここで決まる)。
+		// 値は持ち主が持ち、ここは登録された設定を読み書きするだけ
+		std::unique_ptr<Config::ConfigRegistry> m_upConfigRegistry = nullptr;
 
 		// 入力 : ウィンドウのフォーカス通知を受けるので、ウィンドウより前に作る
 		std::unique_ptr<Input::InputManager> m_upInputManager = nullptr;
@@ -261,7 +262,8 @@ namespace Engine
 
 		// 終了の予約(ReserveQuit)。次のフレームの頭でメインループを抜ける
 		bool m_isQuitReserved = false;
-		Option::ProjectOptions::BuildConfig m_buildConfig = {};			// 起動設定(今効いている値)
+		Config::BuildConfig m_buildConfig = {};			// 起動設定(今効いている値)
+		Config::BuildConfig m_editBuildConfig = {};		// 起動設定(設定画面で直した値。保存されるのはこちら)
 
 		// フレーム分のごみ箱を用意する。
 		// 積むのはメインスレッドとは限らない(ワーカーでビルド中のリソースが壊れたときなど)ので、

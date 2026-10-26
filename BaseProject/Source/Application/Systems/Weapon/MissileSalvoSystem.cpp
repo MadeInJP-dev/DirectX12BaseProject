@@ -1,7 +1,8 @@
 ﻿#include "MissileSalvoSystem.h"
 
 #include "Application/ECS/World/APPWorld.h"
-#include "Engine/Option/OptionManager.h"
+#include "Engine/Graphics/GraphicsEngine.h"
+#include "Engine/MainEngine.h"
 
 #include "Application/Components/Enemy/EnemyTag.h"
 #include "Application/Components/Camera/ProjMatComponent.h"
@@ -55,12 +56,12 @@ namespace App::System
 			)
 			{
 				if (a_count == 0) return;
-				if (!a_ctx.pServices || !a_ctx.pServices->pOptionManager) return;
+				if (!a_ctx.pServices || !a_ctx.pServices->pMainEngine) return;
 
 				// スクリーン解像度(px) : HUD の SubmitUI がピクセル座標を解釈する基準と合わせる
-				const auto& _winOp = a_ctx.pServices->pOptionManager->GetWindowOption();
-				const float _w = static_cast<float>(_winOp.windowWidth);
-				const float _h = static_cast<float>(_winOp.windowHeight);
+				const auto* _pGraphicsEngine = a_ctx.pServices->pMainEngine->RefGraphicsEngine();
+				const float _w = static_cast<float>(_pGraphicsEngine->GetRenderWidth());
+				const float _h = static_cast<float>(_pGraphicsEngine->GetRenderHeight());
 				if (_w <= 0.0f || _h <= 0.0f) return;
 
 				//==================================================================

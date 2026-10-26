@@ -8,7 +8,6 @@
 #include "Engine/Graphics/D3D12/DescriptorHeapManager/DescriptorHeapManager.h"
 
 #include "Engine/MainEngine.h"
-#include "Engine/Option/OptionManager.h"
 
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Graphics/Frame/RenderContext/RenderContext.h"
@@ -44,7 +43,7 @@ namespace Editor
 		if (!m_upEditorCamera)
 		{
 			m_upEditorCamera = std::make_unique<EditorCamera>();
-			m_upEditorCamera->Init(a_pServices ? a_pServices->pOptionManager : nullptr);
+			m_upEditorCamera->Init(a_pServices && a_pServices->pMainEngine ? a_pServices->pMainEngine->RefGraphicsEngine() : nullptr);
 		}
 
 		// エフェクト確認用のモーダル画面

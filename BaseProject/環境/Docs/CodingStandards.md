@@ -637,13 +637,35 @@ Context
 
 * エンジン設定(`Asset/Data/Engine/EngineData.ojoptn`)の `BuildConfig` に、機能ごとの真偽値で持つ。
 * **項目・何をするか・いつ効くか(すぐ / 次に読み込むものから / 次の起動から)・各プリセットでの値は、
-  `Source/Engine/Option/ProjectOptions/BuildConfig.cpp` の一覧(`GetBuildConfigItems`)が正本。**
-  オプション画面・保存・プリセット・ビルドパネルはすべてここから引く。ここに説明を写さない。
+  `Source/Engine/Config/BuildConfig.cpp` の一覧(`GetBuildConfigItems`)が正本。**
+  設定画面・保存・プリセット・ビルドパネルはすべてここから引く。ここに説明を写さない。
 * 使う側は `MainEngine::GetBuildConfig()`(今効いている値)を見る。次の起動から効く項目は起動時の値のまま変わらない。
-  `OptionManager::GetBuildConfig()` はオプション画面で直した値で、まだ効いていないことがある。
+  `MainEngine::GetEditBuildConfig()` は設定画面で直した値(保存されるのはこちら)で、まだ効いていないことがある。
 * 項目を足すときは、一覧に1行足して使う側で `GetBuildConfig()` を引く。ビルドモードのような「まとめた値」で分岐しない。
 * プリセット(デバッグ / 開発 / 提出)は各項目に値を入れるボタンで、正本ではない。
   提出用パッケージの EngineData はビルドパネルが「提出」の組み合わせで書き換える。
+
+## 6.3 エンジン設定(Config)
+
+* **設定の値は、それを使うシステムが持つ。** まとめて持つクラス(旧 `OptionManager`)は置かない。
+  読む側は持ち主から引く(例 : `InputManager::GetConfig()`)。持ち主が値を受け手へ流し込む形にしない。
+* 設定は `XxxConfig` という構造体にし、持ち主の隣に置く。`Archive(Persistence::Archive&)` と
+  `DrawEdit(const ECS::EngineServices&)` を持たせ、持ち主は `GetConfig()` / `RefConfig()` で出す。
+* `Engine::Config::ConfigRegistry`(`Source/Engine/Config/`)は、`EngineData.ojoptn` の読み書きと設定画面(ConfigPanel)への一覧だけを持つ。
+  持ち主を作った直後に `Register` すると、読んである値がその場で流し込まれる。App 側の設定も同じファイルへ登録でき、壊すときは `Unregister` する。
+* 作り手が決める値はここ、プレイヤーが変える値は App の `UserData`(エンジンへは `SetUserFPSRate` などで重ねる)。
+
+| グループ | 構造体 | 持ち主 | 中身 |
+| --- | --- | --- | --- |
+| `BuildConfig` | `Engine::Config::BuildConfig` | `MainEngine` | 起動設定(6.2) |
+| `WindowConfig` | `Engine::Window::WindowConfig` | `NativeWindow` | タイトル・大きさ(= 描画解像度)・起動時のモード |
+| `TimeConfig` | `Engine::Time::TimeConfig` | `TimeManager` | FPS の上限 |
+| `SceneViewConfig` | `Engine::Graphics::SceneViewConfig` | `SceneView` | TAA のジッター |
+| `InputConfig` | `Engine::Input::InputConfig` | `InputManager` | 作り手の視点感度・カーソル固定 |
+| `DebugDrawConfig` | `Engine::Graphics::DebugDrawConfig` | `DebugDraw` | デバッグワイヤーの表示 |
+| `CursorConfig` | `App::Game::CursorConfig` | `App::Game::MouseCursor` | 自前で描くカーソル |
+
+* 今の描画解像度は `WindowConfig` ではなく `GraphicsEngine::GetRenderWidth / GetRenderHeight` を見る(大きさの設定は次の起動から効くため)。
 
 ---
 

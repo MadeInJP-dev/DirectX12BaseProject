@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "WindowConfig.h"
+
 namespace Engine::Window
 {
 
@@ -131,6 +133,12 @@ namespace Engine::Window
 			if (m_focusCallback) m_focusCallback(a_isActive);
 		}
 
+		//----------------------------------------------------------------------------------
+		// 設定(タイトル・大きさ・起動時のモード)。Create の前に読み終えておく
+		//----------------------------------------------------------------------------------
+		const WindowConfig& GetConfig() const { return m_config; }
+		WindowConfig& RefConfig() { return m_config; }
+
 	private:
 
 		/// <summary>
@@ -146,6 +154,9 @@ namespace Engine::Window
 		void RegisterRawMouse();
 
 	private:
+
+		WindowConfig m_config = {};
+
 		// Windows用
 		// ウィンドウプロシージャは CreateWindowEx の途中からも呼ばれるため、
 		// ハンドルは必ずnullptrで初期化しておく

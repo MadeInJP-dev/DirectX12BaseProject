@@ -21,7 +21,7 @@ namespace Editor::Build
 		// メタファイルの拡張子(MainEngine::InitializeAssetDatabase で決めているもの)
 		constexpr const char* META_EXTENSION = ".assetmeta";
 
-		// エンジン設定のファイル名と、起動設定のグループ名(OptionManager / BuildConfig::GetName)
+		// エンジン設定のファイル名と、起動設定のグループ名(MainEngine が ConfigRegistry へ登録する名前)
 		constexpr const char* ENGINE_DATA_FILE_NAME = "EngineData.ojoptn";
 		constexpr const char* BUILD_CONFIG_GROUP = "BuildConfig";
 		// 廃止したビルドモードのキー : 残っていると古い設定として読まれるので消す
@@ -332,7 +332,7 @@ namespace Editor::Build
 		// 項目とキーは起動設定の一覧(GetBuildConfigItems)から引く
 		auto& _group = _json[BUILD_CONFIG_GROUP];
 		_group.erase(LEGACY_BUILD_MODE_KEY);
-		for (const auto& _item : Engine::Option::ProjectOptions::GetBuildConfigItems())
+		for (const auto& _item : Engine::Config::GetBuildConfigItems())
 		{
 			_group[_item.key] = a_context.pSettings->executeBuildConfig.*_item.pValue;
 		}

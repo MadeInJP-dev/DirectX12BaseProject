@@ -9,9 +9,9 @@ namespace Engine::Resource
 	class ResourceManager;
 	class AssetDatabase;
 }
-namespace Engine::Option
+namespace Engine::Config
 {
-	class OptionManager;
+	class ConfigRegistry;
 }
 namespace Engine::Input
 {
@@ -69,12 +69,15 @@ namespace Engine::ECS
 		// Jolt 全体の持ち主(アロケータ・JobSystem)。
 		// シーンごとの物理空間は World リソースの Physics::PhysicsWorld のほう
 		Physics::PhysicsEngine*		pPhysicsEngine		= nullptr;
-		Option::OptionManager*		pOptionManager		= nullptr;
+
+		// エンジン設定の読み書きと設定画面への一覧。
+		// 値は各システムが持つ(ウィンドウなら NativeWindow、入力なら InputManager)ので、読むときは持ち主から引く
+		Config::ConfigRegistry*		pConfigRegistry		= nullptr;
 
 		// デバッグ用ワイヤーの置き場(GraphicsEngine が持っている)。
 		// 以前はここに MainEditor を入れてシステムから直接描かせていたが、
 		// アプリからエディターへの依存になるのでエンジン側の置き場に差し替えた。
-		// 表示のオンオフは DebugDrawOption が持ち、エディターはそれを触るだけ
+		// 表示のオンオフは DebugDraw の設定(DebugDrawConfig)が持ち、エディターはそれを触るだけ
 		Graphics::DebugDraw*		pDebugDraw			= nullptr;
 
 		// ECS外オブジェクト(GameObject)のクラス情報。

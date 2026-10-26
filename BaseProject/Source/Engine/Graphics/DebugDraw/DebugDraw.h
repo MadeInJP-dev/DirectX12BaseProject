@@ -1,5 +1,7 @@
 #pragma once
 
+#include "DebugDrawConfig.h"
+
 namespace Engine::Graphics
 {
 	// デバッグラインの形状
@@ -38,7 +40,7 @@ namespace Engine::Graphics
 	/// 中身は描き終わりに捨てられる(GraphicsEngine::EndFrame)。
 	/// 積んだフレームのうちに描かれるので、消す処理を呼ぶ側が持つ必要はない。
 	///
-	/// オプション(DebugDrawOption::drawWire)が off のときは1本も積まない。
+	/// 設定(DebugDrawConfig::drawWire)が off のときは1本も積まない。
 	/// 空のままなら描画側も早期リターンするので、描画コマンドごと止まる。
 	/// </remarks>
 	class DebugDraw
@@ -88,11 +90,11 @@ namespace Engine::Graphics
 		// 積んだものを捨てる。フレームの頭で1回だけ呼ぶ
 		void Clear();
 
-		// 線を積むかどうか(DebugDrawOption::drawWire)。
-		// オプションの持ち主(MainEngine)が毎フレームの頭で流し込む
-		void SetWireEnabled(bool a_isEnabled) { m_isWireEnabled = a_isEnabled; }
+		// 設定(線を積むかどうか)
+		const DebugDrawConfig& GetConfig() const { return m_config; }
+		DebugDrawConfig& RefConfig() { return m_config; }
 
-		// 今積める状態か(オプションが on で、上限に達していない)。
+		// 今積める状態か(設定が on で、上限に達していない)。
 		// 積む前に大量の走査をする側が、無駄に回さないために見る
 		bool IsEnabled() const;
 
@@ -100,7 +102,7 @@ namespace Engine::Graphics
 
 	private:
 
-		// 積んでよいか : オプションと上限を見る
+		// 積んでよいか : 設定と上限を見る
 		bool CanPush();
 
 	private:
@@ -108,7 +110,6 @@ namespace Engine::Graphics
 		std::vector<DebugLineData> m_lineDataVec = {};
 		UINT m_capacity = 10000;
 
-		// オプションの写し : 描画層からオプションを直接引かないため
-		bool m_isWireEnabled = false;
+		DebugDrawConfig m_config = {};
 	};
 }

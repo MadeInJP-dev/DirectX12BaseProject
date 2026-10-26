@@ -3,7 +3,7 @@
 #include "Engine/GameObject/BaseObject/BaseObject.h"	// ObjectContext
 #include "Engine/ECS/System/SystemContext.h"			// ObjectContext が運ぶサービス群
 #include "Engine/MainEngine.h"
-#include "Engine/Option/OptionManager.h"				// ウィンドウ解像度(px)取得用
+#include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Input/InputManager/InputManager.h"		// カーソル位置の取得用
 #include "Engine/Window/NativeWindow.h"					// クライアント領域の実サイズ取得用
 #include "Engine/Audio/AudioManager.h"					// 乗った音・押した音
@@ -318,7 +318,7 @@ namespace App::Object
 	bool UIInteraction::CalcCursorUIPos(Engine::GameObject::ObjectContext& a_context, Math::Vector2& a_outPos)
 	{
 		if (!a_context.pServices) return false;
-		if (!a_context.pServices->pInputManager || !a_context.pServices->pOptionManager) return false;
+		if (!a_context.pServices->pInputManager) return false;
 		if (!a_context.pServices->pMainEngine) return false;
 
 		// カーソル(クライアント座標)
@@ -326,9 +326,9 @@ namespace App::Object
 		if (!a_context.pServices->pInputManager->GetCursorClientPos(_clientPos)) return false;
 
 		// 描画解像度
-		const auto& _winOp = a_context.pServices->pOptionManager->GetWindowOption();
-		const float _renderW = static_cast<float>(_winOp.windowWidth);
-		const float _renderH = static_cast<float>(_winOp.windowHeight);
+		const auto* _pGraphicsEngine = a_context.pServices->pMainEngine->RefGraphicsEngine();
+		const float _renderW = static_cast<float>(_pGraphicsEngine->GetRenderWidth());
+		const float _renderH = static_cast<float>(_pGraphicsEngine->GetRenderHeight());
 		if (_renderW <= 0.0f || _renderH <= 0.0f) return false;
 
 		// クライアント領域の実サイズ

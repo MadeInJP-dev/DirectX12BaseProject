@@ -50,7 +50,8 @@
         "BaseProject.sln",
         "BaseProject.vcxproj",
         "BaseProject.vcxproj.filters",
-        ".editorconfig"
+        ".editorconfig",
+        ""
     ],
     "shaderDirectory": "Asset/Shader",
     "shaderSourceExtensions": [

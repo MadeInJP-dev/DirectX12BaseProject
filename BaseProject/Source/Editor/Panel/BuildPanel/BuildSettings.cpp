@@ -102,16 +102,16 @@ namespace Editor::Build
 		{
 			const int _mode = _it->get<int>();
 			a_outSettings.isOverrideBuildConfig = (_mode >= 0);
-			if (_mode >= 0 && _mode < static_cast<int>(Engine::Option::ProjectOptions::EBuildPreset::Count))
+			if (_mode >= 0 && _mode < static_cast<int>(Engine::Config::EBuildPreset::Count))
 			{
-				_config.ApplyPreset(static_cast<Engine::Option::ProjectOptions::EBuildPreset>(_mode));
+				_config.ApplyPreset(static_cast<Engine::Config::EBuildPreset>(_mode));
 			}
 		}
 
 		// 起動設定の各項目(キーは EngineData と同じ)
 		if (const auto _it = _json.find(BUILD_CONFIG_KEY); _it != _json.end() && _it->is_object())
 		{
-			for (const auto& _item : Engine::Option::ProjectOptions::GetBuildConfigItems())
+			for (const auto& _item : Engine::Config::GetBuildConfigItems())
 			{
 				ReadValue(*_it, _item.key, _config.*_item.pValue);
 			}
@@ -127,7 +127,7 @@ namespace Editor::Build
 
 		auto& _configJson = _json[BUILD_CONFIG_KEY];
 		_configJson = nlohmann::json::object();
-		for (const auto& _item : Engine::Option::ProjectOptions::GetBuildConfigItems())
+		for (const auto& _item : Engine::Config::GetBuildConfigItems())
 		{
 			_configJson[_item.key] = a_settings.executeBuildConfig.*_item.pValue;
 		}

@@ -335,7 +335,7 @@ namespace Editor
 	//======================================================================================
 	bool BuildPanel::DrawExecuteBuildConfig()
 	{
-		namespace ProjectOptions = Engine::Option::ProjectOptions;
+		namespace Config = Engine::Config;
 
 		bool _isChanged = ImGui::Checkbox("EngineData の起動設定を書き換える", &m_settings.isOverrideBuildConfig);
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("OFF なら開発中の EngineData の起動設定をそのまま置く");
@@ -345,20 +345,20 @@ namespace Editor
 		ImGui::Indent();
 
 		ImGui::TextUnformatted("プリセット");
-		for (size_t _index = 0; _index < static_cast<size_t>(ProjectOptions::EBuildPreset::Count); ++_index)
+		for (size_t _index = 0; _index < static_cast<size_t>(Config::EBuildPreset::Count); ++_index)
 		{
-			const auto _preset = static_cast<ProjectOptions::EBuildPreset>(_index);
+			const auto _preset = static_cast<Config::EBuildPreset>(_index);
 			ImGui::SameLine();
-			if (ImGui::Button(ProjectOptions::GetBuildPresetName(_preset)))
+			if (ImGui::Button(Config::GetBuildPresetName(_preset)))
 			{
 				_config.ApplyPreset(_preset);
 				_isChanged = true;
 			}
 		}
 		const auto _matchPreset = _config.FindMatchingPreset();
-		ImGui::TextDisabled("今の組み合わせ : %s", _matchPreset ? ProjectOptions::GetBuildPresetName(*_matchPreset) : "どのプリセットとも違う");
+		ImGui::TextDisabled("今の組み合わせ : %s", _matchPreset ? Config::GetBuildPresetName(*_matchPreset) : "どのプリセットとも違う");
 
-		for (const auto& _item : ProjectOptions::GetBuildConfigItems())
+		for (const auto& _item : Config::GetBuildConfigItems())
 		{
 			_isChanged |= ImGui::Checkbox(_item.label, &(_config.*_item.pValue));
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", _item.description);

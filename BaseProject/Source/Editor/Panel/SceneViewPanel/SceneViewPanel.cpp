@@ -33,7 +33,6 @@
 #include "Engine/Resource/Data/Mesh/Mesh.h"
 #include "Application/Components/Render/ModelComponent.h"
 
-#include "Engine/Option/OptionManager.h"
 
 #include "Engine/GameObject/BaseObject/BaseObject.h"
 
@@ -253,11 +252,11 @@ namespace Editor
 		auto _gpuHandle = EditorHelper::GetImGuiTexHandle(_pTex->GetImGuiSRV());
 		// 表示アスペクトは実解像度(カメラ/アンプロジェクトが使う windowWidth/Height)に合わせる。
 		// ここがずれるとスクリーン→ゲーム座標のスケールが X/Y で食い違い、ピッキングが横方向にずれる。
-		const auto& _winOp = a_editContext.pServices->pOptionManager->GetWindowOption();
+		const auto* _pGraphicsEngine = a_editContext.pServices->pMainEngine->RefGraphicsEngine();
 		ImVec2 _actualRenderSize = EditorHelper::DrawSRVView(
 			_gpuHandle,
-			static_cast<float>(_winOp.windowWidth),
-			static_cast<float>(_winOp.windowHeight));
+			static_cast<float>(_pGraphicsEngine->GetRenderWidth()),
+			static_cast<float>(_pGraphicsEngine->GetRenderHeight()));
 		ImVec2 _imageMin = ImGui::GetItemRectMin();   // 画像の実際の左上(スクリーン絶対座標)
 
 		// フリーカメラへホバー状態を渡す。
@@ -302,7 +301,7 @@ namespace Editor
 		if (ImGuizmo::IsUsing() || ImGuizmo::IsOver()) return;
 
 		// スクリーン情報取得
-		const auto& _windowOp = a_editContext.pServices->pOptionManager->GetWindowOption();
+		const auto* _pGraphicsEngine = a_editContext.pServices->pMainEngine->RefGraphicsEngine();
 
 		// 画像左上を基準にしたローカルマウス座標
 		ImVec2 _mousePos = ImGui::GetMousePos();
@@ -313,8 +312,8 @@ namespace Editor
 		// 表示サイズ → レンダーターゲット解像度へスケール
 		if (a_rect.x <= 0.0f || a_rect.y <= 0.0f) return;
 		Math::Vector2 _gameMouse = {};
-		_gameMouse.x = _localMouse.x * (static_cast<float>(_windowOp.windowWidth)  / a_rect.x);
-		_gameMouse.y = _localMouse.y * (static_cast<float>(_windowOp.windowHeight) / a_rect.y);
+		_gameMouse.x = _localMouse.x * (static_cast<float>(_pGraphicsEngine->GetRenderWidth())  / a_rect.x);
+		_gameMouse.y = _localMouse.y * (static_cast<float>(_pGraphicsEngine->GetRenderHeight()) / a_rect.y);
 
 		// スクリーン座標からワールド空間のレイを作成
 		Math::Ray _ray = a_editContext.pEditorCamera->ScreenPointToRay(_gameMouse);

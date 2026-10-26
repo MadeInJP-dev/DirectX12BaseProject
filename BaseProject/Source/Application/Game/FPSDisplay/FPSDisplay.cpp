@@ -2,7 +2,6 @@
 
 #include "Engine/MainEngine.h"
 #include "Engine/Graphics/GraphicsEngine.h"
-#include "Engine/Option/OptionManager.h"		// ウィンドウ解像度(px)取得用
 
 #include "Application/Object/UI/Decoration/DecorationDraw.h"
 
@@ -94,13 +93,13 @@ namespace App::Game
 		if (!m_isVisible || !a_pGraphicsEngine) return;
 
 		const auto& _services = m_pEngine->GetEngineServices();
-		if (!_services.pResourceManager || !_services.pOptionManager) return;
+		if (!_services.pResourceManager || !_services.pMainEngine) return;
 
 		// UI の座標は描画解像度(px)。右上の角から離して置く
-		const auto& _winOp = _services.pOptionManager->GetWindowOption();
+		const auto* _pGraphicsEngine = _services.pMainEngine->RefGraphicsEngine();
 
 		Object::Decoration::ParentTransform _parentTr = {};
-		_parentTr.pixelPos = { static_cast<float>(_winOp.windowWidth) - MARGIN.x, MARGIN.y };
+		_parentTr.pixelPos = { static_cast<float>(_pGraphicsEngine->GetRenderWidth()) - MARGIN.x, MARGIN.y };
 		_parentTr.layer    = LAYER;
 
 		const Object::Decoration::ParentOption _parentOp = {};

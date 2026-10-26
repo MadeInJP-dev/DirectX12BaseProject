@@ -1,19 +1,21 @@
 ﻿#pragma once
 
-#include "../IOption.h"
-
-namespace Engine::Option::ProjectOptions
+namespace Engine::ECS
 {
+	struct EngineServices;
+}
 
+namespace Engine::Input
+{
 	/// <summary>
-	/// 入力関係の設定
+	/// 入力関係の設定(エンジン設定の "InputConfig")。持ち主は InputManager
 	/// </summary>
 	/// <remarks>
 	/// 視点移動は生のマウス入力(WM_INPUT)から作っているため、Windowsの
 	/// 「ポインターの速度」スライダーや「ポインターの精度を高める」(加速)の影響を受けない。
 	/// 振り向きの速さを変えられるのはここだけなので、感度は必ずこの設定で調整する。
 	/// </remarks>
-	struct InputOption : IOption
+	struct InputConfig
 	{
 		// カーソルを画面中央へ固定するか(プレイ中のみ働く)
 		bool isCursorLockedToCenter = false;
@@ -41,18 +43,8 @@ namespace Engine::Option::ProjectOptions
 		// 「何cmで振り向けるか」で感度を決められる。
 		int mouseDpi = 800;
 
-		const std::string& GetName() const override
-		{
-			static const std::string NAME = "InputOption";
-			return NAME;
-		}
-
-		EOptionCategory GetCategory() override
-		{
-			return EOptionCategory::Project;
-		}
-
-		void DrawEdit(const ECS::EngineServices& a_services) override;
-		void Archive(Persistence::Archive& a_archive) override;
+		// 設定画面・保存(ConfigRegistry から呼ばれる)
+		void DrawEdit(const ECS::EngineServices& a_services);
+		void Archive(Persistence::Archive& a_archive);
 	};
 }

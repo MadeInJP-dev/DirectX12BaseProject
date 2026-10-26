@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "TimeConfig.h"
+
 namespace Engine::Time
 {
 	class FPSController;
@@ -68,7 +70,13 @@ namespace Engine::Time
 		/// </summary>
 		UINT GetNowFPS() const;
 
+		// 設定(FPSの上限)
+		const TimeConfig& GetConfig() const { return m_config; }
+		TimeConfig& RefConfig() { return m_config; }
+
 	private:
+
+		TimeConfig m_config = {};
 
 		std::unique_ptr<FPSController> m_upFPSController = nullptr;
 		std::unique_ptr<DeltaTime> m_upDeltaTime = nullptr;

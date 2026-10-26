@@ -27,7 +27,7 @@ namespace Engine
 	inline constexpr UINT CPU_FRAME_COUNT = 3;	// CPUカウント数
 
 	// ※ 以前のビルド構成(EBuildConfiguration)は廃止した。
-	//    実行時に切り替える機能は起動設定(Option/ProjectOptions/BuildConfig)の項目で持つ
+	//    実行時に切り替える機能は起動設定(Config/BuildConfig)の項目で持つ
 
 	// アプリケーションモード
 	enum class EAppMode : UINT

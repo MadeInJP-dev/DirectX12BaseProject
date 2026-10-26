@@ -10,7 +10,6 @@
 
 #include "../../MainEngine.h"
 #include "../../Window/NativeWindow.h"
-#include "../../Option/ProjectOptions/InputOption.h"
 #include "InputManager.h"
 #include "InputManager.h"
 
@@ -73,17 +72,15 @@ namespace Engine::Input
 		}
 	}
 
-	void InputManager::Init(const Option::ProjectOptions::InputOption* a_pInputOption)
+	void InputManager::Init()
 	{
-		m_pInputOption = a_pInputOption;
-
 		m_upInputDeviceManager = std::make_unique<InputDeviceManager>();
 		m_upInputDeviceManager->Init();
 
 		// 保存されている設定を反映する
 		// この時点ではまだウィンドウが生成されていないため、
 		// 中心座標はここでは求めず、固定を行うフレームごとに実測する
-		if (m_pInputOption) SetCursorCentered(m_pInputOption->isCursorLockedToCenter);
+		SetCursorCentered(m_config.isCursorLockedToCenter);
 
 		// システム用の入力を用意する
 		RegisterSystemDevice();
@@ -235,18 +232,18 @@ namespace Engine::Input
 
 		// ---- 移動量 : 生の入力から取る ----
 		bool _hasRawDelta = false;
-		if (_pWind && m_pInputOption)
+		if (_pWind)
 		{
 			int _rawX = 0;
 			int _rawY = 0;
 			_pWind->ConsumeRawMouseDelta(_rawX, _rawY);
 
 			// 感度はここでしか掛からない(Windows側の設定を通っていないため)
-			const auto& _inputOption = *m_pInputOption;
+			const auto& _inputConfig = m_config;
 
 			// 作り手の感度 × プレイヤーの感度
-			m_deltaX = static_cast<float>(_rawX) * _inputOption.lookSensitivityX * m_userLookSensitivity;
-			m_deltaY = static_cast<float>(_rawY) * _inputOption.lookSensitivityY * m_userLookSensitivity;
+			m_deltaX = static_cast<float>(_rawX) * _inputConfig.lookSensitivityX * m_userLookSensitivity;
+			m_deltaY = static_cast<float>(_rawY) * _inputConfig.lookSensitivityY * m_userLookSensitivity;
 
 			// 上下の反転はここで掛ける。
 			// 後段(InputAxisForWindowsMouse)は「下が正」で届いた値を軸の向きへ
@@ -441,7 +438,7 @@ namespace Engine::Input
 	bool InputManager::IsInvertLookY() const
 	{
 		if (m_opUserInvertLookY) return m_opUserInvertLookY.value();
-		return m_pInputOption && m_pInputOption->isInvertLookY;
+		return m_config.isInvertLookY;
 	}
 
 	// ホイールの回転量 : ボタンと同じく、ゲーム入力を受け付けない間は 0

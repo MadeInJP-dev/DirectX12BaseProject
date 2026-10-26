@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Editor/EditorCommon.h"
-#include "Engine/Option/ProjectOptions/BuildConfig.h"
+#include "Engine/Config/BuildConfig.h"
 
 namespace Editor::Build
 {
@@ -57,10 +57,10 @@ namespace Editor::Build
 
 		// 実行フォルダの EngineData の起動設定を書き換えるか。書き換えるときは executeBuildConfig の項目を書く
 		bool isOverrideBuildConfig = true;
-		Engine::Option::ProjectOptions::BuildConfig executeBuildConfig = []()
+		Engine::Config::BuildConfig executeBuildConfig = []()
 			{
-				Engine::Option::ProjectOptions::BuildConfig _config = {};
-				_config.ApplyPreset(Engine::Option::ProjectOptions::EBuildPreset::Submission);
+				Engine::Config::BuildConfig _config = {};
+				_config.ApplyPreset(Engine::Config::EBuildPreset::Submission);
 				return _config;
 			}();
 
@@ -82,7 +82,7 @@ namespace Editor::Build
 		std::vector<std::string> dataDirectoryVec = { "Asset/Data/Engine", "Asset/Data/Game", "Asset/Data/User" };
 
 		// JSON 固定で読むもの : バイナリが無いので .oj* のまま置く
-		// (.ojoptn は OptionManager、.ojrpipe は RenderingPipelineAssetIO が JSON で読む)
+		// (.ojoptn は ConfigRegistry、.ojrpipe は RenderingPipelineAssetIO が JSON で読む)
 		std::vector<std::string> jsonKeepExtensionVec = { ".ojoptn", ".ojrpipe" };
 	};
 

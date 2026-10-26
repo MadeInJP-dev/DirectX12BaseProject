@@ -2,9 +2,9 @@
 
 #include "Editor/EditorCommon.h"
 
-namespace Engine::Option
+namespace Engine::Graphics
 {
-	class OptionManager;
+	class GraphicsEngine;
 }
 
 namespace Editor
@@ -28,8 +28,8 @@ namespace Editor
 	{
 	public:
 
-		// a_pOptionManager : 射影とスクリーン座標の変換に使うウィンドウの大きさを読む先(借り物)
-		void Init(const Option::OptionManager* a_pOptionManager);
+		// a_pGraphicsEngine : 射影とスクリーン座標の変換に使う描画解像度を読む先(借り物)
+		void Init(const Engine::Graphics::GraphicsEngine* a_pGraphicsEngine);
 
 		// a_dt : 実フレーム時間
 		void Update(float a_dt);
@@ -101,8 +101,8 @@ namespace Editor
 		float m_boostRate   = 4.0f;		// Shift を押している間の倍率
 		float m_sensitivity = 0.15f;	// 度/ピクセル
 
-		// ウィンドウ設定の読み先
-		const Option::OptionManager* m_pOptionManager = nullptr;
+		// 描画解像度の読み先
+		const Engine::Graphics::GraphicsEngine* m_pGraphicsEngine = nullptr;
 
 		// 射影
 		float m_fovY  = 60.0f;
