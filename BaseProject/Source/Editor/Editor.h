@@ -24,6 +24,7 @@ namespace Editor
 	class Profiler;
 	class EffectEditor;
 	class PrefabEditor;
+	class IPreviewEditor;
 
 	//=======================================================================
 	// 
@@ -177,6 +178,11 @@ namespace Editor
 
 	private:
 
+		// 開いている確認用の画面(エフェクト / プレハブエディター)。無ければ nullptr
+		IPreviewEditor* RefOpenPreviewEditor() const;
+
+	private:
+
 		// ImGuiコンテキスト
 		std::unique_ptr<ImGuiContext> m_upImGuiContext = nullptr;
 
@@ -199,10 +205,13 @@ namespace Editor
 		// プレハブ編集用のモーダル画面
 		std::unique_ptr<PrefabEditor> m_upPrefabEditor = nullptr;
 
+		// 確認用の画面を同じ窓口で回すための並び(実体は上の2つ。借り物)
+		std::vector<IPreviewEditor*> m_previewEditorVec = {};
+
 		// エディター用関数登録
 		std::vector<std::function<void()>> m_editFuncVec = {};
 
 		bool m_isInit = false;
 
 	};
-}
+}

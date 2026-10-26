@@ -11,7 +11,8 @@ namespace Editor
 		AssetDataBasePanel();
 		~AssetDataBasePanel() override = default;
 
-		const char* GetName() const override { return "AssetDataBase"; };
+		const char* GetName() const override { return "Assets"; }
+		EPanelDock GetDefaultDock() const override { return EPanelDock::Bottom; }
 		void OnDrawImGui(EditorContext& a_editContext) override;
 	private:
 
@@ -32,4 +33,4 @@ namespace Editor
 		using AssetCreateFunc = std::function<void(const ECS::EngineServices&, const std::string&, const std::string&)>;
 		std::unordered_map<std::string, AssetCreateFunc> m_assetCreateFuncs;
 	};
-}
+}

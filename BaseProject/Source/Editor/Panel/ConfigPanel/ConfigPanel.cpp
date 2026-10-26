@@ -7,7 +7,7 @@
 // 何がどこにあるかは ConfigRegistry へ登録されたものから引く(ここに設定の種類を書かない)。
 //
 // 環境光・平行光・フォグ・空は「シーンごとに変わるもの」なので、ここではなく
-// シーン(Engine::Scene::SceneAmbient)が持つ。編集は SceneAmbientPanel から。
+// シーン(Engine::Scene::SceneAmbient)が持つ。編集は SceneSettingsPanel から。
 //==========================================================================================
 namespace Editor
 {

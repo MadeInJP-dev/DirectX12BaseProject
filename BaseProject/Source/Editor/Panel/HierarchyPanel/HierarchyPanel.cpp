@@ -28,31 +28,6 @@ namespace Editor
 		Engine::ECS::World* _pWorld = a_editContext.pServices->pSceneManager->RefWorld();
 		if (!_pWorld || !_pWorld->IsInit()) return;
 
-		// インスペクターモードのセット
-		a_editContext.eInspectorType = EInspectorType::Entity;
-
-		if (ImGui::BeginMenuBar())
-		{
-			if (ImGui::BeginMenu("Filter"))
-			{
-				auto FilterItem = [this](const char* label, EFilterType type) {
-					if (ImGui::MenuItem(label, nullptr, m_filterType == type))
-					{
-						m_filterType = type;
-					}
-					};
-
-				FilterItem("None", EFilterType::None);
-				FilterItem("Player", EFilterType::Player);
-				FilterItem("Camera", EFilterType::Camera);
-				FilterItem("UI", EFilterType::UI);
-				FilterItem("Ground", EFilterType::Ground);
-
-				ImGui::EndMenu();
-			}
-			ImGui::EndMenuBar();
-		}
-
 		// 全エンティティ取得
 		UINT _aliveEntityCount = _pWorld->GetAliveEntityCount();
 		Engine::EditorField::Value("EntityNum", "%d", _aliveEntityCount);
@@ -79,25 +54,10 @@ namespace Editor
 				Engine::EditorField::HelpText("From Prefab");
 
 				// アセットデータベースに登録されているプレハブ一覧
-				const auto& _prefabList = a_editContext.pServices->pAssetDatabase->GetTypeMetaVec("Prefab");
-				if (_prefabList.empty())
+				const auto _prefabSpan = a_editContext.pServices->pAssetDatabase->GetTypeMetaVec("Prefab");
+				if (const auto* _pProp = EditorHelper::DrawAssetSelectList(_prefabSpan))
 				{
-					Engine::EditorField::HelpText("  (no prefab)");
-				}
-				else
-				{
-					// 数が増えると探せなくなるので名前で絞り込めるようにする
-					const std::string& _search = EditorHelper::DrawSearchBox();
-
-					for (auto& _prop : _prefabList)
-					{
-						if (!EditorHelper::IsMatchSearch(_search, _prop.fileName)) continue;
-
-						if (ImGui::MenuItem(_prop.fileName.c_str()))
-						{
-							InstantiatePrefab(a_editContext,_pWorld, _prop.guid);
-						}
-					}
+					InstantiatePrefab(a_editContext, _pWorld, _pProp->guid);
 				}
 
 				ImGui::EndPopup();
@@ -446,4 +406,4 @@ namespace Editor
 
 		return _children;
 	}
-}
+}

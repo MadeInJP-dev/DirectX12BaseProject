@@ -23,7 +23,8 @@ namespace Editor
 	public:
 		~RenderGraphResourceViewPanel() override = default;
 
-		const char* GetName() const override { return "RenderGraphResourceView"; };
+		const char* GetName() const override { return "Render Graph"; }
+		EPanelDock GetDefaultDock() const override { return EPanelDock::Bottom; }
 		void OnDrawImGui(EditorContext& a_editContext) override;
 
 	private:

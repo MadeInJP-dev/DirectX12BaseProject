@@ -60,7 +60,14 @@ namespace Editor
 		float appWindowWidth = 0;
 		float appWindowHeight = 0;
 
+		//==============================================================================
 		// 現在のインスペクターモード
+		//
+		// 最後に選んだものの種類になる(SelectAsset / SelectEntity / SelectGameObject が書く)。
+		// 以前は一覧のパネルが「描かれている間」毎フレーム書き換えていたので、
+		// 一覧を並べて開いていると、最後に描かれたパネルの種類がいつも勝っていた
+		// (シーンビューでエンティティを選んでも、インスペクターがオブジェクトのままになる)
+		//==============================================================================
 		EInspectorType eInspectorType = EInspectorType::None;
 
 		//==============================================================================
@@ -87,6 +94,7 @@ namespace Editor
 
 			pAssetProp = a_pAssetProp;
 			selectedAssetGUID = a_pAssetProp->guid;
+			eInspectorType = EInspectorType::Asset;
 		}
 
 		// アセットの選択を外す
@@ -154,6 +162,8 @@ namespace Editor
 				return;
 			}
 
+			eInspectorType = EInspectorType::Entity;
+
 			// 単体選択 : 中身を入れ替えるだけ
 			if (!a_isAdditive)
 			{
@@ -183,7 +193,18 @@ namespace Editor
 		}
 
 		// 選択中のECS外オブジェクト(GameObjectManager管理下)
+		// 選ぶときは SelectGameObject を通す(インスペクターの種類も切り替わる)
 		GameObject::BaseObject* pGameObject = nullptr;
+
+		// ECS外オブジェクトを選択する。エンティティの選択は外す(インスペクターは1つしか出せないため)
+		void SelectGameObject(GameObject::BaseObject* a_pObject)
+		{
+			pGameObject = a_pObject;
+			if (!a_pObject) return;
+
+			ClearEntitySelection();
+			eInspectorType = EInspectorType::Game;
+		}
 
 		// プレハブのシグネチャ+初期値のコピー先
 		PrefabClipboard prefabClipboard = {};
@@ -225,4 +246,4 @@ namespace Editor
 			}
 		}
 	};
-}
+}

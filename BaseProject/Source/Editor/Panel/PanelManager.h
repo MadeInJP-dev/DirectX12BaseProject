@@ -2,6 +2,8 @@
 
 #include "../Internal/EditorContext.h"
 #include "../Panel/IPanel.h"
+#include "DockLayout/DockLayout.h"
+#include "MainMenuBar/MainMenuBar.h"
 #include "Editor/EditorCommon.h"
 
 namespace Editor
@@ -14,6 +16,11 @@ namespace Editor
 	/// <summary>
 	/// パネルを管理するためのクラス
 	/// </summary>
+	/// <remarks>
+	/// パネルの登録と描画に加えて、パネルを並べる土台(DockLayout)と
+	/// いちばん上のメニューバー(MainMenuBar)も持つ。
+	/// メニューの Window はパネルの一覧を、File は選択の状態とは別のシーンの操作を扱う
+	/// </remarks>
 	class PanelManager
 	{
 	public:
@@ -70,6 +77,12 @@ namespace Editor
 
 		// パネル間共通メモ帳
 		EditorContext m_editContext = {};
+
+		// パネルを並べる土台
+		DockLayout m_dockLayout = {};
+
+		// いちばん上のメニューバー
+		MainMenuBar m_mainMenuBar;
 	};
 
 	template<typename T>
@@ -93,4 +106,4 @@ namespace Editor
 		}
 		return nullptr;
 	}
-}
+}

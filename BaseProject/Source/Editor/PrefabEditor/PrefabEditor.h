@@ -1,18 +1,18 @@
 ﻿#pragma once
 
 #include "Editor/EditorCommon.h"
+#include "../Widget/ScenePreview/IPreviewEditor.h"
+#include "../Widget/ScenePreview/ScenePreview.h"
+#include "../Widget/PopUp/Popup.h"
+#include "../Widget/PopUp/ConfirmPopup/ConfirmPopup.h"
 
 namespace Engine
 {
-	namespace ECS { class World; }
 	namespace Resource { class Prefab; }
-	namespace Graphics::Pipeline { class RenderingPipelineAsset; }
 }
 
 namespace Editor
 {
-	class EditorCamera;
-
 	//======================================================================================
 	//
 	// プレハブエディター
@@ -46,13 +46,13 @@ namespace Editor
 	//   (理由はエフェクトエディターと同じ)。
 	//
 	//======================================================================================
-	class PrefabEditor
+	class PrefabEditor : public IPreviewEditor
 	{
 	public:
 
 		// a_pServices : アプリ寿命のサービス一式(借り物)。アセットの読み込みに使う
 		explicit PrefabEditor(ECS::EngineServices* a_pServices);
-		~PrefabEditor();
+		~PrefabEditor() override;
 		NON_COPYABLE_NON_MOVABLE(PrefabEditor);
 
 		/// <summary>
@@ -65,41 +65,16 @@ namespace Editor
 		/// </summary>
 		void Close();
 
-		/// <summary>
-		/// 開いているか。ここが true の間、ゲームのシーンは止まる
-		/// </summary>
-		bool IsOpen() const { return m_isOpen; }
-
-		/// <summary>
-		/// プレビュー用ワールドの更新(ゲームのシーンの代わりに回る)
-		/// </summary>
-		void UpdateScene(float a_dt);
-
-		/// <summary>
-		/// プレビュー用ワールドの描画命令を積む(ゲームのシーンの代わりに回る)
-		/// </summary>
-		void DrawScene();
-
-		/// <summary>
-		/// カメラの更新。MainEditor がフリーカメラの代わりに呼ぶ
-		/// </summary>
-		void UpdateCamera(float a_dt);
-
-		/// <summary>
-		/// カメラの割り込み行列を取得する
-		/// </summary>
-		/// <returns>開いていなければ false(割り込まない)</returns>
-		bool TryGetCameraOverride(Math::Matrix& a_outWorldMat, Math::Matrix& a_outProjMat) const;
-
-		/// <summary>
-		/// ポップアップの描画。MainEditor がパネルの後に呼ぶ
-		/// </summary>
-		void OnDrawImGui();
-
-		/// <summary>
-		/// 終了処理
-		/// </summary>
-		void Release();
+		//----------------------------------------------------------------------------------
+		// IPreviewEditor
+		//----------------------------------------------------------------------------------
+		bool IsOpen() const override { return m_isOpen; }
+		void UpdateScene(float a_dt) override;
+		void DrawScene() override;
+		void UpdateCamera(float a_dt) override;
+		bool TryGetCameraOverride(Math::Matrix& a_outWorldMat, Math::Matrix& a_outProjMat) const override;
+		void OnDrawImGui() override;
+		void Release() override;
 
 	private:
 
@@ -107,21 +82,12 @@ namespace Editor
 		// プレビュー
 		//----------------------------------------------------------------------------------
 
-		// プレビュー用ワールドとカメラを作る(初回に開いたときだけ)
-		void EnsureWorld();
-
 		// 編集中のプレハブの実体を原点に出す(その場で生成する)
 		void SpawnInstance();
 
 		// プレビュー用ワールドに居るものを全部片付ける
 		// (実体が動いて出したもの(弾・エフェクト)も含めて消す)
 		void DestroyAllEntities();
-
-		// このプレビューのカメラを GraphicsEngine へ積む
-		void SubmitPreviewCamera();
-
-		// 目安になる格子をデバッグ線で描く(大きさの把握用)
-		void DrawGrid() const;
 
 		// 選んでいるノードの位置に軸を描く
 		void DrawSelectedNodeAxis() const;
@@ -161,6 +127,7 @@ namespace Editor
 		//----------------------------------------------------------------------------------
 		// UI
 		//----------------------------------------------------------------------------------
+		void DrawContent();
 		void DrawToolbar();
 		void DrawNodePane();
 		void DrawNodeTreeItem(int a_nodeIndex, const std::vector<std::vector<int>>& a_childIndexMap);
@@ -168,7 +135,6 @@ namespace Editor
 		void DrawNodeGizmo(const ImVec2& a_imageMin, const ImVec2& a_imageSize);
 		void DrawInfo();
 		void DrawEditPane();
-		void DrawCloseConfirmPopup();
 
 	private:
 
@@ -176,8 +142,6 @@ namespace Editor
 		// 状態
 		//----------------------------------------------------------------------------------
 		bool m_isOpen = false;					// 開いているか
-		bool m_isOpenRequest = false;			// ImGui へポップアップを開かせる要求(開いた最初の1回だけ)
-		bool m_isCloseConfirmRequest = false;	// 未保存の確認を開かせる要求
 		bool m_isCloseRequest = false;			// 確認が済んで閉じる要求(ポップアップの中で閉じる)
 
 		Core::GUID m_prefabGUID = Core::DEFAULT_GUID;
@@ -189,23 +153,12 @@ namespace Editor
 		// アプリ寿命のサービス一式(借り物)
 		ECS::EngineServices* m_pServices = nullptr;
 
-		// プレビュー用のワールド。
-		// 閉じても捨てずに使い回す(理由はエフェクトエディターと同じ :
-		// World::Release() はリソースのGC掃除まで走り、ゲーム側のモデルまで解放してしまう)
-		std::unique_ptr<Engine::ECS::World> m_upWorld = nullptr;
+		// 確認用のワールド・カメラ・描画構成・再生と格子
+		ScenePreview m_preview;
 
-		// シーンビューと同じフリーカメラ(プレビュー専用の実体)
-		std::unique_ptr<EditorCamera> m_upCamera = nullptr;
-
-		//----------------------------------------------------------------------------------
-		// 描画構成
-		//
-		// 開いた時点でゲームが使っていたものを借りる(絵作りを本番と揃えるため)
-		//----------------------------------------------------------------------------------
-		Engine::Handle<Engine::Graphics::Pipeline::RenderingPipelineAsset> m_pipelineHandle = {};
-
-		// このプレビューのカメラを GraphicsEngine 側で識別する鍵(ワールドが違えば別扱い)
-		static constexpr uint32_t PREVIEW_CAMERA_ENTITY = 0;
+		// この画面そのもの(画面の大部分を使うモーダル)と、未保存のまま閉じるときの確認
+		Popup m_popup;
+		ConfirmPopup m_closeConfirmPopup;
 
 		//----------------------------------------------------------------------------------
 		// 出している実体
@@ -220,12 +173,6 @@ namespace Editor
 		bool m_isAutoRespawn = true;		// 中身が変わったら自動で出し直す
 
 		//----------------------------------------------------------------------------------
-		// 再生
-		//----------------------------------------------------------------------------------
-		bool  m_isPlaying = true;		// 時間を進めるか(止めるとアニメーションなどがその場で固まる)
-		float m_playSpeed = 1.0f;		// 再生速度の倍率
-
-		//----------------------------------------------------------------------------------
 		// 編集
 		//----------------------------------------------------------------------------------
 		int   m_selectedNode = -1;		// 選んでいるノード(-1 = ルート / 0 以上 = 子の添え字)
@@ -235,8 +182,6 @@ namespace Editor
 		//----------------------------------------------------------------------------------
 		// 表示
 		//----------------------------------------------------------------------------------
-		bool  m_isDrawGrid = true;
-		float m_gridSize = 10.0f;		// 格子の半径(m)
 		bool  m_isDrawAxis = true;		// 選んでいるノードの位置に軸を描く
 		bool  m_isUseGizmo = true;		// 選んでいる子ノードを移動ギズモで動かす
 	};

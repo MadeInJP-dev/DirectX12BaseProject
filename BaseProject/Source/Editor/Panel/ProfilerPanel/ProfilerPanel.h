@@ -27,7 +27,8 @@ namespace Editor
 	public:
 		~ProfilerPanel() override = default;
 
-		const char* GetName() const override { return "ProfilerPanel"; };
+		const char* GetName() const override { return "Profiler"; }
+		EPanelDock GetDefaultDock() const override { return EPanelDock::Bottom; }
 		void OnDrawImGui(EditorContext& a_editContext) override;
 		ImGuiWindowFlags GetFlags() const override { return ImGuiWindowFlags_MenuBar; }
 

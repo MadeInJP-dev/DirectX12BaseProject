@@ -1573,12 +1573,37 @@
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Panel\SceneAmbientPanel\SceneAmbientPanel.cpp">
+    <ClCompile Include="Source\Editor\Panel\SceneSettingsPanel\SceneSettingsPanel.cpp">
       <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Panel\SceneConfigPanel\SceneConfigPanel.cpp">
+    <ClCompile Include="Source\Editor\Panel\MainMenuBar\MainMenuBar.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\MainMenuBar\SceneFileMenu\SceneFileMenu.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\DockLayout\DockLayout.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Widget\PopUp\NameInputPopup\NameInputPopup.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Widget\PopUp\ConfirmPopup\ConfirmPopup.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Widget\ScenePreview\ScenePreview.cpp">
       <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
@@ -2503,8 +2528,14 @@
     <ClInclude Include="Source\Editor\Panel\InspectorPanel\InspectorPanel.h" />
     <ClInclude Include="Source\Editor\Panel\IPanel.h" />
     <ClInclude Include="Source\Editor\Panel\ConfigPanel\ConfigPanel.h" />
-    <ClInclude Include="Source\Editor\Panel\SceneAmbientPanel\SceneAmbientPanel.h" />
-    <ClInclude Include="Source\Editor\Panel\SceneConfigPanel\SceneConfigPanel.h" />
+    <ClInclude Include="Source\Editor\Panel\SceneSettingsPanel\SceneSettingsPanel.h" />
+    <ClInclude Include="Source\Editor\Panel\MainMenuBar\MainMenuBar.h" />
+    <ClInclude Include="Source\Editor\Panel\MainMenuBar\SceneFileMenu\SceneFileMenu.h" />
+    <ClInclude Include="Source\Editor\Panel\DockLayout\DockLayout.h" />
+    <ClInclude Include="Source\Editor\Widget\PopUp\NameInputPopup\NameInputPopup.h" />
+    <ClInclude Include="Source\Editor\Widget\PopUp\ConfirmPopup\ConfirmPopup.h" />
+    <ClInclude Include="Source\Editor\Widget\ScenePreview\ScenePreview.h" />
+    <ClInclude Include="Source\Editor\Widget\ScenePreview\IPreviewEditor.h" />
     <ClInclude Include="Source\Editor\Panel\RenderGraphResourceViewPanel\RenderGraphResourceViewPanel.h" />
     <ClInclude Include="Source\Editor\Panel\SceneViewPanel\SceneViewPanel.h" />
     <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerPanel.h" />

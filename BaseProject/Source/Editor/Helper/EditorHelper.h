@@ -2,6 +2,9 @@
 
 #include "Editor/EditorCommon.h"
 
+// 一覧から選ぶ関数がアセットの型を受け取る(振る舞いを持たない軽い型だけのヘッダー)
+#include "Engine/Resource/Manager/AssetDatabase/AssetTypes.h"
+
 //------------------------------------------------------------------------------------------
 // このヘッダーはAnimatorAsset -> StateGraphEditor 経由で
 // ResourceManagerより先に読まれるため、重いヘッダーは持ち込まない。
@@ -51,6 +54,25 @@ namespace Editor
 		/// <param name="a_text">候補の表示名</param>
 		/// <returns>表示してよければ true(検索文字列が空なら常に true)</returns>
 		static bool IsMatchSearch(const std::string& a_search, const std::string& a_text);
+
+		/// <summary>
+		/// アセットの一覧を検索欄付きで並べ、押されたものを返す
+		/// </summary>
+		/// <remarks>
+		/// シーンを開く・プレハブを置くなど「種類で絞った一覧から1つ選ぶ」場面で使う。
+		/// 検索はファイル名と置き場所の両方に当てる(同名が別フォルダにあり得るため)。
+		/// 同名が並ぶものにだけ置き場所を添える。
+		/// ポップアップの中で使うと、押したときにポップアップが閉じる
+		/// </remarks>
+		/// <param name="a_assetSpan">並べるアセット(AssetDatabase::GetTypeMetaVec の結果)</param>
+		/// <param name="a_selectedGUID">強調して出すもの(今開いているシーンなど)</param>
+		/// <param name="a_searchID">検索欄のID(同じ窓に複数置くなら変える)</param>
+		/// <returns>押されたもの。押されなければ nullptr</returns>
+		static const Resource::AssetProperty* DrawAssetSelectList(
+			std::span<const Resource::AssetProperty> a_assetSpan,
+			const Core::GUID& a_selectedGUID = {},
+			const char* a_searchID = "##Search"
+		);
 
 		//--------------------------------------------------------------------------------------
 		// テクスチャ

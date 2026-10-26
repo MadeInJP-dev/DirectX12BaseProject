@@ -1,20 +1,13 @@
 ﻿#include "EffectEditor.h"
 
-#include "../Editor.h"
 #include "../Helper/EditorHelper.h"
-#include "../EditorCamera/EditorCamera.h"
 
 #include "../Panel/InspectorPanel/AssetInspector/ResourceDraw/EffectAssetEdit/EffectAssetEdit.h"
 #include "../Panel/InspectorPanel/AssetInspector/ResourceDraw/ParticleEdit/ParticleEdit.h"
 
-#include "Engine/MainEngine.h"
 #include "Engine/Effect/EffectPlayer.h"
 #include "Engine/ECS/World/World.h"
-#include "Engine/Scene/BaseScene/BaseScene.h"
 #include "Engine/Scene/SceneAmbient/SceneAmbient.h"
-#include "Engine/Physics/PhysicsWorld.h"
-#include "Engine/Graphics/GraphicsEngine.h"
-#include "Engine/Graphics/DebugDraw/DebugDraw.h"
 #include "Engine/Resource/Manager/AssetDatabase/AssetDatabase.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 #include "Engine/Resource/Data/EffectAsset/EffectAsset.h"
@@ -34,16 +27,11 @@ namespace Editor
 {
 	namespace
 	{
-		// ポップアップのID。OpenPopup と BeginPopupModal で同じものを使う
-		constexpr const char* POPUP_ID = "Effect Editor";
-
 		// エフェクトを出す位置。プレビューは常に原点固定にしておく
 		const Math::Vector3 EFFECT_ORIGIN = { 0.0f, 0.0f, 0.0f };
 
-		// カメラの定位置。原点に出るエフェクトが正面に収まる位置
-		const Math::Vector3 CAMERA_HOME_POS = { 0.0f, 2.5f, -8.0f };
-		constexpr float CAMERA_HOME_YAW = 0.0f;
-		constexpr float CAMERA_HOME_PITCH = 10.0f;
+		// 画面に対する大きさ。モーダルなので後ろのパネルは触れない
+		constexpr float SCREEN_RATIO = 0.9f;
 	}
 
 	//======================================================================================
@@ -63,8 +51,16 @@ namespace Editor
 
 	EffectEditor::EffectEditor(ECS::EngineServices* a_pServices)
 		: m_pServices(a_pServices)
+		, m_preview(a_pServices)
+		, m_popup("Effect Editor")
 		, m_upPlainAmbient(std::make_unique<Scene::SceneAmbient>(Scene::SceneAmbient::CreatePlain()))
-	{}
+	{
+		m_popup.SetScreenRatio(SCREEN_RATIO);
+		m_popup.SetContent([this]() { DrawContent(); });
+
+		// × で閉じられた
+		m_popup.SetOnClosed([this]() { Close(); });
+	}
 	EffectEditor::~EffectEditor() = default;
 
 	//======================================================================================
@@ -104,32 +100,17 @@ namespace Editor
 	void EffectEditor::BeginOpen()
 	{
 		m_isOpen = true;
-		m_isOpenRequest = true;
+
+		// Open() はインスペクターの描画中(ウィンドウの中)から呼ばれるので、
+		// 開く要求だけ出しておき、ID スタックが素の状態になる OnDrawImGui で開く
+		m_popup.Open();
 
 		// 再生状態は開くたびに頭から
-		m_isPlaying = true;
 		m_isRestartRequest = false;
 		m_selectedParticlePart = 0;
 
-		EnsureWorld();
-
-		//----------------------------------------------------------------------------------
-		// 描画構成を借りる
-		//
-		// ゲームのシーンが直前まで画面を作っていた構成をそのまま使う。
-		// ここで別のものを組むと、合わせた見た目がゲームへ持っていくとずれる。
-		//
-		// 借りるのは開いた瞬間の1回だけ。開いているあいだはこちらのカメラが
-		// メインになるので、毎フレーム引き直すと自分の値を借り直すことになる
-		//----------------------------------------------------------------------------------
-		if (auto* _pGE = MainEngine::Instance().RefGraphicsEngine())
-		{
-			m_pipelineHandle = _pGE->GetCameraPipelines()->GetLastMainPipelineHandle();
-		}
-
-		// カメラは開くたびに定位置へ。
-		// 前回どこかへ飛ばしたまま開くと、出したものが画面の外から始まってしまう
-		if (m_upCamera) m_upCamera->SetPose(CAMERA_HOME_POS, CAMERA_HOME_YAW, CAMERA_HOME_PITCH);
+		// ワールド・カメラ・描画構成の用意(描画構成はゲームが直前まで使っていたものを借りる)
+		m_preview.BeginOpen();
 
 		ReserveSpawn();
 	}
@@ -146,44 +127,19 @@ namespace Editor
 		m_effectHandle = {};
 		m_effectPrefabHandle = {};
 
-		// 押しっぱなし扱いを閉じたあとへ持ち越さない
-		if (m_upCamera) m_upCamera->CancelControl();
+		m_preview.EndOpen();
 	}
 
 	void EffectEditor::Release()
 	{
-		// World::Release() は呼ばない。
-		// あちらは「ECS参照カウントを全部リセット → GCで数え直し → 未参照を解放」まで走るので、
-		// 数えられるのはこのワールドの中身だけになり、ゲームのシーンが使っている
-		// モデルやテクスチャまで巻き添えで解放されてしまう。
-		// ここが呼ばれるのはアプリ終了時(ResourceManager::Release のあと)なので、
-		// 持ち物を捨てるだけでよい。
-		m_upWorld.reset();
-		m_upCamera.reset();
+		m_preview.Release();
 		m_isOpen = false;
-	}
-
-	//======================================================================================
-	// プレビュー用ワールド
-	//======================================================================================
-	void EffectEditor::EnsureWorld()
-	{
-		if (!m_upCamera)
-		{
-			m_upCamera = std::make_unique<EditorCamera>();
-			m_upCamera->Init(m_pServices->pMainEngine->RefGraphicsEngine());
-		}
-
-		if (m_upWorld) return;
-
-		// ゲームのシーンとまったく同じ構成(コンポーネント・システム・ワールドリソース)で作る。
-		// 描画のされ方を本番と揃えるのが目的なので、ここで簡易版を組んではいけない
-		m_upWorld = Scene::CreateSceneWorld(*m_pServices->pMainEngine, true);
 	}
 
 	void EffectEditor::ReserveSpawn()
 	{
-		if (!m_upWorld) return;
+		ECS::World* _pWorld = m_preview.RefWorld();
+		if (!_pWorld) return;
 		if (m_effectGUID == Core::DEFAULT_GUID) return;
 
 		// エフェクトプレハブ : ゲームと同じ経路で炊く(寿命も付くので、放っておけば全部消える)。
@@ -193,7 +149,7 @@ namespace Editor
 			m_prefabElapsed = 0.0f;
 			if (const auto* _pEffectPrefab = RefEffectPrefab())
 			{
-				App::Utility::SpawnEffectPrefab(*m_upWorld, *_pEffectPrefab, EFFECT_ORIGIN);
+				App::Utility::SpawnEffectPrefab(*_pWorld, *_pEffectPrefab, EFFECT_ORIGIN);
 			}
 			return;
 		}
@@ -201,18 +157,19 @@ namespace Editor
 		// 実体化は次の BeginFrame。
 		// 出し切っても消えないようにしておく(何度も再生し直したいので寿命はこちらが握る)。
 		// 発生位置は常に原点。カメラは自由に動かせるので、見る位置と出す位置は分けておく
-		App::Utility::ReserveSpawnEffectAt(*m_upWorld, m_effectGUID, EFFECT_ORIGIN, false);
+		App::Utility::ReserveSpawnEffectAt(*_pWorld, m_effectGUID, EFFECT_ORIGIN, false);
 	}
 
 	void EffectEditor::DestroyEffectEntity()
 	{
-		if (!m_upWorld) return;
+		ECS::World* _pWorld = m_preview.RefWorld();
+		if (!_pWorld) return;
 
 		// プレビュー用ワールドにはエフェクトしか居ないので、見つけたものを全部片付ける。
 		// エフェクトプレハブで出したもの(破片など、エフェクトを持たないものもある)は
 		// 必ず寿命を持つので、そちらでも拾う
 		std::vector<ECS::Entity> _targets = {};
-		m_upWorld->ForEach<App::Component::EffectAssetComponent>(
+		_pWorld->ForEach<App::Component::EffectAssetComponent>(
 			[&](ECS::Chunk* a_pChunk, uint32_t a_count, App::Component::EffectAssetComponent*)
 			{
 				for (uint32_t _i = 0; _i < a_count; ++_i)
@@ -221,7 +178,7 @@ namespace Editor
 				}
 			}
 		);
-		m_upWorld->ForEach<App::Component::LifeTimeComponent>(
+		_pWorld->ForEach<App::Component::LifeTimeComponent>(
 			[&](ECS::Chunk* a_pChunk, uint32_t a_count, App::Component::LifeTimeComponent*)
 			{
 				for (uint32_t _i = 0; _i < a_count; ++_i)
@@ -235,25 +192,16 @@ namespace Editor
 		std::sort(_targets.begin(), _targets.end());
 		_targets.erase(std::unique(_targets.begin(), _targets.end()), _targets.end());
 
-		for (const ECS::Entity& _entity : _targets)
-		{
-			m_upWorld->ReserveReleaseEntity(_entity);
-		}
-
-		// 解放予約は次の BeginFrame で消化される。
-		// 閉じたあとはこのワールドを回さないので、ここで1回だけ空回しして始末しておく
-		if (!_targets.empty())
-		{
-			m_upWorld->BeginFrame();
-		}
+		m_preview.DestroyEntities(_targets);
 	}
 
 	EffectEditor::EffectRef EffectEditor::FindEffect() const
 	{
 		EffectRef _ref = {};
-		if (!m_upWorld) return _ref;
+		ECS::World* _pWorld = m_preview.RefWorld();
+		if (!_pWorld) return _ref;
 
-		m_upWorld->ForEach<App::Component::EffectRuntimeComponent, App::Component::EffectPlayRequestComponent>(
+		_pWorld->ForEach<App::Component::EffectRuntimeComponent, App::Component::EffectPlayRequestComponent>(
 			[&](ECS::Chunk* a_pChunk, uint32_t a_count, App::Component::EffectRuntimeComponent* a_runtimeArray, App::Component::EffectPlayRequestComponent* a_requestArray)
 			{
 				if (_ref.IsValid()) return;		// 先に見つけたものを使う(プレビューは常に1つ)
@@ -280,11 +228,12 @@ namespace Editor
 
 	int EffectEditor::CountPrefabEntities() const
 	{
-		if (!m_upWorld) return 0;
+		ECS::World* _pWorld = m_preview.RefWorld();
+		if (!_pWorld) return 0;
 
 		// エフェクトプレハブで出したものは全部寿命を持つ(SpawnEffectPrefab が付ける)
 		int _count = 0;
-		m_upWorld->ForEach<App::Component::LifeTimeComponent>(
+		_pWorld->ForEach<App::Component::LifeTimeComponent>(
 			[&](ECS::Chunk*, uint32_t a_count, App::Component::LifeTimeComponent*)
 			{
 				_count += static_cast<int>(a_count);
@@ -310,12 +259,12 @@ namespace Editor
 	//======================================================================================
 	void EffectEditor::UpdateScene(float a_dt)
 	{
-		if (!m_isOpen || !m_upWorld) return;
+		if (!m_isOpen || !m_preview.RefWorld()) return;
 
 		// 止めているあいだは時間を進めない。
 		// エフェクトの経過時間もパーティクルの発生もここの dt で決まるので、
 		// 0 を流すだけで「その瞬間で固まる」
-		const float _dt = m_isPlaying ? (a_dt * m_playSpeed) : 0.0f;
+		const float _dt = m_preview.GetDeltaTime(a_dt);
 
 		//------------------------------------------------------------------
 		// エフェクトプレハブ : 全部消えたら炊き直す / Restart で片付けて炊き直す
@@ -370,22 +319,8 @@ namespace Editor
 		}
 
 		// ---- ゲームのシーンと同じ順でフェーズを回す ----
-		// 当たり判定の空間もこのワールドの持ち物(CreateSceneWorld が足している)なので、
-		// ゲームのシーンと同じ手順をそのまま踏める。
-		// プレビューにコライダーが居なければ空のまま素通りするだけ
-		m_upWorld->BeginFrame();
-
-		m_upWorld->RunSystem(ECS::ESystemType::Input, _dt);
-		m_upWorld->RunSystem(ECS::ESystemType::PreUpdate, _dt);
-		m_upWorld->RunSystem(ECS::ESystemType::Update, _dt);
-
-		// 判定クエリ(Physics)の前に物理空間を進める。BaseScene::Update と同じ位置
-		m_upWorld->RefResource<Physics::PhysicsWorld>().Update(_dt);
-
-		m_upWorld->RunSystem(ECS::ESystemType::Physics, _dt);
-		m_upWorld->RunSystem(ECS::ESystemType::Animation, _dt);
-		m_upWorld->RunSystem(ECS::ESystemType::Camera, _dt);
-		m_upWorld->RunSystem(ECS::ESystemType::PostUpdate, _dt);
+		// プレビューにコライダーが居なければ、当たり判定の空間は空のまま素通りするだけ
+		m_preview.RunUpdate(_dt);
 	}
 
 	//======================================================================================
@@ -396,10 +331,11 @@ namespace Editor
 	//======================================================================================
 	void EffectEditor::ApplyPreviewTransform(ECS::Entity a_entity, float a_dt)
 	{
-		if (!m_upWorld) return;
-		if (!m_upWorld->HasComponent<App::Component::LocalTransformComponent>(a_entity)) return;
+		ECS::World* _pWorld = m_preview.RefWorld();
+		if (!_pWorld) return;
+		if (!_pWorld->HasComponent<App::Component::LocalTransformComponent>(a_entity)) return;
 
-		auto* _pTransform = m_upWorld->RefData<App::Component::LocalTransformComponent>(a_entity);
+		auto* _pTransform = _pWorld->RefData<App::Component::LocalTransformComponent>(a_entity);
 		if (!_pTransform) return;
 
 		Math::Vector3 _pos = EFFECT_ORIGIN;
@@ -425,33 +361,10 @@ namespace Editor
 	//======================================================================================
 	void EffectEditor::DrawScene()
 	{
-		if (!m_isOpen || !m_upWorld) return;
+		if (!m_isOpen) return;
 
 		// 背景(空・フォグ・光)は SceneManager がこの前に流し込み済み(GetPreviewAmbient で選んだもの)
-		if (auto* _pGE = MainEngine::Instance().RefGraphicsEngine())
-		{
-			// 確認用ワールドのアニメーションモデルの BLAS と頂点領域(PreDraw より前に)
-			_pGE->RefDrawSubmitter()->ProcessDynamicRaytracingInit(*m_upWorld);
-		}
-
-		m_upWorld->RunSystem(ECS::ESystemType::PreDraw, 0.0f);
-		m_upWorld->RunSystem(ECS::ESystemType::Draw, 0.0f);
-		m_upWorld->RunSystem(ECS::ESystemType::PostDraw, 0.0f);
-
-		//----------------------------------------------------------------------------------
-		// このプレビューのカメラを積む
-		//
-		// このワールドにはカメラのエンティティが居ないので、
-		// CameraPipelineSubmitSystem は何も送らない。ここで直接送る。
-		//
-		// isMain を立てるのは、ゲームのカメラが1台も積まれないこのあいだに
-		// 画面を作る役が居なくなるのを防ぐため。
-		// 実際に見えるのはモーダルの中なので、バックバッファの中身は問題にならない
-		//----------------------------------------------------------------------------------
-		SubmitPreviewCamera();
-
-		// 大きさの目安になる格子
-		if (m_isDrawGrid) DrawGrid();
+		m_preview.RunDraw();
 	}
 
 	//======================================================================================
@@ -466,70 +379,21 @@ namespace Editor
 		return m_upPlainAmbient.get();
 	}
 
-	void EffectEditor::SubmitPreviewCamera()
-	{
-		if (!m_upWorld || !m_upCamera) return;
-		if (!m_pipelineHandle.IsValid()) return;
-
-		auto* _pGE = MainEngine::Instance().RefGraphicsEngine();
-		if (!_pGE) return;
-
-		const auto* _pGraphicsEngine = m_pServices->pMainEngine->RefGraphicsEngine();
-
-		Engine::Graphics::CameraSubmitDesc _desc = {};
-		_desc.pWorld			= m_upWorld.get();
-		_desc.entity			= PREVIEW_CAMERA_ENTITY;
-		_desc.pipelineHandle	= m_pipelineHandle;
-		_desc.worldMat			= m_upCamera->GetWorldMatrix();
-		_desc.projMat			= m_upCamera->GetProjMatrix();
-		_desc.viewportWidth		= static_cast<UINT>(_pGraphicsEngine->GetRenderWidth());
-		_desc.viewportHeight	= static_cast<UINT>(_pGraphicsEngine->GetRenderHeight());
-		_desc.order				= 0;
-		_desc.isMain			= true;
-
-		_pGE->RefCameraPipelines()->SubmitCamera(_desc);
-	}
-
-	void EffectEditor::DrawGrid() const
-	{
-		const Math::Color _lineColor(0.30f, 0.32f, 0.36f, 1.0f);
-		const Math::Color _axisColor(0.55f, 0.58f, 0.65f, 1.0f);
-
-		// 積む先はエンジン側の置き場。エディターも他と同じ経路で入れる
-		auto* _pDebugDraw = MainEngine::Instance().RefGraphicsEngine()->RefDebugDraw();
-		if (!_pDebugDraw) return;
-
-		// 格子はエフェクトの発生位置(原点)に敷く
-		const float _half = m_gridSize;
-		const int   _count = static_cast<int>(m_gridSize);	// 1mごと
-
-		for (int _i = -_count; _i <= _count; ++_i)
-		{
-			const float _p = static_cast<float>(_i);
-			const Math::Color& _col = (_i == 0) ? _axisColor : _lineColor;
-
-			_pDebugDraw->DrawLine(Math::Vector3(_p, 0.0f, -_half), Math::Vector3(_p, 0.0f, _half), _col);
-			_pDebugDraw->DrawLine(Math::Vector3(-_half, 0.0f, _p), Math::Vector3(_half, 0.0f, _p), _col);
-		}
-	}
-
 	//======================================================================================
 	// カメラ : シーンビューのフリーカメラと同じもの
 	//======================================================================================
 	void EffectEditor::UpdateCamera(float a_dt)
 	{
-		if (!m_isOpen || !m_upCamera) return;
+		if (!m_isOpen) return;
 
-		m_upCamera->Update(a_dt);
+		m_preview.UpdateCamera(a_dt);
 	}
 
 	bool EffectEditor::TryGetCameraOverride(Math::Matrix& a_outWorldMat, Math::Matrix& a_outProjMat) const
 	{
-		if (!m_isOpen || !m_upCamera) return false;
+		if (!m_isOpen) return false;
 
-		a_outWorldMat = m_upCamera->GetWorldMatrix();
-		a_outProjMat = m_upCamera->GetProjMatrix();
-		return true;
+		return m_preview.TryGetCameraOverride(a_outWorldMat, a_outProjMat);
 	}
 
 	//======================================================================================
@@ -539,55 +403,36 @@ namespace Editor
 	{
 		if (!m_isOpen) return;
 
-		// 開いた最初のフレームだけ ImGui へ知らせる。
-		// Open() はインスペクターの描画中(ウィンドウの中)から呼ばれるので、
-		// ID スタックが素の状態になるここまで待ってから開く
-		if (m_isOpenRequest)
+		m_popup.Draw();
+	}
+
+	void EffectEditor::DrawContent()
+	{
+		DrawToolbar();
+		Engine::EditorField::Line();
+
+		// 左 : 見る / 右 : 組む
+		const float _paneWidth = (std::min)(m_editPaneWidth, ImGui::GetContentRegionAvail().x * 0.6f);
+		const float _viewWidth =
+			ImGui::GetContentRegionAvail().x - _paneWidth - ImGui::GetStyle().ItemSpacing.x;
+
+		if (ImGui::BeginChild("EffectEditorViewport", ImVec2((std::max)(64.0f, _viewWidth), 0.0f)))
 		{
-			ImGui::OpenPopup(POPUP_ID);
-			m_isOpenRequest = false;
+			// ゲームと同じレンダーグラフの出力。情報欄のぶん(3行)を下に残す
+			ImVec2 _imageMin = {};
+			ImVec2 _imageSize = {};
+			m_preview.DrawViewport(3.0f, _imageMin, _imageSize);
+			DrawInfo();
 		}
+		ImGui::EndChild();
 
-		// 画面の大部分を使う。モーダルなので後ろのパネルは触れない
-		const ImVec2 _display = ImGui::GetIO().DisplaySize;
-		ImGui::SetNextWindowSize(ImVec2(_display.x * 0.9f, _display.y * 0.9f), ImGuiCond_Appearing);
-		ImGui::SetNextWindowPos(ImVec2(_display.x * 0.5f, _display.y * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+		Engine::EditorField::SameLine();
 
-		bool _isWindowOpen = true;
-		if (ImGui::BeginPopupModal(POPUP_ID, &_isWindowOpen, ImGuiWindowFlags_NoCollapse))
+		if (ImGui::BeginChild("EffectEditorEditPane", ImVec2(_paneWidth, 0.0f), true))
 		{
-			DrawToolbar();
-			Engine::EditorField::Line();
-
-			// 左 : 見る / 右 : 組む
-			const float _paneWidth = (std::min)(m_editPaneWidth, ImGui::GetContentRegionAvail().x * 0.6f);
-			const float _viewWidth =
-				ImGui::GetContentRegionAvail().x - _paneWidth - ImGui::GetStyle().ItemSpacing.x;
-
-			if (ImGui::BeginChild("EffectEditorViewport", ImVec2((std::max)(64.0f, _viewWidth), 0.0f)))
-			{
-				DrawViewport();
-				DrawInfo();
-			}
-			ImGui::EndChild();
-
-			Engine::EditorField::SameLine();
-
-			if (ImGui::BeginChild("EffectEditorEditPane", ImVec2(_paneWidth, 0.0f), true))
-			{
-				DrawEditPane();
-			}
-			ImGui::EndChild();
-
-			ImGui::EndPopup();
+			DrawEditPane();
 		}
-
-		// × で閉じられた
-		if (!_isWindowOpen)
-		{
-			ImGui::CloseCurrentPopup();
-			Close();
-		}
+		ImGui::EndChild();
 	}
 
 	//--------------------------------------------------------------------------------------
@@ -601,19 +446,17 @@ namespace Editor
 		Engine::EditorField::HelpText("(%s)", m_effectGUID.String().c_str());
 
 		// ---- 再生 ----
-		if (ImGui::Button(m_isPlaying ? "Pause" : "Play", ImVec2(80.0f, 0.0f)))
-		{
-			m_isPlaying = !m_isPlaying;
-		}
+		m_preview.DrawPlayButton();
 		Engine::EditorField::SameLine();
-		if (ImGui::Button("Restart", ImVec2(80.0f, 0.0f)))
+		if (Engine::EditorField::Button("Restart", Math::Vector2(80.0f, 0.0f)))
 		{
 			m_isRestartRequest = true;
-			m_isPlaying = true;
+			m_preview.SetPlaying(true);
 		}
 		Engine::EditorField::SameLine();
 		Engine::EditorField::Field("Loop", m_isLoop);
-		Engine::EditorField::Slider("Speed", m_playSpeed, 0.05f, 3.0f, "x%.2f");
+		Engine::EditorField::SameLine();
+		m_preview.DrawSpeedSlider();
 
 		// ---- 表示 ----
 		// 背景は1行で置く。
@@ -621,18 +464,10 @@ namespace Editor
 		// 折り返す注意書きが1文字ずつ縦に並んでプレビューが潰れる
 		Engine::EditorField::Field("Background", m_background);
 		Engine::EditorField::Tooltip("Black : 空・フォグ無しの黒背景 / CurrentScene : 開く前のシーンの環境設定(空・フォグ・光)");
-		Engine::EditorField::Field("Grid", m_isDrawGrid);
-		if (m_isDrawGrid && !m_pServices->pDebugDraw->GetConfig().drawWire)
-		{
-			Engine::EditorField::SameLine();
-			Engine::EditorField::HelpText("(Option の Draw Debug Wire が off のため出ません)");
-		}
+		m_preview.DrawGridToggle();
 		Engine::EditorField::SameLine();
-		if (ImGui::Button("Reset Camera"))
-		{
-			if (m_upCamera) m_upCamera->SetPose(CAMERA_HOME_POS, CAMERA_HOME_YAW, CAMERA_HOME_PITCH);
-		}
-		Engine::EditorField::Tooltip("右ドラッグ中のみ視点操作 / WASD・EQ移動 / Shift加速");
+		m_preview.DrawResetCameraButton();
+		m_preview.DrawWireOffNote(true);
 
 		// ---- 持ち主の動かし方(エフェクトのときだけ) ----
 		if (m_mode == EMode::Effect)
@@ -640,7 +475,7 @@ namespace Editor
 			Engine::EditorField::Field("Owner Rotation (deg)", m_previewRotation, 1.0f);
 			Engine::EditorField::Tooltip("エフェクトを付けた持ち主の向き(Pitch / Yaw / Roll)。形状の +Z が付いてくる");
 			Engine::EditorField::SameLine();
-			if (ImGui::Button("Reset##OwnerRotation"))
+			if (Engine::EditorField::Button("Reset##OwnerRotation"))
 			{
 				m_previewRotation = { 0.0f, 0.0f, 0.0f };
 			}
@@ -659,54 +494,9 @@ namespace Editor
 		Engine::EditorField::SameLine();
 		if (EditorField::DeleteButton("Close"))
 		{
-			ImGui::CloseCurrentPopup();
+			m_popup.Close();
 			Close();
 		}
-	}
-
-	//--------------------------------------------------------------------------------------
-	// 左 : ゲームと同じレンダーグラフの出力
-	//--------------------------------------------------------------------------------------
-	void EffectEditor::DrawViewport()
-	{
-		auto* _pGE = MainEngine::Instance().RefGraphicsEngine();
-		if (!_pGE) { Engine::EditorField::HelpText("GraphicsEngine がありません"); return; }
-
-		if (!m_pipelineHandle.IsValid())
-		{
-			Engine::EditorField::HelpText("描画構成が決まっていません(シーンを一度開いてから開き直してください)");
-			return;
-		}
-
-		// このプレビューのカメラが描いた絵をそのまま出す。
-		// ゲームのシーンと同じ設計図を通っているので、ここで見えているものが本番の見え方
-		const auto* _pTex = _pGE->GetCameraPipelines()->GetCameraFinalTexture(m_upWorld.get(), PREVIEW_CAMERA_ENTITY);
-		if (!_pTex) { Engine::EditorField::HelpText("出力テクスチャがまだありません"); return; }
-
-		const auto* _pGraphicsEngine = m_pServices->pMainEngine->RefGraphicsEngine();
-		const float _aspect = (_pGraphicsEngine->GetRenderHeight() > 0)
-			? static_cast<float>(_pGraphicsEngine->GetRenderWidth()) / static_cast<float>(_pGraphicsEngine->GetRenderHeight())
-			: 16.0f / 9.0f;
-
-		// 情報欄のぶんを残して、収まる大きさへ合わせる
-		const ImVec2 _avail = ImGui::GetContentRegionAvail();
-		const float _reserveY = ImGui::GetTextLineHeightWithSpacing() * 3.0f;
-		const float _maxH = (std::max)(64.0f, _avail.y - _reserveY);
-
-		ImVec2 _size((std::max)(64.0f, _avail.x), 0.0f);
-		_size.y = _size.x / _aspect;
-		if (_size.y > _maxH)
-		{
-			_size.y = _maxH;
-			_size.x = _maxH * _aspect;
-		}
-
-		auto _gpuHandle = EditorHelper::GetImGuiTexHandle(_pTex->GetImGuiSRV());
-		ImGui::Image(static_cast<ImTextureID>(_gpuHandle.ptr), _size);
-
-		// フリーカメラへホバー状態を渡す。
-		// 右クリックの開始位置がこの画像の上の時だけ操作を始めるための判定(シーンビューと同じ)
-		if (m_upCamera) m_upCamera->SetViewportHovered(ImGui::IsItemHovered());
 	}
 
 	void EffectEditor::DrawInfo()
@@ -786,7 +576,8 @@ namespace Editor
 	void EffectEditor::DrawEffectPrefabEditPane()
 	{
 		auto* _pEffectPrefab = RefEffectPrefab();
-		if (!_pEffectPrefab || !m_upWorld)
+		ECS::World* _pWorld = m_preview.RefWorld();
+		if (!_pEffectPrefab || !_pWorld)
 		{
 			Engine::EditorField::HelpText("エフェクトプレハブを読み込めませんでした");
 			return;
@@ -796,7 +587,7 @@ namespace Editor
 		if (ImGui::Button("Save"))
 		{
 			auto _path = m_pServices->pAssetDatabase->GetFilePathFromGUID(m_effectGUID);
-			_pEffectPrefab->Save(m_upWorld.get(), _path);
+			_pEffectPrefab->Save(_pWorld, _path);
 			ENGINE_LOG("Save EffectPrefab : %s", _path.c_str());
 		}
 		Engine::EditorField::Tooltip("変更は次に炊いたときから効く(Restart)");
@@ -809,7 +600,7 @@ namespace Editor
 
 		Engine::EditorField::Line();
 
-		Inspector::PrefabComponentsEdit(m_upWorld.get(), &_pEffectPrefab->RefPrefab());
+		Inspector::PrefabComponentsEdit(_pWorld, &_pEffectPrefab->RefPrefab());
 	}
 
 	//--------------------------------------------------------------------------------------

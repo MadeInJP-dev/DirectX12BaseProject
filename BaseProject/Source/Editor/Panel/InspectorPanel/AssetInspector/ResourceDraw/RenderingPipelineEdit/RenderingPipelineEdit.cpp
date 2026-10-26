@@ -128,26 +128,26 @@ namespace Editor::Inspector
 		// 既存の描画と同じ流れを一式組む。
 		// 今入っているものは全部捨てるので、押し間違いが痛い分だけ確認を挟む
 		Engine::EditorField::SameLine();
-		if (ImGui::Button("Standard")) ImGui::OpenPopup("StandardPipelinePopup");
+		if (ImGui::Button("Standard")) m_standardConfirmPopup.Open();
+		m_standardConfirmPopup.Draw();
+	}
 
-		if (ImGui::BeginPopup("StandardPipelinePopup"))
-		{
-			Engine::EditorField::HelpText("今のパスと配線をすべて捨てて組み直します");
-
-			PassMetaRegistry* _pRegistry = m_pAsset->RefMetaRegistry();
-			if (EditorField::CreateButton("Build") && _pRegistry)
+	void RenderingPipelineEditor::InitStandardConfirm()
+	{
+		m_standardConfirmPopup.SetMessage("既定の構成で組み直しますか?", "今のパスと配線をすべて捨てて組み直します");
+		m_standardConfirmPopup.AddChoice("Build",
+			[this]()
 			{
+				// 確認は描画の中(DrawToolbar)で出すので、m_pAsset はこのフレームのものが入っている
+				PassMetaRegistry* _pRegistry = m_pAsset ? m_pAsset->RefMetaRegistry() : nullptr;
+				if (!_pRegistry) return;
+
 				BuildStandardPipeline(*m_pAsset, *_pRegistry);
 
 				// パスが総入れ替えになるので、次の Draw で座標を配り直す
 				ReserveApplyNodePositions();
-				ImGui::CloseCurrentPopup();
-			}
-			Engine::EditorField::SameLine();
-			if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
-
-			ImGui::EndPopup();
-		}
+			},
+			EConfirmStyle::Danger);
 	}
 
 	void RenderingPipelineEditor::DrawAddPass()

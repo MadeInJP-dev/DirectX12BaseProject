@@ -429,8 +429,25 @@ namespace Editor::Inspector
 	// プレハブ化ボタン + 名前入力ポップアップ
 	void CreatePrefabButton(EditorContext& a_editContext, ECS::World* a_pWorld)
 	{
-		// 入力中のプレハブ名
-		static char _nameCach[256] = "";
+		// インスペクターは関数なので、ポップアップは関数の中に置いて使い回す
+		static NameInputPopup s_createPrefabPopup("Create Prefab", "Prefab Name##PrefabName", "Save");
+
+		// 実際に保存される名前(被っていたら _01 が加算されたもの)を出しておく
+		s_createPrefabPopup.SetHint(
+			[&a_editContext](const std::string& a_name) -> std::string
+			{
+				const std::string _saveName = MakeUniquePrefabName(*a_editContext.pServices->pAssetDatabase, a_name);
+				if (_saveName.empty()) return "Input prefab name...";
+				return "Save to : " + MakePrefabBasePath(_saveName);
+			});
+
+		// 決定の中身は今のフレームの選択をつかむので、毎フレーム預け直す
+		s_createPrefabPopup.SetOnConfirm(
+			[&a_editContext, a_pWorld](const std::string& a_name)
+			{
+				CreatePrefabFromEntity(a_pWorld, a_editContext.GetPrimaryEntity(), a_name);
+				return true;
+			});
 
 		if (Engine::EditorField::CreateButton("Create Prefab"))
 		{
@@ -444,44 +461,10 @@ namespace Editor::Inspector
 				if (_pName && _pName[0] != '\0') _defaultName = _pName;
 			}
 
-			std::snprintf(_nameCach, sizeof(_nameCach), "%s", _defaultName.c_str());
-
-			ImGui::OpenPopup("CreatePrefabPopup");
+			s_createPrefabPopup.Open(_defaultName);
 		}
 
-		if (ImGui::BeginPopupModal("CreatePrefabPopup", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-		{
-			Engine::EditorField::Field("Prefab Name##PrefabName", _nameCach, sizeof(_nameCach));
-
-			// 実際に保存される名前(被っていたら _01 が加算されたもの)を出しておく
-			const std::string _inputName = _nameCach;
-			const std::string _saveName = MakeUniquePrefabName(*a_editContext.pServices->pAssetDatabase, _inputName);
-
-			if (_saveName.empty())
-			{
-				Engine::EditorField::HelpText("Input prefab name...");
-			}
-			else
-			{
-				Engine::EditorField::HelpText("Save to : %s", MakePrefabBasePath(_saveName).c_str());
-			}
-
-			ImGui::BeginDisabled(_saveName.empty());
-			if (ImGui::Button("Save"))
-			{
-				CreatePrefabFromEntity(a_pWorld, a_editContext.GetPrimaryEntity(), _inputName);
-				ImGui::CloseCurrentPopup();
-			}
-			ImGui::EndDisabled();
-
-			Engine::EditorField::SameLine();
-			if (ImGui::Button("Cancel"))
-			{
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::EndPopup();
-		}
+		s_createPrefabPopup.Draw();
 	}
 
 	void EntityInspector(EditorContext& a_editContext)

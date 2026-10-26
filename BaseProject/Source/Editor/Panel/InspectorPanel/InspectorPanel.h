@@ -16,7 +16,8 @@ namespace Editor
 		InspectorPanel();
 		~InspectorPanel() override;
 
-		const char* GetName() const override { return "InspectorPanel"; };
+		const char* GetName() const override { return "Inspector"; }
+		EPanelDock GetDefaultDock() const override { return EPanelDock::Right; }
 		void OnDrawImGui(EditorContext& a_editContext) override;
 
 	private:
@@ -25,4 +26,4 @@ namespace Editor
 		// 前方宣言で持つので、生成と破棄は完全型が見える .cpp 側に置く
 		std::unique_ptr<Inspector::AssetInspector> m_upAssetInspector = nullptr;
 	};
-}
+}

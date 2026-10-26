@@ -16,7 +16,8 @@ namespace Editor
 	public:
 		~ConfigPanel() override = default;
 
-		const char* GetName() const override { return "ConfigPanel"; };
+		const char* GetName() const override { return "Engine Config"; }
+		EPanelDock GetDefaultDock() const override { return EPanelDock::RightBottom; }
 		void OnDrawImGui(EditorContext& a_editContext) override;
 
 	private:

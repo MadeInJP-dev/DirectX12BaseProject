@@ -33,7 +33,8 @@ namespace Editor
 		BuildPanel();
 		~BuildPanel() override;
 
-		const char* GetName() const override { return "BuildPanel"; };
+		const char* GetName() const override { return "Build"; }
+		EPanelDock GetDefaultDock() const override { return EPanelDock::Bottom; }
 		void OnDrawImGui(EditorContext& a_editContext) override;
 
 	private:
@@ -115,7 +116,11 @@ namespace Editor
 		Popup m_assetConvertPopup{"AssetConvertPanel"};
 		Build::AssetConvertView m_assetConvertView = {};
 
-		// 書き出し先が空でないときの確認
-		Popup m_overwritePopup{"書き出し先の確認"};
+		// 書き出し先が空でないときの確認。
+		// 書き出しには毎フレームの EditorContext が要るので、ポップアップの中では答えを覚えるだけにして
+		// 描き終わったあとに書き出す
+		ConfirmPopup m_overwritePopup{"書き出し先の確認"};
+		bool m_isOverwriteAnswered = false;		// 確認で「書き出す」と答えた
+		bool m_isOverwriteClean = false;		// そのとき書き出し先を消してから書き出すか
 	};
 }

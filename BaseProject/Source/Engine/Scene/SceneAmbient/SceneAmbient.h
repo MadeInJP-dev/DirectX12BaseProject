@@ -86,7 +86,7 @@ namespace Engine::Scene
 		static void ApplyNone(Graphics::GraphicsEngine& a_ge, Handle<Graphics::DirectionalLight>& a_inoutDLHandle);
 
 		//----------------------------------------------------------------------------------
-		// 編集UI(エディターの SceneAmbientPanel から呼ばれる)
+		// 編集UI(エディターの SceneSettingsPanel から呼ばれる)
 		//----------------------------------------------------------------------------------
 		void DrawEdit(const ECS::EngineServices& a_services);
 

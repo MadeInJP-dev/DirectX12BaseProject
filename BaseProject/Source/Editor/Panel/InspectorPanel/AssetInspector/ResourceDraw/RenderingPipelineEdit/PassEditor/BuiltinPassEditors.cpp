@@ -264,13 +264,13 @@ namespace Editor::Inspector
 		};
 
 		// ボリュメトリックフォグ : 回す解像度だけ触れる。
-		// フォグとダストの値はシーンの環境設定(SceneAmbientPanel)の持ち物
+		// フォグとダストの値はシーンの環境設定(SceneSettingsPanel)の持ち物
 		class SceneVolumetricFogEditor : public PassEditor<SceneVolumetricFogPass>
 		{
 		protected:
 			EPassEditResult OnDrawDetail(SceneVolumetricFogPass& a_pass) override
 			{
-				Engine::EditorField::HelpText("フォグとグラウンドダストの設定はシーンの環境設定(SceneAmbientPanel)の持ち物です");
+				Engine::EditorField::HelpText("フォグとグラウンドダストの設定はシーンの環境設定(SceneSettingsPanel)の持ち物です");
 				Engine::EditorField::HelpText("GroundDepth を繋がないとチリは出ません");
 				Engine::EditorField::HelpText("GroundField を繋がないとチリは衝撃で動きません");
 
@@ -327,7 +327,7 @@ namespace Editor::Inspector
 			EPassEditResult OnDrawDetail(ShadowMapPass& a_pass) override
 			{
 				Engine::EditorField::HelpText("主光源から見た深度を 2x2 のカスケードアトラスへ描きます");
-				Engine::EditorField::HelpText("影の求め方・範囲・バイアスはシーンの環境設定(SceneAmbientPanel)で設定します");
+				Engine::EditorField::HelpText("影の求め方・範囲・バイアスはシーンの環境設定(SceneSettingsPanel)で設定します");
 
 				auto& _params = a_pass.RefParams();
 
@@ -855,12 +855,12 @@ namespace Editor::Inspector
 		a_registry.Register<CoCPass, DoFParamEditor<CoCPass>>("DoFPass と同じ値にすること");
 		a_registry.Register<DoFPass, DoFParamEditor<DoFPass>>("CoCPass と同じ値にすること");
 		a_registry.Register<SceneVolumetricFogPass, SceneVolumetricFogEditor>();
-		a_registry.Register<SceneFogCompositePass, NoteOnlyEditor<SceneFogCompositePass>>(std::initializer_list<const char*>{ "合成の強さと有効/無効はシーンの環境設定(SceneAmbientPanel)の持ち物です", "トーンマップ前(HDR)に置いてください", "SceneDepth にフォグのパスと同じ深度を繋ぐと、縮小したフォグを物体の縁でにじませずに引き伸ばします" });
+		a_registry.Register<SceneFogCompositePass, NoteOnlyEditor<SceneFogCompositePass>>(std::initializer_list<const char*>{ "合成の強さと有効/無効はシーンの環境設定(SceneSettingsPanel)の持ち物です", "トーンマップ前(HDR)に置いてください", "SceneDepth にフォグのパスと同じ深度を繋ぐと、縮小したフォグを物体の縁でにじませずに引き伸ばします" });
 		a_registry.Register<GroundFieldPass, NoteOnlyEditor<GroundFieldPass>>(std::initializer_list<const char*>{ "カメラを中心にした範囲の衝撃を、真上から見たテクスチャへ書きます", "Field を SceneVolumetricFogPass の GroundField へ繋いでください" });
 		a_registry.Register<ToneMapPass, ToneMapEditor>();
 
 		// ---- Sky / Present / UI ----
-		a_registry.Register<SkyPass, NoteOnlyEditor<SkyPass>>(std::initializer_list<const char*>{ "空の設定はシーンの環境設定(SceneAmbientPanel)の持ち物です" });
+		a_registry.Register<SkyPass, NoteOnlyEditor<SkyPass>>(std::initializer_list<const char*>{ "空の設定はシーンの環境設定(SceneSettingsPanel)の持ち物です" });
 		a_registry.Register<FinalOutputPass, FinalOutputEditor>();
 		a_registry.Register<UIPass, NoteOnlyEditor<UIPass>>(std::initializer_list<const char*>{ "深度を持たないので、積んだ順がそのまま前後になります", "ScanLineMask を ScanLinePass の Mask へ繋ぐと、ScanLine を選んだUIにだけ掛かります" });
 

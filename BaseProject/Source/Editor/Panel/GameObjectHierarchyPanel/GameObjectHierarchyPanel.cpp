@@ -75,25 +75,8 @@ namespace Editor
 		// プレハブの一覧を出し、選ばれたものを返す(選ばれなければ nullptr)
 		const Engine::Resource::AssetProperty* DrawPrefabList(EditorContext& a_editContext, const char* a_searchID)
 		{
-			const auto& _prefabList = a_editContext.pServices->pAssetDatabase->GetTypeMetaVec("ObjectPrefab");
-			if (_prefabList.empty())
-			{
-				Engine::EditorField::HelpText("  (no prefab)");
-				return nullptr;
-			}
-
-			const std::string& _search = EditorHelper::DrawSearchBox(a_searchID);
-
-			const Engine::Resource::AssetProperty* _pSelected = nullptr;
-			for (const auto& _prop : _prefabList)
-			{
-				if (!EditorHelper::IsMatchSearch(_search, _prop.fileName)) continue;
-
-				ImGui::PushID(&_prop);
-				if (ImGui::MenuItem(_prop.fileName.c_str())) _pSelected = &_prop;
-				ImGui::PopID();
-			}
-			return _pSelected;
+			return EditorHelper::DrawAssetSelectList(
+				a_editContext.pServices->pAssetDatabase->GetTypeMetaVec("ObjectPrefab"), {}, a_searchID);
 		}
 
 		// 検索に当たるか : 名前とクラス名のどちらかに含まれていればよい
@@ -106,10 +89,6 @@ namespace Editor
 
 	void GameObjectHierarchyPanel::OnDrawImGui(EditorContext& a_editContext)
 	{
-		// このタブを見ている間はインスペクターをGameモードにする
-		// (既存のHierarchyPanel/AssetDataBasePanelと同じ流儀。表示中のタブがモードを決める)
-		a_editContext.eInspectorType = EInspectorType::Game;
-
 		// 現在のシーンのオブジェクトマネージャーを取得
 		auto* _pManager = a_editContext.pServices->pSceneManager->RefGameObjectManager();
 		if (!_pManager)
@@ -165,8 +144,7 @@ namespace Editor
 						GameObject::BaseObject* _pNew = _pManager->AddObjectByTypeID(_id);
 						if (_pNew)
 						{
-							a_editContext.pGameObject = _pNew;
-							a_editContext.ClearEntitySelection();
+							a_editContext.SelectGameObject(_pNew);
 						}
 						ImGui::CloseCurrentPopup();
 					}
@@ -180,8 +158,7 @@ namespace Editor
 			{
 				if (GameObject::BaseObject* _pNew = PlacePrefab(_pManager, *_pProp, nullptr))
 				{
-					a_editContext.pGameObject = _pNew;
-					a_editContext.ClearEntitySelection();
+					a_editContext.SelectGameObject(_pNew);
 				}
 				ImGui::CloseCurrentPopup();
 			}
@@ -338,8 +315,7 @@ namespace Editor
 		if (!ImGui::IsItemClicked() || ImGui::IsItemToggledOpen()) return;
 
 		// ゲームオブジェクト選択に切り替え(ECSエンティティの選択は解除)
-		a_editContext.pGameObject = a_pObject;
-		a_editContext.ClearEntitySelection();
+		a_editContext.SelectGameObject(a_pObject);
 		a_inoutIsSelectedAlive = true;
 	}
 
@@ -374,7 +350,7 @@ namespace Editor
 				if (_pUI->MergeIntoParent(_context) && a_editContext.pGameObject == a_pObject)
 				{
 					// 自分は消えるので、まとめ先を選び直す
-					a_editContext.pGameObject = _pParent;
+					a_editContext.SelectGameObject(_pParent);
 				}
 			}
 			if (!_isMergeable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
@@ -419,8 +395,7 @@ namespace Editor
 			{
 				if (GameObject::BaseObject* _pNew = PlacePrefab(a_pManager, *_pProp, a_pObject))
 				{
-					a_editContext.pGameObject = _pNew;
-					a_editContext.ClearEntitySelection();
+					a_editContext.SelectGameObject(_pNew);
 				}
 				ImGui::CloseCurrentPopup();
 			}

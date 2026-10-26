@@ -17,7 +17,8 @@ namespace Editor
 	public:
 		~HierarchyPanel() override = default;
 
-		const char* GetName() const override { return "HierarchyPanel"; };
+		const char* GetName() const override { return "Entities"; }
+		EPanelDock GetDefaultDock() const override { return EPanelDock::Left; }
 		void OnDrawImGui(EditorContext& a_editContext) override;
 	private:
 
@@ -53,18 +54,8 @@ namespace Editor
 		EParentState GetParentState(Engine::ECS::World* a_pWorld, const ECS::Entity& a_entity) const;
 
 	private:
-		// 検索時のフィルター
-		enum class EFilterType
-		{
-			None,
-			Player,
-			Camera,
-			Ground,
-			UI,
-		};
-		EFilterType m_filterType;
 
 		// エンティティ生成時のオフセット
 		float m_distance = 10.0f;				// カメラからの距離
 	};
-}
+}

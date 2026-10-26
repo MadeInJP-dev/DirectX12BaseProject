@@ -11,8 +11,8 @@
 //  付け忘れはビルド時の CheckEditorPch で止まる)。
 //
 // ImGui をエディターの外へ漏らさないために、共通の Pch.h からは ImGui を外してある。
-// エディターの外から読まれるヘッダー(Editor.h / EffectEditor.h / EditorCamera.h /
-// Editor/EditorCommon.h)は、ここに頼らずに書くこと。
+// エディターの外から読まれるヘッダー(Editor.h / Editor/EditorCommon.h)は、ここに頼らずに書くこと。
+// (EffectEditor.h / PrefabEditor.h はエディターの中だけで読む。ScenePreview と Popup を値で持つ)
 // 編集UIの窓口 EditorField は Engine/EditorField に宣言があり、実装だけが Helper/EditorField.cpp にある。
 //
 //==========================================================================================
@@ -37,5 +37,7 @@
 //---------------------------------------------------------
 // エディター内部の共通部品
 //---------------------------------------------------------
-#include "Helper/EditorHelper.h"	// 検索欄・SRV表示・ノード部品
-#include "Widget/PopUp/Popup.h"		// パップアップ
+#include "Helper/EditorHelper.h"						// 検索欄・SRV表示・ノード部品・アセット一覧
+#include "Widget/PopUp/Popup.h"							// モーダルなポップアップ
+#include "Widget/PopUp/NameInputPopup/NameInputPopup.h"	// 名前を1つ打って決めるポップアップ
+#include "Widget/PopUp/ConfirmPopup/ConfirmPopup.h"		// 押す前に確かめるポップアップ

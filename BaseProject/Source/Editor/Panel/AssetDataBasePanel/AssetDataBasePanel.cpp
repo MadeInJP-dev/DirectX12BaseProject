@@ -68,7 +68,6 @@ namespace Editor
 	}
 	void AssetDataBasePanel::OnDrawImGui(EditorContext& a_editContext)
 	{
-		a_editContext.eInspectorType = EInspectorType::Asset;
 
 		CreateAssetButton(a_editContext);
 
@@ -215,4 +214,4 @@ namespace Editor
 			ImGui::EndTabBar();
 		}
 	}
-}
+}

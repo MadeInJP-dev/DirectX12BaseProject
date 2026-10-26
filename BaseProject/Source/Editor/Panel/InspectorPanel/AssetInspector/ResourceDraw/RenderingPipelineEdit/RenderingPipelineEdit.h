@@ -41,6 +41,8 @@ namespace Editor::Inspector
 			// 実体は型ごとに1つで状態を持たないので、開くたびに作り直して構わない
 			RegisterBuiltinPassEditors(m_passEditorRegistry);
 			RegisterBuiltinCompositeNodes(m_compositeNodeRegistry);
+
+			InitStandardConfirm();
 		}
 
 		~RenderingPipelineEditor() override = default;
@@ -69,6 +71,7 @@ namespace Editor::Inspector
 		void DrawAddComposite();						// 合成ノード追加ボタン + ポップアップ
 		void DrawValidation();							// 検証結果の一覧
 		void DrawSelectedPassDetail();					// 選択中パスの詳細(EditUpdate)
+		void InitStandardConfirm();						// 既定構成で組み直す前の確認を用意する
 
 		//----------------------------------------------------------------------------------
 		// グラフの中
@@ -131,5 +134,8 @@ namespace Editor::Inspector
 		// 座標を配り直すパス : まとまりを解いて出てきたぶんだけ。
 		// 全体を配り直すと、動かしてあったノードが保存位置へ巻き戻る
 		std::vector<Core::GUID> m_pendingApplyPosVec = {};
+
+		// 既定構成(Standard)で組み直す前の確認。今のパスと配線をすべて捨てるため
+		ConfirmPopup m_standardConfirmPopup{ "Standard Pipeline" };
 	};
 }

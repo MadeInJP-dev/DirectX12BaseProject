@@ -168,35 +168,7 @@ namespace Editor
 
 		ImGuizmo::BeginFrame();
 
-		// ドックの土台をクライアント領域全体に広げる
-		//
-		// 描画解像度(WindowOptionのwindowWidth/Height)を渡してはいけない。
-		// ImGuiの座標系はクライアント領域基準なので、
-		// 枠やDPI・ウィンドウモードでクライアント領域が変わった瞬間に
-		// ドック領域だけが画面外へはみ出し、パネルのサイズが合わなくなる。
-		const ImGuiViewport* _pViewport = ImGui::GetMainViewport();
-		ImGui::SetNextWindowPos(_pViewport->WorkPos);
-		ImGui::SetNextWindowSize(_pViewport->WorkSize);
-
-		// ビューポート切り替え
-		ImGui::Begin(
-			"MainDockWindow",
-			nullptr,
-			ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_NoCollapse |
-			ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoBringToFrontOnFocus |
-			ImGuiWindowFlags_NoNavFocus |
-			ImGuiWindowFlags_NoDocking
-		);
-		{
-			// ベース
-			ImGuiID _dockSpaceID = ImGui::GetID("MyDockSpace");
-			ImGui::DockSpace(_dockSpaceID, ImGui::GetContentRegionAvail(), ImGuiDockNodeFlags_PassthruCentralNode);
-		}
-
-		ImGui::End();
+		// ドックの土台とメニューバーは PanelManager(DockLayout / MainMenuBar)が出す
 	}
 
 	void ImGuiContext::End(Graphics::D3D12::GraphicsCommandList * a_pCmdList)

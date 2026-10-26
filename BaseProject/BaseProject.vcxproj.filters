@@ -112,11 +112,32 @@
     <Filter Include="Source\Editor\Panel\RenderGraphResourceViewPanel">
       <UniqueIdentifier>{ee7569c1-c32f-4489-ad60-55e2e607b096}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Editor\Panel\SceneAmbientPanel">
+    <Filter Include="Source\Editor\Panel\SceneSettingsPanel">
       <UniqueIdentifier>{8d45b7a4-1e64-41cc-a26f-e3c92afc04fb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Editor\Panel\SceneConfigPanel">
+    <Filter Include="Source\Editor\Panel\MainMenuBar">
       <UniqueIdentifier>{77daebf7-dec3-4396-893b-60f5e045eb16}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\MainMenuBar\SceneFileMenu">
+      <UniqueIdentifier>{3f1c6a92-5b7e-4d08-9a41-c2e8d7f05b13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\DockLayout">
+      <UniqueIdentifier>{a6e24d17-0c9b-4f3a-8e75-1b9d40c6e2f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Widget">
+      <UniqueIdentifier>{5d93b0e4-7a2f-4c61-b8d5-e04f19a3c7b2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Widget\PopUp">
+      <UniqueIdentifier>{c27f8e51-3d4a-4b96-a0e3-6f5b2c8d91a4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Widget\PopUp\NameInputPopup">
+      <UniqueIdentifier>{e8b14c3d-92f6-4a07-b5d1-7c3e0a9f2b65}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Widget\PopUp\ConfirmPopup">
+      <UniqueIdentifier>{19d6f2a8-4e3b-4c75-9f02-b8a5e1d7c3f0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Widget\ScenePreview">
+      <UniqueIdentifier>{4b7e9c02-6f1d-4a83-8c5e-d2a0f7b3e916}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Editor\Panel\SceneViewPanel">
       <UniqueIdentifier>{6c6a374a-ecea-4f89-8590-89ffa76bc7f7}</UniqueIdentifier>
@@ -2256,11 +2277,26 @@
     <ClCompile Include="Source\Editor\Panel\LogPanel\LogPanel.cpp">
       <Filter>Source\Editor\Panel\LogPanel</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Panel\SceneAmbientPanel\SceneAmbientPanel.cpp">
-      <Filter>Source\Editor\Panel\SceneAmbientPanel</Filter>
+    <ClCompile Include="Source\Editor\Panel\SceneSettingsPanel\SceneSettingsPanel.cpp">
+      <Filter>Source\Editor\Panel\SceneSettingsPanel</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Panel\SceneConfigPanel\SceneConfigPanel.cpp">
-      <Filter>Source\Editor\Panel\SceneConfigPanel</Filter>
+    <ClCompile Include="Source\Editor\Panel\MainMenuBar\MainMenuBar.cpp">
+      <Filter>Source\Editor\Panel\MainMenuBar</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\MainMenuBar\SceneFileMenu\SceneFileMenu.cpp">
+      <Filter>Source\Editor\Panel\MainMenuBar\SceneFileMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\DockLayout\DockLayout.cpp">
+      <Filter>Source\Editor\Panel\DockLayout</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Widget\PopUp\NameInputPopup\NameInputPopup.cpp">
+      <Filter>Source\Editor\Widget\PopUp\NameInputPopup</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Widget\PopUp\ConfirmPopup\ConfirmPopup.cpp">
+      <Filter>Source\Editor\Widget\PopUp\ConfirmPopup</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Widget\ScenePreview\ScenePreview.cpp">
+      <Filter>Source\Editor\Widget\ScenePreview</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Panel\ConfigPanel\ConfigPanel.cpp">
       <Filter>Source\Editor\Panel\ConfigPanel</Filter>
@@ -2997,7 +3033,9 @@
     <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildPanel.cpp">
       <Filter>Source\Editor\Panel\BuildPanel</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Widget\PopUp\Popup.cpp" />
+    <ClCompile Include="Source\Editor\Widget\PopUp\Popup.cpp">
+      <Filter>Source\Editor\Widget\PopUp</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Panel\BuildPanel\AssetConvertView\AssetConvertView.cpp">
       <Filter>Source\Editor\Panel\BuildPanel\AssetConvertView</Filter>
     </ClCompile>
@@ -4185,11 +4223,29 @@
     <ClInclude Include="Source\Editor\Panel\LogPanel\LogPanel.h">
       <Filter>Source\Editor\Panel\LogPanel</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Panel\SceneAmbientPanel\SceneAmbientPanel.h">
-      <Filter>Source\Editor\Panel\SceneAmbientPanel</Filter>
+    <ClInclude Include="Source\Editor\Panel\SceneSettingsPanel\SceneSettingsPanel.h">
+      <Filter>Source\Editor\Panel\SceneSettingsPanel</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Panel\SceneConfigPanel\SceneConfigPanel.h">
-      <Filter>Source\Editor\Panel\SceneConfigPanel</Filter>
+    <ClInclude Include="Source\Editor\Panel\MainMenuBar\MainMenuBar.h">
+      <Filter>Source\Editor\Panel\MainMenuBar</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\MainMenuBar\SceneFileMenu\SceneFileMenu.h">
+      <Filter>Source\Editor\Panel\MainMenuBar\SceneFileMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\DockLayout\DockLayout.h">
+      <Filter>Source\Editor\Panel\DockLayout</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Widget\PopUp\NameInputPopup\NameInputPopup.h">
+      <Filter>Source\Editor\Widget\PopUp\NameInputPopup</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Widget\PopUp\ConfirmPopup\ConfirmPopup.h">
+      <Filter>Source\Editor\Widget\PopUp\ConfirmPopup</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Widget\ScenePreview\ScenePreview.h">
+      <Filter>Source\Editor\Widget\ScenePreview</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Widget\ScenePreview\IPreviewEditor.h">
+      <Filter>Source\Editor\Widget\ScenePreview</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Panel\ConfigPanel\ConfigPanel.h">
       <Filter>Source\Editor\Panel\ConfigPanel</Filter>
@@ -5277,7 +5333,9 @@
     <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPanel.h">
       <Filter>Source\Editor\Panel\BuildPanel</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Widget\PopUp\Popup.h" />
+    <ClInclude Include="Source\Editor\Widget\PopUp\Popup.h">
+      <Filter>Source\Editor\Widget\PopUp</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\Panel\BuildPanel\AssetConvertView\AssetConvertView.h">
       <Filter>Source\Editor\Panel\BuildPanel\AssetConvertView</Filter>
     </ClInclude>

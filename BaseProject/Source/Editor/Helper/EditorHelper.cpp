@@ -59,6 +59,47 @@ namespace Editor
 			_isSameChar) != a_text.end();
 	}
 
+	//======================================================================================
+	// アセットの一覧から1つ選ぶ
+	//======================================================================================
+	const Resource::AssetProperty* EditorHelper::DrawAssetSelectList(
+		std::span<const Resource::AssetProperty> a_assetSpan,
+		const Core::GUID& a_selectedGUID,
+		const char* a_searchID)
+	{
+		if (a_assetSpan.empty())
+		{
+			Engine::EditorField::HelpText("  (no asset)");
+			return nullptr;
+		}
+
+		// 数が増えると探せなくなるので名前で絞り込めるようにする
+		const std::string& _search = DrawSearchBox(a_searchID);
+
+		// 同名が別フォルダにあり得るので、置き場所を添える対象を先に拾う
+		const auto _duplicatedSet = Engine::EditorField::CollectDuplicatedNames(
+			a_assetSpan,
+			[](const Resource::AssetProperty& a_prop) { return a_prop.fileName; });
+
+		const Resource::AssetProperty* _pSelected = nullptr;
+		for (const auto& _prop : a_assetSpan)
+		{
+			// 同名が並ぶときはフォルダ名で絞り込めたほうが早いので、パスも検索対象にする
+			if (!IsMatchSearch(_search, _prop.fileName) && !IsMatchSearch(_search, _prop.filePath)) continue;
+
+			// 名前が同じでもImGuiのIDがぶつからないようにする(Selectable のIDはラベルから作られる)
+			ImGui::PushID(&_prop);
+
+			const std::string _label = Engine::EditorField::MakeUniqueLabel(
+				_duplicatedSet, _prop.fileName, Core::File::GetDirFromPath(_prop.filePath));
+
+			if (Engine::EditorField::Selectable(_label.c_str(), a_selectedGUID == _prop.guid)) _pSelected = &_prop;
+
+			ImGui::PopID();
+		}
+		return _pSelected;
+	}
+
 	D3D12_GPU_DESCRIPTOR_HANDLE EditorHelper::GetImGuiTexHandle(const Handle<Graphics::D3D12::ImGuiSRV>& a_imguiSRVHandle)
 	{
 		auto* _pGE = MainEngine::Instance().RefGraphicsEngine();

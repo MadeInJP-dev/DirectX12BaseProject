@@ -22,7 +22,8 @@ namespace Editor
 	public:
 		~SceneViewPanel() override = default;
 
-		const char* GetName() const override { return "SceneViewPanel"; };
+		const char* GetName() const override { return "Scene"; }
+		EPanelDock GetDefaultDock() const override { return EPanelDock::Center; }
 		void OnDrawImGui(EditorContext& a_editContext) override;
 		ImGuiWindowFlags GetFlags() const override { return ImGuiWindowFlags_MenuBar; }
 	private:
@@ -58,16 +59,8 @@ namespace Editor
 		// ECS外オブジェクト用のギズモ(BaseObject::DrawGizmoへ委譲)
 		void GameObjectGizmoDraw(const ImVec2& a_pos, const ImVec2& a_rect, EditorContext& a_editContext);
 
-		// メニューバー
-		void SceneFileMenu(EditorContext& a_editContext);
-
-		// シーンファイル操作
-		void LoadScenePopup(EditorContext& a_editContext);
-		void SaveScenePopup(EditorContext& a_editContext);
-		void CreateScenePopup(EditorContext& a_editContext);
-
-		void OpenSavePopup();
-		void SaveScene(EditorContext& a_editContext, const Core::GUID& a_guid);
+		// メニューバー(カメラ)。シーンの開く・保存は MainMenuBar の File にある
+		void DrawMenuBar(EditorContext& a_editContext);
 
 		// エンティティコピー : Ctrl+C / Ctrl+V のショートカット処理
 		void CopyEntities(EditorContext& a_editContext, Engine::ECS::World* a_pWorld);
@@ -96,21 +89,7 @@ namespace Editor
 
 	private:
 
-		// シーンファイル操作系
-		bool m_isLoadScenePopup = false;
-		bool m_openLoadPopup = false;
-		bool m_openSaveAsPopup = false;
-		bool m_openCreatePopup = false;
-		std::string m_sceneNameInput = "";
-
-		// 操作用変数
-		bool m_isSaveShortcut = false;
-		bool m_canOverwrite = false;
-		bool m_doOverwrite = false;
-
 		// コピー用 : Ctrl+C で詰めて、Ctrl+V のたびに中身から生成する(何度でも貼り付け可)
 		std::vector<EntityCopyData> m_copyBufferVec = {};
-
-		Core::GUID m_currentSceneGUID = Core::DEFAULT_GUID;
 	};
-}
+}

@@ -58,6 +58,9 @@ namespace Editor
 			m_upPrefabEditor = std::make_unique<PrefabEditor>(a_pServices);
 		}
 
+		// 確認用の画面は同じ窓口で回す(開く口だけは種類ごとにパネルへ渡す)
+		m_previewEditorVec = { m_upEffectEditor.get(), m_upPrefabEditor.get() };
+
 		// プロファイラ
 		// パネルより先に作る : パネルへは参照だけを渡す
 		if (!m_upProfiler)
@@ -120,13 +123,9 @@ namespace Editor
 		m_pLogPanel = nullptr;
 
 		// 確認用の画面が抱えているワールドを捨てる
-		if (m_upEffectEditor)
+		for (IPreviewEditor* _pPreviewEditor : m_previewEditorVec)
 		{
-			m_upEffectEditor->Release();
-		}
-		if (m_upPrefabEditor)
-		{
-			m_upPrefabEditor->Release();
+			_pPreviewEditor->Release();
 		}
 
 		m_upImGuiContext->Release();
@@ -212,8 +211,7 @@ namespace Editor
 		if (IsModalActive())
 		{
 			if (m_upEditorCamera) m_upEditorCamera->CancelControl();
-			if (m_upEffectEditor) m_upEffectEditor->UpdateCamera(a_dt);
-			if (m_upPrefabEditor) m_upPrefabEditor->UpdateCamera(a_dt);
+			if (IPreviewEditor* _pPreviewEditor = RefOpenPreviewEditor()) _pPreviewEditor->UpdateCamera(a_dt);
 			return;
 		}
 
@@ -248,12 +246,8 @@ namespace Editor
 	//======================================================================================
 	bool MainEditor::TryGetCameraOverride(EAppMode a_mode, Engine::DevTool::CameraOverride& a_outOverride) const
 	{
-		if (m_upEffectEditor && m_upEffectEditor->TryGetCameraOverride(a_outOverride.worldMat, a_outOverride.projMat))
-		{
-			a_outOverride.isCullByGameCamera = false;
-			return true;
-		}
-		if (m_upPrefabEditor && m_upPrefabEditor->TryGetCameraOverride(a_outOverride.worldMat, a_outOverride.projMat))
+		if (const IPreviewEditor* _pPreviewEditor = RefOpenPreviewEditor();
+			_pPreviewEditor && _pPreviewEditor->TryGetCameraOverride(a_outOverride.worldMat, a_outOverride.projMat))
 		{
 			a_outOverride.isCullByGameCamera = false;
 			return true;
@@ -278,42 +272,31 @@ namespace Editor
 	//======================================================================================
 	bool MainEditor::IsScenePreviewActive() const
 	{
-		return (m_upEffectEditor && m_upEffectEditor->IsOpen()) ||
-			(m_upPrefabEditor && m_upPrefabEditor->IsOpen());
+		return RefOpenPreviewEditor() != nullptr;
 	}
 
 	void MainEditor::UpdateScenePreview(float a_deltaTime)
 	{
-		if (m_upEffectEditor && m_upEffectEditor->IsOpen())
-		{
-			m_upEffectEditor->UpdateScene(a_deltaTime);
-			return;
-		}
-		if (m_upPrefabEditor && m_upPrefabEditor->IsOpen())
-		{
-			m_upPrefabEditor->UpdateScene(a_deltaTime);
-		}
+		if (IPreviewEditor* _pPreviewEditor = RefOpenPreviewEditor()) _pPreviewEditor->UpdateScene(a_deltaTime);
 	}
 
 	void MainEditor::DrawScenePreview()
 	{
-		if (m_upEffectEditor && m_upEffectEditor->IsOpen())
-		{
-			m_upEffectEditor->DrawScene();
-			return;
-		}
-		if (m_upPrefabEditor && m_upPrefabEditor->IsOpen())
-		{
-			m_upPrefabEditor->DrawScene();
-		}
+		if (IPreviewEditor* _pPreviewEditor = RefOpenPreviewEditor()) _pPreviewEditor->DrawScene();
 	}
 
-	// 背景の環境設定はエフェクトエディターだけが選べる(プレハブエディターはゲームのシーンのもの)
+	// 背景の環境設定はエフェクトエディターだけが選べる(プレハブエディターはゲームのシーンのもの = nullptr)
 	const Engine::Scene::SceneAmbient* MainEditor::GetScenePreviewAmbient() const
 	{
-		if (m_upEffectEditor && m_upEffectEditor->IsOpen())
+		const IPreviewEditor* _pPreviewEditor = RefOpenPreviewEditor();
+		return _pPreviewEditor ? _pPreviewEditor->GetPreviewAmbient() : nullptr;
+	}
+
+	IPreviewEditor* MainEditor::RefOpenPreviewEditor() const
+	{
+		for (IPreviewEditor* _pPreviewEditor : m_previewEditorVec)
 		{
-			return m_upEffectEditor->GetPreviewAmbient();
+			if (_pPreviewEditor->IsOpen()) return _pPreviewEditor;
 		}
 		return nullptr;
 	}
@@ -358,13 +341,9 @@ namespace Editor
 		// モーダル画面はパネルの後に出す。
 		// ImGui のポップアップは「開く要求を出したときのIDスタック」に紐づくので、
 		// パネルの中(インスペクター)からではなくここで開くこと
-		if (m_upEffectEditor)
+		for (IPreviewEditor* _pPreviewEditor : m_previewEditorVec)
 		{
-			m_upEffectEditor->OnDrawImGui();
-		}
-		if (m_upPrefabEditor)
-		{
-			m_upPrefabEditor->OnDrawImGui();
+			_pPreviewEditor->OnDrawImGui();
 		}
 
 		// 各登録された関数を実行

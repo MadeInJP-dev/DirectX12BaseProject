@@ -8,8 +8,7 @@
 #include "../Panel/GameObjectHierarchyPanel/GameObjectHierarchyPanel.h"
 #include "../Panel/SceneViewPanel/SceneViewPanel.h"
 #include "../Panel/ConfigPanel/ConfigPanel.h"
-#include "../Panel/SceneAmbientPanel/SceneAmbientPanel.h"
-#include "../Panel/SceneConfigPanel/SceneConfigPanel.h"
+#include "../Panel/SceneSettingsPanel/SceneSettingsPanel.h"
 #include "../Panel/ProfilerPanel/ProfilerPanel.h"
 #include "../Panel/LogPanel/LogPanel.h"
 #include "../Panel/BuildPanel/BuildPanel.h"
@@ -22,17 +21,19 @@ namespace Editor
 {
 	void PanelManager::Init(EditorCamera* a_pEditorCamera, EffectEditor* a_pEffectEditor, PrefabEditor* a_pPrefabEditor, Profiler* a_pProfiler, ECS::EngineServices* a_pServices)
 	{
-		RegisterPanel<RenderGraphResourceViewPanel>();
-		RegisterPanel<AssetDataBasePanel>();
-		RegisterPanel<InspectorPanel>();
-		RegisterPanel<HierarchyPanel>();
+		// 並びは画面の左から右、上から下の順。
+		// 同じ場所に入るパネルは、ここで先に登録したものが前のタブになる(DockLayout)。
+		// 描く順でもあるので、選ぶ側(一覧・シーンビュー)をインスペクターより先に置く
+		RegisterPanel<HierarchyPanel>();				// 左
 		RegisterPanel<GameObjectHierarchyPanel>();
-		RegisterPanel<SceneViewPanel>();
+		RegisterPanel<SceneViewPanel>();				// 真ん中
+		RegisterPanel<InspectorPanel>();				// 右
+		RegisterPanel<SceneSettingsPanel>();			// 右下
 		RegisterPanel<ConfigPanel>();
-		RegisterPanel<SceneAmbientPanel>();
-		RegisterPanel<SceneConfigPanel>();
-		RegisterPanel<ProfilerPanel>();
+		RegisterPanel<AssetDataBasePanel>();			// 下
 		RegisterPanel<LogPanel>();
+		RegisterPanel<ProfilerPanel>();
+		RegisterPanel<RenderGraphResourceViewPanel>();
 		RegisterPanel<BuildPanel>();
 
 		m_editContext.pEditorCamera = a_pEditorCamera;
@@ -40,6 +41,8 @@ namespace Editor
 		m_editContext.pPrefabEditor = a_pPrefabEditor;
 		m_editContext.pProfiler = a_pProfiler;
 		m_editContext.pServices = a_pServices;
+
+		m_mainMenuBar.Init(a_pServices);
 	}
 
 	void PanelManager::OnDrawPanels()
@@ -52,8 +55,23 @@ namespace Editor
 		// 選択中のものが前のシーンの遺物になっていないか確かめる
 		ValidateContext();
 
+		// 土台とメニューバー。配置の組み直しは DockSpace の前に済ませる
+		m_dockLayout.BeginHost();
+		if (m_mainMenuBar.Draw(m_upPanelVec))
+		{
+			m_dockLayout.RequestReset();
+		}
+		m_dockLayout.DockSpace(m_upPanelVec);
+		m_dockLayout.EndHost();
+
+		// メニューから開くポップアップは土台の外で出す(ID スタックが素の状態のところ)
+		m_mainMenuBar.DrawPopups();
+
 		for (auto& _panel : m_upPanelVec)
 		{
+			// 閉じたパネルは描かない(開き直すのはメニューの Window から)
+			if (!_panel->RefIsOpen()) continue;
+
 			if (ImGui::Begin(_panel->GetName(),&_panel->RefIsOpen(),_panel->GetFlags()))
 			{
 				_panel->OnDrawImGui(m_editContext);

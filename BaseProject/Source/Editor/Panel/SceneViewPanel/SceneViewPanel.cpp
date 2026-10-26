@@ -226,8 +226,8 @@ namespace Editor
 {
 	void Editor::SceneViewPanel::OnDrawImGui(EditorContext& a_editContext)
 	{
-		// シーンファイルメニューバー
-		SceneFileMenu(a_editContext);
+		// メニューバー(カメラ)
+		DrawMenuBar(a_editContext);
 
 		// ワールド取得
 		Engine::ECS::World* _pWorld = a_editContext.pServices->pSceneManager->RefWorld();
@@ -829,329 +829,31 @@ namespace Editor
 
 		_pObj->DrawGizmo(_ctx, _pObjManager->RefObjectContext());
 	}
-	void SceneViewPanel::SceneFileMenu(EditorContext& a_editContext)
-	{
-		//------------------------------------------------------------------
-		// 開いているシーンを実物から取り直す
-		//
-		// シーンはエディターからだけでなくゲーム側からも切り替わる
-		// (タイトル→ホーム、ホーム→出撃先など)。以前はここで一度覚えたきり
-		// だったので、ゲームが切り替えた後もエディターは前のシーンを指したまま
-		// になり、Ctrl+S で「別のシーンのファイル」へ上書きしてしまっていた。
-		//
-		// 実際に積まれているシーンが自分のGUIDを持っているので、毎フレーム
-		// そこから取り直す。これで表示も保存先も必ず今のシーンを指す。
-		//------------------------------------------------------------------
-		auto* _pScene = a_editContext.pServices->pSceneManager->RefCurrentTopScene();
-		if (!_pScene) return;
-
-		if (!(m_currentSceneGUID == _pScene->GetGUID()))
-		{
-			m_currentSceneGUID = _pScene->GetGUID();
-
-			// 保存先のファイルがあるシーンだけ上書きさせる
-			m_canOverwrite = m_currentSceneGUID.IsValid();
-
-			ENGINE_LOG("シーンのGUIDがセットされました : %s", m_currentSceneGUID.String().c_str());
-		}
-
-		// --- ショートカット判定 ---
-		bool _isCtrl = ImGui::GetIO().KeyCtrl;
-		m_isSaveShortcut = _isCtrl && ImGui::IsKeyPressed(ImGuiKey_S);
-		m_doOverwrite = false;
-
-		// Ctr + S が押されたら
-		if (m_isSaveShortcut)
-		{
-			if (m_canOverwrite) m_doOverwrite = true;	// 現在のシーンにデータファイルがあるのなら、上書き
-			else OpenSavePopup();						// なければ新規保存ポップアップ
-		}
-
-		// シーンの走査
-		if (ImGui::BeginMenuBar())
-		{
-			if (ImGui::BeginMenu("File"))
-			{
-				if (ImGui::MenuItem("Create new scene..."))
-				{
-					m_openCreatePopup = true;
-					m_sceneNameInput = "";
-				}
-
-				ImGui::Separator();
-
-				// ロード
-				if (ImGui::MenuItem("Load scene..."))
-				{
-					m_openLoadPopup = true;
-				}
-
-				ImGui::Separator();
-
-				// セーブ
-				// 上書き保存
-				if (ImGui::MenuItem("Save scene", "Ctrl+S", false, m_canOverwrite))
-				{
-					m_doOverwrite = true;
-				}
-				// 名前を付けて保存
-				if (ImGui::MenuItem("Save scene with Name..."))
-				{
-					OpenSavePopup();
-				}
-
-				ImGui::EndMenu();
-			}
-
-			// エディター用フリーカメラの設定
-			if (ImGui::BeginMenu("Camera"))
-			{
-				if (a_editContext.pEditorCamera)
-				{
-					a_editContext.pEditorCamera->DrawEditUI();
-				}
-				else
-				{
-					ImGui::TextDisabled("EditorCamera is null");
-				}
-				ImGui::EndMenu();
-			}
-
-			//--------------------------------------------------------------
-			// デバッグプレイの入り切り
-			//
-			// エディターを出したままゲームを動かすモード。
-			// インスペクターで値の動きを見ながら操作を確かめるためのもので、
-			// 映るのはゲームのカメラ、入力もゲームへ渡る。
-			//
-			// 入っている間はマウスがゲーム側の持ち物になる(カーソルは画面中央へ
-			// 固定され、エディターはマウスを受け取らない)ので、
-			// 抜けるのは Ctrl+P。ボタンの文字にも出しておく。
-			//
-			// 色は付けない。このエディターでは色付きのボタンは
-			// 「押すと増える(緑)/減る(赤)」を表す決まりなので、
-			// 表示の切り替えに使うと意味が食い違う
-			//--------------------------------------------------------------
-			{
-				auto& _engine = MainEngine::Instance();
-				const bool _isDebugPlay = (_engine.GetMode() == EAppMode::DebugPlay);
-
-				if (ImGui::Button(_isDebugPlay
-					? "Debug Play : ON   (Ctrl+P to Editor)"
-					: "Debug Play : OFF"))
-				{
-					_engine.ChangeMode(_isDebugPlay ? EAppMode::Editor : EAppMode::DebugPlay);
-				}
-
-				if (!_isDebugPlay && ImGui::IsItemHovered())
-				{
-					ImGui::SetTooltip(
-						"エディターを出したままシーンビューで遊ぶ\n"
-						"入るとマウスはゲーム側へ渡るので、抜けるときは Ctrl+P");
-				}
-			}
-
-			ImGui::EndMenuBar();
-		}
-
-		// ポップアップ処理
-		LoadScenePopup(a_editContext);
-		SaveScenePopup(a_editContext);
-		CreateScenePopup(a_editContext);
-
-		// 実際のセーブ処理の実行
-		if (m_doOverwrite)
-		{
-			SaveScene(a_editContext, m_currentSceneGUID);
-		}
-	}
-	void SceneViewPanel::LoadScenePopup(EditorContext& a_editContext)
-	{
-		if (m_openLoadPopup) { ImGui::OpenPopup("Load Scene Asset"); m_openLoadPopup = false; }
-		if (ImGui::BeginPopupModal("Load Scene Asset", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-		{
-			const auto& _sceneMetaVec = a_editContext.pServices->pAssetDatabase->GetTypeMetaVec("Scene");
-			if (_sceneMetaVec.empty())
-			{
-				Engine::EditorField::HelpText("Not find SceneAsset");
-			}
-
-			// 数が増えると探せなくなるので名前で絞り込めるようにする
-			const std::string& _search = EditorHelper::DrawSearchBox();
-
-			// 同名のシーンが別フォルダにあり得るので、置き場所を添える対象を先に拾う
-			const auto _duplicatedSet = EditorField::CollectDuplicatedNames(
-				_sceneMetaVec,
-				[](const Resource::AssetProperty& a_prop) { return a_prop.fileName; });
-
-			for (size_t _i = 0; _i < _sceneMetaVec.size(); ++_i)
-			{
-				const auto& _sceneMeta = _sceneMetaVec[_i];
-
-				// 同名が並ぶときはフォルダ名で絞り込めたほうが早いので、パスも検索対象にする
-				if (!EditorHelper::IsMatchSearch(_search, _sceneMeta.fileName) &&
-					!EditorHelper::IsMatchSearch(_search, _sceneMeta.filePath)) continue;
-
-				// 名前が同じでもImGuiのIDがぶつからないようにする
-				// (Selectable のIDはラベル文字列から作られるため)
-				ImGui::PushID(static_cast<int>(_i));
-
-				const std::string _label = EditorField::MakeUniqueLabel(
-					_duplicatedSet, _sceneMeta.fileName,
-					Core::File::GetDirFromPath(_sceneMeta.filePath));
-
-				if (ImGui::Selectable(_label.c_str(), m_currentSceneGUID == _sceneMeta.guid))
-				{
-					auto* _pScene = a_editContext.pServices->pSceneManager->RefCurrentTopScene();
-					if (_pScene)
-					{
-						// ロード処理
-						a_editContext.pServices->pSceneManager->ReserveChangeScene(_sceneMeta.guid, Scene::ESceneChangeType::Replace);
-						ENGINE_LOG("シーンを読み込みました : %s", _sceneMeta.fileName.c_str());
-
-						m_currentSceneGUID = _sceneMeta.guid; // 現在のGUIDを更新
-						m_canOverwrite = true; // 上書き可能にする
-					}
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::PopID();
-			}
-
-			Engine::EditorField::Line();
-			if (ImGui::Button("Close", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
-			ImGui::EndPopup();
-		}
-	}
-	void SceneViewPanel::SaveScenePopup(EditorContext& a_editContext)
-	{
-		if (m_openSaveAsPopup) { ImGui::OpenPopup("Save Scene As"); m_openSaveAsPopup = false; }
-		if (ImGui::BeginPopupModal("Save Scene As", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-		{
-			// Enterキーでも決定できる
-			bool isEnterPressed = Engine::EditorField::ConfirmField("File Name (.scene)##scenename", m_sceneNameInput);
-
-			if (ImGui::Button("Save", ImVec2(120, 0)) || isEnterPressed)
-			{
-				if (!m_sceneNameInput.empty())
-				{
-					std::string dirPath = "Asset/Scenes/" + m_sceneNameInput;
-					std::string filepath = dirPath + "/" + m_sceneNameInput;
-
-					// サブディレクトリを作成するように修正
-					std::filesystem::create_directories(dirPath);
-
-					Core::GUID _guid = a_editContext.pServices->pAssetDatabase->AddMetaData(filepath, "Scene");
-					m_currentSceneGUID = _guid;
-					m_canOverwrite = true;
-
-					// 名前を付けて保存した先が、このシーンの新しい置き場所になる。
-					// シーン本体にも覚えさせておかないと、上のGUID取り直しで
-					// 保存前のGUIDへ戻ってしまう
-					if (auto* _pCurrentScene = a_editContext.pServices->pSceneManager->RefCurrentTopScene())
-					{
-						_pCurrentScene->SetGUID(_guid);
-					}
-
-					SaveScene(a_editContext, m_currentSceneGUID);
-					ImGui::CloseCurrentPopup(); // 保存後に閉じる
-				}
-			}
-			Engine::EditorField::SameLine();
-			if (ImGui::Button("Cancel", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); } // タイポ修正
-			ImGui::EndPopup();
-		}
-	}
 	//======================================================================================
-	// 新規シーンの作成
-	//--------------------------------------------------------------------------------------
-	// 空のシーンをアセットとして書き出してから、そのまま開く。
+	// シーンビューのメニューバー
 	//
-	// 「名前を付けて保存」は今開いている中身を別名で書き出すものなので、
-	// 空から始めたいときには使えない(前のシーンの中身が付いてくる)。
+	// シーンの開く・保存とデバッグプレイは、どのパネルを見ていても使えるよう
+	// いちばん上のメニューバー(MainMenuBar)へ移した。ここにはこのビューの見え方だけを置く
 	//======================================================================================
-	void SceneViewPanel::CreateScenePopup(EditorContext& a_editContext)
+	void SceneViewPanel::DrawMenuBar(EditorContext& a_editContext)
 	{
-		if (m_openCreatePopup) { ImGui::OpenPopup("Create New Scene"); m_openCreatePopup = false; }
-		if (!ImGui::BeginPopupModal("Create New Scene", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) return;
+		if (!ImGui::BeginMenuBar()) return;
 
-		const bool _isEnterPressed = Engine::EditorField::ConfirmField("File Name (.scene)##newscenename", m_sceneNameInput);
-
-		Engine::EditorField::HelpText("Asset/Scenes/<名前>/ へ空のシーンを作って開きます");
-
-		// 名前が無いままは押させない
-		ImGui::BeginDisabled(m_sceneNameInput.empty());
-		const bool _isCreatePressed = ImGui::Button("Create", ImVec2(120, 0));
-		ImGui::EndDisabled();
-
-		if ((_isCreatePressed || _isEnterPressed) && !m_sceneNameInput.empty())
+		// エディター用フリーカメラの設定
+		if (ImGui::BeginMenu("Camera"))
 		{
-			const Core::GUID _guid =
-				a_editContext.pServices->pSceneManager->CreateEmptyScene(*a_editContext.pServices->pAssetDatabase, "", m_sceneNameInput);
-
-			if (_guid.IsValid())
+			if (a_editContext.pEditorCamera)
 			{
-				// 作った先をこのまま開く。
-				// 中身は空なので、上書き保存の行き先もここになる
-				a_editContext.pServices->pSceneManager->ReserveChangeScene(_guid, Scene::ESceneChangeType::Replace);
-
-				m_currentSceneGUID = _guid;
-				m_canOverwrite = true;
-
-				ImGui::CloseCurrentPopup();
+				a_editContext.pEditorCamera->DrawEditUI();
 			}
-			// 失敗(同名がある等)のときは閉じない。理由はログへ出ている
+			else
+			{
+				Engine::EditorField::HelpText("EditorCamera is null");
+			}
+			ImGui::EndMenu();
 		}
 
-		Engine::EditorField::SameLine();
-		if (ImGui::Button("Cancel", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
-
-		ImGui::EndPopup();
-	}
-
-	void SceneViewPanel::OpenSavePopup()
-	{
-		m_openSaveAsPopup = true;
-		m_sceneNameInput = "";
-	}
-	void SceneViewPanel::SaveScene(EditorContext& a_editContext, const Core::GUID & a_guid)
-	{
-		// 現在のシーンを取得
-		auto* _pScene = a_editContext.pServices->pSceneManager->RefCurrentTopScene();
-		if (!_pScene)
-		{
-			ENGINE_LOG("シーンのセーブに失敗しました");
-			return;
-		}
-
-		// 読み込み途中のシーンは中身が揃っていない : 保存すると空の中身でファイルを上書きしてしまう
-		if (!_pScene->IsReady())
-		{
-			ENGINE_WARNING("[Scene] 読み込み中のシーンは保存できません。読み込みが済んでから保存してください");
-			return;
-		}
-
-		// ファイルパスを取得
-		auto _path = a_editContext.pServices->pAssetDatabase->GetFilePathFromGUID(a_guid);
-		if (_path.empty())
-		{
-			ENGINE_LOG("シーンのセーブに失敗しました");
-			return;
-		}
-
-		auto _fileDir = Core::File::GetDirFromPath(_path);
-		auto _fileName = Core::File::GetFileNameWithoutExtension(_path);
-
-		// どのシーンを保存するかをログ出力する
-		ENGINE_LOG("[Scene] セーブ : %s", _path.c_str());
-
-		{
-			Persistence::Archive _ar(Persistence::Archive::EMode::Save, _fileDir, _fileName, "scene");
-			_pScene->Archive(_ar);
-		}
-
-		// シーンの設定(先読み一覧・計測フラグ)は別のファイル。一緒に書いておく
-		_pScene->RefConfig().SaveFile(_fileDir, _fileName);
+		ImGui::EndMenuBar();
 	}
 	void SceneViewPanel::CopyEntities(EditorContext& a_editContext, Engine::ECS::World* a_pWorld)
 	{
@@ -1362,4 +1064,4 @@ namespace Editor
 
 		return _targets;
 	}
-}
+}

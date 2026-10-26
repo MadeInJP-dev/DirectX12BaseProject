@@ -180,6 +180,12 @@ namespace Editor
 	{
 		// 設定ファイルが無ければ既定値(見本の形)のまま
 		Build::LoadBuildSettings(m_settings);
+
+		m_overwritePopup.AddChoice("消して作り直す",
+			[this]() { m_isOverwriteAnswered = true; m_isOverwriteClean = true; },
+			EConfirmStyle::Danger);
+		m_overwritePopup.AddChoice("上書きする",
+			[this]() { m_isOverwriteAnswered = true; m_isOverwriteClean = false; });
 	}
 
 	BuildPanel::~BuildPanel()
@@ -195,39 +201,6 @@ namespace Editor
 
 		// まとめてのコンバートを進める(ポップアップを閉じても続く)
 		m_assetConvertView.Update(a_editContext);
-
-		// ポップアップ準備
-		m_assetConvertPopup.SetContent(
-			[this, &a_editContext]()
-			{
-				m_assetConvertView.Draw(a_editContext);
-			}
-		);
-		m_overwritePopup.SetContent(
-			[this, &a_editContext]()
-			{
-				ImGui::Text("書き出し先にすでにファイルがあります。");
-				ImGui::TextUnformatted(Core::File::ToUTF8(m_reportPackageDirectory).c_str());
-				ImGui::Spacing();
-
-				if (ImGui::Button("消して作り直す"))
-				{
-					BuildPackage(a_editContext, true);
-					ImGui::CloseCurrentPopup();
-				}
-				ImGui::SameLine();
-				if (ImGui::Button("上書きする"))
-				{
-					BuildPackage(a_editContext, false);
-					ImGui::CloseCurrentPopup();
-				}
-				ImGui::SameLine();
-				if (ImGui::Button("やめる"))
-				{
-					ImGui::CloseCurrentPopup();
-				}
-			}
-		);
 
 		const bool _isBuilding = m_isBuilding.load();
 		const bool _isConverting = m_assetConvertView.IsConverting();
@@ -282,8 +255,15 @@ namespace Editor
 		DrawReport(a_editContext);
 
 		// ポップアップ描画
-		m_assetConvertPopup.Draw();
+		m_assetConvertPopup.Draw([this, &a_editContext]() { m_assetConvertView.Draw(a_editContext); });
 		m_overwritePopup.Draw();
+
+		// 書き出し先の確認で答えが出ていたら書き出す
+		if (m_isOverwriteAnswered)
+		{
+			m_isOverwriteAnswered = false;
+			BuildPackage(a_editContext, m_isOverwriteClean);
+		}
 
 		// 入力中は保存しない(1文字ごとに書かない)
 		if (m_isSettingsDirty && !ImGui::IsAnyItemActive())
@@ -638,6 +618,7 @@ namespace Editor
 			&& !std::filesystem::is_empty(_context.packageDirectory, _ec))
 		{
 			m_reportPackageDirectory = _context.packageDirectory;
+			m_overwritePopup.SetMessage("書き出し先にすでにファイルがあります。", Core::File::ToUTF8(m_reportPackageDirectory));
 			m_overwritePopup.Open();
 			return;
 		}

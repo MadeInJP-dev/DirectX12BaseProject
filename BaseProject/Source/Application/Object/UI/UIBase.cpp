@@ -1,4 +1,4 @@
-#include "UIBase.h"
+﻿#include "UIBase.h"
 
 #include "Engine/ECS/System/SystemContext.h"	// ObjectContext が運ぶサービス群
 #include "Engine/MainEngine.h"

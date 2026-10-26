@@ -30,7 +30,8 @@ namespace Editor
 		LogPanel();
 		~LogPanel() override = default;
 
-		const char* GetName() const override { return "LogPanel"; };
+		const char* GetName() const override { return "Log"; }
+		EPanelDock GetDefaultDock() const override { return EPanelDock::Bottom; }
 		void OnDrawImGui(EditorContext& a_editContext) override;
 
 		// ログのクリア

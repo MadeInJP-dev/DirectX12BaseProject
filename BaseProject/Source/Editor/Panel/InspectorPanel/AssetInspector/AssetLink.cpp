@@ -80,7 +80,6 @@ namespace Editor::Inspector
 		}
 
 		a_editContext.SelectAsset(_pAsset);
-		a_editContext.eInspectorType = EInspectorType::Asset;
 
 		return true;
 	}

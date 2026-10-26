@@ -23,7 +23,8 @@ namespace Editor
 	public:
 		~GameObjectHierarchyPanel() override = default;
 
-		const char* GetName() const override { return "GameObjectHierarchy"; }
+		const char* GetName() const override { return "Objects"; }
+		EPanelDock GetDefaultDock() const override { return EPanelDock::Left; }
 		void OnDrawImGui(EditorContext& a_editContext) override;
 
 	private:

@@ -251,7 +251,7 @@ namespace App::Object
 	//======================================================================================
 	void AmbientDustObject::DrawInspector(Engine::GameObject::ObjectContext& a_context)
 	{
-		Engine::EditorField::HelpText("カメラに追従する空間のチリ。環境光・フォグ・空は SceneAmbientPanel で設定する");
+		Engine::EditorField::HelpText("カメラに追従する空間のチリ。環境光・フォグ・空は SceneSettingsPanel で設定する");
 		Engine::EditorField::Line();
 
 		DrawDastInspector(a_context);
