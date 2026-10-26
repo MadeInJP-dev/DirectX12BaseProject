@@ -455,7 +455,7 @@ namespace Engine::Graphics
 	//   ・テクスチャを持たないマテリアル(法線マップ無しなど)
 	//   ・非同期ロード中 : スロットには空の実体が入っていて、SRVはまだ無い
 	//   ・読み込み失敗
-	// 以前は見つからないと null を参照していた(Shipping では ERRLOG が消えるので素通りする)
+	// 以前は見つからないと null を参照していた(ログを切ったビルドでは ERRLOG が消えるので素通りする)
 	//------------------------------------------------------------------------------------------
 	int DrawSubmitter::GetSRVIndexFromTextureHandle(const Handle<Resource::Texture>& a_texHandle) const
 	{

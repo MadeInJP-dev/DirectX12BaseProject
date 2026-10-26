@@ -59,8 +59,8 @@ VECTOR_REGINE/
 |---|---|
 | ビルド構成(Debug / Release)・Include / Lib パス・プリプロセッサ定義 | [BaseProject/BaseProject.vcxproj](BaseProject/BaseProject.vcxproj) |
 | PCH の分け方と .cpp を足したときの設定 | CodingStandards.md の「5. PCH」 |
-| ビルドモード(Debug / Development / Shipping)の意味 | CodingStandards.md の「6. Build Configuration」 |
-| エンジン設定(ビルドモード・Asset のルート・スレッド数・各オプション)の値 | [BaseProject/Asset/Data/Engine/EngineData.ojoptn](BaseProject/Asset/Data/Engine/EngineData.ojoptn)。項目の定義は `BaseProject/Source/Engine/Option/` 以下 |
+| VS の構成(Debug / Release)と起動設定(BuildConfig の項目)の意味 | CodingStandards.md の「6. Build Configuration」。項目の一覧の正本は `BaseProject/Source/Engine/Option/ProjectOptions/BuildConfig.cpp` |
+| エンジン設定(起動設定・Asset のルート・スレッド数・各オプション)の値 | [BaseProject/Asset/Data/Engine/EngineData.ojoptn](BaseProject/Asset/Data/Engine/EngineData.ojoptn)。項目の定義は `BaseProject/Source/Engine/Option/` 以下 |
 | 最初に開くシーン | [BaseProject/Asset/Data/Game/GameData.ojgmdt](BaseProject/Asset/Data/Game/GameData.ojgmdt)(シーンの GUID)。読むのは `Source/Application/Game/GameManager/` |
 | ユーザー設定(キー割り当てなど) | [BaseProject/Asset/Data/User/UserData.ojdata](BaseProject/Asset/Data/User/UserData.ojdata)。定義は `Source/Application/Game/UserData/` |
 | シーンファイルの置き場と .ojscene / .obscene の使い分け | `BaseProject/Source/Engine/Scene/SceneManager/SceneManager.cpp` のコメント |

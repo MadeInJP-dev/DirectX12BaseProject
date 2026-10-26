@@ -21,7 +21,7 @@ namespace App::Game
 	/// </summary>
 	/// <remarks>
 	/// 設定画面(ゲーム → FPS Display)で出し入れする、プレイヤー向けの確認用の表示。
-	/// デバッグキー(F7)の情報の表示とは別物で、Shipping でも作る。
+	/// デバッグキー(F7)の情報の表示とは別物で、デバッグキーを切っていても作る。
 	/// 出すかどうかは UserData::GameSettings::isFPSVisible を毎フレーム読む。
 	/// HUD の表示を切っていても出す(HUD とは別に選べる項目のため)
 	/// </remarks>

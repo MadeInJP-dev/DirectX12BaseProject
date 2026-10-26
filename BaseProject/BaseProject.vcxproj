@@ -1710,6 +1710,7 @@
     <ClCompile Include="Source\Engine\Option\GraphicsOptions\RenderingOption.cpp" />
     <ClCompile Include="Source\Engine\Option\GraphicsOptions\WindowOption.cpp" />
     <ClCompile Include="Source\Engine\Option\OptionManager.cpp" />
+    <ClCompile Include="Source\Engine\Option\ProjectOptions\BuildConfig.cpp" />
     <ClCompile Include="Source\Engine\Option\ProjectOptions\InputOption.cpp" />
     <ClCompile Include="Source\Engine\Option\ProjectOptions\CursorOption.cpp" />
     <ClCompile Include="Source\Engine\Scene\SceneAudio\SceneAudio.cpp" />

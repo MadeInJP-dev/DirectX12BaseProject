@@ -19,7 +19,7 @@ namespace App::System
 	//   いつもの読み手(EffectEventSystem / ScoreSystem)が出すので、ここは何も足さない。
 	// ・予約するのはウェーブを飛ばす SceneSequence(オブジェクト)。オブジェクトはシステムの後で
 	//   更新されるので、予約は次のフレームのここで消化される。
-	// ・入口が無いワールド(Shipping)では何もしない。
+	// ・入口が無いワールド(デバッグキーを切っているとき)では何もしない。
 	// ・PostUpdate 帯。死亡を積む側の並び(HealthSystem の後)に置く。
 	//==============================================================================
 	void DebugKillSystem::Init(App::ECS::APPWorld& a_world)

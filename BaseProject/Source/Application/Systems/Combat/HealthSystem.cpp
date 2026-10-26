@@ -67,7 +67,7 @@ namespace App::System
 				// ヒットが1件も無いフレームは何もしない
 				if (_hitEvents.events.empty()) return;
 
-				// デバッグキーの無敵(入口が無ければ Shipping なので効かない)
+				// デバッグキーの無敵(入口が無ければデバッグキーを切っているので効かない)
 				const Game::DebugCommands* _pDebug = InstanceResource::DebugCommandResource::FindCommands(a_ctx.pWorld);
 				const bool _isPlayerInvincible = _pDebug && _pDebug->isPlayerInvincible;
 

@@ -111,7 +111,7 @@ namespace App::Game
 			m_upFPSDisplay->Init(*m_pEngine);
 		}
 
-		// デバッグキー : Shipping では作らない(ワールドへ入口も置かれないので、受け取る側も何もしない)
+		// デバッグキー : 起動設定で切っていれば作らない(ワールドへ入口も置かれないので、受け取る側も何もしない)
 		if (!m_upDebugKeys && DebugKeys::IsEnabled())
 		{
 			m_upDebugKeys = std::make_unique<DebugKeys>();

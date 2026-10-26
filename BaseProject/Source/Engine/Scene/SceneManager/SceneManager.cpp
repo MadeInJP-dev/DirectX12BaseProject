@@ -862,8 +862,8 @@ namespace Engine::Scene
 	SceneManager::SceneManager(MainEngine* a_pEngine)
 		: m_pEngine(a_pEngine)
 	{
-		// ビルドモードは MainEngine が生成前に決めている
-		m_isRecordUsedAssets = m_pEngine && m_pEngine->GetBuildMode() != EBuildConfiguration::Shipping;
+		// 起動設定は MainEngine が生成前に決めている(次の起動から効く項目)
+		m_isRecordUsedAssets = m_pEngine && m_pEngine->GetBuildConfig().isRecordUsedAssets;
 	}
 
 	void SceneManager::RecordUsedAsset(const Core::GUID& a_guid)

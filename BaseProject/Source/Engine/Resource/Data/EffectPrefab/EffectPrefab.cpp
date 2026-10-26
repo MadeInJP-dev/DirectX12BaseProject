@@ -44,7 +44,7 @@ namespace Engine::Resource
 		auto _dir = Core::File::GetDirFromPath(a_filePath);
 		auto _fileName = Core::File::GetFileNameWithoutExtension(a_filePath);
 
-		// 形式はビルドモード任せ(Development までは .oj があればそちらを読む)
+		// 形式は起動設定任せ(JSON を読む設定なら .oj があればそちらを読む)
 		Persistence::Archive _arch(Persistence::Archive::EMode::Load, _dir, _fileName, FILE_EXT);
 		Archive(_arch, a_pWorld);
 	}

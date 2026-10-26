@@ -31,7 +31,8 @@ namespace Engine::Resource
 
 	void AssetDatabase::Init(
 		const std::string& a_assetFilePath,
-		const std::string& a_metafileExtension
+		const std::string& a_metafileExtension,
+		bool a_isWatch
 	)
 	{
 		// 初期化
@@ -39,6 +40,9 @@ namespace Engine::Resource
 		m_metafileExtension = a_metafileExtension;
 
 		m_dirHandle = INVALID_HANDLE_VALUE;
+
+		// 監視しないときはスレッドも立てない(Update は変更が届かないので何もしない)
+		if (!a_isWatch) return;
 
 		// ディレクトリ以下の更新検知用にハンドルを作成
 		m_dirHandle = CreateFileW(

@@ -203,7 +203,7 @@ RTTI : `dynamic_cast` / `typeid` の**実使用は 0**(コメント内の言及�
 | 優先度 | ファイル | 行 | 現在 | 問題 | 修正案 |
 | --- | --- | -: | --- | --- | --- |
 | High | Engine/MainEngine.cpp | 73–84 | Debug モードで `EnableDebugLayer()` のみ | ルール 6.1 の **GPU Validation が無効** | `ID3D12Debug1::SetEnableGPUBasedValidation(TRUE)`。ただし DXR/バインドレス込みで大幅に遅くなるため、DebugOptions のフラグで切り替えを推奨 |
-| High | BaseProject.vcxproj | – | VS の構成は Debug / Release のみ。Debug/Development/Shipping は **実行時に JSON(BuildConfig)で切り替え** | Editor・デバッグ機能がどの構成でもコンパイルに含まれる。Shipping の「すべて除外」を実現できない構造 | Shipping 着手時に VS 構成(またはプリプロセッサ定義)を追加 |
+| High | BaseProject.vcxproj | – | VS の構成は Debug / Release のみ。Debug/Development/Shipping は **実行時に JSON(BuildConfig)で切り替え** | Editor・デバッグ機能がどの構成でもコンパイルに含まれる。Shipping の「すべて除外」を実現できない構造 | Shipping 着手時に VS 構成(またはプリプロセッサ定義)を追加 → 2026-10-26 ビルドモード自体を廃止し、起動設定の項目に置き換えた(CodingStandards 6章) |
 
 ---
 

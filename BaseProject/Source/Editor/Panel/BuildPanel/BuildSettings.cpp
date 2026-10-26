@@ -13,6 +13,11 @@ namespace Editor::Build
 		// 実行フォルダへ入れる Data は BuildSettings::dataDirectoryVec だけなので、ここは入らない
 		const std::filesystem::path SETTINGS_PATH = "Asset/Data/Editor/BuildSettings.ojbuild";
 
+		// 実行フォルダへ書く起動設定の項目をまとめるキー
+		constexpr const char* BUILD_CONFIG_KEY = "executeBuildConfig";
+		// 廃止したビルドモード(古い設定から読むだけ)
+		constexpr const char* LEGACY_BUILD_MODE_KEY = "executeBuildMode";
+
 		// 書いてあれば読む。無い・型が違う項目は今の値(既定値)のまま
 		template<typename T>
 		void ReadValue(const nlohmann::json& a_json, const char* a_key, T& a_value)
@@ -58,7 +63,7 @@ namespace Editor::Build
 			a_func("exeName", a_settings.exeName);
 			a_func("isCopyDll", a_settings.isCopyDll);
 			a_func("extraFiles", a_settings.extraFileVec);
-			a_func("executeBuildMode", a_settings.executeBuildMode);
+			a_func("isOverrideBuildConfig", a_settings.isOverrideBuildConfig);
 
 			a_func("isConvertBeforeBuild", a_settings.isConvertBeforeBuild);
 			a_func("isIncludeRecordedAssets", a_settings.isIncludeRecordedAssets);
@@ -90,6 +95,27 @@ namespace Editor::Build
 
 		ForEachBuildSettingsField(a_outSettings,
 			[&_json](const char* a_key, auto& a_value) { ReadValue(_json, a_key, a_value); });
+
+		// 古い設定 : 起動設定をビルドモード(-1=そのまま / 0=Debug / 1=Development / 2=Shipping)で持っていた
+		auto& _config = a_outSettings.executeBuildConfig;
+		if (const auto _it = _json.find(LEGACY_BUILD_MODE_KEY); _it != _json.end() && _it->is_number_integer())
+		{
+			const int _mode = _it->get<int>();
+			a_outSettings.isOverrideBuildConfig = (_mode >= 0);
+			if (_mode >= 0 && _mode < static_cast<int>(Engine::Option::ProjectOptions::EBuildPreset::Count))
+			{
+				_config.ApplyPreset(static_cast<Engine::Option::ProjectOptions::EBuildPreset>(_mode));
+			}
+		}
+
+		// 起動設定の各項目(キーは EngineData と同じ)
+		if (const auto _it = _json.find(BUILD_CONFIG_KEY); _it != _json.end() && _it->is_object())
+		{
+			for (const auto& _item : Engine::Option::ProjectOptions::GetBuildConfigItems())
+			{
+				ReadValue(*_it, _item.key, _config.*_item.pValue);
+			}
+		}
 		return true;
 	}
 
@@ -98,6 +124,13 @@ namespace Editor::Build
 		nlohmann::json _json = nlohmann::json::object();
 		ForEachBuildSettingsField(a_settings,
 			[&_json](const char* a_key, const auto& a_value) { _json[a_key] = a_value; });
+
+		auto& _configJson = _json[BUILD_CONFIG_KEY];
+		_configJson = nlohmann::json::object();
+		for (const auto& _item : Engine::Option::ProjectOptions::GetBuildConfigItems())
+		{
+			_configJson[_item.key] = a_settings.executeBuildConfig.*_item.pValue;
+		}
 
 		std::error_code _ec;
 		std::filesystem::create_directories(SETTINGS_PATH.parent_path(), _ec);

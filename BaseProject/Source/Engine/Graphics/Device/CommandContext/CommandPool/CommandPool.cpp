@@ -245,7 +245,7 @@ namespace Engine::Graphics
 		auto _it = m_trackingMap.find(a_pList);
 		if (_it == m_trackingMap.end())
 		{
-			// Shipping では ENGINE_ERRLOG が消えるので、end() を触らないよう必ず抜ける
+			// ログを切ったビルド(ENABLE_RELEASE_LOG 無し)では ENGINE_ERRLOG が消えるので、end() を触らないよう必ず抜ける
 			ENGINE_ERRLOG(false, "ExecuteImmediate : 未知のコマンドリストが渡されました");
 			return;
 		}

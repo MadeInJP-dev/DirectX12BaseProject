@@ -565,7 +565,7 @@ Engine::MainEngine::Instance().SetDevTool(_upEditor.get());
 ```
 
 エディター(開発ツール)は `Engine::DevTool::IDevTool` を通してだけ呼ぶ。差し込まれていなければ nullptr なので、
-呼ぶ側は必ず確かめる(Shipping ではエディター無しで動かすため)。
+呼ぶ側は必ず確かめる(エディターを差し込まない組み立てでも動くようにするため)。
 
 ### 編集UIの窓口(EditorField)
 
@@ -624,27 +624,26 @@ Context
 
 # 6. Build Configuration
 
-## 6.1 DebugMode
+ビルドで変わるものは、コンパイルで決まるものと、起動時に読む設定で決まるものの2つに分ける。
+以前のビルドモード(Debug / Development / Shipping)は廃止した(何が変わるかがコードの中にしか無く、書いてあることと食い違っていたため)。
 
-* デバッグ機能を最大限有効化する。
-* DirectX 12 Debug Layer を有効化する。
-* GPU Validation を有効化する。
-* 重いモデル・テクスチャ等を除き、可能なものは JSON から読み込む。
+## 6.1 VS の構成(コンパイルで決まるもの)
 
-## 6.2 Development
+* `Debug` / `Release` の2つ。最適化・`_DEBUG`・リンクするライブラリ(`Library/Lib/Debug|Release`)が変わる。
+* ログ(`ENGINE_LOG` など)は `ENABLE_RELEASE_LOG` があればどちらでも出る(`Core/Debug/DebugLog.h`)。
+* エディターはどちらにも入る(`main.cpp` が差し込む)。使えるかどうかは下の起動設定で決める。
 
-* Editor を有効化する。
-* Profiler 等の開発ツールを有効化する。
-* 重いモデル・テクスチャ等を除き、可能なものは JSON から読み込む。
+## 6.2 起動設定(BuildConfig)
 
-## 6.3 Shipping
-
-※ 現在未実装。
-
-* リリース用 Build とする。
-* すべてのデバッグ機能を除外する。
-* Editor 機能を除外する。
-* すべてのリソースをバイナリ形式で読み込む。
+* エンジン設定(`Asset/Data/Engine/EngineData.ojoptn`)の `BuildConfig` に、機能ごとの真偽値で持つ。
+* **項目・何をするか・いつ効くか(すぐ / 次に読み込むものから / 次の起動から)・各プリセットでの値は、
+  `Source/Engine/Option/ProjectOptions/BuildConfig.cpp` の一覧(`GetBuildConfigItems`)が正本。**
+  オプション画面・保存・プリセット・ビルドパネルはすべてここから引く。ここに説明を写さない。
+* 使う側は `MainEngine::GetBuildConfig()`(今効いている値)を見る。次の起動から効く項目は起動時の値のまま変わらない。
+  `OptionManager::GetBuildConfig()` はオプション画面で直した値で、まだ効いていないことがある。
+* 項目を足すときは、一覧に1行足して使う側で `GetBuildConfig()` を引く。ビルドモードのような「まとめた値」で分岐しない。
+* プリセット(デバッグ / 開発 / 提出)は各項目に値を入れるボタンで、正本ではない。
+  提出用パッケージの EngineData はビルドパネルが「提出」の組み合わせで書き換える。
 
 ---
 

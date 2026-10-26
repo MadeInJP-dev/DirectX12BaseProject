@@ -29,9 +29,11 @@ namespace Engine::Resource
 		//-----------------------------------------------------------------------------------------------------
 
 		// アセットの上位フォルダと作成拡張子指定
+		// a_isWatch : 起動中のファイルの出し入れを監視するか(しなければ起動時のものだけ)
 		void Init(
 			const std::string& a_assetFilePath,
-			const std::string& a_metafileExtension
+			const std::string& a_metafileExtension,
+			bool a_isWatch = true
 		);
 		// 解放処理
 		void Release();

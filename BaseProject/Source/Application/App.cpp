@@ -165,6 +165,9 @@ namespace App
 		// ゲームからでもデバッグプレイからでも、行き先はエディター
 		const bool _isPlaying = (_engine.GetMode() != Engine::EAppMode::Editor);
 
+		// 起動設定でエディターを切っているときは入らない(エディターからゲームへ戻るのは止めない)
+		if (_isPlaying && !_engine.GetBuildConfig().isEditorEnabled) return;
+
 		_engine.ChangeMode(_isPlaying ? Engine::EAppMode::Editor : Engine::EAppMode::Game);
 	}
 

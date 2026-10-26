@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Editor/EditorCommon.h"
+#include "Engine/Option/ProjectOptions/BuildConfig.h"
 
 namespace Editor::Build
 {
@@ -54,8 +55,14 @@ namespace Editor::Build
 		bool isCopyDll = true;					// exe と同じフォルダの .dll も置く
 		std::vector<std::string> extraFileVec = {};	// 実行フォルダへそのまま置くもの(説明書.pdf など)
 
-		// 実行フォルダの EngineData に書くビルドモード(EBuildConfiguration の値)。-1 ならそのまま
-		int executeBuildMode = static_cast<int>(EBuildConfiguration::Shipping);
+		// 実行フォルダの EngineData の起動設定を書き換えるか。書き換えるときは executeBuildConfig の項目を書く
+		bool isOverrideBuildConfig = true;
+		Engine::Option::ProjectOptions::BuildConfig executeBuildConfig = []()
+			{
+				Engine::Option::ProjectOptions::BuildConfig _config = {};
+				_config.ApplyPreset(Engine::Option::ProjectOptions::EBuildPreset::Submission);
+				return _config;
+			}();
 
 		//-------------------------------------------------------------------------------------------
 		// 実行フォルダのアセット : バイナリ(.ob* / .dds / .cso など)と .assetmeta だけを置く

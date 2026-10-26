@@ -14,7 +14,7 @@ namespace App::InstanceResource
 	// デバッグキー(Development まで)の命令への入口を置くワールドリソース。
 	//
 	// 命令の実体(DebugCommands)は GameManager の DebugKeys が持つ。ここに置くのは借りたポインタと、
-	// このワールドだけで使う「倒す予約」。Shipping ではワールドの作り手がこれを置かない。
+	// このワールドだけで使う「倒す予約」。デバッグキーを切っているとワールドの作り手がこれを置かない。
 	//
 	// 倒す予約を別に持っているのは、死亡を積む時刻の都合。
 	// ウェーブを飛ばす SceneSequence はオブジェクトなのでシステムの後に更新されるが、
@@ -34,7 +34,7 @@ namespace App::InstanceResource
 		/// ワールドから入口を引く。置かれていなければ nullptr
 		/// </summary>
 		/// <remarks>
-		/// Shipping のワールドと、作り手を通らずに作られたワールド(エディターの確認用など)には無い
+		/// デバッグキーを切っているときのワールドと、作り手を通らずに作られたワールド(エディターの確認用など)には無い
 		/// </remarks>
 		static DebugCommandResource* Find(Engine::ECS::World* a_pWorld)
 		{

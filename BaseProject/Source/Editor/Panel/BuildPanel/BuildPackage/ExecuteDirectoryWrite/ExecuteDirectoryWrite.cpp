@@ -21,10 +21,11 @@ namespace Editor::Build
 		// メタファイルの拡張子(MainEngine::InitializeAssetDatabase で決めているもの)
 		constexpr const char* META_EXTENSION = ".assetmeta";
 
-		// エンジン設定のファイル名と、ビルドモードの保存キー(OptionManager / BuildConfig::Archive)
+		// エンジン設定のファイル名と、起動設定のグループ名(OptionManager / BuildConfig::GetName)
 		constexpr const char* ENGINE_DATA_FILE_NAME = "EngineData.ojoptn";
 		constexpr const char* BUILD_CONFIG_GROUP = "BuildConfig";
-		constexpr const char* BUILD_MODE_KEY = "buildMode";
+		// 廃止したビルドモードのキー : 残っていると古い設定として読まれるので消す
+		constexpr const char* LEGACY_BUILD_MODE_KEY = "buildMode";
 
 		// 保存は JSON とバイナリを続けて書くので、書いた順のぶんだけ JSON が新しく見えることがある
 		constexpr auto SAVE_TOLERANCE = std::chrono::seconds(2);
@@ -213,8 +214,8 @@ namespace Editor::Build
 				const bool _isBinary = StartsWith(_ext, ".ob");
 				if (!_isBinary && !ContainsIgnoreCase(_settings.jsonKeepExtensionVec, _ext)) continue;
 
-				// エンジン設定はビルドモードを書き換えて置く
-				if (_settings.executeBuildMode >= 0 && _path.filename() == ENGINE_DATA_FILE_NAME)
+				// エンジン設定は起動設定を書き換えて置く
+				if (_settings.isOverrideBuildConfig && _path.filename() == ENGINE_DATA_FILE_NAME)
 				{
 					WriteEngineData(a_context, _path, a_plan);
 					continue;
@@ -323,12 +324,18 @@ namespace Editor::Build
 
 		if (!_json.is_object())
 		{
-			a_plan.AddWarning("エンジン設定が読めないので、ビルドモードを書き換えずに置きます : " + Core::File::ToUTF8(a_src));
+			a_plan.AddWarning("エンジン設定が読めないので、起動設定を書き換えずに置きます : " + Core::File::ToUTF8(a_src));
 			a_plan.AddCopyFile(a_src, _dst);
 			return;
 		}
 
-		_json[BUILD_CONFIG_GROUP][BUILD_MODE_KEY] = a_context.pSettings->executeBuildMode;
+		// 項目とキーは起動設定の一覧(GetBuildConfigItems)から引く
+		auto& _group = _json[BUILD_CONFIG_GROUP];
+		_group.erase(LEGACY_BUILD_MODE_KEY);
+		for (const auto& _item : Engine::Option::ProjectOptions::GetBuildConfigItems())
+		{
+			_group[_item.key] = a_context.pSettings->executeBuildConfig.*_item.pValue;
+		}
 		a_plan.AddWriteText(_dst, _json.dump(4));
 	}
 }

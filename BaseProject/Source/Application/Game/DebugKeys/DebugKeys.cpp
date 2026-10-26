@@ -94,7 +94,7 @@ namespace App::Game
 
 	bool DebugKeys::IsEnabled()
 	{
-		return Engine::MainEngine::Instance().GetBuildMode() != Engine::EBuildConfiguration::Shipping;
+		return Engine::MainEngine::Instance().GetBuildConfig().isDebugKeys;
 	}
 
 	bool DebugKeys::IsReservedKey(int a_keyCode)

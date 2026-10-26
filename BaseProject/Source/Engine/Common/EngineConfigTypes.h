@@ -26,13 +26,8 @@ namespace Engine
 	inline constexpr UINT BACKBUFFER_COUNT = 3;	// バックバッファ数
 	inline constexpr UINT CPU_FRAME_COUNT = 3;	// CPUカウント数
 
-	// ビルド構成
-	enum class EBuildConfiguration : UINT
-	{
-		Debug,			// 最適化なし、デバッグ機能フル稼働
-		Development,	// 最適化あり、エディター、プロファイラーなどの開発ツール有効
-		Shipping		// リリース用、デバッグ機能、エディタ機能はすべて除外
-	};
+	// ※ 以前のビルド構成(EBuildConfiguration)は廃止した。
+	//    実行時に切り替える機能は起動設定(Option/ProjectOptions/BuildConfig)の項目で持つ
 
 	// アプリケーションモード
 	enum class EAppMode : UINT

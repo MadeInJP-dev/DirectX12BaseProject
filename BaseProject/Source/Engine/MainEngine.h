@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "Engine/Option/ProjectOptions/BuildConfig.h"
+
 namespace Engine::DevTool
 {
 	class IDevTool;
@@ -190,8 +192,14 @@ namespace Engine
 		//----------------------------------------------------------------------------
 		ECS::ComponentMetaRegistry* RefComponentRegistry() { return m_upComponentRegistry.get(); }
 
-		// コンフィグ取得
-		EBuildConfiguration GetBuildMode() const { return m_buildMode; }
+		//----------------------------------------------------------------------------
+		// 起動設定(今効いている値)
+		//
+		// 次の起動から効く項目は起動したときの値のまま、すぐ効く項目は
+		// オプション画面で直した値が毎フレーム写される。使う側は時期を気にせずここを見る。
+		// オプション画面で直した値そのものは OptionManager::GetBuildConfig()
+		//----------------------------------------------------------------------------
+		const Option::ProjectOptions::BuildConfig& GetBuildConfig() const { return m_buildConfig; }
 
 		// ============================================================================
 		// 遅延開放処理
@@ -204,6 +212,9 @@ namespace Engine
 		// アセットマネージャーの初期化
 		void InitializeAssetDatabase();
 
+		// 起動設定をログへ出す(どの項目が効いているか)
+		void LogBuildConfig() const;
+
 		// アプリ寿命のサービス一式を組む : 載せる実体が揃ってから呼ぶ
 		void BuildEngineServices();
 
@@ -215,7 +226,7 @@ namespace Engine
 		// 後ろのメンバ(オーディオのサウンドインスタンス・シーンなど)が持つ ResourceRef は、破棄のときに参照を返しに来る
 		std::unique_ptr<Resource::ResourceManager> m_upResourceManager = nullptr;		// リソース(とアセットデータベース)の持ち主
 
-		// エンジン設定 : 何よりも先に読む(ビルドモードやウィンドウの大きさがここで決まる)
+		// エンジン設定 : 何よりも先に読む(起動設定やウィンドウの大きさがここで決まる)
 		std::unique_ptr<Option::OptionManager> m_upOptionManager = nullptr;
 
 		// 入力 : ウィンドウのフォーカス通知を受けるので、ウィンドウより前に作る
@@ -250,7 +261,7 @@ namespace Engine
 
 		// 終了の予約(ReserveQuit)。次のフレームの頭でメインループを抜ける
 		bool m_isQuitReserved = false;
-		EBuildConfiguration m_buildMode = EBuildConfiguration::Debug;		// ビルドモード
+		Option::ProjectOptions::BuildConfig m_buildConfig = {};			// 起動設定(今効いている値)
 
 		// フレーム分のごみ箱を用意する。
 		// 積むのはメインスレッドとは限らない(ワーカーでビルド中のリソースが壊れたときなど)ので、

@@ -2403,6 +2403,9 @@
     <ClCompile Include="Source\Engine\Scene\ScenePhysics\ScenePhysics.cpp">
       <Filter>Source\Engine\Scene\ScenePhysics</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Option\ProjectOptions\BuildConfig.cpp">
+      <Filter>Source\Engine\Option\ProjectOptions</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Option\ProjectOptions\CursorOption.cpp">
       <Filter>Source\Engine\Option\ProjectOptions</Filter>
     </ClCompile>

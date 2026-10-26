@@ -25,9 +25,6 @@ namespace Editor
 		// 結果に並べる注意の上限(多いと表示が重い。全部はログへ出す)
 		constexpr size_t MAX_REPORT_LINES = 500;
 
-		// 実行フォルダの EngineData に書くビルドモードの選択肢(-1 はそのまま)
-		constexpr std::array<const char*, 4> BUILD_MODE_LABELS = { "そのまま", "Debug", "Development", "Shipping" };
-
 		// 大きさを読みやすく
 		std::string FormatBytes(uintmax_t a_bytes)
 		{
@@ -330,6 +327,51 @@ namespace Editor
 		}
 	}
 
+	//======================================================================================
+	// 実行フォルダの起動設定
+	//--------------------------------------------------------------------------------------
+	// 項目・説明・プリセットの値は起動設定の一覧(GetBuildConfigItems)から引く。
+	// 書き出したパッケージは次に起動したときに読むので、反映の時期は出さない
+	//======================================================================================
+	bool BuildPanel::DrawExecuteBuildConfig()
+	{
+		namespace ProjectOptions = Engine::Option::ProjectOptions;
+
+		bool _isChanged = ImGui::Checkbox("EngineData の起動設定を書き換える", &m_settings.isOverrideBuildConfig);
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("OFF なら開発中の EngineData の起動設定をそのまま置く");
+		if (!m_settings.isOverrideBuildConfig) return _isChanged;
+
+		auto& _config = m_settings.executeBuildConfig;
+		ImGui::Indent();
+
+		ImGui::TextUnformatted("プリセット");
+		for (size_t _index = 0; _index < static_cast<size_t>(ProjectOptions::EBuildPreset::Count); ++_index)
+		{
+			const auto _preset = static_cast<ProjectOptions::EBuildPreset>(_index);
+			ImGui::SameLine();
+			if (ImGui::Button(ProjectOptions::GetBuildPresetName(_preset)))
+			{
+				_config.ApplyPreset(_preset);
+				_isChanged = true;
+			}
+		}
+		const auto _matchPreset = _config.FindMatchingPreset();
+		ImGui::TextDisabled("今の組み合わせ : %s", _matchPreset ? ProjectOptions::GetBuildPresetName(*_matchPreset) : "どのプリセットとも違う");
+
+		for (const auto& _item : ProjectOptions::GetBuildConfigItems())
+		{
+			_isChanged |= ImGui::Checkbox(_item.label, &(_config.*_item.pValue));
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", _item.description);
+		}
+
+		// 提出用で残っていると困るもの
+		if (_config.isEditorEnabled) ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.3f, 1.0f), "受け取った人がエディターへ切り替えられます");
+		if (_config.isLoadJsonData) ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.3f, 1.0f), "実行フォルダに JSON は置かないので、JSON を優先して読む意味はありません");
+
+		ImGui::Unindent();
+		return _isChanged;
+	}
+
 	bool BuildPanel::DrawSettings(EditorContext& a_editContext)
 	{
 		bool _isChanged = false;
@@ -373,15 +415,7 @@ namespace Editor
 			_isChanged |= ImGui::Checkbox("exe と同じフォルダの dll も置く", &_settings.isCopyDll);
 			_isChanged |= DrawStringList("一緒に置くファイル(説明書など)", _settings.extraFileVec);
 
-			// -1(そのまま)が先頭なので 1 ずらして選ぶ
-			int _modeIndex = std::clamp(_settings.executeBuildMode + 1, 0, static_cast<int>(BUILD_MODE_LABELS.size()) - 1);
-			ImGui::TextUnformatted("EngineData のビルドモード");
-			ImGui::SetNextItemWidth(-FLT_MIN);
-			if (ImGui::Combo("##BuildMode", &_modeIndex, BUILD_MODE_LABELS.data(), static_cast<int>(BUILD_MODE_LABELS.size())))
-			{
-				_settings.executeBuildMode = _modeIndex - 1;
-				_isChanged = true;
-			}
+			_isChanged |= DrawExecuteBuildConfig();
 			ImGui::Unindent();
 		}
 

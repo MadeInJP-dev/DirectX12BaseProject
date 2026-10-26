@@ -21,7 +21,7 @@ namespace App::Game
 	/// 発表・確認用のデバッグキー(F1〜F7)
 	/// </summary>
 	/// <remarks>
-	/// Shipping 以外(Debug / Development)のときだけ GameManager が作る。
+	/// 起動設定の isDebugKeys が ON のときだけ GameManager が作る。
 	///
 	///   F1        プレイヤーの無敵を切り替え
 	///   F2        出ている敵を倒して次のウェーブへ(Shift+F2 で最後のウェーブ = ボスへ)
@@ -50,14 +50,14 @@ namespace App::Game
 		NON_COPYABLE_NON_MOVABLE(DebugKeys);
 
 		/// <summary>
-		/// デバッグキーを使えるビルドか(Shipping では使えない)
+		/// デバッグキーを使えるか(起動設定の isDebugKeys。次の起動から効く)
 		/// </summary>
 		static bool IsEnabled();
 
 		/// <summary>
 		/// デバッグキーが使っているキーか : 操作の割り当ての候補から外す
 		/// </summary>
-		/// <remarks>Shipping では何も使っていないので常に false</remarks>
+		/// <remarks>デバッグキーを切っているときは何も使っていないので常に false</remarks>
 		static bool IsReservedKey(int a_keyCode);
 
 		// 初期化 : キーをデバイスへ積み、エディターの窓を登録する

@@ -59,7 +59,7 @@ namespace Engine::Persistence
 			else if (a_format == EArchiveFormat::Binary) _loadBin = true;
 			else
 			{
-				// Auto : ビルドモードで決める(下の ShouldLoadJson を参照)
+				// Auto : 起動設定で決める(下の ShouldLoadJson を参照)
 				_loadJson = ShouldLoadJson(a_ext);
 				_loadBin  = !_loadJson;
 			}
@@ -94,8 +94,8 @@ namespace Engine::Persistence
 	//======================================================================================
 	// Auto のときの読み込み形式
 	//
-	// ・Shipping        : 必ずバイナリ(.ob)。JSON は開発中の編集用なので製品には持ち込まない。
-	// ・Debug/Development : .oj があればそちらを優先する。
+	// ・起動設定の「開発用の JSON を優先して読む」が OFF : 必ずバイナリ(.ob)。提出用に JSON は持ち込まない。
+	// ・ON : .oj があればそちらを優先する。
 	//
 	// JSON を優先するのは、バイナリが「フィールドを書いた順にそのまま並べるだけ」の
 	// 形式で、キーを持たないため。コンポーネントやアセットにフィールドを1つ足すと
@@ -116,8 +116,8 @@ namespace Engine::Persistence
 
 	bool Archive::ShouldLoadJson(const std::string& a_ext) const
 	{
-		// 製品ビルドはバイナリのみ
-		if (MainEngine::Instance().GetBuildMode() == EBuildConfiguration::Shipping) return false;
+		// 提出用(JSON を読まない設定)はバイナリのみ
+		if (!MainEngine::Instance().GetBuildConfig().isLoadJsonData) return false;
 
 		// 重いデータはモードによらずバイナリ
 		if (IsHeavyDataExtension(a_ext)) return false;

@@ -114,7 +114,7 @@ namespace Engine::Resource
 	{
 		Release();
 
-		// 形式はビルドモード任せ(Auto)。Development までは .ojstet 優先、Shipping は .obstet のみ
+		// 形式は起動設定任せ(Auto)。JSON を読む設定なら .ojstet 優先、読まない設定(提出用)は .obstet のみ
 		Persistence::Archive _arch(
 			Persistence::Archive::EMode::Load, a_fileDir, a_fileName, "stet");
 

@@ -121,10 +121,10 @@ namespace App::Game
 		// ゲーム中に自前で描くマウスカーソル
 		std::unique_ptr<MouseCursor> m_upMouseCursor;
 
-		// 画面の右上の FPS の表示(設定画面で出し入れする。Shipping でも作る)
+		// 画面の右上の FPS の表示(設定画面で出し入れする。デバッグキーを切っていても作る)
 		std::unique_ptr<FPSDisplay> m_upFPSDisplay;
 
-		// 発表・確認用のデバッグキー(F1〜F7)。Shipping では作らない
+		// 発表・確認用のデバッグキー(F1〜F7)。起動設定で切っていれば作らない
 		std::unique_ptr<DebugKeys> m_upDebugKeys;
 
 		// エンジン(借り物)

@@ -66,39 +66,23 @@ namespace Engine
 
 		// 設定を保存
 		m_appMode = EAppMode::Game;
-		m_buildMode = _optionManager.GetBuildConfig().buildMode;
+		// 起動設定 : 次の起動から効く項目はここで決まり、終わるまで変わらない
+		m_buildConfig = _optionManager.GetBuildConfig();
+		LogBuildConfig();
 
 		// インプット初期化
 		m_upInputManager = std::make_unique<Input::InputManager>();
 		m_upInputManager->Init(&_optionManager.GetInputOption());
-		bool _isD3DDebug = false;
-		// ビルドモードによって、仕様を変更
-		switch (m_buildMode)
-		{
-		case EBuildConfiguration::Debug:
+
+		// D3D のデバッグレイヤーはデバイスを作る前に有効にする
+		const bool _isD3DDebug = m_buildConfig.isD3DDebugLayer;
+		if (_isD3DDebug)
 		{
 			ComPtr<ID3D12Debug> _debug;
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&_debug))))
 			{
 				_debug->EnableDebugLayer();
 			}
-			// D3DデバッグON
-			_isD3DDebug = true;
-			ENGINE_LOG("[Option] : Debug モードでビルドされます");
-			break;
-		}
-		case EBuildConfiguration::Development:
-		{
-			ENGINE_LOG("[Option] : Development モードでビルドされます");
-			break;
-		}
-		case EBuildConfiguration::Shipping:
-		{
-			ENGINE_LOG("[Option] : Shipping モードでビルドされます");
-			break;
-		}
-		default:
-			break;
 		}
 
 		// ウィンドウクラスの生成
@@ -314,32 +298,17 @@ namespace Engine
 		m_upTimeManager->Release();
 		m_upWindow->Release();
 
-		// ビルドモードによって、仕様を変更
-		switch (m_buildMode)
+		// D3D のデバッグレイヤーがあるときは、解放し忘れを報告する(一番最後に呼ぶ)
+		if (m_buildConfig.isD3DDebugLayer)
 		{
-		case EBuildConfiguration::Debug:
-		{
-			// 解放時にエラー検出（一番最後に呼ぶ）
-			ComPtr<IDXGIDebug1> debug;
-			if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug))))
+			ComPtr<IDXGIDebug1> _debug;
+			if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&_debug))))
 			{
-				debug->ReportLiveObjects(
+				_debug->ReportLiveObjects(
 					DXGI_DEBUG_ALL,
 					DXGI_DEBUG_RLO_DETAIL
 				);
 			}
-			break;
-		}
-		case EBuildConfiguration::Development:
-		{
-			break;
-		}
-		case EBuildConfiguration::Shipping:
-		{
-			break;
-		}
-		default:
-			break;
 		}
 	}
 
@@ -385,6 +354,9 @@ namespace Engine
 		m_upGraphicsEngine->RefParticleManager()->BeginFrame(m_upTimeManager->GetDeltaTime());	// パーティクルデータの更新
 
 		m_upResourceManager->RefAssetDatabase().Update();
+
+		// 起動設定のうち、すぐ効く項目へオプション画面の直しを写す
+		m_buildConfig.ApplyLiveValues(_optionManager.GetBuildConfig());
 
 		return true;
 	}
@@ -627,14 +599,26 @@ namespace Engine
 		std::lock_guard<std::mutex> _lock(m_releaseQueueMutex);
 		m_releaseQueues[_frameIdx].push_back(std::move(a_releaseFunc));
 	}
+	void MainEngine::LogBuildConfig() const
+	{
+		const auto _preset = m_buildConfig.FindMatchingPreset();
+		ENGINE_LOG("[Option] 起動設定 : %s", _preset ? Option::ProjectOptions::GetBuildPresetName(*_preset) : "プリセットと違う組み合わせ");
+
+		for (const auto& _item : Option::ProjectOptions::GetBuildConfigItems())
+		{
+			ENGINE_LOG("[Option]   %s : %s", _item.label, (m_buildConfig.*_item.pValue) ? "ON" : "OFF");
+		}
+	}
+
 	void MainEngine::InitializeAssetDatabase()
 	{
 		// 持ち主はリソースマネージャー
 		auto& _assetDB = m_upResourceManager->RefAssetDatabase();
 
 		_assetDB.Init(
-			"Asset/",			// クロールフォルダ指定
-			".assetmeta"		// 作成拡張子
+			"Asset/",							// クロールフォルダ指定
+			".assetmeta",						// 作成拡張子
+			m_buildConfig.isWatchAssetFolder	// 起動中の変更を監視するか
 		);
 		
 		// ---- 対応する拡張子を登録 ----		

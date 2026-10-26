@@ -1,7 +1,12 @@
 {
     "BuildConfig": {
         "assetRootPath": "Asset/",
-        "buildMode": 1,
+        "isD3DDebugLayer": false,
+        "isDebugKeys": true,
+        "isEditorEnabled": true,
+        "isLoadJsonData": true,
+        "isRecordUsedAssets": true,
+        "isWatchAssetFolder": true,
         "maxThreadCount": 30
     },
     "CursorOption": {
