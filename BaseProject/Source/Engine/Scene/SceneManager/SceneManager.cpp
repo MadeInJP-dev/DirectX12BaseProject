@@ -12,6 +12,7 @@
 #include "../../Audio/AudioManager.h"
 #include "../../ECS/System/SystemContext.h"	// EngineServices
 #include "../../Graphics/Frame/DrawSubmitter/DrawSubmitter.h"
+#include "../../Graphics/Particle/ParticleBufferManager.h"
 #include "../../Resource/Data/Texture/IO/TextureIO.h"
 
 #include "Engine/DevTool/IDevTool.h"
@@ -63,6 +64,9 @@ namespace Engine::Scene
 			m_upLoadingScreen.reset();
 		}
 		m_loadingTime = 0.0f;
+		m_loadingScreenState = ELoadingScreenState::Hidden;
+		m_loadingScreenVeil = 1.0f;
+		m_backdropBlur = 0.0f;
 
 		// 消えたシーンのテクスチャを指したままにせず、平行光の席も返す
 		ApplySceneAmbient();
@@ -77,6 +81,10 @@ namespace Engine::Scene
 	//======================================================================================
 	namespace
 	{
+		// 染める色を積む深さ : シーンの UI より上。ロード画面の上へ重ねる色はさらに上
+		constexpr float FADE_Z_LAYER = 50000.0f;
+		constexpr float LOADING_VEIL_Z_LAYER = 50001.0f;
+
 		// 開発ツールが確認用シーン(エフェクトの確認など)を回しているなら、その窓口を返す
 		DevTool::IDevTool* RefActiveScenePreview(MainEngine& a_engine)
 		{
@@ -135,10 +143,26 @@ namespace Engine::Scene
 		// 読み込みが続いている時間 : ロード画面を出すかの判定に使う
 		m_loadingTime = _isLoading ? (m_loadingTime + a_dt) : 0.0f;
 
-		// ロード画面の更新(バーの値はロード画面の進行役が GetLoadProgress から引く)
+		// ロード画面の出し入れ
+		UpdateLoadingScreen(a_dt, _isLoading);
+
+		// 重ねたシーンの後ろのぼかし
+		UpdateBackdropBlur(a_dt);
+
+		// 下のシーンを止めている間(一番上だけ更新して重ねている)は粒子の時間も止める。
+		// 粒子はワールドと別に進むので、止めないと止まった画の中で粒だけ動いて消えてしまう
+		if (auto* _pGE = m_pEngine->RefGraphicsEngine())
+		{
+			_pGE->RefParticleManager()->SetTimeFrozen(m_isUpdateTopSceneOnly && m_upBaseSceneVec.size() >= 2);
+		}
+
+		// ロード画面の更新(バーの値はロード画面の進行役が GetLoadProgress から引く)。
+		// 出ている間はスタックのシーンを止める : 読み込みが済んだ行き先が裏で動き出さないように。
+		// (UI の並びは全シーン共通なので、裏で描くと行き先の UI がロード画面の上に混ざる)
 		if (IsLoadingScreenVisible())
 		{
 			m_upLoadingScreen->Update(a_dt);
+			return;
 		}
 
 		//==================================================================
@@ -197,11 +221,25 @@ namespace Engine::Scene
 			return;
 		}
 
-		// すべてのシーンを描画(読み込み中のシーンは BaseScene::Draw の中で弾く)
-		for (auto& _scene : m_upBaseSceneVec)
+		// すべてのシーンを描画(読み込み中のシーンは BaseScene::Draw の中で弾く)。
+		// ロード画面が出ている間は描かない(覆い隠しているうえ、更新も止めている)
+		const bool _isLoadingScreenVisible = IsLoadingScreenVisible();
+		if (!_isLoadingScreenVisible)
 		{
-			// 命令のスタック
-			_scene->Draw();
+			for (auto& _scene : m_upBaseSceneVec)
+			{
+				// 命令のスタック
+				_scene->Draw();
+			}
+
+			// 重ねたシーンの後ろのぼかし(今フレームだけ効く)
+			if (m_backdropBlur > 0.0f)
+			{
+				if (auto* _pGE = m_pEngine->RefGraphicsEngine())
+				{
+					_pGE->RefSceneView()->SetBackdropBlur(EaseFade(m_backdropBlur) * m_backdropBlurStrength, m_backdropBlurRadius);
+				}
+			}
 		}
 
 		// シーンの環境設定を流し込む。
@@ -214,16 +252,24 @@ namespace Engine::Scene
 		// フェードはシーンの上。ロード画面は染めた画面の上に出したいので、その手前で積む
 		SubmitFade();
 
-		// ロード画面は一番上に重ねる
-		if (IsLoadingScreenVisible())
+		// ロード画面は一番上に重ねる。出し入れの間は染めた色をさらに上へ重ねる
+		if (_isLoadingScreenVisible)
 		{
 			m_upLoadingScreen->Draw();
+			SubmitScreenColor(m_loadingScreenVeil, LOADING_VEIL_Z_LAYER);
 		}
 	}
 
 	//======================================================================================
 	// シーン遷移のフェード
 	//======================================================================================
+	float SceneManager::EaseFade(float a_t)
+	{
+		// 3次のなだらかな曲線(smoothstep)。比例で染めると、出だしと終わりで急に止まって見える
+		const float _t = std::clamp(a_t, 0.0f, 1.0f);
+		return _t * _t * (3.0f - 2.0f * _t);
+	}
+
 	void SceneManager::UpdateFade(float a_dt)
 	{
 		// 読み込みで長いフレームが出ても、染める時間が飛ばないように
@@ -242,15 +288,32 @@ namespace Engine::Scene
 			}
 			else
 			{
-				m_fadeAlpha = m_fadeTimer / m_fadeDuration;
+				m_fadeAlpha = EaseFade(m_fadeTimer / m_fadeDuration);
 			}
 			break;
 
 		case EFadeState::WaitReady:
 		{
+			// ロード画面が出ている間は、消えるまで染めたまま(消すときも染めた色へ落とす)
+			if (IsLoadingScreenVisible()) break;
+
 			// 行き先が動き出すまで染めたまま
 			const BaseScene* _pTop = RefCurrentTopScene();
-			if (!_pTop || !_pTop->IsReady()) break;
+			if (!_pTop || !_pTop->IsReady())
+			{
+				m_fadeWaitTime = 0.0f;
+				m_fadeStableFrameCount = 0;
+				break;
+			}
+
+			//------------------------------------------------------------------
+			// 動き出してすぐは重いフレームが続く(描画構成の組み立て・BLAS・初めて描くもの)。
+			// そのまま戻すと、上の時間の上限で戻りがコマ送りになり、暗い画面が長く残る。
+			// 染めたまま数フレーム落ち着くのを待ってから戻す(待ちすぎないよう上限あり)
+			//------------------------------------------------------------------
+			m_fadeWaitTime += a_dt;
+			m_fadeStableFrameCount = (a_dt <= FADE_STABLE_FRAME_SEC) ? (m_fadeStableFrameCount + 1) : 0;
+			if (m_fadeStableFrameCount < FADE_STABLE_FRAME_COUNT && m_fadeWaitTime < FADE_STABLE_TIMEOUT_SEC) break;
 
 			const SceneFadeSetting& _fadeIn = _pTop->GetConfig().GetFadeIn();
 			if (!_fadeIn.IsActive())
@@ -276,7 +339,7 @@ namespace Engine::Scene
 			}
 			else
 			{
-				m_fadeAlpha = 1.0f - m_fadeTimer / m_fadeDuration;
+				m_fadeAlpha = 1.0f - EaseFade(m_fadeTimer / m_fadeDuration);
 			}
 			break;
 
@@ -319,12 +382,21 @@ namespace Engine::Scene
 		if (!a_wasFadedOut && _pTop) m_fadeColor = _pTop->GetConfig().GetFadeColor();
 		m_fadeState = EFadeState::WaitReady;
 		m_fadeAlpha = 1.0f;
+		m_fadeWaitTime = 0.0f;
+		m_fadeStableFrameCount = 0;
 	}
 
 	void SceneManager::SubmitFade()
 	{
-		// ロード画面が出ている間は積まない(染めた色でロード画面を隠さない)
-		if (m_fadeAlpha <= 0.0f || IsLoadingScreenVisible()) return;
+		// ロード画面が出ている間は積まない(染めた色でロード画面を隠さない。出し入れの色は別に積む)
+		if (IsLoadingScreenVisible()) return;
+
+		SubmitScreenColor(m_fadeAlpha, FADE_Z_LAYER);
+	}
+
+	void SceneManager::SubmitScreenColor(float a_alpha, float a_zLayer)
+	{
+		if (a_alpha <= 0.0f) return;
 
 		auto* _pGE = m_pEngine->RefGraphicsEngine();
 		if (!_pGE) return;
@@ -344,9 +416,99 @@ namespace Engine::Scene
 		_desc.texHandle = Resource::TextureIO::LoadTexture(Core::GUID(), TexColor::WHITE, &_context);
 		_desc.pixelPos = Math::Vector2(_w * 0.5f, _h * 0.5f);
 		_desc.pixelSize = Math::Vector2(_w + 4.0f, _h + 4.0f);
-		_desc.color = Math::Color(m_fadeColor.r, m_fadeColor.g, m_fadeColor.b, m_fadeAlpha);
-		_desc.Zlayer = 50000.0f;
+		_desc.color = Math::Color(m_fadeColor.r, m_fadeColor.g, m_fadeColor.b, (std::min)(a_alpha, 1.0f));
+		_desc.Zlayer = a_zLayer;
 		_pGE->RefDrawSubmitter()->SubmitUI(_desc);
+	}
+
+	//======================================================================================
+	// ロード画面の出し入れ
+	//--------------------------------------------------------------------------------------
+	// 出すのは、画面が染まり切ったまま読み込みが長引いたときだけ。
+	// 重ねる切り替え(Push)は染めないので、後ろのシーンを見せたまま読み込みを待つ。
+	// 出すときは染めた色から戻し、読み込みが済んで最短の時間が過ぎたら染めた色へ落として隠す。
+	// 隠した後はフェードの WaitReady が行き先のフェードインへ進める
+	//======================================================================================
+	void SceneManager::UpdateLoadingScreen(float a_dt, bool a_isLoading)
+	{
+		// 読み込みで長いフレームが出ても、出し入れが一瞬で飛ばないように
+		const float _dt = std::min(a_dt, 0.1f);
+
+		switch (m_loadingScreenState)
+		{
+		case ELoadingScreenState::Hidden:
+			if (!a_isLoading) break;
+			if (!m_upLoadingScreen || !m_upLoadingScreen->IsReady()) break;
+			if (m_loadingTime < LOADING_SCREEN_DELAY_SEC) break;
+			if (m_fadeAlpha < 1.0f) break;
+
+			m_loadingScreenState = ELoadingScreenState::In;
+			m_loadingScreenTimer = 0.0f;
+			m_loadingScreenShownTime = 0.0f;
+			m_loadingScreenVeil = 1.0f;
+			break;
+
+		case ELoadingScreenState::In:
+			m_loadingScreenTimer += _dt;
+			m_loadingScreenShownTime += _dt;
+			m_loadingScreenVeil = 1.0f - EaseFade(m_loadingScreenTimer / LOADING_SCREEN_FADE_SEC);
+			if (m_loadingScreenTimer >= LOADING_SCREEN_FADE_SEC)
+			{
+				m_loadingScreenState = ELoadingScreenState::Shown;
+				m_loadingScreenVeil = 0.0f;
+			}
+			break;
+
+		case ELoadingScreenState::Shown:
+			m_loadingScreenShownTime += _dt;
+			if (a_isLoading || m_loadingScreenShownTime < LOADING_SCREEN_MIN_SEC) break;
+
+			m_loadingScreenState = ELoadingScreenState::Out;
+			m_loadingScreenTimer = 0.0f;
+			break;
+
+		case ELoadingScreenState::Out:
+			m_loadingScreenTimer += _dt;
+			m_loadingScreenVeil = EaseFade(m_loadingScreenTimer / LOADING_SCREEN_FADE_SEC);
+			if (m_loadingScreenTimer >= LOADING_SCREEN_FADE_SEC)
+			{
+				m_loadingScreenState = ELoadingScreenState::Hidden;
+				m_loadingScreenVeil = 1.0f;
+			}
+			break;
+
+		default:
+			break;
+		}
+	}
+
+	//======================================================================================
+	// 重ねたシーンの後ろのぼかし
+	//--------------------------------------------------------------------------------------
+	// 一番上のシーンがぼかしを使う設定で、下に別のシーンがあるときに掛ける。
+	// 外すときは最後に使ったシーンの強さ・時間のまま戻す(上のシーンはもう居ないため)
+	//======================================================================================
+	void SceneManager::UpdateBackdropBlur(float a_dt)
+	{
+		float _target = 0.0f;
+		if (m_upBaseSceneVec.size() >= 2)
+		{
+			const BaseScene& _top = *m_upBaseSceneVec.back();
+			const SceneBackdropSetting& _setting = _top.GetConfig().GetBackdrop();
+			if (_top.IsReady() && _setting.IsActive())
+			{
+				_target = 1.0f;
+				m_backdropBlurStrength = std::clamp(_setting.strength, 0.0f, 1.0f);
+				m_backdropBlurRadius = _setting.radius;
+				m_backdropBlurDuration = _setting.duration;
+			}
+		}
+
+		const float _dt = std::min(a_dt, 0.1f);
+		const float _step = (m_backdropBlurDuration > 0.0f) ? (_dt / m_backdropBlurDuration) : 1.0f;
+		m_backdropBlur = (_target > m_backdropBlur)
+			? (std::min)(_target, m_backdropBlur + _step)
+			: (std::max)(_target, m_backdropBlur - _step);
 	}
 
 	void SceneManager::SetWorldFactory(WorldFactory a_factory)
@@ -558,7 +720,7 @@ namespace Engine::Scene
 	{
 		return m_upLoadingScreen
 			&& m_upLoadingScreen->IsReady()
-			&& m_loadingTime >= LOADING_SCREEN_DELAY_SEC;
+			&& m_loadingScreenState != ELoadingScreenState::Hidden;
 	}
 
 	//======================================================================================
@@ -669,6 +831,31 @@ namespace Engine::Scene
 		}
 
 		PopScene(a_resourceManager);
+		PushScene(a_resourceManager, a_guid);
+	}
+
+	//======================================================================================
+	// 全部外して切り替え
+	//--------------------------------------------------------------------------------------
+	// ステージの上へ重ねたリザルトから戻るときのように、重ねたシーンの下まで消して行き先だけにする。
+	// 行き先が引けなければ今のスタックを残す(ReplaceScene と同じ)
+	//======================================================================================
+	void SceneManager::ReplaceAllScenes(Resource::ResourceManager& a_resourceManager, const Core::GUID& a_guid)
+	{
+		if (m_upBaseSceneVec.empty()) return;
+
+		if (a_resourceManager.GetAssetDatabase().GetFilePathFromGUID(a_guid).empty())
+		{
+			ENGINE_WARNING("[Scene] 切り替え先のシーンが見つかりません : %s 今のシーンを続けます",
+				a_guid.String().c_str());
+			return;
+		}
+
+		// 1つずつ Pop に通す(最後の1つを外したところで共有のものが片付く)
+		while (!m_upBaseSceneVec.empty())
+		{
+			PopScene(a_resourceManager);
+		}
 		PushScene(a_resourceManager, a_guid);
 	}
 
@@ -799,7 +986,8 @@ namespace Engine::Scene
 			if (m_fadeState == EFadeState::Out) break;
 
 			// 切り替えの前に、今のシーンの設定で染める(染め終えた後の再入では通す)
-			if (m_sceneChangeCmd.front().changeType == ESceneChangeType::Replace
+			const ESceneChangeType _frontType = m_sceneChangeCmd.front().changeType;
+			if ((_frontType == ESceneChangeType::Replace || _frontType == ESceneChangeType::ReplaceAll)
 				&& !m_isFadeOutDone
 				&& TryBeginFadeOut())
 			{
@@ -836,6 +1024,11 @@ namespace Engine::Scene
 				break;
 			case ESceneChangeType::Replace:			// 現在のシーンと切り替える
 				ReplaceScene(a_resourceManager, _cmd.sceneGUID);
+				BeginFadeInWait(m_isFadeOutDone);
+				m_isFadeOutDone = false;
+				break;
+			case ESceneChangeType::ReplaceAll:		// 全部外して切り替える
+				ReplaceAllScenes(a_resourceManager, _cmd.sceneGUID);
 				BeginFadeInWait(m_isFadeOutDone);
 				m_isFadeOutDone = false;
 				break;

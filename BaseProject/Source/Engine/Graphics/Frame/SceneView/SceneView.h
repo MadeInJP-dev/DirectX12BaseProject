@@ -89,6 +89,17 @@ namespace Engine::Graphics
 		const DoFOptionCB& GetDoFData() const;
 		bool IsDoFOverride() const { return m_isDoFOverride; }
 
+		//--------------------------------------------------------------------------------------------
+		// 後ろのぼかし
+		//
+		// ポーズ・設定画面・リザルトのように上へ重ねたシーンの間、後ろの 3D を画面全体ぼかす。
+		// SceneManager が毎フレーム頼み、EndFrame で落ちる(頼まれなければ掛からない)。
+		// 被写界深度のパス(CoC / DoF)が送る直前に ApplyBackdropBlur で値へ重ねるので、
+		// カメラが FocusParamComponent を持っていなくても効く(パイプラインに DoF のノードは要る)
+		//--------------------------------------------------------------------------------------------
+		void SetBackdropBlur(float a_amount, float a_radius);
+		void ApplyBackdropBlur(DoFOptionCB& a_inoutCB) const;
+
 		void SetRadialBlurData(const RadialBlurOptionCB& a_data);
 		const RadialBlurOptionCB& GetRadialBlurData() const;
 		bool IsRadialBlurOverride() const { return m_isRadialBlurOverride; }
@@ -213,6 +224,10 @@ namespace Engine::Graphics
 
 		// 被写界深度データ(アクティブカメラの FocusParamComponent から毎フレーム設定)
 		DoFOptionCB m_cbDoF = {};
+
+		// 後ろのぼかし(SceneManager から毎フレーム設定。EndFrame で消す)
+		float m_backdropBlur = 0.0f;
+		float m_backdropBlurRadius = 0.0f;
 
 		// ラジアルブラーデータ(アクティブカメラの RadialBlurComponent から毎フレーム設定)
 		RadialBlurOptionCB m_cbRadialBlur = {};

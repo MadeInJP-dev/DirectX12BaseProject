@@ -17,7 +17,8 @@ struct DoFOptionData
 
 	float maxBlurRadius;	// 最大ボケ半径(ピクセル)
 	int enable;				// 0 でそのまま通す
-	float2 pad;
+	float backdropBlur;		// 後ろのぼかしの掛かり具合(0〜1) : 重ねたシーンの後ろを、ピントに関係なく画面全体ぼかす
+	float backdropRadius;	// 後ろのぼかしの半径(ピクセル)
 };
 
 #endif

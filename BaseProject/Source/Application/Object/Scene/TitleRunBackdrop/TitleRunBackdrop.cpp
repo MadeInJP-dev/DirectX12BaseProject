@@ -394,6 +394,10 @@ namespace App::Object
 
 		a_outPos = a_runnerPos + _dir * m_sideDistance + Math::Vector3(0.0f, m_sideHeight, 0.0f);
 		a_outLookAt = a_runnerPos + Math::Vector3(0.0f, m_sideLookHeight, 0.0f);
+
+		// 機体を画面の横へ寄せる : カメラから見た右(視線 -_dir を Y 軸まわりに 90 度)の逆へ見る点をずらす
+		const Math::Vector3 _camRight = { -_dir.z, 0.0f, _dir.x };
+		a_outLookAt -= _camRight * m_sideFrameShift;
 	}
 
 	//--------------------------------------------------------------------------------------
@@ -505,6 +509,12 @@ namespace App::Object
 		a_ar.Field("FlybyHeight", m_flybyHeight);
 		a_ar.Field("FlybyLookHeight", m_flybyLookHeight);
 		a_ar.Field("FlybyTrackRate", m_flybyTrackRate);
+
+		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
+		if (!a_ar.IsLegacyLayout())
+		{
+			a_ar.Field("SideFrameShift", m_sideFrameShift);
+		}
 	}
 
 	//======================================================================================
@@ -550,6 +560,8 @@ namespace App::Object
 		Engine::EditorField::Field("Side Distance", m_sideDistance, 0.1f, 0.5f, 100.0f);
 		Engine::EditorField::Field("Side Height", m_sideHeight, 0.05f);
 		Engine::EditorField::Field("Side Look Height", m_sideLookHeight, 0.05f);
+		Engine::EditorField::Field("Side Frame Shift", m_sideFrameShift, 0.05f);
+		Engine::EditorField::Tooltip("機体を画面の横へ寄せる量(m)。正で右へ(左に文字を置くとき)");
 
 		Engine::EditorField::Line();
 		Engine::EditorField::Text("肩越し");

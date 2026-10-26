@@ -121,6 +121,7 @@ namespace App::Object
 		float m_sideDistance    = 15.0f;	// 機体からの水平距離(m)
 		float m_sideHeight      = 6.0f;	// 足元からの高さ(m)
 		float m_sideLookHeight  = 5.4f;	// 見る点の足元からの高さ(m)
+		float m_sideFrameShift  = 0.0f;	// 機体を画面の横へ寄せる量(m。正で右へ。見る点を逆へずらす)
 
 		// 肩越し : 機体の後ろ・右・上へずらした位置から、前の遠くを見る
 		float m_shoulderDuration   = 5.0f;

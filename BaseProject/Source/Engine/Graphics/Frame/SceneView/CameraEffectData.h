@@ -11,6 +11,7 @@ namespace Engine::Graphics
 	// 被写界深度(DoF)の調整値
 	// アクティブカメラの FocusParamComponent を CamSetShaderSystem が詰め、
 	// CoCパスとDoFパスの両方へ送る。
+	// 後ろのぼかし(backdrop)はカメラではなく SceneView が送る直前に重ねる(SceneView::ApplyBackdropBlur)
 	// ※ HLSL 側(Asset/Shader/Common/RootParameters/DoFOptionData.hlsli)と並びを合わせること
 	struct DoFOptionCB
 	{
@@ -21,8 +22,8 @@ namespace Engine::Graphics
 
 		float maxBlurRadius;	// 最大ボケ半径(ピクセル)
 		int   enable;			// 0 ならボカさずそのまま通す
-		float pad0;
-		float pad1;
+		float backdropBlur;		// 後ろのぼかしの掛かり具合(0〜1)。画面全体をピントに関係なくぼかす
+		float backdropRadius;	// 後ろのぼかしの半径(ピクセル)
 	};
 
 	// ラジアルブラーの調整値

@@ -40,6 +40,17 @@ namespace Engine::Scene
 		bool IsActive() const { return isEnabled && duration > 0.0f; }
 	};
 
+	// 重ねたシーンの後ろのぼかし(ポーズ・設定画面・リザルトのように上へ出すシーン用)
+	struct SceneBackdropSetting
+	{
+		bool isEnabled = false;		// このシーンを重ねている間、後ろをぼかすか
+		float strength = 1.0f;		// 掛かり具合(0〜1)
+		float radius = 24.0f;		// ぼかしの半径(描画解像度のピクセル)
+		float duration = 0.35f;		// 掛け始め・外すときにかける時間(秒)
+
+		bool IsActive() const { return isEnabled && strength > 0.0f && radius > 0.0f; }
+	};
+
 	class SceneConfig
 	{
 	public:
@@ -91,9 +102,18 @@ namespace Engine::Scene
 		const SceneFadeSetting& GetFadeIn() const { return m_fadeIn; }
 		const Math::Color& GetFadeColor() const { return m_fadeColor; }
 
+		//------------------------------------------------------------------------------------------
+		// 後ろのぼかし
+		//
+		// このシーンが一番上に重なっている間(下に別のシーンがあるときだけ)、
+		// 後ろの 3D をぼかす。UI はぼけない。既定は掛けない
+		//------------------------------------------------------------------------------------------
+		const SceneBackdropSetting& GetBackdrop() const { return m_backdrop; }
+
 	private:
 
-		void ArchiveFade(Persistence::Archive& a_ar);	// フェードの区切り
+		void ArchiveFade(Persistence::Archive& a_ar);		// フェードの区切り
+		void ArchiveBackdrop(Persistence::Archive& a_ar);	// 後ろのぼかしの区切り
 
 		// 次に開いたときに先読み一覧を計測し直すか
 		bool m_isRecordPreLoadAssets = false;
@@ -105,5 +125,8 @@ namespace Engine::Scene
 		SceneFadeSetting m_fadeOut = {};
 		SceneFadeSetting m_fadeIn = {};
 		Math::Color m_fadeColor = Math::Color(0.0f, 0.0f, 0.0f, 1.0f);	// 染める色(a は使わない)
+
+		// 重ねている間の後ろのぼかし
+		SceneBackdropSetting m_backdrop = {};
 	};
 }

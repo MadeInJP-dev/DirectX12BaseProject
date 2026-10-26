@@ -4,6 +4,11 @@
 
 #include "../../SequenceBgm.h"
 
+namespace Engine
+{
+	class MainEngine;
+}
+
 namespace Engine::Scene
 {
 	class SceneManager;
@@ -19,6 +24,7 @@ namespace App::Object
 	/// その差し込み先をここが引き受ける。
 	///
 	///   ・シーン上の UIButton を GUID で探し、押されたらシーンを切り替える処理を差し込む
+	///     (始める = 切り替え / 設定 = 設定画面を重ねる / 終了 = アプリを閉じる)
 	///   ・タイトルの間はカーソルの中央固定を切る(固定したままだとカーソルを動かせない)
 	///
 	/// ボタンの見た目・位置は UIButton 側、背景は UIElement 側が持つ。
@@ -55,6 +61,12 @@ namespace App::Object
 		// 遷移先のシーンを読み込む
 		void ReserveChangeScene(Engine::Scene::SceneManager& a_sceneManager);
 
+		// 設定画面を重ねる(タイトルは閉じない。設定画面が自分を外せば戻ってくる)
+		void ReserveOpenOption(Engine::Scene::SceneManager& a_sceneManager);
+
+		// アプリを閉じる
+		void ReserveQuit(Engine::MainEngine& a_engine);
+
 	private:
 
 		//-------------------------------------------------------------------
@@ -65,6 +77,13 @@ namespace App::Object
 
 		// 遷移先のシーン
 		Core::GUID m_nextSceneGUID = {};
+
+		// 押したら設定画面を重ねるボタンと、そのシーン(後から足したもの。未設定なら使わない)
+		Core::GUID m_optionButtonGUID = {};
+		Core::GUID m_optionSceneGUID = {};
+
+		// 押したらアプリを閉じるボタン(後から足したもの。未設定なら使わない)
+		Core::GUID m_quitButtonGUID = {};
 
 		// タイトルの間はカーソルの中央固定を切るか。
 		// 固定したままだとカーソルが毎フレーム中央へ戻され、ボタンを狙えない

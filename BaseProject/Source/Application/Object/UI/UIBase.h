@@ -74,6 +74,17 @@ namespace App::Object
 		// 更新処理 : 押下の進行と、飾りのアニメーション
 		void Update(Engine::GameObject::ObjectContext& a_context) override;
 
+		/// <summary>
+		/// ゲームの HUD(IsHUD の付いた UI)を、プレイヤーの設定によらずまとめて隠す
+		/// </summary>
+		/// <remarks>
+		/// リザルトをステージの上へ重ねたときに、止まったステージの HUD を消すためのもの。
+		/// 重ねている間、下のシーンは更新されないので、上のシーンから全体の印を立てる
+		/// (SequenceBgm::SetGlobalDuck と同じ形)。立てた側が必ず下ろすこと
+		/// </remarks>
+		static void SetHUDSuppressed(bool a_isSuppressed) { s_isHUDSuppressed = a_isSuppressed; }
+		static bool IsHUDSuppressed() { return s_isHUDSuppressed; }
+
 		// 描画処理
 		void Draw(Engine::GameObject::ObjectContext& a_context) override;
 
@@ -610,6 +621,9 @@ namespace App::Object
 
 		// エディターで開いている飾りの番号(-1 で未選択)。保存しない
 		int m_editDecorationIndex = -1;
+
+		// HUD をまとめて隠しているか(SetHUDSuppressed)。保存しない
+		inline static bool s_isHUDSuppressed = false;
 
 		// コントローラー用の組を出しているか(最後に触ったデバイスから PreUpdate で決める)。保存しない
 		bool m_isShowGamepad = false;

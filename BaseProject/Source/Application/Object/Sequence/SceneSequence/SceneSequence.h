@@ -6,6 +6,11 @@
 
 #include "../../SequenceBgm.h"
 
+namespace Engine
+{
+	class MainEngine;
+}
+
 namespace Engine::Scene
 {
 	class SceneManager;
@@ -195,6 +200,11 @@ namespace App::Object
 		// a_pSceneManager : 切り替えの予約先(無ければ記録だけ移す)
 		void ReserveResultScene(Game::GlobalGameContext& a_gameData, Engine::Scene::SceneManager* a_pSceneManager);
 
+		// 勝ったときのスロー : 決着してからの実時間で時間の倍率を寄せていく / 戻す
+		void UpdateClearSlow(Engine::GameObject::ObjectContext& a_context, float a_realDt);
+		void RestoreTimeScale();
+		bool IsClearSlow() const { return m_result == App::Game::EGameResult::Clear && m_clearSlowScale < 1.0f; }
+
 		//-------------------------------------------------------------------
 		// ポーズ
 		//-------------------------------------------------------------------
@@ -230,6 +240,16 @@ namespace App::Object
 		// ゲームシーンの入り口なので既定で消す(前回のスコアが残らないように)
 		bool m_isResetOnStart = true;
 
+		// リザルトをこのシーンの上へ重ねるか(後から足したもの)。
+		// 重ねると、このシーンは止まって決着の瞬間の画が後ろに残る(リザルト側でぼかす)。
+		// 切ると従来どおり切り替える
+		bool m_isResultOverlay = false;
+
+		// 勝ったとき(最後の敵が爆散した瞬間)から、時間の倍率をここまでなだらかに落とす(後から足したもの)。
+		// 1 ならスローにしない。スローにする間、勝ったときの待ち(ClearDelay)は実時間で数える
+		float m_clearSlowScale = 1.0f;
+		float m_clearSlowInTime = 0.8f;		// 落としきるまでの実時間(秒)
+
 		//=======================================================================
 		// ポーズ
 		//=======================================================================
@@ -256,6 +276,9 @@ namespace App::Object
 		bool  m_isPlayerFound = false;		// プレイヤーを一度でも見つけたか
 											// (湧く前の1フレームを死亡と間違えないため)
 		bool  m_isStarted = false;			// 最初の更新を通ったか(記録を消す判定に使う)
+
+		float m_resultRealTime = 0.0f;					// 決着してからの実時間(秒)
+		Engine::MainEngine* m_pSlowEngine = nullptr;	// 時間の倍率を変えている先(戻すまで持つ)
 
 		//-------------------------------------------------------------------
 		// BGM

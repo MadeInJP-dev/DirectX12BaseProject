@@ -6,6 +6,7 @@
 #include "Engine/Scene/SceneManager/SceneManager.h"
 #include "Engine/EditorField/EditorField.h"
 
+#include "Application/Object/UI/UIBase.h"
 #include "Application/Object/UI/Widget/UIButton/UIButton.h"
 
 //==========================================================================================
@@ -57,6 +58,9 @@ namespace App::Object
 		SequenceBgm::SetGlobalDuck(m_gameBgmDuck);
 
 		m_bgm.Update(a_context);
+
+		// 下のゲームの HUD を隠す(閉じるときに戻す)
+		if (m_isHideGameHUD) UIBase::SetHUDSuppressed(true);
 
 		//==============================================================
 		// 開いたのと同じキーで閉じる
@@ -121,7 +125,7 @@ namespace App::Object
 	}
 
 	//======================================================================================
-	// ポーズを閉じてから、ゲームのシーンを行き先へ差し替える
+	// ポーズごとゲームのシーンを外して、行き先へ差し替える
 	//======================================================================================
 	void PauseSequence::ReserveExitScene(Engine::Scene::SceneManager& a_sceneManager)
 	{
@@ -135,14 +139,9 @@ namespace App::Object
 
 		m_isClosing = true;
 
-		auto& _sceneManager = a_sceneManager;
-
-		// 先に自分を外す。重ねたまま差し替えると、入れ替わるのは後ろのゲームの方で
-		// ポーズ画面が乗りっぱなしになる
-		_sceneManager.ReserveChangeScene(Core::DEFAULT_GUID, Engine::Scene::ESceneChangeType::Pop);
-
-		// 続けて後ろのゲームを行き先へ差し替える(命令は積んだ順に処理される)
-		_sceneManager.ReserveChangeScene(m_exitSceneGUID, Engine::Scene::ESceneChangeType::Replace);
+		// 下のゲームまで全部外して行き先へ。ポーズ画面を出したまま染めてから切り替わるので、
+		// 先に自分だけ外したとき(ポーズが消えて HUD が戻ってから暗くなる)のちらつきが出ない
+		a_sceneManager.ReserveChangeScene(m_exitSceneGUID, Engine::Scene::ESceneChangeType::ReplaceAll);
 	}
 
 	//======================================================================================
@@ -177,6 +176,9 @@ namespace App::Object
 		// 絞ったぶんを戻す。戻し忘れると、ゲームへ帰った後も小さいままになる
 		SequenceBgm::SetGlobalDuck(1.0f);
 
+		// 隠した HUD も戻す
+		if (m_isHideGameHUD) UIBase::SetHUDSuppressed(false);
+
 		if (!m_isReleaseCursorLock) return;
 		if (!a_context.pServices) return;
 		if (!a_context.pServices->pInputManager) return;
@@ -209,6 +211,7 @@ namespace App::Object
 		{
 			a_ar.GUIDField("OptionButtonGUID", m_optionButtonGUID);
 			a_ar.GUIDField("OptionSceneGUID", m_optionSceneGUID);
+			a_ar.Field("IsHideGameHUD", m_isHideGameHUD);
 		}
 	}
 
@@ -288,6 +291,9 @@ namespace App::Object
 
 		Engine::EditorField::Field("GameBgmDuck", m_gameBgmDuck, 0.01f, 0.0f, 1.0f);
 		Engine::EditorField::Tooltip("ポーズ中、下のゲームBGMへ掛ける倍率(1で絞らない)");
+
+		Engine::EditorField::Field("Hide Game HUD", m_isHideGameHUD);
+		Engine::EditorField::Tooltip("ポーズ中、下のゲームの HUD を隠す");
 
 		Engine::EditorField::Header("Cursor");
 

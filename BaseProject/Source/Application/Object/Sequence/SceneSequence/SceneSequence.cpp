@@ -20,6 +20,7 @@
 #include "SequenceActor.h"
 
 #include "Engine/Scene/SceneManager/SceneManager.h"
+#include "Engine/MainEngine.h"
 
 //==========================================================================================
 // SceneSequence
@@ -189,7 +190,13 @@ namespace App::Object
 		{
 			if (m_isSceneRequested) return;
 
-			m_resultTimer = (std::max)(0.0f, m_resultTimer - a_context.dt);
+			// 勝ったときのスロー。スローの間は待ちを実時間で数える(倍率で待ちが伸びないように)
+			const float _realDt = (a_context.pServices && a_context.pServices->pMainEngine)
+				? a_context.pServices->pMainEngine->GetUnscaledDeltaTime()
+				: a_context.dt;
+			UpdateClearSlow(a_context, _realDt);
+
+			m_resultTimer = (std::max)(0.0f, m_resultTimer - (IsClearSlow() ? _realDt : a_context.dt));
 			if (m_resultTimer > 0.0f) return;
 
 			ReserveResultScene(_gameData, a_context.pServices ? a_context.pServices->pSceneManager : nullptr);
@@ -299,6 +306,10 @@ namespace App::Object
 	{
 		m_isSceneRequested = true;
 
+		// スローはここで戻す。重ねたリザルトの演出まで遅くならないように
+		// (このシーンは重ねた後は止まるので、スローのまま止まった画が残る)
+		RestoreTimeScale();
+
 		auto& _gameData = a_gameData;
 
 		// タイムは決着するまで毎フレーム入れているので、ここでは触らない
@@ -315,8 +326,39 @@ namespace App::Object
 		}
 
 		if (!a_pSceneManager) return;
+
+		// 重ねるなら、このシーンは止まったまま後ろに残る(戻るのはリザルトが全部外して切り替える)
 		a_pSceneManager->ReserveChangeScene(
-			m_resultSceneGUID, Engine::Scene::ESceneChangeType::Replace);
+			m_resultSceneGUID,
+			m_isResultOverlay ? Engine::Scene::ESceneChangeType::Push : Engine::Scene::ESceneChangeType::Replace);
+	}
+
+	//======================================================================================
+	// 勝ったときのスロー
+	//--------------------------------------------------------------------------------------
+	// 最後の敵が爆散した瞬間(決着した瞬間)から、時間の倍率を m_clearSlowScale へなだらかに落とす。
+	// 倍率はアプリ全体のもの(MainEngine::SetTimeScale)なので、リザルトへ移るときと
+	// このシーンが消えるときに必ず 1 へ戻す
+	//======================================================================================
+	void SceneSequence::UpdateClearSlow(Engine::GameObject::ObjectContext& a_context, float a_realDt)
+	{
+		if (!IsClearSlow()) return;
+		if (!a_context.pServices || !a_context.pServices->pMainEngine) return;
+
+		m_resultRealTime += a_realDt;
+		const float _t = (m_clearSlowInTime > 0.0f) ? std::clamp(m_resultRealTime / m_clearSlowInTime, 0.0f, 1.0f) : 1.0f;
+		const float _ease = _t * _t * (3.0f - 2.0f * _t);
+
+		m_pSlowEngine = a_context.pServices->pMainEngine;
+		m_pSlowEngine->SetTimeScale(std::lerp(1.0f, (std::max)(m_clearSlowScale, 0.0f), _ease));
+	}
+
+	void SceneSequence::RestoreTimeScale()
+	{
+		if (!m_pSlowEngine) return;
+
+		m_pSlowEngine->SetTimeScale(1.0f);
+		m_pSlowEngine = nullptr;
 	}
 
 	//======================================================================================
@@ -891,6 +933,9 @@ namespace App::Object
 	{
 		// 借りているBGMを返す
 		m_bgm.Release(a_context);
+
+		// スローのまま抜けた(リザルトを待たずに切り替わった)ときも倍率を戻す
+		RestoreTimeScale();
 	}
 
 	void SceneSequence::Archive(Engine::Persistence::Archive& a_ar, Engine::GameObject::ObjectContext& /*a_context*/)
@@ -1009,6 +1054,15 @@ namespace App::Object
 			}
 			a_ar.EndArray();
 		}
+
+		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
+		// 区切りを持たない古い .ob* には無いので読まない
+		if (!a_ar.IsLegacyLayout())
+		{
+			a_ar.Field("IsResultOverlay", m_isResultOverlay);
+			a_ar.Field("ClearSlowScale", m_clearSlowScale);
+			a_ar.Field("ClearSlowInTime", m_clearSlowInTime);
+		}
 	}
 
 	//======================================================================================
@@ -1046,6 +1100,14 @@ namespace App::Object
 			Engine::EditorField::Field("Clear Delay (s)", m_clearDelay, 0.1f, 0.0f, 60.0f);
 			Engine::EditorField::Field("Dead Delay (s)", m_deadDelay, 0.1f, 0.0f, 60.0f);
 			Engine::EditorField::Tooltip("決着してから移るまでの間(演出を見せる時間)");
+
+			Engine::EditorField::Field("Result Overlay", m_isResultOverlay);
+			Engine::EditorField::Tooltip("リザルトをこのシーンの上へ重ねる(止まった決着の瞬間を後ろに残す)。切ると切り替える");
+
+			Engine::EditorField::Field("Clear Slow Scale", m_clearSlowScale, 0.01f, 0.0f, 1.0f);
+			Engine::EditorField::Tooltip("勝った瞬間から時間の倍率をここまで落とす(1 でスローにしない)。スローの間は Clear Delay を実時間で数える");
+			Engine::EditorField::Field("Clear Slow In Time (s)", m_clearSlowInTime, 0.05f, 0.0f, 10.0f);
+			Engine::EditorField::Tooltip("倍率を落としきるまでの実時間");
 
 			Engine::EditorField::Field("Reset On Start", m_isResetOnStart);
 			Engine::EditorField::Tooltip("シーンの入り口でスコアとタイムを消す");

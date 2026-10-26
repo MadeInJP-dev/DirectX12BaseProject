@@ -63,6 +63,17 @@ namespace Engine::Graphics::Particle
 		void BeginFrame(float a_dt);
 
 		/// <summary>
+		/// 粒子の時間を止めるか
+		/// </summary>
+		/// <remarks>
+		/// 粒子はワールドとは別に毎フレーム進む(更新シェーダーの経過時間と、眠ったプールを見分ける時計)。
+		/// ポーズやリザルトを重ねて下のシーンを止めても、粒子だけ動き続け、やがてプールごと眠って消える。
+		/// 止めている間はどちらも進めない。SceneManager が毎フレーム決める
+		/// </remarks>
+		void SetTimeFrozen(bool a_isFrozen) { m_isTimeFrozen = a_isFrozen; }
+		bool IsTimeFrozen() const { return m_isTimeFrozen; }
+
+		/// <summary>
 		/// フレームの描画が全部終わった後、コマンドリストを流す前に呼ぶ
 		/// </summary>
 		/// <remarks>
@@ -229,6 +240,9 @@ namespace Engine::Graphics::Particle
 
 		// 眠っているプールを見分けるための時刻(メインスレッドのみ)
 		double m_elapsedTime = 0.0;
+
+		// 粒子の時間を止めているか(SetTimeFrozen)
+		bool m_isTimeFrozen = false;
 		std::unordered_map<Handle<Resource::ParticlesAsset>, double> m_lastEmitTime;
 
 		//----------------------------------------------------------------------------------

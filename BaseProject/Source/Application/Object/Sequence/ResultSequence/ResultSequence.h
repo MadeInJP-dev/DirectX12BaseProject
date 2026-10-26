@@ -20,6 +20,10 @@ namespace App::Object
 	///   ・シーン上の UIButton を GUID で探し、押されたらタイトルへ戻す処理を差し込む
 	///   ・リザルトの間はカーソルの中央固定を切る(固定したままだと狙えない)
 	///
+	/// ステージの上へ重ねて出すこともある(SceneSequence の Result Overlay)。そのときは
+	///   ・下のゲームの HUD を隠す(IsHideGameHUD)・ゲームの BGM を絞る(GameBgmDuck)
+	///   ・戻るときは重ねた下のステージまで外して切り替える(ReplaceAll。重ねていなくても同じ動き)
+	///
 	/// 出す数字(スコア・タイム)は GlobalGameContext に入っていて、
 	/// 並べるのは ScoreHUD の仕事。ここは触らない。
 	/// ゲームシーンから持ってきた記録はリザルトを抜けても消さない
@@ -56,6 +60,9 @@ namespace App::Object
 		// タイトルへ戻る
 		void ReserveBackToTitle(Engine::Scene::SceneManager& a_sceneManager);
 
+		// 勝ち負けで出し分ける UI の表示を決める(揃ったところで一度だけ)
+		void ApplyResultVisible(Engine::GameObject::ObjectContext& a_context);
+
 	private:
 
 		//-------------------------------------------------------------------
@@ -70,11 +77,24 @@ namespace App::Object
 		// リザルトの間はカーソルの中央固定を切るか
 		bool m_isReleaseCursorLock = true;
 
+		// ---- ステージの上へ重ねるとき用(後から足したもの) ----
+		// 下のゲームの HUD を隠すか
+		bool m_isHideGameHUD = false;
+
+		// 下のゲームの BGM に掛ける倍率(1 でそのまま。ポーズと同じ全体の絞り)
+		float m_gameBgmDuck = 1.0f;
+
+		// 勝ったとき / 負けたときだけ出す UI(後から足したもの。未設定なら出し分けない)。
+		// 記録が無い(リザルトを直に開いた)ときは勝ちの方を出す
+		Core::GUID m_clearUIGUID = {};
+		Core::GUID m_failedUIGUID = {};
+
 		//-------------------------------------------------------------------
 		// 状態(保存しない)
 		//-------------------------------------------------------------------
 		bool m_isBound = false;			// 差し込み済みか
 		bool m_isSceneRequested = false;	// 二重に遷移要求を出さないための印
+		bool m_isResultApplied = false;		// 勝ち負けの出し分けを済ませたか
 
 		//-------------------------------------------------------------------
 		// BGM

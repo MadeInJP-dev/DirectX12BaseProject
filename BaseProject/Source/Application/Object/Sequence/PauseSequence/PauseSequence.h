@@ -65,7 +65,7 @@ namespace App::Object
 		// ポーズを閉じて後ろのゲームへ戻る
 		void ReserveResume(Engine::Scene::SceneManager& a_sceneManager);
 
-		// ポーズを閉じてから、ゲームのシーンを行き先へ差し替える
+		// ポーズごとゲームのシーンを外して、行き先へ差し替える
 		void ReserveExitScene(Engine::Scene::SceneManager& a_sceneManager);
 
 		// 設定画面のシーンを上へ重ねる(ポーズは閉じない。設定画面を閉じればここへ戻る)
@@ -105,6 +105,10 @@ namespace App::Object
 		/// 1.0 にすれば何もしない
 		/// </remarks>
 		float m_gameBgmDuck = 0.35f;
+
+		// 下のゲームの HUD を隠すか(後から足したもの)。
+		// 後ろの画をぼかして見せるとき(シーン設定の Backdrop Blur)、HUD だけくっきり残らないように
+		bool m_isHideGameHUD = false;
 
 		//-------------------------------------------------------------------
 		// 状態(保存しない)

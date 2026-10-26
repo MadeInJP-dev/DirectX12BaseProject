@@ -761,6 +761,9 @@ namespace App::Object
 	{
 		if (!m_isHUD) return false;
 
+		// 上へ重ねたシーン(リザルト)がまとめて隠している
+		if (s_isHUDSuppressed) return true;
+
 		const auto* _pUserDataResource = InstanceResource::UserDataResource::Find(a_context.pWorld);
 		if (!_pUserDataResource || !_pUserDataResource->pUserData) return false;
 

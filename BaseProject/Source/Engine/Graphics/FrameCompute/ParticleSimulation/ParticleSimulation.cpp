@@ -424,8 +424,9 @@ namespace Engine::Graphics
 			};
 			// 固定値だと実フレームレートと寿命の減りが一致しない(重いほど長生きする)ため
 			// 実際の経過時間を渡す
+			// 重ねたシーン(ポーズ・リザルト)で下のシーンが止まっている間は粒子も止める
 			UpdateCB _cbData = {};
-			_cbData.deltaTime = MainEngine::Instance().GetDeltaTime();
+			_cbData.deltaTime = _pParticleManager->IsTimeFrozen() ? 0.0f : MainEngine::Instance().GetDeltaTime();
 
 			// 重力と減衰はアセット単位。プールごとに回しているのでここで引ける
 			const auto* _pParticle = m_pResourceManager ? m_pResourceManager->Get(_handle) : nullptr;

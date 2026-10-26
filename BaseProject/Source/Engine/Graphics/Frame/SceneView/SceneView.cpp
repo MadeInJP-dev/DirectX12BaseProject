@@ -100,6 +100,9 @@ namespace Engine::Graphics
 		m_cbDoF = {};
 		m_isDoFOverride = false;
 
+		m_backdropBlur = 0.0f;
+		m_backdropBlurRadius = 0.0f;
+
 		m_cbRadialBlur = {};
 		m_isRadialBlurOverride = false;
 
@@ -150,6 +153,20 @@ namespace Engine::Graphics
 	const DoFOptionCB& SceneView::GetDoFData() const
 	{
 		return m_cbDoF;
+	}
+	void SceneView::SetBackdropBlur(float a_amount, float a_radius)
+	{
+		m_backdropBlur = std::clamp(a_amount, 0.0f, 1.0f);
+		m_backdropBlurRadius = (std::max)(a_radius, 0.0f);
+	}
+	void SceneView::ApplyBackdropBlur(DoFOptionCB& a_inoutCB) const
+	{
+		if (m_backdropBlur <= 0.0f || m_backdropBlurRadius <= 0.0f) return;
+
+		// カメラのピントが切ってあってもぼかす
+		a_inoutCB.enable = 1;
+		a_inoutCB.backdropBlur = m_backdropBlur;
+		a_inoutCB.backdropRadius = m_backdropBlurRadius;
 	}
 	void SceneView::SetRadialBlurData(const RadialBlurOptionCB& a_data)
 	{

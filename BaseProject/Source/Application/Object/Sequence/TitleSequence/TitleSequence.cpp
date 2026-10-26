@@ -4,8 +4,10 @@
 #include "Engine/GameObject/GameObjectManager/GameObjectManager.h"
 #include "Engine/Input/InputManager/InputManager.h"
 #include "Engine/Scene/SceneManager/SceneManager.h"
+#include "Engine/MainEngine.h"
 #include "Engine/EditorField/EditorField.h"
 
+#include "../../ObjectPicker.h"
 #include "Application/Object/UI/Widget/UIButton/UIButton.h"
 
 //==========================================================================================
@@ -62,9 +64,16 @@ namespace App::Object
 		// 押されたときにシーンを切り替えるので、ここで受け取って掴ませる
 		auto* _pSceneManager = a_context.pServices ? a_context.pServices->pSceneManager : nullptr;
 		if (!_pSceneManager) return;
+		auto* _pEngine = a_context.pServices->pMainEngine;
 
 		auto* _pObject = a_context.pObjectManager->FindByGUID(m_playButtonGUID);
 		if (!_pObject) return;
+
+		// 設定・終了のボタンは指定していれば揃うまで待つ(読み込み順に依存しないように)
+		auto* _pOption = Picker::Find<UIButton>(a_context.pObjectManager, m_optionButtonGUID);
+		auto* _pQuit = Picker::Find<UIButton>(a_context.pObjectManager, m_quitButtonGUID);
+		if (m_optionButtonGUID.IsValid() && !_pOption) return;
+		if (m_quitButtonGUID.IsValid() && !_pQuit) return;
 
 		// 指定されたGUIDがボタン以外だった場合は差し込まない
 		auto* _pButton = Core::TypeInfo::Cast<UIButton>(_pObject);
@@ -79,6 +88,9 @@ namespace App::Object
 		// 押されたらシーンを切り替える。
 		// this を掴むが、ボタンは同じシーンに居るので寿命は一緒に尽きる
 		_pButton->SetOnClick([this, _pSceneManager]() { ReserveChangeScene(*_pSceneManager); });
+
+		if (_pOption) _pOption->SetOnClick([this, _pSceneManager]() { ReserveOpenOption(*_pSceneManager); });
+		if (_pQuit && _pEngine) _pQuit->SetOnClick([this, _pEngine]() { ReserveQuit(*_pEngine); });
 
 		m_isBound = true;
 	}
@@ -101,6 +113,36 @@ namespace App::Object
 		// シーンの切り替えは SceneManager が持っている(ボタンを結んだときにサービスから受け取ったもの)
 		a_sceneManager.ReserveChangeScene(
 			m_nextSceneGUID, Engine::Scene::ESceneChangeType::Replace);
+	}
+
+	//======================================================================================
+	// 設定画面を重ねる
+	//--------------------------------------------------------------------------------------
+	// タイトルは閉じずに上へ重ねる。更新されるのは一番上のシーンだけなので、
+	// 設定画面が自分を外せばタイトルの続きへ戻る(何度でも開ける)
+	//======================================================================================
+	void TitleSequence::ReserveOpenOption(Engine::Scene::SceneManager& a_sceneManager)
+	{
+		if (m_isSceneRequested) return;
+
+		if (!m_optionSceneGUID.IsValid())
+		{
+			ENGINE_WARNING("[TitleSequence] 設定画面のシーンが設定されていません");
+			return;
+		}
+
+		a_sceneManager.ReserveChangeScene(m_optionSceneGUID, Engine::Scene::ESceneChangeType::Push);
+	}
+
+	//======================================================================================
+	// アプリを閉じる(起動モードによらない)
+	//======================================================================================
+	void TitleSequence::ReserveQuit(Engine::MainEngine& a_engine)
+	{
+		if (m_isSceneRequested) return;
+
+		m_isSceneRequested = true;
+		a_engine.ReserveQuit();
 	}
 
 	//======================================================================================
@@ -133,6 +175,15 @@ namespace App::Object
 		a_ar.Field("IsReleaseCursorLock", m_isReleaseCursorLock);
 
 		m_bgm.Archive(a_ar);
+
+		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
+		// 区切りを持たない古い .ob* には無いので読まない
+		if (!a_ar.IsLegacyLayout())
+		{
+			a_ar.GUIDField("OptionButtonGUID", m_optionButtonGUID);
+			a_ar.GUIDField("OptionSceneGUID", m_optionSceneGUID);
+			a_ar.GUIDField("QuitButtonGUID", m_quitButtonGUID);
+		}
 	}
 
 	//======================================================================================
@@ -181,6 +232,14 @@ namespace App::Object
 		Engine::EditorField::Header("Next Scene");
 
 		Engine::EditorField::AssetField(*a_context.pServices, "Scene", "Scene", m_nextSceneGUID);
+
+		Engine::EditorField::Header("Option / Quit");
+
+		if (Picker::DrawCombo<UIButton>("Option", a_context.pObjectManager, m_optionButtonGUID)) m_isBound = false;
+		Engine::EditorField::AssetField(*a_context.pServices, "Scene", "OptionScene", m_optionSceneGUID);
+		Engine::EditorField::Tooltip("Option を押したときに重ねる設定画面のシーン");
+		if (Picker::DrawCombo<UIButton>("Quit", a_context.pObjectManager, m_quitButtonGUID)) m_isBound = false;
+		Engine::EditorField::Tooltip("押したらアプリを閉じるボタン");
 
 		m_bgm.DrawInspector(a_context);
 

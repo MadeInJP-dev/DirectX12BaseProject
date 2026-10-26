@@ -39,9 +39,12 @@ namespace Engine::Graphics::Pipeline
 		//
 		// カメラ側を優先しないと、演出でボケや流れが動かなくなる
 		//----------------------------------------------------------------------------------
-		const DoFOptionCB& _cb = a_context.pGraphicsEngine->GetSceneView()->IsDoFOverride()
+		DoFOptionCB _cb = a_context.pGraphicsEngine->GetSceneView()->IsDoFOverride()
 			? a_context.pGraphicsEngine->GetSceneView()->GetDoFData()
 			: m_cb;
+
+		// 重ねたシーンの後ろのぼかしはカメラの値の上へ重ねる
+		a_context.pGraphicsEngine->GetSceneView()->ApplyBackdropBlur(_cb);
 
 		_pCB->BindAndAttachDataComputeRootCBV(a_context.pCmdList, 1, _cb);
 		_pCB->BindAndAttachDataComputeRootCBV<SkyData>(a_context.pCmdList, 4, a_context.pGraphicsEngine->GetSceneView()->GetSkyData());

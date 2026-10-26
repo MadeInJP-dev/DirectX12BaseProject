@@ -38,7 +38,8 @@ namespace Engine::Scene
 		Push,		// 重ねる
 		Pop,		// 一つ消去
 		Replace,	// 切り替え
-		Clear		// 全消去
+		Clear,		// 全消去
+		ReplaceAll	// 全部外して切り替え(重ねたシーンの下まで消す。リザルトをステージに重ねたときの戻り道)
 	};
 
 	//==================================================================================================
@@ -201,9 +202,15 @@ namespace Engine::Scene
 		// シーンは積んだ(Push / Replace)フレームでは組み立てず、毎フレーム少しずつ読み込む
 		// (BaseScene::UpdateLoad)。読み込みが済むまでそのシーンは更新も描画もされない。
 		//
-		// 読み込みが一定時間(LOADING_SCREEN_DELAY_SEC)より長引いたら、
-		// ロード画面のシーンを一番上に重ねて出す。ロード画面はスタックの外で常駐させるので、
-		// シーンの切り替えの掃除(SweepUnusedAll)で消えない。
+		// 画面が染まり切った(フェードアウトが済んだ)まま読み込みが一定時間
+		// (LOADING_SCREEN_DELAY_SEC)より長引いたら、ロード画面のシーンを一番上に重ねて出す。
+		// 出し入れは染めた色から戻す / 染めた色へ落とす(LOADING_SCREEN_FADE_SEC)で、
+		// 一度出したら短くても LOADING_SCREEN_MIN_SEC は見せる(一瞬だけ映ってちらつかないように)。
+		// 出ている間はスタックのシーンを更新も描画もしない : 読み込みが済んだ行き先が
+		// ロード画面の裏で動き出さないように(ステージの時間が進む・敵が撃ってくる)。
+		// 重ねる(Push)ときは染めないので出さない(後ろのシーンがそのまま見えている)。
+		//
+		// ロード画面はスタックの外で常駐させるので、シーンの切り替えの掃除(SweepUnusedAll)で消えない。
 		//------------------------------------------------------------------------------------------
 
 		/// <summary>
@@ -227,12 +234,22 @@ namespace Engine::Scene
 		//------------------------------------------------------------------------------------------
 		// シーン遷移のフェード
 		//
-		// シーンの切り替え(Replace)のとき、今のシーンの設定(SceneConfig)に従って画面を染めてから
+		// シーンの切り替え(Replace / ReplaceAll)のとき、今のシーンの設定(SceneConfig)に従って画面を染めてから
 		// 切り替え、行き先のシーンの読み込みが済んだら行き先の設定で染めた画面から戻す。
 		// 重ねる / 外す(ポーズ画面など)ではかけない。最初のシーンを開くときはフェードインだけ。
-		// 染めている間も今のシーンは動き続ける
+		// 染めている間も今のシーンは動き続ける。
+		// 濃さは時間に比例させず、出だしと終わりをなだらかにする(EaseFade)
 		//------------------------------------------------------------------------------------------
 		bool IsFading() const { return m_fadeAlpha > 0.0f; }
+
+		//------------------------------------------------------------------------------------------
+		// 重ねたシーンの後ろのぼかし
+		//
+		// 一番上のシーンが設定(SceneConfig::GetBackdrop)でぼかしを使い、下に別のシーンがあるとき、
+		// 後ろの 3D をぼかす(SceneView::SetBackdropBlur)。掛け外しは設定の時間でなだらかに。
+		// 下のシーンは止まっている(一番上だけ更新)ので、止まった瞬間の画がぼけて残る
+		//------------------------------------------------------------------------------------------
+		float GetBackdropBlur() const { return m_backdropBlur; }
 
 	private:
 
@@ -244,10 +261,25 @@ namespace Engine::Scene
 			In,			// 戻している最中
 		};
 
+		enum class ELoadingScreenState
+		{
+			Hidden,		// 出していない
+			In,			// 染めた色から戻している最中
+			Shown,		// 出している
+			Out,		// 染めた色へ落としている最中(終わったら隠す)
+		};
+
 		void UpdateFade(float a_dt);					// 毎フレーム
 		bool TryBeginFadeOut();							// 今のシーンの設定でフェードアウトを始める(始めたら true)
 		void BeginFadeInWait(bool a_wasFadedOut);		// 切り替えた直後に、行き先のフェードインに備える
 		void SubmitFade();								// 染めている色を画面全体に積む
+		void SubmitScreenColor(float a_alpha, float a_zLayer);	// 染める色を画面全体に1枚積む
+
+		void UpdateLoadingScreen(float a_dt, bool a_isLoading);	// ロード画面の出し入れ
+		void UpdateBackdropBlur(float a_dt);					// 重ねたシーンの後ろのぼかし
+
+		// 出だしと終わりをなだらかにする(0〜1 → 0〜1)
+		static float EaseFade(float a_t);
 
 		//------------------------------------------------------------------------------------------
 		// シーン
@@ -256,6 +288,7 @@ namespace Engine::Scene
 		void ReplaceScene(Resource::ResourceManager& a_resourceManager, const Core::GUID& a_guid);	// シーンの切り替え
 		bool PushScene(Resource::ResourceManager& a_resourceManager, const Core::GUID& a_guid);		// シーンを重ねる(読み込めたら true)
 		void PopScene(Resource::ResourceManager& a_resourceManager);									// 最前面のシーンを消去
+		void ReplaceAllScenes(Resource::ResourceManager& a_resourceManager, const Core::GUID& a_guid);	// 全部外して切り替え
 
 		// シーンを作る : 初期化と設定ファイルの読み込みまで(組み立ては読み込みの中で行う)。
 		// 見つからなければ nullptr
@@ -302,8 +335,24 @@ namespace Engine::Scene
 		float m_loadingTime = 0.0f;
 
 		// これより長く読み込みが続いたらロード画面を出す。
-		// ポーズ画面のように1〜2フレームで済むものでロード画面がちらつかないように
-		static constexpr float LOADING_SCREEN_DELAY_SEC = 0.1f;
+		// すぐ済む切り替えでロード画面がちらつかないように(済めば染めた色からそのまま戻す)
+		static constexpr float LOADING_SCREEN_DELAY_SEC = 0.3f;
+
+		// ロード画面の出し入れにかける時間 / 一度出したら見せておく最短の時間
+		static constexpr float LOADING_SCREEN_FADE_SEC = 0.35f;
+		static constexpr float LOADING_SCREEN_MIN_SEC = 1.0f;
+
+		// ロード画面の出し入れ
+		ELoadingScreenState m_loadingScreenState = ELoadingScreenState::Hidden;
+		float m_loadingScreenTimer = 0.0f;		// 出し入れの経過(秒)
+		float m_loadingScreenShownTime = 0.0f;	// 出してからの時間(秒)
+		float m_loadingScreenVeil = 1.0f;		// ロード画面の上へ重ねる染めた色の濃さ(0〜1)
+
+		// 重ねたシーンの後ろのぼかし
+		float m_backdropBlur = 0.0f;			// 今の掛かり具合(0〜1、なだらかにする前)
+		float m_backdropBlurStrength = 0.0f;	// 掛ける強さ(最後にぼかしを使ったシーンの設定)
+		float m_backdropBlurRadius = 0.0f;		// 半径(同上)
+		float m_backdropBlurDuration = 0.0f;	// 掛け外しの時間(同上)
 
 		// 先読み一覧を計測しているシーン(閉じるまで)。計測していなければ nullptr
 		BaseScene* m_pPreLoadRecordingScene = nullptr;
@@ -315,6 +364,13 @@ namespace Engine::Scene
 		float m_fadeAlpha = 0.0f;			// 染めている濃さ(0〜1)
 		Math::Color m_fadeColor = Math::Color(0.0f, 0.0f, 0.0f, 1.0f);
 		bool m_isFadeOutDone = false;		// フェードアウトが済んで、切り替えを待っている
+
+		// 染めたまま行き先のフレームが落ち着くのを待つ(WaitReady)
+		float m_fadeWaitTime = 0.0f;		// 行き先の読み込みが済んでからの時間
+		int m_fadeStableFrameCount = 0;		// 続けて軽かったフレームの数
+		static constexpr float FADE_STABLE_FRAME_SEC = 1.0f / 20.0f;	// これより短いフレームを軽いとみなす
+		static constexpr int FADE_STABLE_FRAME_COUNT = 4;				// これだけ続いたら戻し始める
+		static constexpr float FADE_STABLE_TIMEOUT_SEC = 2.5f;			// 落ち着かなくてもこれを過ぎたら戻す
 
 		// 更新するのは一番上のシーンだけか(重ねたシーンの後ろを止めるための既定)
 		bool m_isUpdateTopSceneOnly = true;

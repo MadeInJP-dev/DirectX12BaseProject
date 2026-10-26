@@ -27,6 +27,7 @@ namespace Engine::Scene
 		}
 
 		ArchiveFade(a_ar);
+		ArchiveBackdrop(a_ar);
 	}
 
 	// フェードは後から足した項目なので、先読み一覧の区切りとは別の区切りに置く
@@ -40,6 +41,18 @@ namespace Engine::Scene
 		a_ar.Field("FadeInEnabled", m_fadeIn.isEnabled);
 		a_ar.Field("FadeInDuration", m_fadeIn.duration);
 		a_ar.Field("FadeColor", m_fadeColor);
+	}
+
+	// 後ろのぼかしも後から足した項目なので、フェードとは別の区切りに置く
+	// (無いファイルはぼかさないまま読める)
+	void SceneConfig::ArchiveBackdrop(Persistence::Archive& a_ar)
+	{
+		Persistence::ArchiveSection _section(a_ar, "SceneBackdrop");
+
+		a_ar.Field("BackdropBlurEnabled", m_backdrop.isEnabled);
+		a_ar.Field("BackdropBlurStrength", m_backdrop.strength);
+		a_ar.Field("BackdropBlurRadius", m_backdrop.radius);
+		a_ar.Field("BackdropBlurDuration", m_backdrop.duration);
 	}
 
 	bool SceneConfig::LoadFile(const std::string& a_fileDir, const std::string& a_fileName)
@@ -78,6 +91,15 @@ namespace Engine::Scene
 		Engine::EditorField::Tooltip("このシーンの読み込みが済んだとき、染めた画面から戻します");
 		Engine::EditorField::Field("Fade In Time", m_fadeIn.duration, 0.05f, 0.0f, 10.0f);
 		Engine::EditorField::ColorField("Fade Color", m_fadeColor, false);
+
+		Engine::EditorField::Header("Backdrop Blur");
+		Engine::EditorField::Field("Blur Backdrop", m_backdrop.isEnabled);
+		Engine::EditorField::Tooltip("このシーンを別のシーンの上へ重ねている間、後ろの画面(3D)をぼかします");
+		Engine::EditorField::Field("Blur Strength", m_backdrop.strength, 0.01f, 0.0f, 1.0f);
+		Engine::EditorField::Field("Blur Radius", m_backdrop.radius, 0.5f, 0.0f, 64.0f);
+		Engine::EditorField::Tooltip("ぼかしの半径(描画解像度のピクセル)");
+		Engine::EditorField::Field("Blur Time", m_backdrop.duration, 0.05f, 0.0f, 5.0f);
+		Engine::EditorField::Tooltip("掛け始め・外すときにかける時間(秒)");
 
 		Engine::EditorField::Header("PreLoad");
 		Engine::EditorField::Field("Record PreLoad Assets", m_isRecordPreLoadAssets);

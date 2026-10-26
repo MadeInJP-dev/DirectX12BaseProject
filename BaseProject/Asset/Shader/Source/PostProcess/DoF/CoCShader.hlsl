@@ -77,6 +77,14 @@ RWTexture2D<float> Get_outputCoC() { RWTexture2D<float> _r = ResourceDescriptorH
 // サンプラー
 SamplerState g_samp : register(s0);
 
+// 後ろのぼかし : ピントで決まった CoC を、掛かり具合に応じて最大ボケへ寄せる。
+// 手前ボケ(負)は符号を残したまま大きさだけ寄せる(途中でピントが合う瞬間を作らない)
+float ApplyBackdropCoC(float a_coc)
+{
+	float _size = lerp(abs(a_coc), 1.0f, saturate(g_dof.backdropBlur));
+	return (a_coc < 0.0f) ? -_size : _size;
+}
+
 // 深度からビュー空間の位置を復元する
 float3 ReconstructViewPos(float2 a_uv, float a_depth)
 {
@@ -132,7 +140,7 @@ void CSMain(uint3 DTid : SV_DispatchThreadID)
 	{
 		if (g_sky.isSkyDof == 0)
 		{
-			g_outputCoC[_coord] = 0.0f;
+			g_outputCoC[_coord] = ApplyBackdropCoC(0.0f);
 			return;
 		}
 
@@ -164,5 +172,5 @@ void CSMain(uint3 DTid : SV_DispatchThreadID)
 	}
 
 	// 空のときだけ倍率が掛かる(それ以外は 1.0 なので素通り)
-	g_outputCoC[_coord] = _coc * _skyCoCScale;
+	g_outputCoC[_coord] = ApplyBackdropCoC(_coc * _skyCoCScale);
 }

@@ -107,8 +107,11 @@ namespace Engine::Graphics::Particle
 	}
 	void ParticleBufferManager::BeginFrame(float a_dt)
 	{
+		// 粒子の時間を止めている間は進めない(止めた瞬間の粒をそのまま残す)
+		const float _dt = m_isTimeFrozen ? 0.0f : (std::max)(a_dt, 0.0f);
+
 		// 眠っているプールを見分けるための時刻を進める(更新シェーダーと同じフレーム時間)
-		m_elapsedTime += static_cast<double>((std::max)(a_dt, 0.0f));
+		m_elapsedTime += static_cast<double>(_dt);
 
 		// 使われなくなったプールを捨てる。
 		// 下の準備完了の判定(m_mutex を関数の終わりまで持つ)より前に済ませておく
@@ -134,7 +137,7 @@ namespace Engine::Graphics::Particle
 		}
 
 		// 返却待ちの席の残り時間を進め、粒が消えきったものを空きへ戻す
-		if (m_upEmitterSlotPool) m_upEmitterSlotPool->BeginFrame(a_dt);
+		if (m_upEmitterSlotPool) m_upEmitterSlotPool->BeginFrame(_dt);
 	}
 	//======================================================================================
 	// 使われなくなったプールを捨てる

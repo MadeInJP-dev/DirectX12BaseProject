@@ -6,6 +6,8 @@
 #include "Engine/Scene/SceneManager/SceneManager.h"
 #include "Engine/EditorField/EditorField.h"
 
+#include "../../ObjectPicker.h"
+#include "Application/Object/UI/UIBase.h"
 #include "Application/Object/UI/Widget/UIButton/UIButton.h"
 #include "../../../InstanceResource/GameDataResource.h"
 
@@ -45,6 +47,18 @@ namespace App::Object
 		// ボタンへの差し込み(済んでいれば何もしない)
 		TryBindButton(a_context);
 
+		// 勝ち負けで出し分ける UI(済んでいれば何もしない)
+		ApplyResultVisible(a_context);
+
+		// 下のゲーム(重ねているとき)の HUD と BGM
+		if (m_isHideGameHUD) UIBase::SetHUDSuppressed(true);
+		if (m_gameBgmDuck < 1.0f)
+		{
+			// 自分の曲は絞らない
+			m_bgm.SetDuckTarget(false);
+			SequenceBgm::SetGlobalDuck(m_gameBgmDuck);
+		}
+
 		// BGM : 初回で鳴らし始め、フェードを進める
 		m_bgm.Update(a_context);
 	}
@@ -83,6 +97,31 @@ namespace App::Object
 	}
 
 	//======================================================================================
+	// 勝ち負けで出し分ける UI
+	//--------------------------------------------------------------------------------------
+	// 指定した UI が揃うまで毎フレーム試す(読み込み順に依存しないように)
+	//======================================================================================
+	void ResultSequence::ApplyResultVisible(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (m_isResultApplied) return;
+		if (!a_context.pObjectManager) return;
+		if (!m_clearUIGUID.IsValid() && !m_failedUIGUID.IsValid()) return;
+
+		auto* _pClear = Picker::Find<UIBase>(a_context.pObjectManager, m_clearUIGUID);
+		auto* _pFailed = Picker::Find<UIBase>(a_context.pObjectManager, m_failedUIGUID);
+		if (m_clearUIGUID.IsValid() && !_pClear) return;
+		if (m_failedUIGUID.IsValid() && !_pFailed) return;
+
+		const auto* _pGameData = InstanceResource::GameDataResource::Find(a_context.pWorld);
+		const bool _isFailed = _pGameData && (_pGameData->result == App::Game::EGameResult::GameOver);
+
+		if (_pClear) _pClear->SetVisible(!_isFailed);
+		if (_pFailed) _pFailed->SetVisible(_isFailed);
+
+		m_isResultApplied = true;
+	}
+
+	//======================================================================================
 	// タイトルへ戻る
 	//======================================================================================
 	void ResultSequence::ReserveBackToTitle(Engine::Scene::SceneManager& a_sceneManager)
@@ -97,8 +136,10 @@ namespace App::Object
 
 		m_isSceneRequested = true;
 
+		// ステージの上へ重ねて出していることがあるので、下まで外して切り替える
+		// (重ねていなければ Replace と同じ)
 		a_sceneManager.ReserveChangeScene(
-			m_titleSceneGUID, Engine::Scene::ESceneChangeType::Replace);
+			m_titleSceneGUID, Engine::Scene::ESceneChangeType::ReplaceAll);
 	}
 
 	//======================================================================================
@@ -108,6 +149,10 @@ namespace App::Object
 	{
 		// 借りているBGMを返す
 		m_bgm.Release(a_context);
+
+		// 立てた全体の印を下ろす
+		if (m_isHideGameHUD) UIBase::SetHUDSuppressed(false);
+		if (m_gameBgmDuck < 1.0f) SequenceBgm::SetGlobalDuck(1.0f);
 
 		if (!m_isReleaseCursorLock) return;
 		if (!a_context.pServices) return;
@@ -131,6 +176,16 @@ namespace App::Object
 		a_ar.Field("IsReleaseCursorLock", m_isReleaseCursorLock);
 
 		m_bgm.Archive(a_ar);
+
+		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
+		// 区切りを持たない古い .ob* には無いので読まない
+		if (!a_ar.IsLegacyLayout())
+		{
+			a_ar.Field("IsHideGameHUD", m_isHideGameHUD);
+			a_ar.Field("GameBgmDuck", m_gameBgmDuck);
+			a_ar.GUIDField("ClearUIGUID", m_clearUIGUID);
+			a_ar.GUIDField("FailedUIGUID", m_failedUIGUID);
+		}
 	}
 
 	//======================================================================================
@@ -181,6 +236,18 @@ namespace App::Object
 		Engine::EditorField::AssetField(*a_context.pServices, "Scene", "Scene", m_titleSceneGUID);
 
 		m_bgm.DrawInspector(a_context);
+
+		Engine::EditorField::Header("Over The Stage");
+		Engine::EditorField::Field("Hide Game HUD", m_isHideGameHUD);
+		Engine::EditorField::Tooltip("ステージの上へ重ねたとき、下のゲームの HUD を隠す");
+		Engine::EditorField::Field("Game Bgm Duck", m_gameBgmDuck, 0.01f, 0.0f, 1.0f);
+		Engine::EditorField::Tooltip("ステージの上へ重ねたとき、下のゲームの BGM に掛ける倍率(1 でそのまま)");
+
+		Engine::EditorField::Header("Clear / Failed");
+		if (Picker::DrawCombo<UIBase>("Clear UI", a_context.pObjectManager, m_clearUIGUID)) m_isResultApplied = false;
+		Engine::EditorField::Tooltip("勝ったときだけ出す UI(記録が無いときもこちら)");
+		if (Picker::DrawCombo<UIBase>("Failed UI", a_context.pObjectManager, m_failedUIGUID)) m_isResultApplied = false;
+		Engine::EditorField::Tooltip("負けたときだけ出す UI");
 
 		Engine::EditorField::Header("Cursor");
 
