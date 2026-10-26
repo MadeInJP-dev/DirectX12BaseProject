@@ -1501,6 +1501,21 @@
     <Filter Include="Source\Editor\Panel\BuildPanel">
       <UniqueIdentifier>{1be9d6a4-7f47-4a40-b94b-82b28c6f2d9e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\Panel\BuildPanel\BuildPackage">
+      <UniqueIdentifier>{a2e3766a-1709-470f-90ff-a5b5d46b7ed4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\BuildPanel\BuildPackage\BuildPlan">
+      <UniqueIdentifier>{6d0b3e4a-2c1f-4b7e-9a58-3f2e1c7d8b90}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\BuildPanel\BuildPackage\AssetCollector">
+      <UniqueIdentifier>{b4f1a9c2-7e3d-4f60-8c21-5a9d0e6b3f17}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\BuildPanel\BuildPackage\SourceDirectoryWrite">
+      <UniqueIdentifier>{3f24f2fb-041d-45ca-b4c0-a7d4c9cbb745}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\BuildPanel\BuildPackage\ExecuteDirectoryWrite">
+      <UniqueIdentifier>{0a5339ba-a28f-46c0-acf6-f85cb99f2ec7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Application\AppPCH.cpp">
@@ -2978,6 +2993,22 @@
     </ClCompile>
     <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildPanel.cpp">
       <Filter>Source\Editor\Panel\BuildPanel</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Widget\PopUp\Popup.cpp" />
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildSettings.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildPackage\BuildPlan\BuildPlan.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\BuildPackage\BuildPlan</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildPackage\AssetCollector\AssetCollector.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\BuildPackage\AssetCollector</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildPackage\SourceDirectoryWrite\SourceDirectoryWrite.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\BuildPackage\SourceDirectoryWrite</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildPackage\ExecuteDirectoryWrite\ExecuteDirectoryWrite.cpp">
+      <Filter>Source\Editor\Panel\BuildPanel\BuildPackage\ExecuteDirectoryWrite</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -5238,6 +5269,25 @@
       <Filter>Source\Editor\Panel\BuildPanel\Converter</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPanel.h">
+      <Filter>Source\Editor\Panel\BuildPanel</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Widget\PopUp\Popup.h" />
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildSettings.h">
+      <Filter>Source\Editor\Panel\BuildPanel</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPackage\BuildPlan\BuildPlan.h">
+      <Filter>Source\Editor\Panel\BuildPanel\BuildPackage\BuildPlan</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPackage\AssetCollector\AssetCollector.h">
+      <Filter>Source\Editor\Panel\BuildPanel\BuildPackage\AssetCollector</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPackage\SourceDirectoryWrite\SourceDirectoryWrite.h">
+      <Filter>Source\Editor\Panel\BuildPanel\BuildPackage\SourceDirectoryWrite</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPackage\ExecuteDirectoryWrite\ExecuteDirectoryWrite.h">
+      <Filter>Source\Editor\Panel\BuildPanel\BuildPackage\ExecuteDirectoryWrite</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildContext.h">
       <Filter>Source\Editor\Panel\BuildPanel</Filter>
     </ClInclude>
   </ItemGroup>

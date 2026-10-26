@@ -164,6 +164,47 @@ namespace Core::File
 	}
 
 	//--------------------------------------------------------------------------------------
+	// UTF-8 の文字列とパスの変換
+	//
+	// std::filesystem::path を std::string から作る / .string() で取り出すと、
+	// Windows では ANSI コードページ(CP932)として扱われる。
+	// ImGui の入力欄や JSON は UTF-8 なので、日本語のフォルダ名を通すときはこちらを使う。
+	//--------------------------------------------------------------------------------------
+
+	/// <summary>UTF-8 の文字列からパスを作る</summary>
+	inline std::filesystem::path FromUTF8(const std::string& a_utf8)
+	{
+		return std::filesystem::path(std::u8string(a_utf8.begin(), a_utf8.end()));
+	}
+	/// <summary>パスを UTF-8 の文字列にする</summary>
+	inline std::string ToUTF8(const std::filesystem::path& a_path)
+	{
+		const std::u8string _u8 = a_path.u8string();
+		return std::string(_u8.begin(), _u8.end());
+	}
+
+	/// <summary>260文字(MAX_PATH)を超えても開けるパスにする</summary>
+	/// <remarks>
+	/// Windows は "\\?\" を付けた絶対パスなら長さの制限を受けない。
+	/// 深いフォルダへ写すとき(提出用パッケージの書き出しなど)に通す。表示には使わないこと
+	/// </remarks>
+	inline std::filesystem::path ToLongPath(const std::filesystem::path& a_path)
+	{
+		std::error_code _ec;
+		const std::filesystem::path _absolute = std::filesystem::absolute(a_path, _ec);
+		if (_ec) return a_path;
+
+		const std::wstring _str = _absolute.lexically_normal().make_preferred().wstring();
+		constexpr std::wstring_view PREFIX = L"\\\\?\\";
+		if (_str.starts_with(PREFIX)) return _str;
+
+		// ネットワークのパス(\\server\share)は "\\?\UNC\server\share"
+		if (_str.starts_with(L"\\\\")) return std::wstring(L"\\\\?\\UNC\\") + _str.substr(2);
+
+		return std::wstring(PREFIX) + _str;
+	}
+
+	//--------------------------------------------------------------------------------------
 	// 存在チェック
 	//--------------------------------------------------------------------------------------
 
@@ -178,5 +219,70 @@ namespace Core::File
 	{
 		std::ifstream _file(a_filePath);
 		return _file.is_open();
+	}
+
+	//--------------------------------------------------------------------------------------
+	// コピー処理
+	//--------------------------------------------------------------------------------------
+
+	inline bool CopyFile(
+		const std::filesystem::path& a_src,
+		const std::filesystem::path& a_destination
+	)
+	{
+		std::error_code _error;
+
+		if (!std::filesystem::is_regular_file(a_src, _error) || _error)
+		{
+			return false;
+		}
+
+		// ディレクトリ作成
+		std::filesystem::create_directories(a_destination.parent_path(), _error);
+
+		if (_error)
+		{
+			return false;
+		}
+
+		// コピー
+		std::filesystem::copy_file(
+			a_src,
+			a_destination,
+			std::filesystem::copy_options::overwrite_existing,
+			_error
+		);
+
+		return !_error;
+	}
+
+	inline bool CopyDirectory(
+		const std::filesystem::path& a_src,
+		const std::filesystem::path& a_destination
+	)
+	{
+		std::error_code _error;
+
+		if (!std::filesystem::is_directory(a_src, _error) || _error)
+		{
+			return false;
+		}
+
+		std::filesystem::create_directories(a_destination,_error);
+
+		if (_error)
+		{
+			return false;
+		}
+
+		std::filesystem::copy(
+			a_src,
+			a_destination,
+			std::filesystem::copy_options::recursive |
+			std::filesystem::copy_options::overwrite_existing,
+			_error
+		);
+
+		return !_error;
 	}
 }

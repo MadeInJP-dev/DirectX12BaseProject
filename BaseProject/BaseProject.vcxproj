@@ -273,6 +273,31 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildPackage\ExecuteDirectoryWrite\ExecuteDirectoryWrite.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildPackage\SourceDirectoryWrite\SourceDirectoryWrite.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildSettings.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildPackage\BuildPlan\BuildPlan.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildPackage\AssetCollector\AssetCollector.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Panel\BuildPanel\BuildPanel.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Editor/EditorPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Editor/EditorPCH.h</PrecompiledHeaderFile>
@@ -1951,6 +1976,12 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildSettings.h" />
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPackage\BuildPlan\BuildPlan.h" />
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPackage\AssetCollector\AssetCollector.h" />
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildContext.h" />
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPackage\ExecuteDirectoryWrite\ExecuteDirectoryWrite.h" />
+    <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPackage\SourceDirectoryWrite\SourceDirectoryWrite.h" />
     <ClInclude Include="Source\Editor\Panel\BuildPanel\BuildPanel.h" />
     <ClInclude Include="Source\Editor\Panel\BuildPanel\Converter\AssetConverterRegistry.h" />
     <ClInclude Include="Source\Editor\Panel\BuildPanel\Converter\IAssetConverter.h" />

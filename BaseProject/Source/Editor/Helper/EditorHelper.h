@@ -89,7 +89,10 @@ namespace Editor
 
 		//--------------------------------------------------------------------------------------
 		// エクスプローラーを開いてフォルダ名を取得
+		//
+		// 返すのは UTF-8(ImGui にそのまま出せる)。パスへ戻すときは Core::File::FromUTF8
+		// a_initialDir(UTF-8)を渡すと、そのフォルダを開いた状態で出す
 		//--------------------------------------------------------------------------------------
-		static bool GetDirectoryNameOpenExplorer(std::string& a_dirName);
+		static bool GetDirectoryNameOpenExplorer(std::string& a_dirName, const std::string& a_initialDir = "");
 	};
 }

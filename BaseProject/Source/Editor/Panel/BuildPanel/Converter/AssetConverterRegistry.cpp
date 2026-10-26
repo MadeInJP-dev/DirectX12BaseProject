@@ -2,6 +2,8 @@
 
 #include "Engine/Resource/Manager/AssetDatabase/AssetDatabase.h"
 
+#include <chrono>
+
 namespace Editor::Build
 {
 	//======================================================================================
@@ -14,6 +16,26 @@ namespace Editor::Build
 
 		std::error_code _ec = {};
 		return std::filesystem::exists(a_prop.filePath + _ext, _ec);
+	}
+
+	bool IAssetConverter::IsOutdated(const Engine::Resource::AssetProperty& a_prop) const
+	{
+		// 出力は ".ob〜"。対になる JSON は ".oj〜"
+		const std::string _ext = GetOutputExtension();
+		if (_ext.size() <= 3 || _ext.compare(0, 3, ".ob") != 0) return false;
+		if (Engine::Persistence::Archive::IsHeavyDataExtension(_ext.substr(3))) return false;
+
+		const std::string _jsonExt = ".oj" + _ext.substr(3);
+
+		std::error_code _ec = {};
+		const auto _binaryTime = std::filesystem::last_write_time(a_prop.filePath + _ext, _ec);
+		if (_ec) return false;
+		const auto _jsonTime = std::filesystem::last_write_time(a_prop.filePath + _jsonExt, _ec);
+		if (_ec) return false;
+
+		// 保存は JSON とバイナリを続けて書くので、書いた順のぶんだけ JSON が新しく見えることがある
+		constexpr auto SAVE_TOLERANCE = std::chrono::seconds(2);
+		return _jsonTime > _binaryTime + SAVE_TOLERANCE;
 	}
 
 	namespace

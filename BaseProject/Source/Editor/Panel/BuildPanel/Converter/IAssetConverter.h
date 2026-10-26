@@ -56,5 +56,9 @@ namespace Editor::Build
 
 		// 変換済みか : 出力ファイルが実際にあるかで見る(アセットデータベースの拡張子一覧は古いことがある)
 		bool IsConverted(const Engine::Resource::AssetProperty& a_prop) const;
+
+		// 変換済みでも、開発用の JSON(.oj*)の方が新しいか : 手で直した後に保存し直していないもの。
+		// 重いデータ(モデル・メッシュ・アニメ)は開発中もバイナリを読むので見ない
+		bool IsOutdated(const Engine::Resource::AssetProperty& a_prop) const;
 	};
 }

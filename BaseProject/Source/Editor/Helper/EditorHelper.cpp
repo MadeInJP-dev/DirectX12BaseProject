@@ -112,7 +112,7 @@ namespace Editor
 	//--------------------------------------------------------------------------------------
 	// エクスプローラーを開いてフォルダ名を取得
 	//--------------------------------------------------------------------------------------
-	bool EditorHelper::GetDirectoryNameOpenExplorer(std::string& a_dirName)
+	bool EditorHelper::GetDirectoryNameOpenExplorer(std::string& a_dirName, const std::string& a_initialDir)
 	{
 		a_dirName = "";
 		IFileDialog* _pDialog = nullptr;
@@ -141,6 +141,23 @@ namespace Editor
 			FOS_PATHMUSTEXIST
 		);
 
+		// 最初に開くフォルダ : 相対パスは作業ディレクトリから。無いフォルダなら既定の場所のまま
+		if (!a_initialDir.empty())
+		{
+			std::error_code _ec;
+			const std::filesystem::path _initialDir = std::filesystem::absolute(Core::File::FromUTF8(a_initialDir), _ec);
+			if (!_ec && std::filesystem::is_directory(_initialDir, _ec))
+			{
+				IShellItem* _pFolder = nullptr;
+				if (SUCCEEDED(SHCreateItemFromParsingName(
+					_initialDir.lexically_normal().wstring().c_str(), nullptr, IID_PPV_ARGS(&_pFolder))))
+				{
+					_pDialog->SetFolder(_pFolder);
+					_pFolder->Release();
+				}
+			}
+		}
+
 		// ダイアログを表示
 		_hr = _pDialog->Show(nullptr);
 
@@ -166,8 +183,8 @@ namespace Editor
 
 			if (SUCCEEDED(_hr))
 			{
-				// Unicodeパスを文字列に変換
-				a_dirName = std::filesystem::path(_path).string();
+				// Unicodeパスを UTF-8 の文字列に変換(.string() は CP932 になり、日本語が ImGui で化ける)
+				a_dirName = Core::String::ToUTF8(_path);
 
 				// 解放
 				CoTaskMemFree(_path);
