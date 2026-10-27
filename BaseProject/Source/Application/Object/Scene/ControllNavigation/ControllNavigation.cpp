@@ -5,6 +5,8 @@
 
 #include "Application/Object/ObjectPicker.h"
 #include "Application/Object/UI/UIBase.h"
+#include "Application/ECS/World/APPWorld.h"
+#include "Application/InstanceResource/UINavigationResource.h"	// 決定は項目移動で選べるときだけ出す
 
 namespace App::Object
 {
@@ -71,6 +73,14 @@ namespace App::Object
 		const auto _it = m_enabledOverrideMap.find(a_item.action);
 		const bool _isEnabled = (_it != m_enabledOverrideMap.end()) ? _it->second : a_item.isEnabled;
 		if (!_isEnabled) return false;
+
+		// 決定はキー・パッドで選べる項目がある(出ている UINavigationGroup が名乗った)ときだけ。
+		// グループは PreUpdate で名乗るので、このフレームの結果が見える
+		if (a_item.action == Game::EGameAction::Decide)
+		{
+			if (!a_context.pWorld || !a_context.pWorld->HasResource<InstanceResource::UINavigationResource>()) return false;
+			if (!a_context.pWorld->GetResource<InstanceResource::UINavigationResource>().HasOwner(a_context.frameIndex)) return false;
+		}
 
 		if (!a_item.conditionGUID.IsValid()) return true;
 

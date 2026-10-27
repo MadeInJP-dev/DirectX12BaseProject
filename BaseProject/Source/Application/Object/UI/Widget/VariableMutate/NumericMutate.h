@@ -59,6 +59,9 @@ namespace App::Object
 		// 今の操作方法
 		ENumericMutateMode GetMode() const { return m_mode; }
 
+		// 項目移動(キー・パッド)で行の UI のどれかが選ばれているか(選んだ行へスクロールを追わせる用)
+		bool IsNavFocused(const Engine::GameObject::ObjectContext& a_context) const;
+
 		// アーカイブ : a_name を頭に付けたキーで書く(<name>GaugeGUID・<name>BarTrackGUID など)
 		void Archive(Engine::Persistence::Archive& a_ar, const std::string& a_name);
 
@@ -79,6 +82,13 @@ namespace App::Object
 
 		// ボタン操作 : このフレームに押されたボタン(下げるなら -1、上げるなら +1)
 		int UpdateButtons(Engine::GameObject::ObjectContext& a_context) const;
+
+		/// <summary>
+		/// スクロールバー操作のキー・パッド : バーが項目移動で選ばれている間、左右で刻みずつ動かす
+		/// </summary>
+		/// <returns>このフレームに動かす向き(下げるなら -1、上げるなら +1)</returns>
+		/// <remarks>選ばれている間は左右での項目移動を止める(上下では行を移れる)。押しっぱなしで繰り返す</remarks>
+		int UpdateNavStep(Engine::GameObject::ObjectContext& a_context);
 
 		// 操作方法に合わせて UI を出し入れする
 		void ApplyModeVisible(Engine::GameObject::ObjectContext& a_context);
@@ -112,5 +122,9 @@ namespace App::Object
 		Math::Vector2 m_rowSize = {};		// 今フレームの行の大きさ
 		std::optional<Engine::Graphics::UIClipRect> m_opClipRect = std::nullopt;
 		float m_rate = 0.0f;				// 最後に Update で受け取った値の、範囲の中での割合(つまみを置く位置)
+
+		// キー・パッドの左右(UpdateNavStep)
+		int m_navHoldDir = 0;				// 倒している向き(-1 で左、+1 で右)
+		float m_navRepeatTimer = 0.0f;		// 押しっぱなしで次に動くまでの残り(秒)
 	};
 }

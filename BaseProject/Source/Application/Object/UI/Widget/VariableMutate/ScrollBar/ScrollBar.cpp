@@ -71,8 +71,9 @@ namespace App::Object
 		UIBase* _pThumb = UIBase::FindUI(a_context, m_thumbGUID);
 		UIBase* _pTrack = UIBase::FindUI(a_context, m_trackGUID);
 
-		const bool _isThumbPressed = _pThumb && _pThumb->IsPressed();
-		const bool _isTrackPressed = _pTrack && _pTrack->IsPressed();
+		// 項目移動で選ばれているときの「押している」は決定キーなので、カーソルの位置へ飛ばさない
+		const bool _isThumbPressed = _pThumb && _pThumb->IsPressed() && !_pThumb->IsNavFocused();
+		const bool _isTrackPressed = _pTrack && _pTrack->IsPressed() && !_pTrack->IsNavFocused();
 
 		Math::Vector2 _cursor = {};
 		if (!(_isThumbPressed || _isTrackPressed) || !UIInteraction::CalcCursorUIPos(a_context, _cursor))
@@ -125,6 +126,13 @@ namespace App::Object
 
 		if (UIBase* _pTrack = UIBase::FindUI(a_context, m_trackGUID)) _pTrack->SetVisible(a_isVisible);
 		if (UIBase* _pThumb = UIBase::FindUI(a_context, m_thumbGUID)) _pThumb->SetVisible(a_isVisible);
+	}
+
+	bool ScrollBar::IsNavFocused(const Engine::GameObject::ObjectContext& a_context) const
+	{
+		const UIBase* _pTrack = UIBase::FindUI(a_context, m_trackGUID);
+		const UIBase* _pThumb = UIBase::FindUI(a_context, m_thumbGUID);
+		return (_pTrack && _pTrack->IsNavFocused()) || (_pThumb && _pThumb->IsNavFocused());
 	}
 
 	//======================================================================================

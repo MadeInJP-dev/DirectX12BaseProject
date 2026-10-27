@@ -78,8 +78,9 @@ namespace App::Object
 			{
 				if (std::abs(_axis.y) > AXIS_THRESHOLD) _dir = (_axis.y > 0.0f) ? -1 : 1;
 			}
-			else if (std::abs(_axis.x) > AXIS_THRESHOLD)
+			else if (std::abs(_axis.x) > AXIS_THRESHOLD && !a_nav.IsHorizontalLocked(a_context.frameIndex))
 			{
+				// 左右を値の増減に使っている間(横のスクロールバーが選ばれている)は動かさない
 				_dir = (_axis.x > 0.0f) ? 1 : -1;
 			}
 

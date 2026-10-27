@@ -52,6 +52,10 @@ namespace App::InstanceResource
 		// キー割り当ての待ち受けのように、スティック・十字キー・LB/RB を別の用途に使っている間に立てる
 		uint64_t moveLockFrameIndex = UINT64_MAX;
 
+		// 左右での移動だけを止めるよう頼まれた最後のフレーム(UINT64_MAX で頼まれていない)。
+		// 横のスクロールバー(数値の行)が選ばれている間、左右を値の増減に使うために立てる。上下・LB/RB では今までどおり動く
+		uint64_t horizontalLockFrameIndex = UINT64_MAX;
+
 		//--------------------------------------------------------------------------------------
 		// グループの取り合い
 		//--------------------------------------------------------------------------------------
@@ -122,6 +126,24 @@ namespace App::InstanceResource
 		bool IsMoveLocked(uint64_t a_frameIndex) const
 		{
 			return moveLockFrameIndex != UINT64_MAX && a_frameIndex <= moveLockFrameIndex + 1;
+		}
+
+		/// <summary>
+		/// 左右での移動を止める(毎フレーム頼む)
+		/// </summary>
+		/// <remarks>LockMove と同じく、頼んだフレームと次のフレームに効く</remarks>
+		void LockHorizontal(uint64_t a_frameIndex) { horizontalLockFrameIndex = a_frameIndex; }
+
+		// 左右での移動を止めているか
+		bool IsHorizontalLocked(uint64_t a_frameIndex) const
+		{
+			return horizontalLockFrameIndex != UINT64_MAX && a_frameIndex <= horizontalLockFrameIndex + 1;
+		}
+
+		/// <summary>このフレームに名乗ったグループがあるか(Update から。キー・パッドで選べる画面か)</summary>
+		bool HasOwner(uint64_t a_frameIndex) const
+		{
+			return claimFrameIndex == a_frameIndex && pOwner != nullptr;
 		}
 
 		/// <summary>その UI が選ばれていて、選択を見せるか(Update から)</summary>

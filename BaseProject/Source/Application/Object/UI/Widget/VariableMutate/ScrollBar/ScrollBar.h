@@ -65,6 +65,9 @@ namespace App::Object
 		// つまみを掴んでいるか
 		bool IsDragging() const { return m_isDragging; }
 
+		// 項目移動(キー・パッド)で溝かつまみが選ばれているか
+		bool IsNavFocused(const Engine::GameObject::ObjectContext& a_context) const;
+
 		// 掴んでいたことを忘れる(隠したとき・出し直したときに掴んだままにならないように)
 		void CancelDrag() { m_isDragging = false; }
 

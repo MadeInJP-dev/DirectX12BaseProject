@@ -182,8 +182,7 @@ namespace App::Object
 		const auto* _pMissionSelect = FindMissionSelect(_pObjectManager);
 		const bool _isConfirmOpen = _pMissionSelect && _pMissionSelect->IsConfirmOpen();
 
-		// 決定 : キーで項目を選べる(UINavigationGroup を置いてある)のはトップとメニューだけ
-		_pNavigation->SetActionEnabled(Game::EGameAction::Decide, _isMenuOpen || (m_mode == EHomeMode::Home));
+		// 決定は ControllNavigation が、キーで項目を選べる(UINavigationGroup が出ている)ときだけ出す
 
 		// 戻る : 閉じる相手があるとき(UpdateBackInput と同じものを見る)
 		_pNavigation->SetActionEnabled(m_backAction, _isMenuOpen || _isConfirmOpen || (m_mode == EHomeMode::MissionSelect));

@@ -295,6 +295,13 @@ namespace App::Object
 		// 今のスクロール位置の割合(0〜1)。動かせないときは 0
 		float GetScrollRate() const;
 
+		// 今の行を「選ばれている行」として覚える(Layout の最後にそこまでスクロールする)
+		void MarkFocusRow()
+		{
+			m_hasFocusRow = true;
+			m_focusRowTop = m_layoutCursorY;
+		}
+
 		// 項目を切り抜く矩形 : 描画範囲からバーのぶんを除いたもの
 		Engine::Graphics::UIClipRect MakeContentClipRect() const;
 
@@ -320,5 +327,9 @@ namespace App::Object
 		float m_scrollOffset = 0.0f;		// 現在位置(px)
 		float m_contentLength = 0.0f;		// 項目の全長(px) : これを最大としてスクロールバーを決める
 		float m_layoutCursorY = 0.0f;		// 並べている途中の行の上端(内容の座標, px)
+
+		// 項目移動(キー・パッド)で選ばれている行 : 並べ終えたら見えるところまでスクロールする
+		bool m_hasFocusRow = false;
+		float m_focusRowTop = 0.0f;			// 上端(内容の座標, px)
 	};
 }

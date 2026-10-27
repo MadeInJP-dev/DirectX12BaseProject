@@ -39,8 +39,12 @@ namespace App::Object
 
 		// 上から順に積む。全長は積み終わった位置
 		m_layoutCursorY = 0.0f;
+		m_hasFocusRow = false;
 		LayoutItems(a_context);
 		m_contentLength = m_layoutCursorY;
+
+		// キー・パッドで範囲の外の行へ移ったら、その行が見えるところまで送る(位置に効くのは次のフレーム)
+		if (m_hasFocusRow) ScrollIntoView(m_focusRowTop, m_focusRowTop + m_layout.itemSize.y);
 
 		PlaceScrollBar(a_context);
 	}
@@ -111,6 +115,8 @@ namespace App::Object
 		});
 
 		_pUI->SetClipRect(MakeContentClipRect());
+
+		if (_pUI->IsNavFocused()) MarkFocusRow();
 	}
 
 	void ScrollPanelBase::AdvanceRow()
@@ -139,6 +145,8 @@ namespace App::Object
 
 		const Engine::Graphics::UIClipRect _clip = MakeContentClipRect();
 		a_numeric.Place(a_context, _rowTopLeft, m_layout.itemSize, &_clip);
+
+		if (a_numeric.IsNavFocused(a_context)) MarkFocusRow();
 	}
 
 	//======================================================================================

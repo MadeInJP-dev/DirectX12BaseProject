@@ -1,13 +1,26 @@
 ﻿#include "NumericMutate.h"
 
+#include "Engine/ECS/System/SystemContext.h"	// ObjectContext が運ぶサービス群
 #include "Engine/EditorField/EditorField.h"
+#include "Engine/Input/InputManager/InputManager.h"
 
+#include "Application/ECS/World/APPWorld.h"
+#include "Application/Game/Core/InputSettings.h"			// 項目移動の軸(BottonMove)
+#include "Application/InstanceResource/UINavigationResource.h"	// 選ばれている間は左右での項目移動を止める
 #include "Application/Object/ObjectPicker.h"
 #include "Application/Object/UI/UIBase.h"
 #include "Application/Object/UI/Widget/UIGauge/UIGauge.h"
 
 namespace App::Object
 {
+	namespace
+	{
+		// キー・パッドの左右 : 倒したとみなす量と、押しっぱなしで繰り返し始めるまで・その後の間隔(秒)
+		constexpr float NAV_AXIS_THRESHOLD = 0.5f;
+		constexpr float NAV_REPEAT_DELAY = 0.4f;
+		constexpr float NAV_REPEAT_INTERVAL = 0.06f;
+	}
+
 	//======================================================================================
 	// 並べる
 	//======================================================================================
@@ -82,6 +95,12 @@ namespace App::Object
 		}
 		else
 		{
+			// キー・パッド : 選ばれている間は左右で刻みずつ
+			if (const int _step = UpdateNavStep(a_context); _step != 0)
+			{
+				a_inoutValue = std::clamp(a_inoutValue + a_step * static_cast<float>(_step), a_min, a_max);
+			}
+
 			// 範囲の中の割合で動かす。吸い付きはバーの分割の設定
 			float _rate = (_range > 0.0f) ? std::clamp((a_inoutValue - a_min) / _range, 0.0f, 1.0f) : 0.0f;
 			if (m_scrollBar.Update(a_context, _rate))
@@ -114,6 +133,53 @@ namespace App::Object
 		if (_pUp && _pUp->IsClicked()) ++_step;
 
 		return _step;
+	}
+
+	int NumericMutate::UpdateNavStep(Engine::GameObject::ObjectContext& a_context)
+	{
+		if (!m_scrollBar.IsNavFocused(a_context) || !a_context.pServices || !a_context.pServices->pInputManager)
+		{
+			m_navHoldDir = 0;
+			return 0;
+		}
+
+		// 左右は値に使うので、項目移動には使わせない(次のフレームの移動から効く)
+		if (a_context.pWorld && a_context.pWorld->HasResource<InstanceResource::UINavigationResource>())
+		{
+			a_context.pWorld->RefResource<InstanceResource::UINavigationResource>().LockHorizontal(a_context.frameIndex);
+		}
+
+		// 倒した瞬間に1つ動き、倒し続けると少し待ってから繰り返す(UINavigationGroup と同じ)
+		const Math::Vector2 _axis = a_context.pServices->pInputManager->GetAxisState(Game::EGameAction::BottonMove);
+		int _dir = 0;
+		if (std::abs(_axis.x) > NAV_AXIS_THRESHOLD && std::abs(_axis.x) > std::abs(_axis.y))
+		{
+			_dir = (_axis.x > 0.0f) ? 1 : -1;
+		}
+
+		if (_dir != m_navHoldDir)
+		{
+			m_navHoldDir = _dir;
+			m_navRepeatTimer = NAV_REPEAT_DELAY;
+			return _dir;
+		}
+		if (_dir == 0) return 0;
+
+		m_navRepeatTimer -= a_context.dt;
+		if (m_navRepeatTimer > 0.0f) return 0;
+
+		m_navRepeatTimer += NAV_REPEAT_INTERVAL;
+		return _dir;
+	}
+
+	bool NumericMutate::IsNavFocused(const Engine::GameObject::ObjectContext& a_context) const
+	{
+		for (const RowItem* _pItem : { &m_gauge, &m_down, &m_up })
+		{
+			const UIBase* _pUI = UIBase::FindUI(a_context, _pItem->guid);
+			if (_pUI && _pUI->IsNavFocused()) return true;
+		}
+		return m_scrollBar.IsNavFocused(a_context);
 	}
 
 	//======================================================================================
