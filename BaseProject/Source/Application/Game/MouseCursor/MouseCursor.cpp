@@ -3,6 +3,7 @@
 #include "Engine/MainEngine.h"
 #include "Engine/Window/NativeWindow.h"
 #include "Engine/Input/InputManager/InputManager.h"
+#include "Engine/Input/InputDeviceManager.h"		// 最後に触ったデバイス(コントローラーを触ったら消す)
 #include "Engine/Config/ConfigRegistry.h"
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
@@ -120,9 +121,75 @@ namespace App::Game
 
 		// クライアント領域の外に出ているならこちらで描くものは無い
 		// (OSのカーソルはそのウィンドウの上でしか消えないので、外は元から普通に出る)
-		if (!TryGetCursorClientPos(m_clientPos)) return;
+		Math::Vector2 _clientPos = {};
+		const bool _hasClientPos = TryGetCursorClientPos(_clientPos);
 
-		m_isDraw = true;
+		// 自動で消す。消えている間は、消えた場所で止めておく
+		UpdateAutoHide(IsMouseTouched(_clientPos, _hasClientPos));
+		if (!_hasClientPos) return;
+		if (!m_isHiddenByIdle) m_clientPos = _clientPos;
+
+		m_isDraw = (m_visibleRate > 0.0f);
+	}
+
+	//======================================================================================
+	// 自動で消す
+	//--------------------------------------------------------------------------------------
+	// 消すのは自前の絵だけ。OSのカーソルの位置は動かさないので、
+	// マウスを触れば消えた場所(からマウスを動かしたぶん)に戻ってくる
+	//======================================================================================
+	void MouseCursor::UpdateAutoHide(bool a_isMouseTouched)
+	{
+		const float _dt = m_pServices->pMainEngine->GetUnscaledDeltaTime();
+
+		const auto _device = m_pServices->pInputManager->GetInputDeviceManager().GetActiveDevice();
+		const bool _isPadTouched = (_device == Engine::Input::EInputDevice::Gamepad) && (m_lastDevice != Engine::Input::EInputDevice::Gamepad);
+		m_lastDevice = _device;
+
+		if (!m_config.isAutoHide || a_isMouseTouched)
+		{
+			m_idleSec = 0.0f;
+			m_isHiddenByIdle = false;
+		}
+		else
+		{
+			m_idleSec += _dt;
+
+			// コントローラーを触ったら待たずに消す
+			if (_isPadTouched || m_idleSec >= m_config.autoHideDelaySec) m_isHiddenByIdle = true;
+		}
+
+		// 目標へ寄せる(時間が 0 なら一度に)
+		const float _target = m_isHiddenByIdle ? 0.0f : 1.0f;
+		const float _sec = m_isHiddenByIdle ? m_config.fadeOutSec : m_config.fadeInSec;
+		const float _step = (_sec > 0.0f) ? (_dt / _sec) : 1.0f;
+		m_visibleRate = (m_visibleRate < _target)
+			? std::min(m_visibleRate + _step, _target)
+			: std::max(m_visibleRate - _step, _target);
+	}
+
+	bool MouseCursor::IsMouseTouched(const Math::Vector2& a_clientPos, bool a_hasClientPos)
+	{
+		// 机に触れた程度の揺れでは戻さない(UI px ではなくクライアントの px)
+		constexpr float MOVE_THRESHOLD = 2.0f;
+
+		bool _isMoved = false;
+		if (a_hasClientPos && m_hasLastTouchPos)
+		{
+			_isMoved = Math::Vector2::DistanceSquared(a_clientPos, m_lastTouchPos) > MOVE_THRESHOLD * MOVE_THRESHOLD;
+		}
+		m_lastTouchPos = a_clientPos;
+		m_hasLastTouchPos = a_hasClientPos;
+
+		if (_isMoved) return true;
+		if (m_pServices->pInputManager->GetWheelDelta() != 0.0f) return true;
+
+		// ボタンは押している間ずっと触っているとみなす(押しながらの間は消さない)
+		for (const int _vk : { VK_LBUTTON, VK_RBUTTON, VK_MBUTTON, VK_XBUTTON1, VK_XBUTTON2 })
+		{
+			if (GetAsyncKeyState(_vk) & 0x8000) return true;
+		}
+		return false;
 	}
 
 	//======================================================================================
@@ -193,6 +260,7 @@ namespace App::Game
 		_desc.pixelPos = _renderPos;
 		_desc.pixelSize = Math::Vector2(m_config.sizePixel, m_config.sizePixel);
 		_desc.color = m_config.color;
+		_desc.color.a *= m_visibleRate;		// 自動で消すときの薄れ
 		_desc.Zlayer = CURSOR_LAYER;
 		_desc.pivot = m_config.hotspot;
 		a_pDrawSubmitter->SubmitUI(_desc);

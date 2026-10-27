@@ -39,6 +39,17 @@ namespace App::Game
 		// 乗算する色
 		Math::Color color = Engine::Color::WHITE;
 
+		// マウスを触らないまま時間が経ったら、すっと消すか。
+		// コントローラーを触ったときは時間を待たずに消す。マウスを触ればその場所に戻る
+		bool isAutoHide = true;
+
+		// 消し始めるまでの、マウスを触っていない時間(秒)
+		float autoHideDelaySec = 3.0f;
+
+		// 消えるまで / 戻るまでにかける時間(秒)
+		float fadeOutSec = 0.35f;
+		float fadeInSec = 0.08f;
+
 		// 設定画面・保存(ConfigRegistry から呼ばれる)
 		void DrawEdit(const Engine::ECS::EngineServices& a_services);
 		void Archive(Engine::Persistence::Archive& a_archive);

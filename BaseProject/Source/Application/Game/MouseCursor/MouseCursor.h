@@ -2,6 +2,8 @@
 
 #include "CursorConfig.h"
 
+#include "Engine/Input/Core/InputDevice.h"	// 最後に触ったデバイス(コントローラーを触ったら消す)
+
 namespace Engine::Resource
 {
 	class Texture;
@@ -65,6 +67,15 @@ namespace App::Game
 		// カーソルのクライアント座標を取り、クライアント領域の内側かどうかも見る
 		bool TryGetCursorClientPos(Math::Vector2& a_outClientPos) const;
 
+		/// <summary>
+		/// 自動で消す : マウスを触っていない時間とコントローラーを見て、出ている割合(m_visibleRate)を進める
+		/// </summary>
+		/// <param name="a_isMouseTouched">このフレームにマウスを動かした・押した・回したか</param>
+		void UpdateAutoHide(bool a_isMouseTouched);
+
+		// このフレームにマウスを触ったか(動かした・ボタンを押した・ホイールを回した)
+		bool IsMouseTouched(const Math::Vector2& a_clientPos, bool a_hasClientPos);
+
 	private:
 
 		const Engine::ECS::EngineServices* m_pServices = nullptr;	// 借り物
@@ -81,7 +92,18 @@ namespace App::Game
 		// このフレームに絵を描くか
 		bool m_isDraw = false;
 
-		// カーソル位置(クライアント座標 px)
+		// カーソル位置(クライアント座標 px)。消えている間は消えた場所のまま止めておき、
+		// マウスを触ったらそこから(OSのカーソルは動いていないので同じ場所に)戻る
 		Math::Vector2 m_clientPos = {};
+
+		//------------------------------------------------------------------------------
+		// 自動で消す
+		//------------------------------------------------------------------------------
+		float m_visibleRate = 1.0f;				// 出ている割合(0 で消えている)。色のアルファへ掛ける
+		float m_idleSec = 0.0f;					// マウスを触っていない時間(秒)
+		bool m_isHiddenByIdle = false;			// 消している最中か(マウスを触るまで戻さない)
+		Math::Vector2 m_lastTouchPos = {};		// 前のフレームのカーソル位置(動いたかを見る)
+		bool m_hasLastTouchPos = false;
+		Engine::Input::EInputDevice m_lastDevice = Engine::Input::EInputDevice::None;	// 前のフレームの最後に触ったデバイス
 	};
 }

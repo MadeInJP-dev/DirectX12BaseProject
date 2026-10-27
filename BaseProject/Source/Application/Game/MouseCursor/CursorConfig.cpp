@@ -37,6 +37,20 @@ void App::Game::CursorConfig::DrawEdit(const Engine::ECS::EngineServices& a_serv
 	Engine::EditorField::HelpText("画像の中で実際に指している点(正規化)。矢印なら尖端");
 
 	Engine::EditorField::ColorField("Color", color);
+
+	Engine::EditorField::Header("AutoHide");
+
+	Engine::EditorField::Field("Enable##AutoHide", isAutoHide);
+	Engine::EditorField::Tooltip("マウスを触らないまま時間が経つ・コントローラーを触ると消す。マウスを触るとその場所に戻る");
+
+	Engine::EditorField::Field("Delay", autoHideDelaySec, 0.1f, 0.0f, 60.0f, "%.1f s");
+	autoHideDelaySec = std::max(autoHideDelaySec, 0.0f);
+	Engine::EditorField::Tooltip("マウスを触らなくなってから消し始めるまで");
+
+	Engine::EditorField::Field("FadeOut", fadeOutSec, 0.01f, 0.0f, 5.0f, "%.2f s");
+	Engine::EditorField::Field("FadeIn", fadeInSec, 0.01f, 0.0f, 5.0f, "%.2f s");
+	fadeOutSec = std::max(fadeOutSec, 0.0f);
+	fadeInSec = std::max(fadeInSec, 0.0f);
 }
 
 void App::Game::CursorConfig::Archive(Engine::Persistence::Archive& a_archive)
@@ -46,4 +60,8 @@ void App::Game::CursorConfig::Archive(Engine::Persistence::Archive& a_archive)
 	a_archive.Field("sizePixel", sizePixel);
 	a_archive.Field("hotspot", hotspot);
 	a_archive.Field("color", color);
+	a_archive.Field("isAutoHide", isAutoHide);
+	a_archive.Field("autoHideDelaySec", autoHideDelaySec);
+	a_archive.Field("fadeOutSec", fadeOutSec);
+	a_archive.Field("fadeInSec", fadeInSec);
 }

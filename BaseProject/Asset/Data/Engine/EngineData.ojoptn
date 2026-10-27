@@ -10,16 +10,20 @@
         "maxThreadCount": 30
     },
     "CursorConfig": {
+        "autoHideDelaySec": 3.0,
         "color": [
             1.0,
             1.0,
             1.0,
             1.0
         ],
+        "fadeInSec": 0.07999999821186066,
+        "fadeOutSec": 0.3499999940395355,
         "hotspot": [
             0.38100001215934753,
             0.24300000071525574
         ],
+        "isAutoHide": true,
         "isEnable": true,
         "sizePixel": 64.0,
         "textureGUID": "eaa92474-cfe9-4399-bc6e-9078675e454b"
