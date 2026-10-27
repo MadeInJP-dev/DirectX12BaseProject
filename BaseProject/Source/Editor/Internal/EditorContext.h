@@ -34,6 +34,15 @@ namespace Editor
 	};
 
 	/// <summary>
+	/// シーンビューのクリックとギズモが相手にするもの
+	/// </summary>
+	enum class ESceneViewTarget
+	{
+		Entity,		// ECS のエンティティ(Entities の一覧を開いているとき)
+		GameObject,	// ECS 外のオブジェクト・UI(Objects の一覧を開いているとき)
+	};
+
+	/// <summary>
 	/// プレハブのコピー&ペースト用クリップボード。
 	///
 	/// シグネチャだけでなくコンポーネントの初期値バイト列ごと持つので、
@@ -204,6 +213,47 @@ namespace Editor
 
 			ClearEntitySelection();
 			eInspectorType = EInspectorType::Game;
+		}
+
+		//==============================================================================
+		// シーンビューのクリックとギズモの相手
+		//
+		// どちらの一覧(Entities / Objects)を開いているかで決める。
+		// UI はエンティティの描画メッシュと画面で重なるので、両方を同時に受け付けると
+		// UI を押したつもりでもエンティティに吸われ、UI のハンドルも掴めなくなるため。
+		//
+		//   ・片方の一覧だけが描かれている(同じ場所のタブで、片方が前に出ている) … そちら
+		//   ・両方とも描かれている(別々の場所に置いている)                       … 最後に触ったほう
+		//   ・どちらも描かれていない                                              … 前のまま
+		//
+		// 一覧は毎フレーム ReportHierarchyShown で知らせ、シーンビューが描く前に
+		// ResolveSceneViewTarget で決める(一覧はシーンビューより先に描かれる)
+		//==============================================================================
+		ESceneViewTarget eSceneViewTarget = ESceneViewTarget::Entity;
+		bool isEntityHierarchyShown = false;	// このフレームに Entities の一覧が描かれたか
+		bool isObjectHierarchyShown = false;	// このフレームに Objects の一覧が描かれたか
+
+		// フレームの頭で、描かれたかどうかを下ろす(PanelManager が呼ぶ)
+		void BeginHierarchyReport()
+		{
+			isEntityHierarchyShown = false;
+			isObjectHierarchyShown = false;
+		}
+
+		// 一覧が描かれたことを知らせる。触っている(フォーカスがある)ならその場で相手を切り替える
+		void ReportHierarchyShown(ESceneViewTarget a_target, bool a_isFocused)
+		{
+			if (a_target == ESceneViewTarget::Entity) isEntityHierarchyShown = true;
+			else isObjectHierarchyShown = true;
+
+			if (a_isFocused) eSceneViewTarget = a_target;
+		}
+
+		// 片方だけが描かれていればそちらにする
+		void ResolveSceneViewTarget()
+		{
+			if (isEntityHierarchyShown == isObjectHierarchyShown) return;
+			eSceneViewTarget = isEntityHierarchyShown ? ESceneViewTarget::Entity : ESceneViewTarget::GameObject;
 		}
 
 		// プレハブのシグネチャ+初期値のコピー先

@@ -52,6 +52,9 @@ namespace Editor
 		// ここで一度だけ取って全パネルで共有する。
 		m_editContext.m_isSelecting = ImGui::IsKeyDown(ImGuiKey_LeftCtrl);
 
+		// どちらの一覧が描かれたかはこのフレームの分だけ見る(シーンビューのクリックの相手を決める)
+		m_editContext.BeginHierarchyReport();
+
 		// 選択中のものが前のシーンの遺物になっていないか確かめる
 		ValidateContext();
 

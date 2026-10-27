@@ -35,6 +35,7 @@
 
 
 #include "Engine/GameObject/BaseObject/BaseObject.h"
+#include "Application/Object/UI/UIBase.h"	// Objects を開いている間は UI をクリックで選ぶ
 
 
 namespace Editor
@@ -226,6 +227,9 @@ namespace Editor
 {
 	void Editor::SceneViewPanel::OnDrawImGui(EditorContext& a_editContext)
 	{
+		// クリックとギズモの相手を決める(一覧はこのパネルより先に描かれている)
+		a_editContext.ResolveSceneViewTarget();
+
 		// メニューバー(カメラ)
 		DrawMenuBar(a_editContext);
 
@@ -266,25 +270,78 @@ namespace Editor
 			_pEditorCam->SetViewportHovered(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows));
 		}
 
+		//------------------------------------------------------------------
+		// クリックとギズモの相手は、開いている一覧(Entities / Objects)で決める
+		//
+		// UI はエンティティの描画メッシュと画面で重なるので、両方を受け付けると
+		// UI やそのハンドルを押したつもりでもエンティティに吸われてしまう
+		//------------------------------------------------------------------
+		if (a_editContext.eSceneViewTarget == ESceneViewTarget::GameObject)
+		{
+			// ハンドルを先に置く : 掴んだクリックを選び直しに使わないため
+			GameObjectGizmoDraw(_imageMin, _actualRenderSize, a_editContext);
+
+			// シーンビュー上で UI をクリックした際に選択する
+			SelectObjectForMouse(a_editContext, _imageMin, _actualRenderSize);
+			return;
+		}
+
 		// シーンビュー上でエンティティをクリックした際に選択する
 		SelectEntityForMouse(a_editContext,_pWorld, _imageMin,_actualRenderSize);
 
 		// エンティティコピー(Ctrl+C / Ctrl+V)
 		CopyEntities(a_editContext, _pWorld);
 
-		// ギズモ描画
-		// ゲームオブジェクト(Gameモード)を選択中ならそちらのギズモを、
-		// そうでなければ従来通りECSエンティティのギズモを出す。
-		if (a_editContext.eInspectorType == EInspectorType::Game && a_editContext.pGameObject)
+		// ギズモはプライマリ選択(選択リストの先頭)に出し、
+		// 動かした分は選択中の全エンティティへ適用する
+		GuizmoDraw(_imageMin, _actualRenderSize, a_editContext, _pWorld);
+	}
+
+	void SceneViewPanel::SelectObjectForMouse(EditorContext& a_editContext, const ImVec2& a_pos, const ImVec2& a_rect)
+	{
+		// このパネル上にカーソルがあり、左クリックした瞬間だけ判定する
+		if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows)) return;
+		if (!ImGui::IsMouseClicked(ImGuiMouseButton_Left)) return;
+
+		// ハンドル(GameObjectGizmoDraw が置いたボタン)を掴んだクリックは移動操作
+		if (ImGui::IsAnyItemActive()) return;
+
+		auto* _pManager = a_editContext.pServices->pSceneManager->RefGameObjectManager();
+		if (!_pManager) return;
+
+		// 画像左上を基準にしたマウス座標を、UI のピクセル座標(描画解像度)へ直す
+		if (a_rect.x <= 0.0f || a_rect.y <= 0.0f) return;
+		const auto* _pGraphicsEngine = a_editContext.pServices->pMainEngine->RefGraphicsEngine();
+		const ImVec2 _mousePos = ImGui::GetMousePos();
+		const Math::Vector2 _uiPos = {
+			(_mousePos.x - a_pos.x) * (static_cast<float>(_pGraphicsEngine->GetRenderWidth()) / a_rect.x),
+			(_mousePos.y - a_pos.y) * (static_cast<float>(_pGraphicsEngine->GetRenderHeight()) / a_rect.y)
+		};
+
+		//------------------------------------------------------------------
+		// 一番手前(画面での Z順が大きい)の UI を選ぶ
+		//
+		// 子は親の Z順に足し算で乗るので、親と子が重なっていれば子が選ばれる。
+		// 同じ Z順なら後に描かれる(一覧の後ろにある)ほう
+		//------------------------------------------------------------------
+		const Engine::GameObject::ObjectContext& _context = _pManager->RefObjectContext();
+
+		App::Object::UIBase* _pPicked = nullptr;
+		float _pickedLayer = 0.0f;
+		for (const auto& _upObject : _pManager->GetObjects())
 		{
-			GameObjectGizmoDraw(_imageMin, _actualRenderSize, a_editContext);
+			auto* _pUI = Core::TypeInfo::Cast<App::Object::UIBase>(_upObject.get());
+			if (!_pUI || !_pUI->IsPickedAt(_context, _uiPos)) continue;
+
+			const float _layer = _pUI->CalcWorldAnchor().layer;
+			if (_pPicked && _layer < _pickedLayer) continue;
+
+			_pPicked = _pUI;
+			_pickedLayer = _layer;
 		}
-		else
-		{
-			// ギズモはプライマリ選択(選択リストの先頭)に出し、
-			// 動かした分は選択中の全エンティティへ適用する
-			GuizmoDraw(_imageMin, _actualRenderSize, a_editContext, _pWorld);
-		}
+
+		// 何も無いところを押したときは選択を変えない(エンティティと同じ)
+		if (_pPicked) a_editContext.SelectGameObject(_pPicked);
 	}
 	void SceneViewPanel::SelectEntityForMouse(EditorContext& a_editContext, Engine::ECS::World* a_pWorld, const ImVec2& a_pos, const ImVec2& a_rect)
 	{
@@ -852,6 +909,11 @@ namespace Editor
 			}
 			ImGui::EndMenu();
 		}
+
+		// 今クリックとギズモが相手にしているもの(開いている一覧で切り替わる)
+		const bool _isObject = (a_editContext.eSceneViewTarget == ESceneViewTarget::GameObject);
+		Engine::EditorField::HelpText("|  Click : %s", _isObject ? "Objects (UI)" : "Entities");
+		Engine::EditorField::Tooltip("Entities / Objects の一覧のうち、開いている(最後に触った)ほうを選ぶ・動かす");
 
 		ImGui::EndMenuBar();
 	}

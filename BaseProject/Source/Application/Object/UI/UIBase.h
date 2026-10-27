@@ -163,6 +163,17 @@ namespace App::Object
 		bool IsDrawnInHierarchy(const Engine::GameObject::ObjectContext& a_context) const;
 
 		/// <summary>
+		/// エディターのシーンビューで、この点を押したらこの UI を選ぶか
+		/// </summary>
+		/// <param name="a_uiPos">UI のピクセル座標(描画解像度, 左上原点)</param>
+		/// <remarks>
+		/// 描かれているものだけ。押せる UI は押したときと同じ範囲(CalcHitRect)、
+		/// 押せない UI(文字・飾りだけのもの)は見えている飾りの範囲で見る。
+		/// 切り抜かれて見えていないところでは選ばない
+		/// </remarks>
+		bool IsPickedAt(const Engine::GameObject::ObjectContext& a_context, const Math::Vector2& a_uiPos) const;
+
+		/// <summary>
 		/// HUD か : プレイヤーが設定画面で HUD を消したとき、一緒に描かれなくなる
 		/// </summary>
 		/// <remarks>

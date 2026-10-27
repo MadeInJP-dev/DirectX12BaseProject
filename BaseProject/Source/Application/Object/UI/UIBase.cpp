@@ -427,6 +427,39 @@ namespace App::Object
 	}
 
 	//======================================================================================
+	// エディターのシーンビューで選ぶか
+	//======================================================================================
+	bool UIBase::IsPickedAt(const Engine::GameObject::ObjectContext& a_context, const Math::Vector2& a_uiPos) const
+	{
+		if (!IsDrawnInHierarchy(a_context)) return false;
+
+		// 押せる UI は、押したときと同じ範囲で選ぶ(切り抜きもそこで見る)
+		if (m_opInteraction) return IsPointInsideSelf(a_uiPos);
+
+		// 押せない UI : 見えていないところでは選ばない
+		if (m_opClipRect)
+		{
+			const Engine::Graphics::UIClipRect& _clip = m_opClipRect.value();
+			if (a_uiPos.x < _clip.min.x || a_uiPos.y < _clip.min.y) return false;
+			if (a_uiPos.x > _clip.max.x || a_uiPos.y > _clip.max.y) return false;
+		}
+
+		// 見えている飾りの範囲(無ければアンカーの矩形)
+		const UIAnchor _anchor = CalcWorldAnchor();
+
+		Math::Vector2 _center = {};
+		Math::Vector2 _size = {};
+		if (CalcDecorationBounds(_center, _size))
+		{
+			return UIAnchor::IsPointInside(
+				a_uiPos, _anchor.ToScreenPos(_center), _size * _anchor.scale, { 0.5f, 0.5f }, _anchor.rotation, {});
+		}
+
+		if (!_anchor.HasSize()) return false;
+		return UIAnchor::IsPointInside(a_uiPos, _anchor.pixelPos, _anchor.pixelSize, _anchor.pivot, _anchor.rotation, {});
+	}
+
+	//======================================================================================
 	// 飾りが占めている範囲
 	//--------------------------------------------------------------------------------------
 	// a_isIncludeAnim を立てると、素の矩形に加えて

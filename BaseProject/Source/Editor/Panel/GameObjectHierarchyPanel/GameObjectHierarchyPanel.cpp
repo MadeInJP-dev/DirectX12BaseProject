@@ -89,6 +89,9 @@ namespace Editor
 
 	void GameObjectHierarchyPanel::OnDrawImGui(EditorContext& a_editContext)
 	{
+		// 開いている間は、シーンビューのクリックとギズモをオブジェクト(UI など)が受け取る
+		a_editContext.ReportHierarchyShown(ESceneViewTarget::GameObject, ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows));
+
 		// 現在のシーンのオブジェクトマネージャーを取得
 		auto* _pManager = a_editContext.pServices->pSceneManager->RefGameObjectManager();
 		if (!_pManager)

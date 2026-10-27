@@ -31,6 +31,9 @@ namespace Editor
 		// シーンビュー上でのエンティティ選択
 		void SelectEntityForMouse(EditorContext& a_editContext, Engine::ECS::World* a_pWorld, const ImVec2& a_pos, const ImVec2& a_rect);
 
+		// シーンビュー上での UI の選択(Objects の一覧を開いているとき)。一番手前の UI を選ぶ
+		void SelectObjectForMouse(EditorContext& a_editContext, const ImVec2& a_pos, const ImVec2& a_rect);
+
 		// レイと描画メッシュのAABBでエンティティをピッキングする(物理空間は使わない)。
 		// 当たり判定を持たないエンティティも選択できるよう、描画メッシュから直接判定する。
 		Engine::ECS::Entity PickEntityByRay(Engine::ECS::World* a_pWorld, const Math::Ray& a_ray);

@@ -24,6 +24,9 @@ namespace Editor
 {
 	void Editor::HierarchyPanel::OnDrawImGui(EditorContext& a_editContext)
 	{
+		// 開いている間は、シーンビューのクリックとギズモをエンティティが受け取る
+		a_editContext.ReportHierarchyShown(ESceneViewTarget::Entity, ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows));
+
 		// ワールド取得
 		Engine::ECS::World* _pWorld = a_editContext.pServices->pSceneManager->RefWorld();
 		if (!_pWorld || !_pWorld->IsInit()) return;
