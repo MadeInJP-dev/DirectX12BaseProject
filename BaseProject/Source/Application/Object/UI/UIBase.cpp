@@ -155,10 +155,31 @@ namespace App::Object
 
 	Decoration::EUIState UIBase::GetUIState() const
 	{
-		// 押せない UI は何もされることがない
-		if (!m_opInteraction) return Decoration::EUIState::Normal;
+		// 押せない UI は自分では何もされることがない
+		const Decoration::EUIState _selfState = m_opInteraction ? m_opInteraction->GetState() : Decoration::EUIState::Normal;
+		if (_selfState != Decoration::EUIState::Normal || !m_isReactToChildren) return _selfState;
 
-		return m_opInteraction->GetState();
+		return FindChildrenState(this);
+	}
+
+	// 子(孫も)のうち、乗られている・押されているものの状態。押しているほうを優先する。
+	// 子の状態は子の Update で進むので、並びによっては1フレーム前の値になる(見た目だけなので構わない)
+	Decoration::EUIState UIBase::FindChildrenState(const Engine::GameObject::BaseObject* a_pObject)
+	{
+		Decoration::EUIState _state = Decoration::EUIState::Normal;
+		for (const Engine::GameObject::BaseObject* _pChild : a_pObject->GetChildren())
+		{
+			const UIBase* _pUI = Core::TypeInfo::Cast<const UIBase>(_pChild);
+			if (_pUI && !_pUI->m_isVisible) continue;
+
+			if (_pUI && _pUI->IsPressed()) return Decoration::EUIState::Pressed;
+			if (_pUI && _pUI->IsHovered()) _state = Decoration::EUIState::Hovered;
+
+			const Decoration::EUIState _childState = FindChildrenState(_pChild);
+			if (_childState == Decoration::EUIState::Pressed) return _childState;
+			if (_childState == Decoration::EUIState::Hovered) _state = _childState;
+		}
+		return _state;
 	}
 
 	void UIBase::SetInteractable(bool a_isInteractable)
@@ -1097,6 +1118,9 @@ namespace App::Object
 			a_ar.GUIDField("NavLeftGUID", _interaction.navLeftGUID);
 			a_ar.GUIDField("NavRightGUID", _interaction.navRightGUID);
 		}
+
+		// 子の状態にも反応するか
+		if (!a_ar.IsLegacyLayout()) a_ar.Field("ReactToChildren", m_isReactToChildren);
 
 		m_anchor.editSize = m_anchor.pixelSize;
 

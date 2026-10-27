@@ -50,6 +50,10 @@ namespace App::Object
 		Engine::EditorField::Field("IsHUD", m_isHUD);
 		Engine::EditorField::Tooltip("プレイヤーが設定画面で HUD を消したとき、一緒に描かれなくなる(照準・ゲージなど)");
 
+		// 子の状態にも反応するか : 行の中の部品を選ぶと、行の飾りも Hovered / Pressed で反応する
+		Engine::EditorField::Field("ReactToChildren", m_isReactToChildren);
+		Engine::EditorField::Tooltip("下の UI が乗られている・選ばれている・押されている間、自分の飾りもその状態で反応する(行ごと光らせるなど)");
+
 		// 置き場所
 		m_anchor.DrawInspector(_w, _h);
 

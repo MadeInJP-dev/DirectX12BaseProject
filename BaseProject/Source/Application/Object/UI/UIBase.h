@@ -199,8 +199,13 @@ namespace App::Object
 		// このフレームに押し切られたか(押して離した瞬間だけ true)
 		bool IsClicked() const { return m_opInteraction && m_opInteraction->isClicked; }
 
-		// 今の状態 : 飾りの反応(Decoration::UIReaction)へ渡すもの
+		// 今の状態 : 飾りの反応(Decoration::UIReaction)へ渡すもの。
+		// ReactToChildren を立てていれば、自分が何もされていない間は子の乗った・押したも拾う
 		Decoration::EUIState GetUIState() const;
+
+		// 子の状態にも反応するか
+		bool IsReactToChildren() const { return m_isReactToChildren; }
+		void SetReactToChildren(bool a_isReact) { m_isReactToChildren = a_isReact; }
 
 		// 触れるかどうか。切ると乗っても押しても反応しない(Disabled 扱い)
 		bool IsInteractable() const { return m_opInteraction && m_opInteraction->isInteractable; }
@@ -535,6 +540,10 @@ namespace App::Object
 		// HUD か(保存される)。プレイヤーが HUD を消している間は描かない
 		bool m_isHUD = false;
 
+		// 子の状態にも反応するか(保存される)。立てると、下の UI のどれかが乗られている・選ばれている・
+		// 押されている間、自分の飾りもその状態で反応する(行の中の部品を選ぶと行ごと光る、など)
+		bool m_isReactToChildren = false;
+
 		// 飾り(保存される) : 配列の順に描くので、後ろにあるものほど手前に出る
 		// キーボード・マウスのとき(コントローラー用を持たなければ常に)出す組
 		std::vector<Decoration::Decoration> m_decorationVec = {};
@@ -557,6 +566,9 @@ namespace App::Object
 
 		// 旧形式(テクスチャ1枚)から飾りへ移し替える(読み込みの最後から)
 		void MigrateLegacyTexture(bool a_hasDecorationArray);
+
+		// 子(孫も)の乗った・押したの状態(ReactToChildren 用)。何もされていなければ Normal
+		static Decoration::EUIState FindChildrenState(const Engine::GameObject::BaseObject* a_pObject);
 
 		/// <summary>
 		/// 番号を持たない・重なっている飾りへ番号を振る
