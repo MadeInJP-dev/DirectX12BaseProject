@@ -69,6 +69,45 @@ float4 ApplyDissolve(float4 a_color, VSOutput a_input)
 	return a_color;
 }
 
+//==========================================================================================
+// 縮小に強い読み方
+//
+// 文字は 64px で焼いたアトラスを縮めて出す(ミップマップは無い)。
+// 1ピクセルで1回だけ読むと、間の細い線を飛ばしてかすれる(16px なら 4 テクセルに1回)。
+// 1ピクセルが覆う範囲が広いときだけ、その範囲を格子に分けて読んで平均する。
+// 勾配も格子の大きさに縮めて渡すので、ミップマップを持つテクスチャでも二重にぼけない
+//==========================================================================================
+static const float SUPER_SAMPLE_START = 1.25f;	// これより広く覆うと複数回読む(テクセル)
+static const int SUPER_SAMPLE_MAX = 4;			// 1辺の最大の分割数(4 で 16 回)
+
+float4 SampleMinified(Texture2D a_tex, float2 a_uv)
+{
+	const float2 _dx = ddx(a_uv);
+	const float2 _dy = ddy(a_uv);
+
+	float2 _texSize;
+	a_tex.GetDimensions(_texSize.x, _texSize.y);
+	const float _footprint = max(length(_dx * _texSize), length(_dy * _texSize));
+
+	if (_footprint <= SUPER_SAMPLE_START) return a_tex.SampleGrad(g_samp, a_uv, _dx, _dy);
+
+	const int _count = clamp((int)ceil(_footprint), 2, SUPER_SAMPLE_MAX);
+	const float _inv = 1.0f / _count;
+	const float2 _subDx = _dx * _inv;
+	const float2 _subDy = _dy * _inv;
+
+	float4 _sum = 0.0f;
+	for (int _y = 0; _y < _count; ++_y)
+	{
+		for (int _x = 0; _x < _count; ++_x)
+		{
+			const float2 _offset = ((_x + 0.5f) * _inv - 0.5f) * _dx + ((_y + 0.5f) * _inv - 0.5f) * _dy;
+			_sum += a_tex.SampleGrad(g_samp, a_uv + _offset, _subDx, _subDy);
+		}
+	}
+	return _sum * (_inv * _inv);
+}
+
 PSOutput PSMain(VSOutput a_input)
 {
 	// 切り抜き : 矩形の外へ出たところは描かない(スクロールする一覧の項目など)
@@ -79,7 +118,7 @@ PSOutput PSMain(VSOutput a_input)
 
 	// テクスチャ取得 : インスタンス番号ではなく、UIDataで指定された実際のSRV番号で引く
 	Texture2D _tex = ResourceDescriptorHeap[a_input.texIndex];
-	float4 _texColor = _tex.Sample(g_samp,a_input.uv);
+	float4 _texColor = SampleMinified(_tex, a_input.uv);
 
 	// 色合成
 	float4 _outColor = _texColor * a_input.color;
