@@ -176,7 +176,7 @@ namespace Editor
 	//======================================================================================
 	// 表示
 	//======================================================================================
-	void GraphicsProfilerView::Draw()
+	void GraphicsProfilerView::Draw(EditorContext& /*a_editContext*/)
 	{
 		Graphics::GraphicsEngine* _pGE = MainEngine::Instance().RefGraphicsEngine();
 		Graphics::GraphicsProfiler* _pProfiler = _pGE ? _pGE->RefProfiler() : nullptr;

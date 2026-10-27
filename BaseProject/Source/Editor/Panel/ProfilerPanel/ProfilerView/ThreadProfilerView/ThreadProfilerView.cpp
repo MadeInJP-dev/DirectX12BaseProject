@@ -90,7 +90,7 @@ namespace Editor
 	//======================================================================================
 	// 表示
 	//======================================================================================
-	void ThreadProfilerView::Draw()
+	void ThreadProfilerView::Draw(EditorContext& /*a_editContext*/)
 	{
 		Thread::JobSystem* _pJobSystem = MainEngine::Instance().RefJobSystem();
 		Thread::ThreadProfiler* _pProfiler = _pJobSystem ? _pJobSystem->RefThreadProfiler() : nullptr;

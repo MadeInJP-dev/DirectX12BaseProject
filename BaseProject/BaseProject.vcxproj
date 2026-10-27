@@ -1623,17 +1623,32 @@
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ECSProfilerView.cpp">
+    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\OverviewProfilerView\OverviewProfilerView.cpp">
       <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\GraphicsProfilerView.cpp">
+    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ScopeTimerProfilerView\ScopeTimerProfilerView.cpp">
       <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ThreadProfilerView.cpp">
+    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ECSProfilerView\ECSProfilerView.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ThreadProfilerView\ThreadProfilerView.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\GraphicsProfilerView\GraphicsProfilerView.cpp">
+      <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ParticleProfilerView\ParticleProfilerView.cpp">
       <PrecompiledHeaderFile>Editor/EditorPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)EditorPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Editor/EditorPCH.h</ForcedIncludeFiles>
@@ -2539,9 +2554,13 @@
     <ClInclude Include="Source\Editor\Panel\RenderGraphResourceViewPanel\RenderGraphResourceViewPanel.h" />
     <ClInclude Include="Source\Editor\Panel\SceneViewPanel\SceneViewPanel.h" />
     <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerPanel.h" />
-    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ECSProfilerView.h" />
-    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\GraphicsProfilerView.h" />
-    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ThreadProfilerView.h" />
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\IProfilerView.h" />
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\OverviewProfilerView\OverviewProfilerView.h" />
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ScopeTimerProfilerView\ScopeTimerProfilerView.h" />
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ECSProfilerView\ECSProfilerView.h" />
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ThreadProfilerView\ThreadProfilerView.h" />
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\GraphicsProfilerView\GraphicsProfilerView.h" />
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ParticleProfilerView\ParticleProfilerView.h" />
     <ClInclude Include="Source\Engine\GameObject\BaseObject\BaseObject.h" />
     <ClInclude Include="Source\Engine\GameObject\GameObjectManager\GameObjectManager.h" />
     <ClInclude Include="Source\Application\Game\GlobalGameContext.h" />

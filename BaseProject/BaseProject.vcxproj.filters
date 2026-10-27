@@ -109,6 +109,27 @@
     <Filter Include="Source\Editor\Panel\ProfilerPanel">
       <UniqueIdentifier>{a5b0b01d-2be5-4a59-94e9-c5ac52db30ca}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\Panel\ProfilerPanel\ProfilerView">
+      <UniqueIdentifier>{6a1f3c8e-2d5b-4e97-a0c4-8b3e7f1d5a29}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\OverviewProfilerView">
+      <UniqueIdentifier>{b2e84f71-9c3a-4d06-8f5b-1e7a2c9d4b63}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ScopeTimerProfilerView">
+      <UniqueIdentifier>{d7c05a3e-4b18-4f62-9e2d-a5f1b8c3e740}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ECSProfilerView">
+      <UniqueIdentifier>{3e9b6d24-1f7c-4a85-b0e3-c6d2a9f15b87}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ThreadProfilerView">
+      <UniqueIdentifier>{f4a27e9b-6c0d-4b31-8d5e-2b9c7a4e1f06}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\GraphicsProfilerView">
+      <UniqueIdentifier>{81c5d3f6-0a2e-4e79-b4c1-9f3d6a8e2b54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ParticleProfilerView">
+      <UniqueIdentifier>{c9e3a1b7-5d4f-4062-a8b9-7e2c1d6f3a95}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\Panel\RenderGraphResourceViewPanel">
       <UniqueIdentifier>{ee7569c1-c32f-4489-ad60-55e2e607b096}</UniqueIdentifier>
     </Filter>
@@ -2304,14 +2325,23 @@
     <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerPanel.cpp">
       <Filter>Source\Editor\Panel\ProfilerPanel</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ECSProfilerView.cpp">
-      <Filter>Source\Editor\Panel\ProfilerPanel</Filter>
+    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\OverviewProfilerView\OverviewProfilerView.cpp">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView\OverviewProfilerView</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\GraphicsProfilerView.cpp">
-      <Filter>Source\Editor\Panel\ProfilerPanel</Filter>
+    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ScopeTimerProfilerView\ScopeTimerProfilerView.cpp">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView\ScopeTimerProfilerView</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ThreadProfilerView.cpp">
-      <Filter>Source\Editor\Panel\ProfilerPanel</Filter>
+    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ECSProfilerView\ECSProfilerView.cpp">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView\ECSProfilerView</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ThreadProfilerView\ThreadProfilerView.cpp">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView\ThreadProfilerView</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\GraphicsProfilerView\GraphicsProfilerView.cpp">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView\GraphicsProfilerView</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ParticleProfilerView\ParticleProfilerView.cpp">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView\ParticleProfilerView</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Panel\RenderGraphResourceViewPanel\RenderGraphResourceViewPanel.cpp">
       <Filter>Source\Editor\Panel\RenderGraphResourceViewPanel</Filter>
@@ -4253,14 +4283,26 @@
     <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerPanel.h">
       <Filter>Source\Editor\Panel\ProfilerPanel</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ECSProfilerView.h">
-      <Filter>Source\Editor\Panel\ProfilerPanel</Filter>
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ProfilerViewBase.h">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\GraphicsProfilerView.h">
-      <Filter>Source\Editor\Panel\ProfilerPanel</Filter>
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\OverviewProfilerView\OverviewProfilerView.h">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView\OverviewProfilerView</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ThreadProfilerView.h">
-      <Filter>Source\Editor\Panel\ProfilerPanel</Filter>
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ScopeTimerProfilerView\ScopeTimerProfilerView.h">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView\ScopeTimerProfilerView</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ECSProfilerView\ECSProfilerView.h">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView\ECSProfilerView</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ThreadProfilerView\ThreadProfilerView.h">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView\ThreadProfilerView</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\GraphicsProfilerView\GraphicsProfilerView.h">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView\GraphicsProfilerView</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ParticleProfilerView\ParticleProfilerView.h">
+      <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView\ParticleProfilerView</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Panel\RenderGraphResourceViewPanel\RenderGraphResourceViewPanel.h">
       <Filter>Source\Editor\Panel\RenderGraphResourceViewPanel</Filter>

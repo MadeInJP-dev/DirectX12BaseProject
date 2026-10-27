@@ -67,9 +67,10 @@ namespace Editor
 	//======================================================================================
 	// 表示
 	//======================================================================================
-	void ECSProfilerView::Draw(Scene::SceneManager* a_pSceneManager)
+	void ECSProfilerView::Draw(EditorContext& a_editContext)
 	{
-		ECS::World* _pWorld = a_pSceneManager ? a_pSceneManager->RefWorld() : nullptr;
+		Scene::SceneManager* _pSceneManager = a_editContext.pServices ? a_editContext.pServices->pSceneManager : nullptr;
+		ECS::World* _pWorld = _pSceneManager ? _pSceneManager->RefWorld() : nullptr;
 		if (!_pWorld || !_pWorld->IsInit())
 		{
 			Engine::EditorField::HelpText("World is not available.");

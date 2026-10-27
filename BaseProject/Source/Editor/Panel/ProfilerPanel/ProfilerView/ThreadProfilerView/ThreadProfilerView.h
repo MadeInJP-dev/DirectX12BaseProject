@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Editor/EditorCommon.h"
+#include "../IProfilerView.h"
 
 namespace Engine::Thread
 {
@@ -16,11 +17,13 @@ namespace Editor
 	/// ジョブシステムが回っているか・ワーカーへ均等に割り振れているかを見るためのもの。
 	/// 計測は ThreadProfiler の担当なので、ここは確定済みの平均を並べるだけ
 	/// </summary>
-	class ThreadProfilerView
+	class ThreadProfilerView : public IProfilerView
 	{
 	public:
 
-		void Draw();
+		const char* GetName() const override { return "Thread"; }
+		const char* GetDescription() const override { return "メイン・ワーカースレッドの稼働時間(ジョブが均等に割り振れているか)"; }
+		void Draw(EditorContext& a_editContext) override;
 
 	private:
 

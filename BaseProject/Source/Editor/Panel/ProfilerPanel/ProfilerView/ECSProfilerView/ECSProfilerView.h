@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Editor/EditorCommon.h"
+#include "../IProfilerView.h"
 
 namespace Engine::Scene
 {
@@ -21,13 +22,13 @@ namespace Editor
 	/// 計測は ECSWorldProfiler の担当なので、ここは取り直しを頼んで結果を並べるだけ。
 	/// ワールドには触らない(プロファイラを付けるのだけはここで行う)
 	/// </summary>
-	class ECSProfilerView
+	class ECSProfilerView : public IProfilerView
 	{
 	public:
 
-		// 今のシーンのワールドを表示する
-		// a_pSceneManager : 今のシーンのワールドを引く先(無ければ何も出さない)
-		void Draw(Scene::SceneManager* a_pSceneManager);
+		const char* GetName() const override { return "ECS"; }
+		const char* GetDescription() const override { return "今のシーンのワールドの中身(アーキタイプ・コンポーネント・システム・リソース)"; }
+		void Draw(EditorContext& a_editContext) override;
 
 	private:
 

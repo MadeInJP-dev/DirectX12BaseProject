@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Editor/EditorCommon.h"
+#include "../IProfilerView.h"
 
 namespace Engine::Graphics
 {
@@ -16,11 +17,13 @@ namespace Editor
 	/// 容量が決まっていて溢れると描画が壊れるものが、どこまで埋まっているかを見るためのもの。
 	/// 計測は GraphicsProfiler の担当なので、ここは取り直しを頼んで結果を並べるだけ
 	/// </summary>
-	class GraphicsProfilerView
+	class GraphicsProfilerView : public IProfilerView
 	{
 	public:
 
-		void Draw();
+		const char* GetName() const override { return "Graphics"; }
+		const char* GetDescription() const override { return "メガバッファ・ディスクリプタヒープ・定数バッファなど、容量の決まったものの埋まり具合"; }
+		void Draw(EditorContext& a_editContext) override;
 
 	private:
 
