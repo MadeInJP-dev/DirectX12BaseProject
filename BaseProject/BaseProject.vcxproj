@@ -784,6 +784,16 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Widget\UIRadioButton\UIRadioButton.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Widget\UIRadioButton\UIRadioGroup.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\Widget\UIGauge\UIGauge.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -2261,6 +2271,8 @@
     <ClInclude Include="Source\Application\Object\UI\Core\UITransition.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\UIElement\UIElement.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\UIButton\UIButton.h" />
+    <ClInclude Include="Source\Application\Object\UI\Widget\UIRadioButton\UIRadioButton.h" />
+    <ClInclude Include="Source\Application\Object\UI\Widget\UIRadioButton\UIRadioGroup.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\UIGauge\UIGauge.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\SideMenu\SideMenu.h" />
     <ClInclude Include="Source\Application\Object\Sequence\UINavigationGroup\UINavigationGroup.h" />

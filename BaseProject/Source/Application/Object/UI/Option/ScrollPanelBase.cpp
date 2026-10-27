@@ -150,31 +150,29 @@ namespace App::Object
 	}
 
 	//======================================================================================
-	// 選択肢を切り替える行
+	// オン/オフの行
 	//======================================================================================
-	void ScrollPanelBase::PlaceSelector(Engine::GameObject::ObjectContext& a_context, const OptionSelectorUI& a_selector)
+	void ScrollPanelBase::PlaceToggle(Engine::GameObject::ObjectContext& a_context, const OptionToggleUI& a_toggle)
 	{
-		PlaceItem(a_context, a_selector.display);
-		PlaceItem(a_context, a_selector.prev);
-		PlaceItem(a_context, a_selector.next);
+		PlaceItem(a_context, a_toggle.display);
+
+		// ボタン : 行の左上からのずれで置く(数値の行と同じ)
+		const Math::Vector2 _rowTopLeft = {
+			m_layout.pos.x,
+			m_layout.pos.y + m_layoutCursorY - m_scrollOffset
+		};
+		const Engine::Graphics::UIClipRect _clip = MakeContentClipRect();
+		a_toggle.radio.Place(a_context, _rowTopLeft, m_layout.itemSize, &_clip);
+
+		if (a_toggle.radio.IsNavFocused(a_context)) MarkFocusRow();
 	}
 
-	int ScrollPanelBase::UpdateSelector(Engine::GameObject::ObjectContext& a_context, const OptionSelectorUI& a_selector)
+	bool ScrollPanelBase::UpdateToggle(Engine::GameObject::ObjectContext& a_context, const OptionToggleUI& a_toggle, bool a_isOn)
 	{
-		int _step = 0;
+		const int _chosen = a_toggle.radio.Update(a_context, a_isOn ? 0 : 1);
+		if (_chosen < 0) return a_isOn;
 
-		UIBase* _pPrev = FindUI(a_context, a_selector.prev.guid);
-		if (_pPrev && _pPrev->IsClicked()) --_step;
-
-		UIBase* _pNext = FindUI(a_context, a_selector.next.guid);
-		if (_pNext && _pNext->IsClicked()) ++_step;
-
-		return _step;
-	}
-
-	void ScrollPanelBase::SetSelectorText(Engine::GameObject::ObjectContext& a_context, const OptionSelectorUI& a_selector, const std::string& a_text)
-	{
-		SetUIText(a_context, a_selector.display.guid, a_selector.valueTextId, a_text);
+		return (_chosen == 0);
 	}
 
 	void ScrollPanelBase::SetUIText(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_guid, uint32_t a_textId, const std::string& a_text)
@@ -276,40 +274,25 @@ namespace App::Object
 		}
 	}
 
-	void ScrollPanelBase::ArchiveSelector(Engine::Persistence::Archive& a_ar, const std::string& a_name, OptionSelectorUI& a_selector)
+	// 前へ・次へのボタンで切り替えていた頃(OptionSelectorUI)と、見出しのキーは同じ。
+	// 名前の文字の番号と前へ・次へのボタンは書かなくなった(JSON はキーで読むので古いものも読める。
+	// バイナリは並びが変わったので、エディターで保存し直すこと)
+	void ScrollPanelBase::ArchiveToggle(Engine::Persistence::Archive& a_ar, const std::string& a_name, OptionToggleUI& a_toggle)
 	{
-		ArchiveItemUI(a_ar, a_name + "Display", a_selector.display);
-		a_ar.Field(a_name + "ValueTextId", a_selector.valueTextId);
-		ArchiveItemUI(a_ar, a_name + "Prev", a_selector.prev);
-		ArchiveItemUI(a_ar, a_name + "Next", a_selector.next);
+		ArchiveItemUI(a_ar, a_name + "Display", a_toggle.display);
+		a_toggle.radio.Archive(a_ar, a_name);
 	}
 
-	void ScrollPanelBase::DrawSelectorInspector(Engine::GameObject::ObjectContext& a_context, const char* a_label, OptionSelectorUI& a_selector)
+	void ScrollPanelBase::DrawToggleInspector(Engine::GameObject::ObjectContext& a_context, const char* a_label, OptionToggleUI& a_toggle)
 	{
 		Engine::EditorField::TreeScope _tree{ a_label };
 		if (!_tree) return;
 
-		DrawItemUIInspector(a_context, "Display", a_selector.display);
-		Engine::EditorField::Tooltip("見出しと今の選択の名前を出す UI");
+		DrawItemUIInspector(a_context, "Display", a_toggle.display);
+		Engine::EditorField::Tooltip("見出しを出す UI(行の土台)");
 
-		// 名前を書き込む飾りは、Display の UI の文字の飾りから選ぶ
-		if (UIBase* _pDisplay = FindUI(a_context, a_selector.display.guid))
-		{
-			_pDisplay->DrawDecorationPicker("ValueText", a_selector.valueTextId, Decoration::EDecorationType::Text);
-			Engine::EditorField::Tooltip("今の選択の名前を書き込む文字の飾り");
-		}
-
-		DrawItemUIInspector(a_context, "Prev", a_selector.prev);
-		DrawItemUIInspector(a_context, "Next", a_selector.next);
-	}
-
-	size_t ScrollPanelBase::StepIndex(size_t a_index, int a_step, size_t a_count)
-	{
-		if (a_count == 0) return 0;
-
-		const int _count = static_cast<int>(a_count);
-		const int _index = (static_cast<int>(a_index) + a_step) % _count;
-		return static_cast<size_t>(_index < 0 ? _index + _count : _index);
+		a_toggle.radio.DrawInspector(a_context, "Radio");
+		Engine::EditorField::Tooltip("0 番がオン、1 番がオフ");
 	}
 
 	//======================================================================================

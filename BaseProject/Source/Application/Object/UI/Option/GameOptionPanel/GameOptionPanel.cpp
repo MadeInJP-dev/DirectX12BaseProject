@@ -45,7 +45,7 @@ namespace App::Object
 		PlaceHeaderRow(a_context, m_performanceHeader);
 		PlaceDropdown(a_context, m_fpsRateSelector.GetUI());
 		AdvanceRow();
-		PlaceSelector(a_context, m_fpsVisibleSelector);
+		PlaceToggle(a_context, m_fpsVisibleToggle);
 		AdvanceRow();
 	}
 
@@ -64,12 +64,11 @@ namespace App::Object
 		}
 
 		// ---- FPS の表示 ----
-		if (UpdateSelector(a_context, m_fpsVisibleSelector) != 0)
+		if (const bool _isOn = UpdateToggle(a_context, m_fpsVisibleToggle, m_settings.isFPSVisible); _isOn != m_settings.isFPSVisible)
 		{
-			m_settings.isFPSVisible = !m_settings.isFPSVisible;
+			m_settings.isFPSVisible = _isOn;
 			_isChanged = true;
 		}
-		SetSelectorText(a_context, m_fpsVisibleSelector, ToOnOff(m_settings.isFPSVisible));
 
 		if (_isChanged) WriteSettings(a_context);
 	}
@@ -101,7 +100,7 @@ namespace App::Object
 		// 区切りを持たない古い .ob* には無いので読まない
 		if (!a_ar.IsLegacyLayout())
 		{
-			ArchiveSelector(a_ar, "FPSVisible", m_fpsVisibleSelector);
+			ArchiveToggle(a_ar, "FPSVisible", m_fpsVisibleToggle);
 		}
 	}
 
@@ -113,7 +112,7 @@ namespace App::Object
 		DrawItemUIInspector(a_context, "PerformanceHeader", m_performanceHeader);
 		Engine::EditorField::Tooltip("見出し(文字だけの UI)。未設定なら行を取らない");
 		DrawDropdownInspector(a_context, "FPSRate", m_fpsRateSelector.RefUI());
-		DrawSelectorInspector(a_context, "FPSVisible", m_fpsVisibleSelector);
+		DrawToggleInspector(a_context, "FPSVisible", m_fpsVisibleToggle);
 		Engine::EditorField::Tooltip("画面の右上に FPS を出すか(デバッグの表示とは別)");
 
 		const std::string _name = m_settings.opFPSRate

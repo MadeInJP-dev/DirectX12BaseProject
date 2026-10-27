@@ -66,7 +66,7 @@ namespace App::Object
 		AdvanceRow();
 		PlaceNumeric(a_context, m_brightnessNumeric);
 		AdvanceRow();
-		PlaceSelector(a_context, m_bloomSelector);
+		PlaceToggle(a_context, m_bloomToggle);
 		AdvanceRow();
 
 		AdvanceSpace(m_sectionSpace);
@@ -74,7 +74,7 @@ namespace App::Object
 		PlaceHeaderRow(a_context, m_gameplayHeader);
 		PlaceNumeric(a_context, m_screenShakeNumeric);
 		AdvanceRow();
-		PlaceSelector(a_context, m_hudSelector);
+		PlaceToggle(a_context, m_hudToggle);
 		AdvanceRow();
 	}
 
@@ -100,12 +100,11 @@ namespace App::Object
 		}
 
 		// ---- ブルーム ----
-		if (UpdateSelector(a_context, m_bloomSelector) != 0)
+		if (const bool _isOn = UpdateToggle(a_context, m_bloomToggle, m_settings.isBloomEnable); _isOn != m_settings.isBloomEnable)
 		{
-			m_settings.isBloomEnable = !m_settings.isBloomEnable;
+			m_settings.isBloomEnable = _isOn;
 			_isChanged = true;
 		}
-		SetSelectorText(a_context, m_bloomSelector, ToOnOff(m_settings.isBloomEnable));
 
 		// ---- 画面の揺れ ----
 		if (UpdatePercent(a_context, m_screenShakeNumeric, m_settings.screenShake,
@@ -115,12 +114,11 @@ namespace App::Object
 		}
 
 		// ---- HUD ----
-		if (UpdateSelector(a_context, m_hudSelector) != 0)
+		if (const bool _isOn = UpdateToggle(a_context, m_hudToggle, m_settings.isHUDVisible); _isOn != m_settings.isHUDVisible)
 		{
-			m_settings.isHUDVisible = !m_settings.isHUDVisible;
+			m_settings.isHUDVisible = _isOn;
 			_isChanged = true;
 		}
-		SetSelectorText(a_context, m_hudSelector, ToOnOff(m_settings.isHUDVisible));
 
 		if (_isChanged) ApplySettings(a_context);
 	}
@@ -148,13 +146,13 @@ namespace App::Object
 		ArchiveItemUI(a_ar, "DisplayHeader", m_displayHeader);
 		ArchiveDropdown(a_ar, "WindowMode", m_windowModeSelector.RefUI());
 		m_brightnessNumeric.Archive(a_ar, "Brightness");
-		ArchiveSelector(a_ar, "Bloom", m_bloomSelector);
+		ArchiveToggle(a_ar, "Bloom", m_bloomToggle);
 
 		a_ar.Field("SectionSpace", m_sectionSpace);
 
 		ArchiveItemUI(a_ar, "GameplayHeader", m_gameplayHeader);
 		m_screenShakeNumeric.Archive(a_ar, "ScreenShake");
-		ArchiveSelector(a_ar, "HUD", m_hudSelector);
+		ArchiveToggle(a_ar, "HUD", m_hudToggle);
 	}
 
 	//======================================================================================
@@ -168,7 +166,7 @@ namespace App::Object
 			Engine::EditorField::Tooltip("見出し(文字だけの UI)。未設定なら行を取らない");
 			DrawDropdownInspector(a_context, "WindowMode", m_windowModeSelector.RefUI());
 			m_brightnessNumeric.DrawInspector(a_context, "Brightness");
-			DrawSelectorInspector(a_context, "Bloom", m_bloomSelector);
+			DrawToggleInspector(a_context, "Bloom", m_bloomToggle);
 		}
 
 		Engine::EditorField::Field("SectionSpace", m_sectionSpace, 0.5f, 0.0f, 512.0f);
@@ -179,7 +177,7 @@ namespace App::Object
 			DrawItemUIInspector(a_context, "GameplayHeader", m_gameplayHeader);
 			Engine::EditorField::Tooltip("見出し(文字だけの UI)。未設定なら行を取らない");
 			m_screenShakeNumeric.DrawInspector(a_context, "ScreenShake");
-			DrawSelectorInspector(a_context, "HUD", m_hudSelector);
+			DrawToggleInspector(a_context, "HUD", m_hudToggle);
 		}
 
 		// 写しの今の値(表示のみ)

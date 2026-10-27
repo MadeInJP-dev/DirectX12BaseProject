@@ -736,6 +736,9 @@
     <Filter Include="Source\Application\Object\UI\Widget\UIButton">
       <UniqueIdentifier>{b7c1d2e3-8f40-4a51-9c62-0d73e4f5a601}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Object\UI\Widget\UIRadioButton">
+      <UniqueIdentifier>{5552b9f0-97d9-44f1-bd24-4018b7f86cbf}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Application\Object\UI\Widget\UIGauge">
       <UniqueIdentifier>{1b890504-cbda-42a6-9729-0f9364a04ec5}</UniqueIdentifier>
     </Filter>
@@ -1775,6 +1778,12 @@
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\Widget\UIButton\UIButton.cpp">
       <Filter>Source\Application\Object\UI\Widget\UIButton</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Widget\UIRadioButton\UIRadioButton.cpp">
+      <Filter>Source\Application\Object\UI\Widget\UIRadioButton</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Widget\UIRadioButton\UIRadioGroup.cpp">
+      <Filter>Source\Application\Object\UI\Widget\UIRadioButton</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\Widget\UIGauge\UIGauge.cpp">
       <Filter>Source\Application\Object\UI\Widget\UIGauge</Filter>
@@ -3643,6 +3652,12 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\Widget\UIButton\UIButton.h">
       <Filter>Source\Application\Object\UI\Widget\UIButton</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\Widget\UIRadioButton\UIRadioButton.h">
+      <Filter>Source\Application\Object\UI\Widget\UIRadioButton</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\Widget\UIRadioButton\UIRadioGroup.h">
+      <Filter>Source\Application\Object\UI\Widget\UIRadioButton</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\Widget\UIGauge\UIGauge.h">
       <Filter>Source\Application\Object\UI\Widget\UIGauge</Filter>

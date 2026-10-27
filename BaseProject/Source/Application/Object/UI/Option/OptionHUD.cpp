@@ -12,6 +12,7 @@
 #include "Application/Object/UI/Option/GraphicsOptionPanel/GraphicsOptionPanel.h"
 #include "Application/Object/UI/Option/SoundOptionPanel/SoundOptionPanel.h"
 #include "Application/Object/UI/Option/InputOptionPanel/InputOptionPanel.h"
+#include "Application/Object/UI/Widget/UIRadioButton/UIRadioButton.h"	// 出ているパネルのタブを選ばれているにする
 
 namespace App::Object
 {
@@ -203,6 +204,14 @@ namespace App::Object
 				break;
 			}
 		}
+
+		// 出ているパネルのタブを「選ばれている」にする(タブがラジオボタンのときだけ。どこを開いているかが見えるように)
+		const int _selectIndex = GetSelectIndex();
+		for (size_t _i = 0; _i < m_tabButtonGUIDVec.size(); ++_i)
+		{
+			auto* _pTab = Core::TypeInfo::Cast<UIRadioButton>(ScrollPanelBase::FindUI(a_context, m_tabButtonGUIDVec[_i]));
+			if (_pTab) _pTab->SetSelected(static_cast<int>(_i) == _selectIndex);
+		}
 	}
 
 	void OptionHUD::ApplyVisibility(Engine::GameObject::ObjectContext& a_context, bool a_isOpen)
@@ -359,7 +368,7 @@ namespace App::Object
 			if (!Engine::EditorField::CollapsingHeader(_panel.GetPanelName())) continue;
 
 			ScrollPanelBase::DrawUIPicker(a_context, "TabButton", m_tabButtonGUIDVec[_i]);
-			Engine::EditorField::Tooltip("押すとこのパネルへ切り替える(UIButton)。位置と大きさは Layout のタブの値で決まる");
+			Engine::EditorField::Tooltip("押すとこのパネルへ切り替える(UIButton か UIRadioButton。ラジオボタンなら出ているパネルのタブが選ばれている見た目になる)。位置と大きさは Layout のタブの値で決まる");
 
 			_panel.DrawInspector(a_context);
 		}

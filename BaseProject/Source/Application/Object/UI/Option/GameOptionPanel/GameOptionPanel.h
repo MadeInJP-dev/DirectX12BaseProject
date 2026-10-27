@@ -71,6 +71,6 @@ namespace App::Object
 			{ Engine::EFPSRate::VSync,     "VSync" },
 			{ Engine::EFPSRate::Unlimited, "Unlimited" },
 		};
-		OptionSelectorUI m_fpsVisibleSelector = {};		// FPS の表示(オン/オフ)。画面の右上に出す
+		OptionToggleUI m_fpsVisibleToggle = {};		// FPS の表示(オン/オフ)。画面の右上に出す
 	};
 }

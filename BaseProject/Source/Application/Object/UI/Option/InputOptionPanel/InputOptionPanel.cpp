@@ -196,7 +196,7 @@ namespace App::Object
 		AdvanceRow();
 
 		// 上下反転
-		PlaceSelector(a_context, m_invertLookYSelector);
+		PlaceToggle(a_context, m_invertLookYToggle);
 		AdvanceRow();
 	}
 
@@ -243,11 +243,10 @@ namespace App::Object
 		{
 			if (_isSensitivityChanged) ApplyStickSensitivity(a_context, _sensitivity);
 
-			if (UpdateSelector(a_context, m_invertLookYSelector) != 0)
+			if (const bool _isOn = UpdateToggle(a_context, m_invertLookYToggle, m_isInvertStickY); _isOn != m_isInvertStickY)
 			{
-				ApplyInvertStickY(a_context, !m_isInvertStickY);
+				ApplyInvertStickY(a_context, _isOn);
 			}
-			SetSelectorText(a_context, m_invertLookYSelector, m_isInvertStickY ? "On" : "Off");
 			return;
 		}
 
@@ -257,11 +256,11 @@ namespace App::Object
 		if (_isSensitivityChanged) ApplySensitivity(a_context, _sensitivity);
 
 		// 上下反転 : 選んだ時点で「選ばれている」扱いになり、作り手の値より優先される
-		if (UpdateSelector(a_context, m_invertLookYSelector) != 0)
+		const bool _isInvert = IsCurrentInvertLookY(a_context);
+		if (const bool _isOn = UpdateToggle(a_context, m_invertLookYToggle, _isInvert); _isOn != _isInvert)
 		{
-			ApplyInvertLookY(a_context, !IsCurrentInvertLookY(a_context));
+			ApplyInvertLookY(a_context, _isOn);
 		}
-		SetSelectorText(a_context, m_invertLookYSelector, IsCurrentInvertLookY(a_context) ? "On" : "Off");
 	}
 
 	void InputOptionPanel::ButtonSettings(Engine::GameObject::ObjectContext& a_context)
@@ -818,7 +817,7 @@ namespace App::Object
 		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
 		ArchiveItemUI(a_ar, "AxisHeader", m_axisHeader);
 		ArchiveItemUI(a_ar, "ButtonHeader", m_buttonHeader);
-		ArchiveSelector(a_ar, "InvertLookY", m_invertLookYSelector);
+		ArchiveToggle(a_ar, "InvertLookY", m_invertLookYToggle);
 	}
 
 	//======================================================================================
@@ -835,7 +834,7 @@ namespace App::Object
 			Engine::EditorField::Tooltip("見出し(文字だけの UI)。未設定なら行を取らない");
 
 			m_sensitivityNumeric.DrawInspector(a_context, "Sensitivity");
-			DrawSelectorInspector(a_context, "InvertLookY", m_invertLookYSelector);
+			DrawToggleInspector(a_context, "InvertLookY", m_invertLookYToggle);
 			Engine::EditorField::Value("Sensitivity", "%.2f", m_moveSensitivity);
 		}
 

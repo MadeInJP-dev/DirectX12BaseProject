@@ -3,6 +3,7 @@
 // 数値の行と右側のスクロールバーは部品を値で持つ
 #include "Application/Object/UI/Widget/VariableMutate/NumericMutate.h"
 #include "Application/Object/UI/Widget/VariableMutate/ScrollBar/ScrollBar.h"
+#include "Application/Object/UI/Widget/UIRadioButton/UIRadioGroup.h"
 
 namespace Engine::GameObject
 {
@@ -44,17 +45,15 @@ namespace App::Object
 	};
 
 	//===============================================================================================
-	// 選択肢を切り替える行 : 今の選択の名前と、前へ・次へのボタン
+	// オン/オフの行 : 見出しと、オン・オフのラジオボタン
 	//
-	// ウィンドウモードやオン/オフのように「決まった選択肢から1つ選ぶ」項目に使う。
-	// 名前は display の UI の文字の飾り(valueTextId)へ毎フレーム書き込む
+	// 選ばれているほうが光る(UIRadioButton の飾りの出し分け)ので、今の値を文字で書き込むことはしない。
+	// ボタンは radio の並びの 0 番がオン、1 番がオフ
 	//===============================================================================================
-	struct OptionSelectorUI
+	struct OptionToggleUI
 	{
-		OptionItemUI display = {};	// 見出しと今の選択の名前を出す UI
-		uint32_t valueTextId = 0;	// 今の選択の名前を書き込む文字の飾り(display の飾りの番号)。0 で書かない
-		OptionItemUI prev = {};		// 前の選択肢へ
-		OptionItemUI next = {};		// 次の選択肢へ
+		OptionItemUI display = {};	// 見出しを出す UI(行の土台。ボタンはこの子に置く)
+		UIRadioGroup radio = {};	// オン(0)・オフ(1)のラジオボタン
 	};
 
 	//===============================================================================================
@@ -180,17 +179,8 @@ namespace App::Object
 		static bool DrawUIPicker(Engine::GameObject::ObjectContext& a_context, const char* a_label, Core::GUID& a_inoutGUID);
 
 		//-----------------------------------------------------------------------
-		// 選択肢を切り替える行の操作 : 派生と、部品(OptionEnumSelector)から使う
+		// 文字の書き込み : 派生と、部品(OptionEnumSelector)から使う
 		//-----------------------------------------------------------------------
-
-		// このフレームに押されたボタン : 前へなら -1、次へなら +1、どちらも押されていなければ 0
-		static int UpdateSelector(Engine::GameObject::ObjectContext& a_context, const OptionSelectorUI& a_selector);
-
-		// 今の選択の名前を書き込む
-		static void SetSelectorText(Engine::GameObject::ObjectContext& a_context, const OptionSelectorUI& a_selector, const std::string& a_text);
-
-		// 選択肢の添え字を a_step だけ進める。端を越えたら反対の端へ回る
-		static size_t StepIndex(size_t a_index, int a_step, size_t a_count);
 
 		// UI の文字の飾り(番号で指す)へ文字を書き込む。変わらなければ書かない
 		static void SetUIText(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_guid, uint32_t a_textId, const std::string& a_text);
@@ -256,17 +246,24 @@ namespace App::Object
 		void PlaceNumeric(Engine::GameObject::ObjectContext& a_context, NumericMutate& a_numeric);
 
 		//-----------------------------------------------------------------------
-		// 派生から使うもの : 選択肢を切り替える行
+		// 派生から使うもの : オン/オフの行
 		//-----------------------------------------------------------------------
 
-		// 今の行へ名前の UI と前へ・次へのボタンを置く(行は送らない)
-		void PlaceSelector(Engine::GameObject::ObjectContext& a_context, const OptionSelectorUI& a_selector);
+		// 今の行へ見出しとオン・オフのボタンを置く(行は送らない)
+		void PlaceToggle(Engine::GameObject::ObjectContext& a_context, const OptionToggleUI& a_toggle);
 
-		// 保存(a_name を頭に付けたキーで書く : <name>DisplayGUID など)
-		static void ArchiveSelector(Engine::Persistence::Archive& a_ar, const std::string& a_name, OptionSelectorUI& a_selector);
+		/// <summary>
+		/// 操作 : 今の値のボタンを選ばれているにし、押されたら値を書き換える
+		/// </summary>
+		/// <param name="a_isOn">今の値</param>
+		/// <returns>変わった後の値(押されなければ a_isOn のまま)</returns>
+		static bool UpdateToggle(Engine::GameObject::ObjectContext& a_context, const OptionToggleUI& a_toggle, bool a_isOn);
+
+		// 保存(a_name を頭に付けたキーで書く : <name>DisplayGUID・<name>RadioButtons)
+		static void ArchiveToggle(Engine::Persistence::Archive& a_ar, const std::string& a_name, OptionToggleUI& a_toggle);
 
 		// インスペクター
-		static void DrawSelectorInspector(Engine::GameObject::ObjectContext& a_context, const char* a_label, OptionSelectorUI& a_selector);
+		static void DrawToggleInspector(Engine::GameObject::ObjectContext& a_context, const char* a_label, OptionToggleUI& a_toggle);
 
 		//-----------------------------------------------------------------------
 		// 派生から使うもの : プルダウンで1つ選ぶ行(操作は OptionDropdown)

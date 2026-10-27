@@ -192,7 +192,7 @@ namespace App::Object
 		// コントローラーの視点(表示用の写し。実体は UserData)
 		float m_stickSensitivity = 1.0f;
 		bool m_isInvertStickY = false;
-		OptionSelectorUI m_invertLookYSelector = {};	// 上下反転(オン/オフ)
+		OptionToggleUI m_invertLookYToggle = {};	// 上下反転(オン/オフ)
 
 		//------------------------------------------------------------------------------
 		// キーボード、コントローラーなどのボタン側の設定

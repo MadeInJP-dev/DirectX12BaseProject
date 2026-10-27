@@ -76,7 +76,7 @@ namespace App::Object
 			{ Engine::EWindowMode::FullScreen,  "Fullscreen" },
 		};
 		NumericMutate m_brightnessNumeric = {};			// 明るさ(%)
-		OptionSelectorUI m_bloomSelector = {};			// ブルーム(オン/オフ)
+		OptionToggleUI m_bloomToggle = {};			// ブルーム(オン/オフ)
 
 		//------------------------------------------------------------------------------
 		// 遊び
@@ -84,6 +84,6 @@ namespace App::Object
 		float m_sectionSpace = 32.0f;					// 画面と遊びの間(px)
 		OptionItemUI m_gameplayHeader = {};				// 見出し。未設定なら行を取らない
 		NumericMutate m_screenShakeNumeric = {};		// 画面の揺れ(%)
-		OptionSelectorUI m_hudSelector = {};			// HUD の表示(オン/オフ)
+		OptionToggleUI m_hudToggle = {};			// HUD の表示(オン/オフ)
 	};
 }

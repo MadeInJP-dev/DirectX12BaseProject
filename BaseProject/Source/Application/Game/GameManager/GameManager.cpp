@@ -26,6 +26,7 @@
 #include "Application/Object/Sequence/ResultSequence/ResultSequence.h"
 #include "Application/Object/UI/HUD/MissileLockBoxHUD/MissileLockBoxHUD.h"
 #include "Application/Object/UI/Widget/UIButton/UIButton.h"
+#include "Application/Object/UI/Widget/UIRadioButton/UIRadioButton.h"
 #include "Application/Object/UI/Widget/UIElement/UIElement.h"
 #include "Application/Object/UI/Widget/UIGauge/UIGauge.h"
 #include "Application/Object/UI/Option/OptionHUD.h"
@@ -157,6 +158,7 @@ namespace App::Game
 			_objRegistry.RegisterType<App::Object::TitleRunBackdrop>("TitleRunBackdrop");		// タイトルの背景。出した機体を床の上でブーストさせ続け、板1枚の床を足元へ寄せてカメラで追う
 			_objRegistry.RegisterType<App::Object::UINavigationGroup>("UINavigationGroup");		// キー・パッドで UI を順に選ぶ。最初の UI だけを持ち、各 UI の前・次をたどる
 			_objRegistry.RegisterType<App::Object::ControllNavigation>("ControllNavigation");	// 画面下部の操作説明(Enter で決定など)。今できる操作の項目だけを帯の左端から詰めて並べる
+			_objRegistry.RegisterType<App::Object::UIRadioButton>("UIRadioButton");				// 並んだ選択肢のうち1つだけが選ばれている押せる UI。選ばれているかで飾りを出し分ける(組は UIRadioGroup)
 		}
 
 		// ------------------------------------------------------------------
