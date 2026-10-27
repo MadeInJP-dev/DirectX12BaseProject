@@ -31,7 +31,7 @@ namespace App::Object
 	// ・同じシーンで複数のグループが同時に出ているときは、Priority の大きい1つだけが動く
 	//   (一覧の上に確認の箱を出すときなど)。取り合いは UINavigationResource
 	//===========================================================================
-	class UINavigationGroup : public Engine::GameObject::BaseObject
+	class UINavigationGroup final : public Engine::GameObject::BaseObject
 	{
 	public:
 

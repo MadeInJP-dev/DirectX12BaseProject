@@ -81,6 +81,16 @@ namespace App::Object
 		// 戻る・タブのボタンと、閉じるキーを見る
 		void UpdateButtons(Engine::GameObject::ObjectContext& a_context);
 
+		/// <summary>
+		/// 閉じるキーで、パネルの中の選択をタブへ戻す
+		/// </summary>
+		/// <returns>戻したら true(このときは閉じない)</returns>
+		/// <remarks>
+		/// キー・パッドでパネルの中の項目を選んでいる間だけ。タブ・戻るボタンを選んでいるとき、
+		/// カーソルで触っているときは何もしない(そのまま閉じる)
+		/// </remarks>
+		bool TryReturnToTab(Engine::GameObject::ObjectContext& a_context);
+
 		// タブ・戻るボタンを置く
 		void PlaceButtons(Engine::GameObject::ObjectContext& a_context);
 
@@ -107,6 +117,9 @@ namespace App::Object
 		// 開いている間はカーソルの中央固定を切るか(固定したままだとボタンを狙えない)。
 		// 閉じても戻さない : ゲーム中はポーズ画面から開く前提で、戻すのはポーズ画面の役
 		bool m_isReleaseCursorLock = true;
+
+		// 項目移動のグループ(UINavigationGroup)。閉じるキーでパネルの中からタブへ戻すのに使う。空なら戻さずに閉じる
+		Core::GUID m_navigationGroupGUID = {};
 
 		//------------------------------------------------------------------------------
 		// パネル

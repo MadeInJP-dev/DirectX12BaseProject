@@ -13,6 +13,8 @@
 #include "Application/Object/UI/Option/SoundOptionPanel/SoundOptionPanel.h"
 #include "Application/Object/UI/Option/InputOptionPanel/InputOptionPanel.h"
 #include "Application/Object/UI/Widget/UIRadioButton/UIRadioButton.h"	// 出ているパネルのタブを選ばれているにする
+#include "Application/Object/Sequence/UINavigationGroup/UINavigationGroup.h"	// 閉じるキーでパネルの中からタブへ戻す
+#include "Application/Object/ObjectPicker.h"
 
 namespace App::Object
 {
@@ -187,6 +189,9 @@ namespace App::Object
 			_isClosePressed = a_context.pServices->pInputManager->IsPress(m_closeAction);
 		}
 
+		// 閉じるキーは、パネルの中を選んでいればまずタブへ戻す(もう一度押すと閉じる)
+		if (_isClosePressed && !_isBackClicked && TryReturnToTab(a_context)) _isClosePressed = false;
+
 		if (_isBackClicked || _isClosePressed)
 		{
 			ReserveClose(a_context);
@@ -212,6 +217,28 @@ namespace App::Object
 			auto* _pTab = Core::TypeInfo::Cast<UIRadioButton>(ScrollPanelBase::FindUI(a_context, m_tabButtonGUIDVec[_i]));
 			if (_pTab) _pTab->SetSelected(static_cast<int>(_i) == _selectIndex);
 		}
+	}
+
+	bool OptionHUD::TryReturnToTab(Engine::GameObject::ObjectContext& a_context)
+	{
+		auto* _pGroup = Picker::Find<UINavigationGroup>(a_context.pObjectManager, m_navigationGroupGUID);
+		if (!_pGroup) return false;
+
+		// キー・パッドで選んでいる(選択が見えている)ときだけ
+		const UIBase* _pCurrent = ScrollPanelBase::FindUI(a_context, _pGroup->GetCurrentGUID());
+		if (!_pCurrent || !_pCurrent->IsNavFocused()) return false;
+
+		// タブ・戻るボタンを選んでいるなら、もう項目の選択にいる
+		const Core::GUID& _currentGUID = _pCurrent->GetGUID();
+		if (_currentGUID == m_backButtonGUID) return false;
+		if (std::find(m_tabButtonGUIDVec.begin(), m_tabButtonGUIDVec.end(), _currentGUID) != m_tabButtonGUIDVec.end()) return false;
+
+		// 出ているパネルのタブへ
+		const int _selectIndex = GetSelectIndex();
+		if (_selectIndex < 0 || static_cast<size_t>(_selectIndex) >= m_tabButtonGUIDVec.size()) return false;
+
+		_pGroup->SetCurrentGUID(m_tabButtonGUIDVec[static_cast<size_t>(_selectIndex)]);
+		return true;
 	}
 
 	void OptionHUD::ApplyVisibility(Engine::GameObject::ObjectContext& a_context, bool a_isOpen)
@@ -302,6 +329,9 @@ namespace App::Object
 			_upPanel->Archive(a_ar);
 			a_ar.EndGroup();
 		}
+
+		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
+		if (!a_ar.IsLegacyLayout()) a_ar.GUIDField("NavigationGroupGUID", m_navigationGroupGUID);
 	}
 
 	//======================================================================================
@@ -321,6 +351,9 @@ namespace App::Object
 		Engine::EditorField::Tooltip("これを押しても閉じる");
 		Engine::EditorField::Field("ReleaseCursorLock", m_isReleaseCursorLock);
 		Engine::EditorField::Tooltip("開いている間はカーソルの中央固定を切る(閉じても戻さない)");
+
+		Picker::DrawCombo<UINavigationGroup>("NavigationGroup", a_context.pObjectManager, m_navigationGroupGUID);
+		Engine::EditorField::Tooltip("項目移動のグループ。キー・パッドでパネルの中を選んでいるとき、閉じるキーはまずタブへ戻す(タブ・戻るで押すと閉じる)。空なら常に閉じる");
 
 		//------------------------------------------------------------------
 		// 配置 : すべてアンカーの位置からのずれ(px, 基準は 1920x1080)
