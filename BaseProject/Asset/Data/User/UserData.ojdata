@@ -5,7 +5,7 @@
         "IsFPSVisible": false
     },
     "Graphics": {
-        "Brightness": 100,
+        "Brightness": 150,
         "HasWindowMode": true,
         "IsBloomEnable": true,
         "IsHUDVisible": true,

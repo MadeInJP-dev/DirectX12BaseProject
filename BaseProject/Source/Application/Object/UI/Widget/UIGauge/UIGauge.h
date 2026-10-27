@@ -126,9 +126,10 @@ namespace App::Object
 		/// 表示する値を入れる
 		/// </summary>
 		/// <param name="a_current">現在値</param>
-		/// <param name="a_max">最大値。0以下だと空として扱う</param>
+		/// <param name="a_max">最大値。最小値以下だと空として扱う</param>
+		/// <param name="a_min">最小値(空のときの値)。数値の飾りには現在値がそのまま出る</param>
 		/// <remarks>Source が Manual のときだけ効く。それ以外は毎フレーム上書きされる</remarks>
-		void SetValue(float a_current, float a_max);
+		void SetValue(float a_current, float a_max, float a_min = 0.0f);
 
 		// 現在値だけ差し替える(最大値は据え置き)
 		void SetCurrent(float a_current);
@@ -136,7 +137,7 @@ namespace App::Object
 		float GetCurrent() const { return m_current; }
 		float GetMax() const { return m_max; }
 
-		// 残量(0〜1)
+		// 残量(0〜1) : 最小値から最大値までのどこにいるか
 		float GetRatio() const;
 
 		//=======================================================================
@@ -254,6 +255,7 @@ namespace App::Object
 		//-------------------------------------------------------------------
 		float m_current = 100.0f;
 		float m_max = 100.0f;
+		float m_min = 0.0f;		// 空のときの値(SetValue で入れる。範囲が 0 から始まらない数値の行用)
 
 		// このフレームに値を取れたか
 		bool m_hasValue = true;

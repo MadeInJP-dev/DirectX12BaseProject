@@ -27,9 +27,10 @@ namespace App::Object
 	//======================================================================================
 	// 値
 	//======================================================================================
-	void UIGauge::SetValue(float a_current, float a_max)
+	void UIGauge::SetValue(float a_current, float a_max, float a_min)
 	{
 		m_max = a_max;
+		m_min = a_min;
 		m_current = a_current;
 	}
 
@@ -43,9 +44,9 @@ namespace App::Object
 		// 最大値が入っていないものは空として扱う。
 		// 0除算を避けるためだけでなく、「まだ値が入っていない」ことを
 		// 満タンで見せてしまわないため
-		if (m_max <= 0.0f) return 0.0f;
+		if (m_max <= m_min) return 0.0f;
 
-		return std::clamp(m_current / m_max, 0.0f, 1.0f);
+		return std::clamp((m_current - m_min) / (m_max - m_min), 0.0f, 1.0f);
 	}
 
 	//======================================================================================
@@ -142,6 +143,7 @@ namespace App::Object
 
 		m_current = _value.current;
 		m_max = (m_maxOverride > 0.0f) ? m_maxOverride : _value.max;
+		m_min = 0.0f;
 		return true;
 	}
 

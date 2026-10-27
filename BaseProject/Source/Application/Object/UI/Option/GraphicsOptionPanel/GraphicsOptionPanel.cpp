@@ -14,11 +14,19 @@ namespace App::Object
 	{
 		const char* ToOnOff(bool a_isOn) { return a_isOn ? "On" : "Off"; }
 
-		// 刻みで動かして範囲に詰める
-		uint32_t StepValue(uint32_t a_value, int a_step, uint32_t a_stepSize, uint32_t a_min, uint32_t a_max)
+		// 整数(%)の設定を数値の行で動かす : 動かしたら整数に丸めて書き、true を返す
+		bool UpdatePercent(Engine::GameObject::ObjectContext& a_context, NumericMutate& a_numeric,
+			uint32_t& a_inoutValue, uint32_t a_min, uint32_t a_max, uint32_t a_step)
 		{
-			const int _value = static_cast<int>(a_value) + a_step * static_cast<int>(a_stepSize);
-			return static_cast<uint32_t>(std::clamp(_value, static_cast<int>(a_min), static_cast<int>(a_max)));
+			float _value = static_cast<float>(a_inoutValue);
+			if (!a_numeric.Update(a_context, _value,
+				static_cast<float>(a_min), static_cast<float>(a_max), static_cast<float>(a_step))) return false;
+
+			const uint32_t _rounded = static_cast<uint32_t>(std::lround(_value));
+			if (_rounded == a_inoutValue) return false;	// 掴んで動かしても、整数が変わるまでは書かない
+
+			a_inoutValue = _rounded;
+			return true;
 		}
 	}
 
@@ -56,7 +64,7 @@ namespace App::Object
 		PlaceHeaderRow(a_context, m_displayHeader);
 		PlaceDropdown(a_context, m_windowModeSelector.GetUI());
 		AdvanceRow();
-		PlaceStepper(a_context, m_brightnessStepper);
+		PlaceNumeric(a_context, m_brightnessNumeric);
 		AdvanceRow();
 		PlaceSelector(a_context, m_bloomSelector);
 		AdvanceRow();
@@ -64,7 +72,7 @@ namespace App::Object
 		AdvanceSpace(m_sectionSpace);
 
 		PlaceHeaderRow(a_context, m_gameplayHeader);
-		PlaceStepper(a_context, m_screenShakeStepper);
+		PlaceNumeric(a_context, m_screenShakeNumeric);
 		AdvanceRow();
 		PlaceSelector(a_context, m_hudSelector);
 		AdvanceRow();
@@ -85,14 +93,11 @@ namespace App::Object
 		}
 
 		// ---- 明るさ ----
-		if (const int _step = UpdateStepper(a_context, m_brightnessStepper); _step != 0)
+		if (UpdatePercent(a_context, m_brightnessNumeric, m_settings.brightness,
+			Game::UserData::BRIGHTNESS_MIN, Game::UserData::BRIGHTNESS_MAX, BRIGHTNESS_STEP))
 		{
-			m_settings.brightness = StepValue(m_settings.brightness, _step, BRIGHTNESS_STEP,
-				Game::UserData::BRIGHTNESS_MIN, Game::UserData::BRIGHTNESS_MAX);
 			_isChanged = true;
 		}
-		SetStepperValue(a_context, m_brightnessStepper,
-			static_cast<float>(m_settings.brightness), static_cast<float>(Game::UserData::BRIGHTNESS_MAX));
 
 		// ---- ブルーム ----
 		if (UpdateSelector(a_context, m_bloomSelector) != 0)
@@ -103,14 +108,11 @@ namespace App::Object
 		SetSelectorText(a_context, m_bloomSelector, ToOnOff(m_settings.isBloomEnable));
 
 		// ---- 画面の揺れ ----
-		if (const int _step = UpdateStepper(a_context, m_screenShakeStepper); _step != 0)
+		if (UpdatePercent(a_context, m_screenShakeNumeric, m_settings.screenShake,
+			0, Game::UserData::SCREEN_SHAKE_MAX, SCREEN_SHAKE_STEP))
 		{
-			m_settings.screenShake = StepValue(m_settings.screenShake, _step, SCREEN_SHAKE_STEP,
-				0, Game::UserData::SCREEN_SHAKE_MAX);
 			_isChanged = true;
 		}
-		SetStepperValue(a_context, m_screenShakeStepper,
-			static_cast<float>(m_settings.screenShake), static_cast<float>(Game::UserData::SCREEN_SHAKE_MAX));
 
 		// ---- HUD ----
 		if (UpdateSelector(a_context, m_hudSelector) != 0)
@@ -145,13 +147,13 @@ namespace App::Object
 	{
 		ArchiveItemUI(a_ar, "DisplayHeader", m_displayHeader);
 		ArchiveDropdown(a_ar, "WindowMode", m_windowModeSelector.RefUI());
-		ArchiveStepper(a_ar, "Brightness", m_brightnessStepper);
+		m_brightnessNumeric.Archive(a_ar, "Brightness");
 		ArchiveSelector(a_ar, "Bloom", m_bloomSelector);
 
 		a_ar.Field("SectionSpace", m_sectionSpace);
 
 		ArchiveItemUI(a_ar, "GameplayHeader", m_gameplayHeader);
-		ArchiveStepper(a_ar, "ScreenShake", m_screenShakeStepper);
+		m_screenShakeNumeric.Archive(a_ar, "ScreenShake");
 		ArchiveSelector(a_ar, "HUD", m_hudSelector);
 	}
 
@@ -165,7 +167,7 @@ namespace App::Object
 			DrawItemUIInspector(a_context, "DisplayHeader", m_displayHeader);
 			Engine::EditorField::Tooltip("見出し(文字だけの UI)。未設定なら行を取らない");
 			DrawDropdownInspector(a_context, "WindowMode", m_windowModeSelector.RefUI());
-			DrawStepperInspector(a_context, "Brightness", m_brightnessStepper);
+			m_brightnessNumeric.DrawInspector(a_context, "Brightness");
 			DrawSelectorInspector(a_context, "Bloom", m_bloomSelector);
 		}
 
@@ -176,7 +178,7 @@ namespace App::Object
 		{
 			DrawItemUIInspector(a_context, "GameplayHeader", m_gameplayHeader);
 			Engine::EditorField::Tooltip("見出し(文字だけの UI)。未設定なら行を取らない");
-			DrawStepperInspector(a_context, "ScreenShake", m_screenShakeStepper);
+			m_screenShakeNumeric.DrawInspector(a_context, "ScreenShake");
 			DrawSelectorInspector(a_context, "HUD", m_hudSelector);
 		}
 

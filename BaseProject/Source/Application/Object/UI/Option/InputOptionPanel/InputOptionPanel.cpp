@@ -191,8 +191,8 @@ namespace App::Object
 	{
 		PlaceHeaderRow(a_context, m_axisHeader);
 
-		// 感度 : ゲージと上げ下げのボタンを1行に並べる(横の位置は各 OffsetX)
-		PlaceStepper(a_context, m_sensitivityStepper);
+		// 感度 : 数値の行(ボタンかスクロールバーかはエディターで選ぶ)
+		PlaceNumeric(a_context, m_sensitivityNumeric);
 		AdvanceRow();
 
 		// 上下反転
@@ -230,17 +230,18 @@ namespace App::Object
 
 	void InputOptionPanel::AxisSettings(Engine::GameObject::ObjectContext& a_context)
 	{
-		// ボタンで1刻みずつ上げ下げする
-		const int _step = UpdateStepper(a_context, m_sensitivityStepper);
-		const float _stepValue = SENSITIVITY_STEP * static_cast<float>(_step);
+		// 感度の行 : 今見せているデバイスの感度を動かす。
+		// ゲージの数値(Text の飾り)にもそのまま感度が出る(小数の桁はゲージの Decimals)
+		float _sensitivity = m_isGamepadMode ? m_stickSensitivity : m_moveSensitivity;
+		const bool _isSensitivityChanged = m_sensitivityNumeric.Update(
+			a_context, _sensitivity, SENSITIVITY_MIN, SENSITIVITY_MAX, SENSITIVITY_STEP);
 
 		//------------------------------------------------------------------
 		// コントローラーの表示 : スティック(視点)の感度と上下反転
 		//------------------------------------------------------------------
 		if (m_isGamepadMode)
 		{
-			if (_step != 0) ApplyStickSensitivity(a_context, m_stickSensitivity + _stepValue);
-			SetStepperValue(a_context, m_sensitivityStepper, m_stickSensitivity, SENSITIVITY_MAX);
+			if (_isSensitivityChanged) ApplyStickSensitivity(a_context, _sensitivity);
 
 			if (UpdateSelector(a_context, m_invertLookYSelector) != 0)
 			{
@@ -253,14 +254,7 @@ namespace App::Object
 		//------------------------------------------------------------------
 		// キーボード・マウスの表示 : マウスの感度と上下反転
 		//------------------------------------------------------------------
-		if (_step != 0)
-		{
-			ApplySensitivity(a_context, m_moveSensitivity + _stepValue);
-		}
-
-		// 表示 : 感度そのものを上限に対する割合で出す。
-		// ゲージの数値(Text の飾り)にもそのまま感度が出る(小数の桁はゲージの Decimals)
-		SetStepperValue(a_context, m_sensitivityStepper, m_moveSensitivity, SENSITIVITY_MAX);
+		if (_isSensitivityChanged) ApplySensitivity(a_context, _sensitivity);
 
 		// 上下反転 : 選んだ時点で「選ばれている」扱いになり、作り手の値より優先される
 		if (UpdateSelector(a_context, m_invertLookYSelector) != 0)
@@ -792,7 +786,7 @@ namespace App::Object
 	void InputOptionPanel::ArchiveItems(Engine::Persistence::Archive& a_ar)
 	{
 		// キーは個別に持っていた頃と同じ(SensitivityGaugeGUID など)
-		ArchiveStepper(a_ar, "Sensitivity", m_sensitivityStepper);
+		m_sensitivityNumeric.Archive(a_ar, "Sensitivity");
 		a_ar.Field("SectionSpace", m_sectionSpace);
 
 		size_t _count = m_buttonVec.size();
@@ -840,7 +834,7 @@ namespace App::Object
 			DrawItemUIInspector(a_context, "AxisHeader", m_axisHeader);
 			Engine::EditorField::Tooltip("見出し(文字だけの UI)。未設定なら行を取らない");
 
-			DrawStepperInspector(a_context, "Sensitivity", m_sensitivityStepper);
+			m_sensitivityNumeric.DrawInspector(a_context, "Sensitivity");
 			DrawSelectorInspector(a_context, "InvertLookY", m_invertLookYSelector);
 			Engine::EditorField::Value("Sensitivity", "%.2f", m_moveSensitivity);
 		}

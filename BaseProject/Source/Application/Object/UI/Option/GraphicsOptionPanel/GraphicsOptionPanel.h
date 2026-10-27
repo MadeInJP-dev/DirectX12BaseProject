@@ -58,7 +58,7 @@ namespace App::Object
 
 	private:
 
-		// 1回押したときに動く量(%)
+		// ボタン1回で動く量(%)
 		static constexpr uint32_t BRIGHTNESS_STEP = 5;
 		static constexpr uint32_t SCREEN_SHAKE_STEP = 10;
 
@@ -75,7 +75,7 @@ namespace App::Object
 			{ Engine::EWindowMode::Borederless, "Borderless" },
 			{ Engine::EWindowMode::FullScreen,  "Fullscreen" },
 		};
-		OptionStepperUI m_brightnessStepper = {};		// 明るさ(%)
+		NumericMutate m_brightnessNumeric = {};			// 明るさ(%)
 		OptionSelectorUI m_bloomSelector = {};			// ブルーム(オン/オフ)
 
 		//------------------------------------------------------------------------------
@@ -83,7 +83,7 @@ namespace App::Object
 		//------------------------------------------------------------------------------
 		float m_sectionSpace = 32.0f;					// 画面と遊びの間(px)
 		OptionItemUI m_gameplayHeader = {};				// 見出し。未設定なら行を取らない
-		OptionStepperUI m_screenShakeStepper = {};		// 画面の揺れ(%)
+		NumericMutate m_screenShakeNumeric = {};		// 画面の揺れ(%)
 		OptionSelectorUI m_hudSelector = {};			// HUD の表示(オン/オフ)
 	};
 }

@@ -184,7 +184,7 @@ namespace App::Object
 		float m_moveSensitivity = 1.0f;			// 感度設定 : 0.01単位での変更(表示用の写し。実体は UserData)
 
 		OptionItemUI m_axisHeader = {};				// 見出し(文字だけの UI)。未設定なら行を取らない
-		OptionStepperUI m_sensitivityStepper = {};	// 感度のゲージと上げ下げのボタン
+		NumericMutate m_sensitivityNumeric = {};		// 感度の数値の行
 
 		// 上下反転(表示用の写し。未選択なら作り手の値のまま)
 		std::optional<bool> m_opIsInvertLookY = std::nullopt;

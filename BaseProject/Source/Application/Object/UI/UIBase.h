@@ -268,6 +268,27 @@ namespace App::Object
 		/// <remarks>親の行列を戻して、親から見た値に直してからアンカーへ入れる(並べる側が画面の座標で決めるとき用)</remarks>
 		void SetWorldPixelPos(const Math::Vector2& a_screenPos);
 
+		/// <summary>
+		/// 画面での左上と大きさ(px)で置く
+		/// </summary>
+		/// <remarks>
+		/// 当たり判定(アンカーの大きさ)も合わせる。ピボットが左上でなくても、矩形の左上が
+		/// a_topLeft に来るようにずらす。見た目(飾りの大きさ)は飾り側が持つので変わらない。
+		/// 並べる側(設定画面のパネル・スクロールバー)が毎フレーム入れる用
+		/// </remarks>
+		void SetWorldPixelRect(const Math::Vector2& a_topLeft, const Math::Vector2& a_size);
+
+		//-----------------------------------------------------------------------
+		// 別の UI を GUID で指す部品用
+		//
+		// 設定画面の行やスクロールバー・NumericMutate のように、シーンに置いた別の UI を
+		// GUID で指して動かす部品(UIBase ではないもの)が使う
+		//-----------------------------------------------------------------------
+
+		// GUID からシーンの UI を引く(見つからなければ nullptr)。
+		// エディターで選ぶコンボは Picker::DrawCombo<UIBase>(Application/Object/ObjectPicker.h)
+		static UIBase* FindUI(const Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_guid);
+
 		//-----------------------------------------------------------------------
 		// 行列(BaseObject) : 子の UI はこの行列に追従する
 		//-----------------------------------------------------------------------
@@ -576,9 +597,6 @@ namespace App::Object
 
 		// インスペクター : 項目移動の前・次(指した相手の向かい側もつなぐ)
 		void DrawNavigationInspector(Engine::GameObject::ObjectContext& a_context);
-
-		// GUID から UI を引く(項目移動の前・次用)
-		static UIBase* FindUI(const Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_guid);
 
 		// インスペクター : 出し入れと合図の演出(確認用に流すボタンを含む)
 		void DrawTransitionInspector();

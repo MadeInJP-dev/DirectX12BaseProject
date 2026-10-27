@@ -1,13 +1,12 @@
 ﻿#pragma once
 
+// 数値の行と右側のスクロールバーは部品を値で持つ
+#include "Application/Object/UI/Widget/VariableMutate/NumericMutate.h"
+#include "Application/Object/UI/Widget/VariableMutate/ScrollBar/ScrollBar.h"
+
 namespace Engine::GameObject
 {
 	struct ObjectContext;
-}
-
-namespace Engine::Graphics
-{
-	struct UIClipRect;
 }
 
 namespace App::InstanceResource
@@ -42,18 +41,6 @@ namespace App::Object
 	{
 		Core::GUID guid = {};
 		float offsetX = 0.0f;		// 行の左端からのずれ(px)
-	};
-
-	//===============================================================================================
-	// 値を上げ下げする行 : 今の値を出すゲージと、下げる・上げるボタン
-	//
-	// 感度や音量のように「刻みで上下する数値」の項目に使う。3つとも同じ行に並ぶ(横の位置は各 offsetX)
-	//===============================================================================================
-	struct OptionStepperUI
-	{
-		OptionItemUI gauge = {};	// 今の値を出す UIGauge(Source は Manual にしておく)
-		OptionItemUI down = {};		// 下げるボタン
-		OptionItemUI up = {};		// 上げるボタン
 	};
 
 	//===============================================================================================
@@ -102,8 +89,9 @@ namespace App::Object
 	// ・項目もバーもシーンに置いた別の UI。ここは位置と切り抜きを毎フレーム入れるだけで、見た目は持たない。
 	//   範囲の外へはみ出したぶんは切り抜き(UIBase::SetClipRect)で描かれず、押せもしない。
 	// ・出し入れは根の UI(RootPanel)1つで行う。項目とバーはヒエラルキーでその下に置くこと。
-	// ・つまみは固定の長さ(ThumbLength)。内容の長さに合わせて伸び縮みはしない
+	// ・右側のスクロールバーは ScrollBar(縦)。つまみは固定の長さで、内容の長さに合わせて伸び縮みはしない
 	//   (飾りの大きさは飾り側が持っていて、アンカーの大きさを変えても絵は変わらないため)。
+	// ・数値の行は NumericMutate(ボタン / スクロールバーをエディターで選ぶ)。置くのは PlaceNumeric
 	//===============================================================================================
 	class ScrollPanelBase
 	{
@@ -168,6 +156,9 @@ namespace App::Object
 
 		//-----------------------------------------------------------------------
 		// 引く・エディター用(パネルの項目にも、OptionHUD のボタンにも使う)
+		//
+		// 中身は UIBase::FindUI / UIBase::SetWorldPixelRect / Picker::DrawCombo<UIBase>。
+		// 設定画面の中からは呼び慣れたこちらの名前で使う
 		//-----------------------------------------------------------------------
 
 		// GUID からシーンの UI を引く(見つからなければ nullptr)
@@ -258,23 +249,11 @@ namespace App::Object
 		static bool DrawItemUIInspector(Engine::GameObject::ObjectContext& a_context, const char* a_label, OptionItemUI& a_item);
 
 		//-----------------------------------------------------------------------
-		// 派生から使うもの : 値を上げ下げする行
+		// 派生から使うもの : 数値の行(操作・保存・インスペクターは NumericMutate を直接呼ぶ)
 		//-----------------------------------------------------------------------
 
-		// 今の行へゲージと上げ下げのボタンを置く(行は送らない)
-		void PlaceStepper(Engine::GameObject::ObjectContext& a_context, const OptionStepperUI& a_stepper);
-
-		// このフレームに押されたボタン : 下げるなら -1、上げるなら +1、どちらも押されていなければ 0
-		static int UpdateStepper(Engine::GameObject::ObjectContext& a_context, const OptionStepperUI& a_stepper);
-
-		// ゲージへ今の値を出す(数値の飾りにも a_value がそのまま出る)
-		static void SetStepperValue(Engine::GameObject::ObjectContext& a_context, const OptionStepperUI& a_stepper, float a_value, float a_max);
-
-		// 保存(a_name を頭に付けたキーで書く : <name>GaugeGUID など)
-		static void ArchiveStepper(Engine::Persistence::Archive& a_ar, const std::string& a_name, OptionStepperUI& a_stepper);
-
-		// インスペクター
-		static void DrawStepperInspector(Engine::GameObject::ObjectContext& a_context, const char* a_label, OptionStepperUI& a_stepper);
+		// 今の行へ数値の行を置く(スクロールと切り抜きを掛ける。行は送らない)
+		void PlaceNumeric(Engine::GameObject::ObjectContext& a_context, NumericMutate& a_numeric);
 
 		//-----------------------------------------------------------------------
 		// 派生から使うもの : 選択肢を切り替える行
@@ -307,14 +286,14 @@ namespace App::Object
 		// ホイール : 範囲の上で回されたぶんだけ動かす
 		void UpdateWheel(Engine::GameObject::ObjectContext& a_context);
 
-		// スクロールバー : つまみのドラッグと、溝を押したときの飛び
+		// スクロールバー : 動かされた割合をスクロール位置へ
 		void UpdateScrollBar(Engine::GameObject::ObjectContext& a_context);
 
-		// スクロールバーの溝とつまみを置く
+		// スクロールバーを描画範囲の右端に縦いっぱいで置く
 		void PlaceScrollBar(Engine::GameObject::ObjectContext& a_context);
 
-		// つまみが動ける距離(px) : 溝の長さからつまみの長さを引いたもの
-		float GetThumbMovable() const;
+		// 今のスクロール位置の割合(0〜1)。動かせないときは 0
+		float GetScrollRate() const;
 
 		// 項目を切り抜く矩形 : 描画範囲からバーのぶんを除いたもの
 		Engine::Graphics::UIClipRect MakeContentClipRect() const;
@@ -328,11 +307,9 @@ namespace App::Object
 		// 設定(保存される)
 		//------------------------------------------------------------------------------
 		Core::GUID m_rootPanelGUID = {};	// 出し入れの単位(UIElement など)。項目とバーはこの下に置く
-		Core::GUID m_barTrackGUID = {};		// バーの溝。押すとつまみがそこへ飛ぶ
-		Core::GUID m_barThumbGUID = {};		// バーのつまみ。掴んで動かす(溝より手前の layer に置く)
 
+		ScrollBar m_scrollBar{ EScrollBarAxis::Vertical };	// 右側のスクロールバー(溝・つまみ・つまみの長さ)
 		float m_barWidth = 16.0f;			// バーの幅(px)。描画範囲の右端からこの幅をバーが使う
-		float m_thumbLength = 48.0f;		// つまみの長さ(px)
 		float m_wheelStep = 64.0f;			// ホイール1ノッチで動く量(px)
 
 		//------------------------------------------------------------------------------
@@ -343,10 +320,5 @@ namespace App::Object
 		float m_scrollOffset = 0.0f;		// 現在位置(px)
 		float m_contentLength = 0.0f;		// 項目の全長(px) : これを最大としてスクロールバーを決める
 		float m_layoutCursorY = 0.0f;		// 並べている途中の行の上端(内容の座標, px)
-
-		// つまみのドラッグ : 掴んだ瞬間の位置からの差で動かす
-		bool m_isDragging = false;
-		float m_dragStartCursorY = 0.0f;
-		float m_dragStartOffset = 0.0f;
 	};
 }

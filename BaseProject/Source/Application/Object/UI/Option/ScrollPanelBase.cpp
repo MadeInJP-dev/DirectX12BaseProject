@@ -8,7 +8,7 @@
 #include "Application/InstanceResource/UserDataResource.h"
 
 #include "Application/Object/UI/UIBase.h"
-#include "Application/Object/UI/Widget/UIGauge/UIGauge.h"
+#include "Application/Object/ObjectPicker.h"
 
 //==========================================================================================
 // ScrollPanelBase
@@ -55,7 +55,7 @@ namespace App::Object
 	void ScrollPanelBase::SetVisible(Engine::GameObject::ObjectContext& a_context, bool a_isVisible)
 	{
 		// 隠したらつまみを離したことにする(出し直したときに掴んだままにならないように)
-		if (!a_isVisible) m_isDragging = false;
+		if (!a_isVisible) m_scrollBar.CancelDrag();
 
 		UIBase* _pRoot = FindUI(a_context, m_rootPanelGUID);
 		if (_pRoot) _pRoot->SetVisible(a_isVisible);
@@ -127,42 +127,18 @@ namespace App::Object
 	}
 
 	//======================================================================================
-	// 値を上げ下げする行
+	// 数値の行
 	//======================================================================================
-	void ScrollPanelBase::PlaceStepper(Engine::GameObject::ObjectContext& a_context, const OptionStepperUI& a_stepper)
+	void ScrollPanelBase::PlaceNumeric(Engine::GameObject::ObjectContext& a_context, NumericMutate& a_numeric)
 	{
-		PlaceItem(a_context, a_stepper.gauge);
-		PlaceItem(a_context, a_stepper.down);
-		PlaceItem(a_context, a_stepper.up);
-	}
+		// 行の左上(画面の座標)。内容はスクロールしたぶんだけ上へずれる
+		const Math::Vector2 _rowTopLeft = {
+			m_layout.pos.x,
+			m_layout.pos.y + m_layoutCursorY - m_scrollOffset
+		};
 
-	int ScrollPanelBase::UpdateStepper(Engine::GameObject::ObjectContext& a_context, const OptionStepperUI& a_stepper)
-	{
-		// TODO : 押しっぱなしで送り続ける・ゲージを掴んで動かす
-		int _step = 0;
-
-		UIBase* _pDown = FindUI(a_context, a_stepper.down.guid);
-		if (_pDown && _pDown->IsClicked()) --_step;
-
-		UIBase* _pUp = FindUI(a_context, a_stepper.up.guid);
-		if (_pUp && _pUp->IsClicked()) ++_step;
-
-		return _step;
-	}
-
-	void ScrollPanelBase::SetStepperValue(Engine::GameObject::ObjectContext& a_context, const OptionStepperUI& a_stepper, float a_value, float a_max)
-	{
-		if (auto* _pGauge = Core::TypeInfo::Cast<UIGauge>(FindUI(a_context, a_stepper.gauge.guid)))
-		{
-			_pGauge->SetValue(a_value, a_max);
-		}
-	}
-
-	void ScrollPanelBase::ArchiveStepper(Engine::Persistence::Archive& a_ar, const std::string& a_name, OptionStepperUI& a_stepper)
-	{
-		ArchiveItemUI(a_ar, a_name + "Gauge", a_stepper.gauge);
-		ArchiveItemUI(a_ar, a_name + "Down", a_stepper.down);
-		ArchiveItemUI(a_ar, a_name + "Up", a_stepper.up);
+		const Engine::Graphics::UIClipRect _clip = MakeContentClipRect();
+		a_numeric.Place(a_context, _rowTopLeft, m_layout.itemSize, &_clip);
 	}
 
 	//======================================================================================
@@ -328,17 +304,6 @@ namespace App::Object
 		return static_cast<size_t>(_index < 0 ? _index + _count : _index);
 	}
 
-	void ScrollPanelBase::DrawStepperInspector(Engine::GameObject::ObjectContext& a_context, const char* a_label, OptionStepperUI& a_stepper)
-	{
-		Engine::EditorField::TreeScope _tree{ a_label };
-		if (!_tree) return;
-
-		DrawItemUIInspector(a_context, "Gauge", a_stepper.gauge);
-		Engine::EditorField::Tooltip("今の値を出す UIGauge(Source は Manual にしておく)");
-		DrawItemUIInspector(a_context, "Down", a_stepper.down);
-		DrawItemUIInspector(a_context, "Up", a_stepper.up);
-	}
-
 	//======================================================================================
 	// ホイール
 	//--------------------------------------------------------------------------------------
@@ -366,85 +331,32 @@ namespace App::Object
 	//======================================================================================
 	void ScrollPanelBase::UpdateScrollBar(Engine::GameObject::ObjectContext& a_context)
 	{
-		Math::Vector2 _cursor = {};
-		const bool _hasCursor = UIInteraction::CalcCursorUIPos(a_context, _cursor);
+		// 動かせないときはバーを出していないので、触られることもない
+		const float _maxOffset = GetMaxScrollOffset();
+		if (_maxOffset <= 0.0f) return;
 
-		//------------------------------------------------------------------
-		// つまみを掴んで動かす
-		//
-		// 押している間(IsPressed)はカーソルがつまみから外れても続くので、
-		// 掴んだ瞬間の位置からの差だけで動かす。つまみの今の位置から測ると、
-		// 端で止まったぶんがずれとして残り、戻したときに手元とつまみが離れる
-		//------------------------------------------------------------------
-		UIBase* _pThumb = FindUI(a_context, m_barThumbGUID);
-		if (_pThumb && _pThumb->IsPressed() && _hasCursor)
-		{
-			if (!m_isDragging)
-			{
-				m_isDragging = true;
-				m_dragStartCursorY = _cursor.y;
-				m_dragStartOffset = m_scrollOffset;
-			}
+		float _rate = GetScrollRate();
+		if (!m_scrollBar.Update(a_context, _rate)) return;
 
-			const float _movable = GetThumbMovable();
-			if (_movable > 0.0f)
-			{
-				const float _rate = (_cursor.y - m_dragStartCursorY) / _movable;
-				SetScrollOffset(m_dragStartOffset + _rate * GetMaxScrollOffset());
-			}
-			return;
-		}
-		m_isDragging = false;
-
-		//------------------------------------------------------------------
-		// 溝を押したら、つまみの真ん中がそこへ来るように飛ぶ
-		//
-		// つまみは溝より手前(layer が大きい)に置くこと。重なったところは手前の
-		// 1つだけが反応するので、つまみを掴んだつもりで溝が押されることはない
-		//------------------------------------------------------------------
-		UIBase* _pTrack = FindUI(a_context, m_barTrackGUID);
-		if (_pTrack && _pTrack->IsClicked() && _hasCursor)
-		{
-			const float _movable = GetThumbMovable();
-			if (_movable > 0.0f)
-			{
-				const float _thumbTop = _cursor.y - m_layout.pos.y - m_thumbLength * 0.5f;
-				SetScrollOffset(_thumbTop / _movable * GetMaxScrollOffset());
-			}
-		}
+		SetScrollOffset(_rate * _maxOffset);
+		m_scrollBar.PlaceThumb(a_context, GetScrollRate());
 	}
 
 	void ScrollPanelBase::PlaceScrollBar(Engine::GameObject::ObjectContext& a_context)
 	{
-		const float _barX = m_layout.pos.x + m_layout.size.x - m_barWidth;
-
 		// 項目が範囲に収まっていて動かせないときは、バーごと出さない。
 		// 出したままだと、掴んでもホイールを回しても動かない壊れたバーに見える
-		const bool _isScrollable = GetMaxScrollOffset() > 0.0f;
+		m_scrollBar.SetVisible(a_context, GetMaxScrollOffset() > 0.0f);
 
-		// 溝 : 描画範囲の右端に縦いっぱい
-		if (UIBase* _pTrack = FindUI(a_context, m_barTrackGUID))
-		{
-			_pTrack->SetVisible(_isScrollable);
-			PlaceUIRect(*_pTrack, { _barX, m_layout.pos.y }, { m_barWidth, m_layout.size.y });
-		}
-
-		// つまみ : 溝の中を、スクロールの割合だけ下がる
-		if (UIBase* _pThumb = FindUI(a_context, m_barThumbGUID))
-		{
-			_pThumb->SetVisible(_isScrollable);
-
-			const float _maxOffset = GetMaxScrollOffset();
-			const float _rate = (_maxOffset > 0.0f) ? (m_scrollOffset / _maxOffset) : 0.0f;
-			const float _top = m_layout.pos.y + GetThumbMovable() * _rate;
-
-			PlaceUIRect(*_pThumb, { _barX, _top }, { m_barWidth, m_thumbLength });
-		}
+		// 描画範囲の右端に縦いっぱい
+		const Math::Vector2 _topLeft = { m_layout.pos.x + m_layout.size.x - m_barWidth, m_layout.pos.y };
+		m_scrollBar.Place(a_context, _topLeft, { m_barWidth, m_layout.size.y }, GetScrollRate());
 	}
 
-	float ScrollPanelBase::GetThumbMovable() const
+	float ScrollPanelBase::GetScrollRate() const
 	{
-		return std::max(m_layout.size.y - m_thumbLength, 0.0f);
+		const float _maxOffset = GetMaxScrollOffset();
+		return (_maxOffset > 0.0f) ? (m_scrollOffset / _maxOffset) : 0.0f;
 	}
 
 	Engine::Graphics::UIClipRect ScrollPanelBase::MakeContentClipRect() const
@@ -472,19 +384,12 @@ namespace App::Object
 	//======================================================================================
 	UIBase* ScrollPanelBase::FindUI(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_guid)
 	{
-		if (!a_guid.IsValid() || !a_context.pObjectManager) return nullptr;
-		return Core::TypeInfo::Cast<UIBase>(a_context.pObjectManager->FindByGUID(a_guid));
+		return UIBase::FindUI(a_context, a_guid);
 	}
 
 	void ScrollPanelBase::PlaceUIRect(UIBase& a_ui, const Math::Vector2& a_topLeft, const Math::Vector2& a_size)
 	{
-		// 位置は画面の座標で決め、親から見た値へ直して入れる
-		UIAnchor& _anchor = a_ui.RefAnchor();
-		_anchor.pixelSize = a_size;
-		a_ui.SetWorldPixelPos({
-			a_topLeft.x + a_size.x * _anchor.pivot.x,
-			a_topLeft.y + a_size.y * _anchor.pivot.y
-		});
+		a_ui.SetWorldPixelRect(a_topLeft, a_size);
 	}
 
 	InstanceResource::UserDataResource* ScrollPanelBase::FindUserData(Engine::GameObject::ObjectContext& a_context)
@@ -503,10 +408,8 @@ namespace App::Object
 			Engine::Persistence::ArchiveSection _section(a_ar, "ScrollPanelBase");
 
 			a_ar.GUIDField("RootPanelGUID", m_rootPanelGUID);
-			a_ar.GUIDField("BarTrackGUID", m_barTrackGUID);
-			a_ar.GUIDField("BarThumbGUID", m_barThumbGUID);
+			m_scrollBar.Archive(a_ar, "Bar");	// BarTrackGUID / BarThumbGUID / BarThumbLength など
 			a_ar.Field("BarWidth", m_barWidth);
-			a_ar.Field("ThumbLength", m_thumbLength);
 			a_ar.Field("WheelStep", m_wheelStep);
 		}
 
@@ -532,15 +435,9 @@ namespace App::Object
 		DrawUIPicker(a_context, "RootPanel", m_rootPanelGUID);
 		Engine::EditorField::Tooltip("このパネルの出し入れの単位(UIElement など)。項目とバーはヒエラルキーでこの下に置く");
 
-		DrawUIPicker(a_context, "BarTrack", m_barTrackGUID);
-		Engine::EditorField::Tooltip("バーの溝。描画範囲の右端に縦いっぱいで置かれ、押すとつまみがそこへ飛ぶ");
-
-		DrawUIPicker(a_context, "BarThumb", m_barThumbGUID);
-		Engine::EditorField::Tooltip("バーのつまみ。掴んで動かす。溝より layer を大きくしておくこと");
-
+		m_scrollBar.DrawInspector(a_context, "Bar");
 		Engine::EditorField::Field("BarWidth", m_barWidth, 0.5f, 0.0f, 256.0f);
-		Engine::EditorField::Field("ThumbLength", m_thumbLength, 0.5f, 1.0f, 1024.0f);
-		Engine::EditorField::Tooltip("つまみの長さ(px)。飾りの大きさもこれに合わせて作ること");
+		Engine::EditorField::Tooltip("バーの幅(px)。描画範囲の右端からこの幅をバーが使う");
 		Engine::EditorField::Field("WheelStep", m_wheelStep, 1.0f, 0.0f, 1024.0f);
 		Engine::EditorField::Tooltip("ホイール1ノッチで動く量(px)");
 
@@ -564,48 +461,6 @@ namespace App::Object
 
 	bool ScrollPanelBase::DrawUIPicker(Engine::GameObject::ObjectContext& a_context, const char* a_label, Core::GUID& a_inoutGUID)
 	{
-		// 今の選択 : 種類と GUID を並べて出す
-		std::string _current = "None";
-		if (UIBase* _pCurrent = FindUI(a_context, a_inoutGUID))
-		{
-			_current = std::string(_pCurrent->GetDisplayName()) + " " + a_inoutGUID.String();
-		}
-		else if (a_inoutGUID.IsValid())
-		{
-			_current = a_inoutGUID.String() + " (見つかりません)";
-		}
-
-		Engine::EditorField::ComboScope _combo(a_label, _current.c_str());
-		if (!_combo) return false;
-
-		bool _isChanged = false;
-
-		if (Engine::EditorField::Selectable("None", !a_inoutGUID.IsValid()))
-		{
-			a_inoutGUID = {};
-			_isChanged = true;
-		}
-
-		if (!a_context.pObjectManager) return _isChanged;
-
-		const auto& _objectVec = a_context.pObjectManager->GetObjects();
-		for (size_t _i = 0; _i < _objectVec.size(); ++_i)
-		{
-			UIBase* _pUI = Core::TypeInfo::Cast<UIBase>(_objectVec[_i].get());
-			if (!_pUI) continue;
-
-			// 同名でもIDがぶつからないようにする
-			Engine::EditorField::IDScope _id(static_cast<int>(_i));
-
-			const std::string _name = std::string(_pUI->GetDisplayName()) + " " + _pUI->GetGUID().String();
-			const bool _isSelected = (a_inoutGUID == _pUI->GetGUID());
-			if (Engine::EditorField::Selectable(_name.c_str(), _isSelected))
-			{
-				a_inoutGUID = _pUI->GetGUID();
-				_isChanged = true;
-			}
-			if (_isSelected) Engine::EditorField::SetItemDefaultFocus();
-		}
-		return _isChanged;
+		return Picker::DrawCombo<UIBase>(a_label, a_context.pObjectManager, a_inoutGUID);
 	}
 }

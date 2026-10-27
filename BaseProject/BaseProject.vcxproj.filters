@@ -739,6 +739,12 @@
     <Filter Include="Source\Application\Object\UI\Widget\UIGauge">
       <UniqueIdentifier>{1b890504-cbda-42a6-9729-0f9364a04ec5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Application\Object\UI\Widget\VariableMutate">
+      <UniqueIdentifier>{7c2e9a41-5f3b-4d86-a1e7-3b9d0c6f4e28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Application\Object\UI\Widget\VariableMutate\ScrollBar">
+      <UniqueIdentifier>{e5a83d17-2c9f-4b40-9d6e-8f1b4a7c2d93}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Application\Object\UI\Widget\SideMenu">
       <UniqueIdentifier>{3e7fb560-9e13-4529-9c0d-a3707aec13c3}</UniqueIdentifier>
     </Filter>
@@ -1772,6 +1778,12 @@
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\Widget\UIGauge\UIGauge.cpp">
       <Filter>Source\Application\Object\UI\Widget\UIGauge</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Widget\VariableMutate\NumericMutate.cpp">
+      <Filter>Source\Application\Object\UI\Widget\VariableMutate</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Widget\VariableMutate\ScrollBar\ScrollBar.cpp">
+      <Filter>Source\Application\Object\UI\Widget\VariableMutate\ScrollBar</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\Widget\SideMenu\SideMenu.cpp">
       <Filter>Source\Application\Object\UI\Widget\SideMenu</Filter>
@@ -3634,6 +3646,12 @@
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\Widget\UIGauge\UIGauge.h">
       <Filter>Source\Application\Object\UI\Widget\UIGauge</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\Widget\VariableMutate\NumericMutate.h">
+      <Filter>Source\Application\Object\UI\Widget\VariableMutate</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\Widget\VariableMutate\ScrollBar\ScrollBar.h">
+      <Filter>Source\Application\Object\UI\Widget\VariableMutate\ScrollBar</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\Widget\SideMenu\SideMenu.h">
       <Filter>Source\Application\Object\UI\Widget\SideMenu</Filter>

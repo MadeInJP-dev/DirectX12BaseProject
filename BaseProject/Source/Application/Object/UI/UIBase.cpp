@@ -301,6 +301,15 @@ namespace App::Object
 		m_anchor.pixelPos = _localPos - m_runtimeOffset;
 	}
 
+	void UIBase::SetWorldPixelRect(const Math::Vector2& a_topLeft, const Math::Vector2& a_size)
+	{
+		m_anchor.pixelSize = a_size;
+		SetWorldPixelPos({
+			a_topLeft.x + a_size.x * m_anchor.pivot.x,
+			a_topLeft.y + a_size.y * m_anchor.pivot.y
+		});
+	}
+
 	//======================================================================================
 	// 行列 : 子の UI はこれに追従する
 	//======================================================================================

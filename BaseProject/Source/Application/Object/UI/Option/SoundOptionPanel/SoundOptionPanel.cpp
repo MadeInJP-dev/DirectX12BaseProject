@@ -48,9 +48,9 @@ namespace App::Object
 	{
 		PlaceHeaderRow(a_context, m_header);
 
-		for (const OptionStepperUI& _stepper : m_volumeStepperArray)
+		for (NumericMutate& _numeric : m_volumeNumericArray)
 		{
-			PlaceStepper(a_context, _stepper);
+			PlaceNumeric(a_context, _numeric);
 			AdvanceRow();
 		}
 	}
@@ -60,23 +60,19 @@ namespace App::Object
 	//======================================================================================
 	void SoundOptionPanel::UpdateItems(Engine::GameObject::ObjectContext& a_context)
 	{
-		for (size_t _i = 0; _i < m_volumeStepperArray.size(); ++_i)
+		for (size_t _i = 0; _i < m_volumeNumericArray.size(); ++_i)
 		{
-			const OptionStepperUI& _stepper = m_volumeStepperArray[_i];
 			const EVolumeKind _kind = static_cast<EVolumeKind>(_i);
 
-			const int _step = UpdateStepper(a_context, _stepper);
-			if (_step != 0)
-			{
-				const int _current = static_cast<int>(RefVolume(m_settings, _kind));
-				ApplyVolume(a_context, _kind, _current + _step * static_cast<int>(VOLUME_STEP));
-			}
+			// 0〜100 のまま動かし、整数に丸めて書く(ゲージにもそのまま出る)。
+			// 掴んで動かしている間は毎フレーム値が来るので、整数が変わったときだけ鳴らす側へ送る
+			const uint32_t _current = RefVolume(m_settings, _kind);
+			float _volume = static_cast<float>(_current);
+			if (!m_volumeNumericArray[_i].Update(a_context, _volume,
+				0.0f, static_cast<float>(Game::UserData::SOUND_VOLUME_MAX), static_cast<float>(VOLUME_STEP))) continue;
 
-			// 表示 : 0〜100 のまま出す
-			SetStepperValue(
-				a_context, _stepper,
-				static_cast<float>(RefVolume(m_settings, _kind)),
-				static_cast<float>(Game::UserData::SOUND_VOLUME_MAX));
+			const int _rounded = static_cast<int>(std::lround(_volume));
+			if (_rounded != static_cast<int>(_current)) ApplyVolume(a_context, _kind, _rounded);
 		}
 	}
 
@@ -107,9 +103,9 @@ namespace App::Object
 
 		ArchiveItemUI(a_ar, "Header", m_header);
 
-		for (size_t _i = 0; _i < m_volumeStepperArray.size(); ++_i)
+		for (size_t _i = 0; _i < m_volumeNumericArray.size(); ++_i)
 		{
-			ArchiveStepper(a_ar, VOLUME_KIND_NAME[_i], m_volumeStepperArray[_i]);
+			m_volumeNumericArray[_i].Archive(a_ar, VOLUME_KIND_NAME[_i]);
 		}
 	}
 
@@ -121,10 +117,10 @@ namespace App::Object
 		DrawItemUIInspector(a_context, "Header", m_header);
 		Engine::EditorField::Tooltip("見出し(文字だけの UI)。未設定なら行を取らない");
 
-		for (size_t _i = 0; _i < m_volumeStepperArray.size(); ++_i)
+		for (size_t _i = 0; _i < m_volumeNumericArray.size(); ++_i)
 		{
 			Engine::EditorField::IDScope _id(static_cast<int>(_i));
-			DrawStepperInspector(a_context, VOLUME_KIND_NAME[_i], m_volumeStepperArray[_i]);
+			m_volumeNumericArray[_i].DrawInspector(a_context, VOLUME_KIND_NAME[_i]);
 
 			Engine::EditorField::Value(VOLUME_KIND_NAME[_i], "%u", RefVolume(m_settings, static_cast<EVolumeKind>(_i)));
 		}
