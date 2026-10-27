@@ -45,6 +45,7 @@ namespace App::Object
 			if (a_nav.inputFrameIndex == a_context.frameIndex) return;
 			a_nav.inputFrameIndex = a_context.frameIndex;
 			a_nav.step = 0;
+			a_nav.stepX = 0;
 
 			if (!a_context.pServices || !a_context.pServices->pInputManager) return;
 			const auto& _input = *a_context.pServices->pInputManager;
@@ -69,26 +70,32 @@ namespace App::Object
 			// 移動量
 			//
 			// 軸は倒した瞬間に1つ動き、倒し続けると少し待ってから繰り返す。
-			// 上が正の軸なので、上は前(-1)・下は次(+1)。右は次、左は前
+			// 上が正の軸なので、上は前(-1)・下は次(+1)。左右は stepX へ入れ、
+			// 行き先は各 UI の Left / Right(空なら前・次)でグループが決める
 			//------------------------------------------------------------------
 			const Math::Vector2 _axis = _input.GetAxisState(Game::EGameAction::BottonMove);
 
-			int _dir = 0;
+			int _dirY = 0;
+			int _dirX = 0;
 			if (std::abs(_axis.y) >= std::abs(_axis.x))
 			{
-				if (std::abs(_axis.y) > AXIS_THRESHOLD) _dir = (_axis.y > 0.0f) ? -1 : 1;
+				if (std::abs(_axis.y) > AXIS_THRESHOLD) _dirY = (_axis.y > 0.0f) ? -1 : 1;
 			}
 			else if (std::abs(_axis.x) > AXIS_THRESHOLD && !a_nav.IsHorizontalLocked(a_context.frameIndex))
 			{
 				// 左右を値の増減に使っている間(横のスクロールバーが選ばれている)は動かさない
-				_dir = (_axis.x > 0.0f) ? 1 : -1;
+				_dirX = (_axis.x > 0.0f) ? 1 : -1;
 			}
 
+			// 上下と左右を1つの値にまとめて、倒している向きが変わったかを見る
+			const int _dir = (_dirY != 0) ? _dirY : _dirX * 2;
+
+			bool _isTrigger = false;
 			if (_dir != a_nav.holdDir)
 			{
 				a_nav.holdDir = _dir;
 				a_nav.repeatTimer = REPEAT_DELAY;
-				a_nav.step = _dir;
+				_isTrigger = true;
 			}
 			else if (_dir != 0)
 			{
@@ -96,8 +103,14 @@ namespace App::Object
 				if (a_nav.repeatTimer <= 0.0f)
 				{
 					a_nav.repeatTimer += REPEAT_INTERVAL;
-					a_nav.step = _dir;
+					_isTrigger = true;
 				}
+			}
+
+			if (_isTrigger)
+			{
+				a_nav.step = _dirY;
+				a_nav.stepX = _dirX;
 			}
 
 			// 押すたびに1つ(押しっぱなしでは繰り返さない)
@@ -106,7 +119,11 @@ namespace App::Object
 
 			// 入力を別の用途に使っている間(キー割り当ての待ち受けなど)は動かさない。
 			// 倒している向きは覚えたままにするので、止めが外れても倒しっぱなしで急に動き出さない
-			if (a_nav.IsMoveLocked(a_context.frameIndex)) a_nav.step = 0;
+			if (a_nav.IsMoveLocked(a_context.frameIndex))
+			{
+				a_nav.step = 0;
+				a_nav.stepX = 0;
+			}
 
 			//------------------------------------------------------------------
 			// 操作の切り替え
@@ -126,7 +143,7 @@ namespace App::Object
 			{
 				a_nav.isNavMode = false;
 			}
-			else if (a_nav.step != 0 || _isDecide || _isPadTouched)
+			else if (a_nav.step != 0 || a_nav.stepX != 0 || _isDecide || _isPadTouched)
 			{
 				a_nav.isNavMode = true;
 			}
@@ -172,11 +189,15 @@ namespace App::Object
 				// キーへ持ち替えたとき、カーソルで指していたところから動けるように
 				if (UIBase* _pHovered = FindHoveredInChain(a_context)) _pCurrent = _pHovered;
 			}
-			else if (_nav.step != 0 && m_isFocusShown)
+			else if (m_isFocusShown)
 			{
 				// 選択を見せていなかったフレームからの最初の1回は、見せるだけで動かさない
 				// (見えていない場所から、いきなり隣へ飛んだように見えないように)
-				if (UIBase* _pNext = FindSelectable(a_context, _pCurrent, _nav.step)) _pCurrent = _pNext;
+				UIBase* _pNext = nullptr;
+				if (_nav.step != 0)			_pNext = FindSelectable(a_context, _pCurrent, _nav.step);
+				else if (_nav.stepX != 0)	_pNext = FindSideways(a_context, _pCurrent, _nav.stepX);
+
+				if (_pNext) _pCurrent = _pNext;
 			}
 		}
 
@@ -244,6 +265,21 @@ namespace App::Object
 		return nullptr;
 	}
 
+	UIBase* UINavigationGroup::FindSideways(const Engine::GameObject::ObjectContext& a_context, const UIBase* a_pFrom, int a_stepX) const
+	{
+		if (!a_pFrom || a_stepX == 0) return nullptr;
+
+		// 左右を指していなければ、今までどおり前・次へ
+		const Core::GUID& _sideGUID = (a_stepX > 0) ? a_pFrom->GetNavRightGUID() : a_pFrom->GetNavLeftGUID();
+		if (!_sideGUID.IsValid()) return FindSelectable(a_context, a_pFrom, a_stepX);
+
+		// 指した先が選べない(隠れている)ときは動かない。前・次へ流すと思わぬ所へ飛ぶため。
+		// 自分を指していれば、そちらへは端で止まる
+		UIBase* _pSide = (a_stepX > 0) ? a_pFrom->FindNavRight(a_context) : a_pFrom->FindNavLeft(a_context);
+		if (_pSide == a_pFrom) return nullptr;
+		return IsSelectable(a_context, _pSide) ? _pSide : nullptr;
+	}
+
 	UIBase* UINavigationGroup::FindPrev(const Engine::GameObject::ObjectContext& a_context, const UIBase* a_pFrom) const
 	{
 		if (!a_pFrom) return nullptr;
@@ -264,16 +300,27 @@ namespace App::Object
 		return nullptr;
 	}
 
+	// 左右の先は First からの並びの外にあることがある(タブの右に並ぶ行など)ので、
+	// 前・次・左・右のどれでもたどれるものを全部見る
 	UIBase* UINavigationGroup::FindHoveredInChain(const Engine::GameObject::ObjectContext& a_context) const
 	{
 		UIBase* _pFirst = Picker::Find<UIBase>(a_context.pObjectManager, m_firstGUID);
-		UIBase* _pWalk = _pFirst;
-		for (int _i = 0; _i < CHAIN_MAX && _pWalk; ++_i)
+		if (!_pFirst) return nullptr;
+
+		std::vector<UIBase*> _visitedVec = { _pFirst };
+		for (size_t _i = 0; _i < _visitedVec.size() && _i < CHAIN_MAX; ++_i)
 		{
+			UIBase* _pWalk = _visitedVec[_i];
 			if (_pWalk->IsHovered()) return _pWalk;
 
-			_pWalk = _pWalk->FindNavNext(a_context);
-			if (_pWalk == _pFirst) break;
+			for (UIBase* _pLink : { _pWalk->FindNavNext(a_context), _pWalk->FindNavPrev(a_context),
+									_pWalk->FindNavRight(a_context), _pWalk->FindNavLeft(a_context) })
+			{
+				if (_pLink && std::find(_visitedVec.begin(), _visitedVec.end(), _pLink) == _visitedVec.end())
+				{
+					_visitedVec.push_back(_pLink);
+				}
+			}
 		}
 		return nullptr;
 	}

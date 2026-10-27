@@ -10,12 +10,13 @@ namespace App::Object
 	// UIグループ : キー・パッドで UI を順に選ぶ(項目移動)
 	//
 	// 各 UI が持つ「前・次の UI」(UIBase::GetNavPrevGUID / GetNavNextGUID)をたどって、
-	// 選んでいる UI を移す。つながりは UI 側が持つので、ここが保存するのは最初の UI だけ。
+	// 選んでいる UI を移す。左右は「左・右の UI」(GetNavLeftGUID / GetNavRightGUID)へ移り、
+	// 指していなければ前・次と同じ。つながりは UI 側が持つので、ここが保存するのは最初の UI だけ。
 	// 今どれを選んでいるかは実行中だけ覚える(保存しない)。
 	//
 	//   RB(NextItem。キーボードは割り当て無し)          … 次へ
 	//   LB(PrevItem)                                   … 前へ
-	//   矢印キー / 左スティック / 十字キー(BottonMove) … 上・左で前、下・右で次
+	//   矢印キー / 左スティック / 十字キー(BottonMove) … 上で前、下で次、左右は Left / Right(空なら前・次)
 	//   Enter / A(Decide)                              … 選んでいる UI を押す(押すのは UIInteraction)
 	//
 	// ・マウスを動かす・クリックするとカーソル操作へ戻り、選択の表示は消える。
@@ -94,7 +95,17 @@ namespace App::Object
 		/// </remarks>
 		UIBase* FindPrev(const Engine::GameObject::ObjectContext& a_context, const UIBase* a_pFrom) const;
 
-		// 最初の UI から Next をたどった中で、カーソルが乗っている UI(無ければ nullptr)
+		/// <summary>
+		/// 左右で移る先を探す
+		/// </summary>
+		/// <param name="a_stepX">正で右、負で左</param>
+		/// <remarks>
+		/// UI の Left / Right を使う。空なら FindSelectable で前・次へ(左右を指さない並びは今までどおり)。
+		/// 指した先が選べないときは nullptr(動かない)
+		/// </remarks>
+		UIBase* FindSideways(const Engine::GameObject::ObjectContext& a_context, const UIBase* a_pFrom, int a_stepX) const;
+
+		// 最初の UI から前・次・左・右をたどれる中で、カーソルが乗っている UI(無ければ nullptr)
 		UIBase* FindHoveredInChain(const Engine::GameObject::ObjectContext& a_context) const;
 
 		// 選べるか : 押せて、触れて、出ている(上の親も含む)

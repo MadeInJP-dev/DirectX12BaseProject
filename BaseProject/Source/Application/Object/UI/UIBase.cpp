@@ -958,6 +958,41 @@ namespace App::Object
 		return FindUI(a_context, GetNavNextGUID());
 	}
 
+	//======================================================================================
+	// 項目移動の左・右
+	//======================================================================================
+	const Core::GUID& UIBase::GetNavLeftGUID() const
+	{
+		static const Core::GUID EMPTY_GUID = {};
+		return m_opInteraction ? m_opInteraction->navLeftGUID : EMPTY_GUID;
+	}
+
+	const Core::GUID& UIBase::GetNavRightGUID() const
+	{
+		static const Core::GUID EMPTY_GUID = {};
+		return m_opInteraction ? m_opInteraction->navRightGUID : EMPTY_GUID;
+	}
+
+	void UIBase::SetNavLeftGUID(const Core::GUID& a_guid)
+	{
+		if (m_opInteraction) m_opInteraction->navLeftGUID = a_guid;
+	}
+
+	void UIBase::SetNavRightGUID(const Core::GUID& a_guid)
+	{
+		if (m_opInteraction) m_opInteraction->navRightGUID = a_guid;
+	}
+
+	UIBase* UIBase::FindNavLeft(const Engine::GameObject::ObjectContext& a_context) const
+	{
+		return FindUI(a_context, GetNavLeftGUID());
+	}
+
+	UIBase* UIBase::FindNavRight(const Engine::GameObject::ObjectContext& a_context) const
+	{
+		return FindUI(a_context, GetNavRightGUID());
+	}
+
 	// ポインタは持たずに毎回引く。相手が消されたときに古いポインタを踏まないように
 	// (引くのは GUID の対応表なので軽い)
 	UIBase* UIBase::FindUI(const Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_guid)
@@ -1054,6 +1089,13 @@ namespace App::Object
 					? std::optional<std::vector<Decoration::Decoration>>(std::move(_unusedDecorationVec))
 					: std::nullopt;
 			}
+		}
+
+		// 項目移動の左・右の UI。前・次と同じく、押せない UI も空の GUID を書いて並びを保つ
+		if (!a_ar.IsLegacyLayout())
+		{
+			a_ar.GUIDField("NavLeftGUID", _interaction.navLeftGUID);
+			a_ar.GUIDField("NavRightGUID", _interaction.navRightGUID);
 		}
 
 		m_anchor.editSize = m_anchor.pixelSize;

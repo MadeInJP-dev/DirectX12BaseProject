@@ -138,7 +138,7 @@ namespace App::Object
 	}
 
 	//======================================================================================
-	// 項目移動の前・次
+	// 項目移動の前・次・左・右
 	//--------------------------------------------------------------------------------------
 	// 片側だけつなぎ忘れないように、指した相手の向かい側(Next を選んだら相手の Prev)も
 	// この UI へ向ける。指し替えたときは、前に指していた相手の向かい側が自分なら外す。
@@ -164,7 +164,7 @@ namespace App::Object
 			UIBase* _pNew = FindUI(a_context, _prevGUID);
 			if (_pNew && _pNew != this) _pNew->SetNavNextGUID(GetGUID());
 		}
-		Engine::EditorField::Tooltip("上・左で移る先。選んだ UI の Next はこの UI になる。空なら「Next がこの UI」のものを前とみなす");
+		Engine::EditorField::Tooltip("上・LB で移る先(Left が空なら左も)。選んだ UI の Next はこの UI になる。空なら「Next がこの UI」のものを前とみなす");
 
 		// ---- 次 ----
 		Core::GUID _nextGUID = _interaction.navNextGUID;
@@ -178,20 +178,35 @@ namespace App::Object
 			UIBase* _pNew = FindUI(a_context, _nextGUID);
 			if (_pNew && _pNew != this) _pNew->SetNavPrevGUID(GetGUID());
 		}
-		Engine::EditorField::Tooltip("下・右・Tab で移る先。選んだ UI の Prev はこの UI になる");
+		Engine::EditorField::Tooltip("下・Tab で移る先(Right が空なら右も)。選んだ UI の Prev はこの UI になる");
+
+		// ---- 左・右 ----
+		// 上下と違って向かい側は付けない(一覧の項目どれからでも同じ詳細へ移る、のように多対1になるため)
+		Picker::DrawCombo<UIBase>("Left", _pObjectManager, _interaction.navLeftGUID);
+		Engine::EditorField::Tooltip("左で移る先。空なら Prev へ移る。自分を選ぶと左へは動かない(端で止まる)");
+
+		Picker::DrawCombo<UIBase>("Right", _pObjectManager, _interaction.navRightGUID);
+		Engine::EditorField::Tooltip("右で移る先。空なら Next へ移る。自分を選ぶと右へは動かない(端で止まる)");
 
 		// ---- つなぎ方の間違い ----
-		auto _warnLink = [&](const char* a_label, const Core::GUID& a_guid)
+		// 左右は「自分 = 端で止まる」なので、自分を指していても間違いにしない
+		auto _warnLink = [&](const char* a_label, const Core::GUID& a_guid, bool a_isSelfAllowed = false)
 			{
 				if (!a_guid.IsValid()) return;
 
 				const UIBase* _pTarget = FindUI(a_context, a_guid);
 				if (!_pTarget)						Engine::EditorField::WarningText("%s : シーンに無い UI を指しています", a_label);
-				else if (_pTarget == this)			Engine::EditorField::WarningText("%s : 自分を指しています", a_label);
+				else if (_pTarget == this)
+				{
+					if (a_isSelfAllowed)			Engine::EditorField::HelpText("%s : 自分(この向きへは動かない)", a_label);
+					else							Engine::EditorField::WarningText("%s : 自分を指しています", a_label);
+				}
 				else if (!_pTarget->HasInteraction())	Engine::EditorField::WarningText("%s : 押せない UI です(選べません)", a_label);
 			};
 		_warnLink("Prev", _interaction.navPrevGUID);
 		_warnLink("Next", _interaction.navNextGUID);
+		_warnLink("Left", _interaction.navLeftGUID, true);
+		_warnLink("Right", _interaction.navRightGUID, true);
 	}
 
 	//======================================================================================

@@ -209,7 +209,7 @@ namespace App::Object
 		//-----------------------------------------------------------------------
 		// 項目移動(キー・パッドで UI を順に選ぶ。押せない UI は持たない)
 		//
-		// 前・次の UI を GUID で持って保存する。実際に選択を動かすのは UINavigationGroup
+		// 前・次(上下)と左・右の UI を GUID で持って保存する。実際に選択を動かすのは UINavigationGroup
 		//-----------------------------------------------------------------------
 
 		// 項目移動で選ばれているか(IsHovered も立つ)
@@ -226,6 +226,18 @@ namespace App::Object
 		// 前・次の UI を引く : 指していない・シーンに無い・UI でないなら nullptr
 		UIBase* FindNavPrev(const Engine::GameObject::ObjectContext& a_context) const;
 		UIBase* FindNavNext(const Engine::GameObject::ObjectContext& a_context) const;
+
+		// 左・右の UI の GUID(空なら左は前・右は次へ移る。押せない UI は常に空)
+		const Core::GUID& GetNavLeftGUID() const;
+		const Core::GUID& GetNavRightGUID() const;
+
+		// 左・右の UI を指し直す(押せない UI では何もしない)
+		void SetNavLeftGUID(const Core::GUID& a_guid);
+		void SetNavRightGUID(const Core::GUID& a_guid);
+
+		// 左・右の UI を引く : 指していない・シーンに無い・UI でないなら nullptr
+		UIBase* FindNavLeft(const Engine::GameObject::ObjectContext& a_context) const;
+		UIBase* FindNavRight(const Engine::GameObject::ObjectContext& a_context) const;
 
 		//-----------------------------------------------------------------------
 		// 演出(出し入れと合図)

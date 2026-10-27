@@ -192,11 +192,12 @@ namespace App::Object
 			return;
 		}
 
-		// タブ : 押されたパネルへ切り替える
+		// タブ : 押されたパネルへ切り替える。
+		// キー・パッドでは選んだだけで切り替える(右で、出ているそのパネルの行へ移れるように)
 		for (size_t _i = 0; _i < m_tabButtonGUIDVec.size(); ++_i)
 		{
 			UIBase* _pTab = ScrollPanelBase::FindUI(a_context, m_tabButtonGUIDVec[_i]);
-			if (_pTab && _pTab->IsClicked())
+			if (_pTab && (_pTab->IsClicked() || _pTab->IsNavFocused()))
 			{
 				SelectPanel(_i);
 				break;
