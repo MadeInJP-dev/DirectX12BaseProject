@@ -140,6 +140,7 @@ namespace App::Object
 		if (!m_scrollBar.IsNavFocused(a_context) || !a_context.pServices || !a_context.pServices->pInputManager)
 		{
 			m_navHoldDir = 0;
+			m_wasNavFocused = false;
 			return 0;
 		}
 
@@ -155,6 +156,21 @@ namespace App::Object
 		if (std::abs(_axis.x) > NAV_AXIS_THRESHOLD && std::abs(_axis.x) > std::abs(_axis.y))
 		{
 			_dir = (_axis.x > 0.0f) ? 1 : -1;
+		}
+
+		// 選ばれた瞬間 : 左右の移動で来たなら、その入力は移動に使ったものなので離すまで待つ
+		// (同じフレームの入力で値まで動いてしまわないように)
+		if (!m_wasNavFocused)
+		{
+			m_wasNavFocused = true;
+			m_navHoldDir = _dir;
+			m_isNavWaitRelease = (_dir != 0);
+			return 0;
+		}
+		if (m_isNavWaitRelease)
+		{
+			if (_dir != 0) return 0;
+			m_isNavWaitRelease = false;
 		}
 
 		if (_dir != m_navHoldDir)

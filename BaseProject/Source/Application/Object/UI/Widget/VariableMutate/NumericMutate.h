@@ -126,5 +126,11 @@ namespace App::Object
 		// キー・パッドの左右(UpdateNavStep)
 		int m_navHoldDir = 0;				// 倒している向き(-1 で左、+1 で右)
 		float m_navRepeatTimer = 0.0f;		// 押しっぱなしで次に動くまでの残り(秒)
+
+		// 前のフレームに選ばれていたか。選ばれた瞬間を知るため
+		bool m_wasNavFocused = false;
+
+		// 選ばれたときに左右が倒れていた(左右の移動でここへ来た)。離すまで値を動かさない
+		bool m_isNavWaitRelease = false;
 	};
 }
