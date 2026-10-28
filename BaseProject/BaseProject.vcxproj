@@ -774,6 +774,26 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Decoration\UIDecoration.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationElement\UIImageElement\UIImageElement.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationElement\UIPolygonElement\UIPolygonElement.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationElement\UITextElement\UITextElement.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Object\SequenceBgm.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -2066,6 +2086,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Application\Object\UI\Decoration\UIDecorationDrawContext.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\VariableMutate\NumericMutate.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\VariableMutate\ScrollBar\ScrollBar.h" />
     <ClInclude Include="Source\Editor\Panel\BuildPanel\AssetConvertView\AssetConvertView.h" />
@@ -2190,6 +2211,11 @@
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationDraw.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationPreset.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\Internal\DecorationInternal.h" />
+    <ClInclude Include="Source\Application\Object\UI\Decoration\UIDecoration.h" />
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIDecorationElementBase.h" />
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIImageElement\UIImageElement.h" />
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIPolygonElement\UIPolygonElement.h" />
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UITextElement\UITextElement.h" />
     <ClInclude Include="Source\Application\Systems\Combat\ScoreSystem.h" />
     <ClInclude Include="Source\Application\Systems\Combat\DebugKillSystem.h" />
     <ClInclude Include="Source\Application\Systems\Combat\DeathEventClearSystem.h" />

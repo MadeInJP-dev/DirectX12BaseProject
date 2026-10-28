@@ -256,162 +256,55 @@ namespace App::Object::Decoration
 		}
 
 		//----------------------------------------------------------------------------------
-		// 文字列を行へ切る
-		//----------------------------------------------------------------------------------
-		std::vector<std::vector<uint32_t>> SplitLines(const std::string& a_utf8Text)
-		{
-			std::vector<std::vector<uint32_t>> _lines = { {} };
-
-			for (const uint32_t _codePoint : Core::String::ToCodePoints(a_utf8Text))
-			{
-				if (_codePoint == '\r') continue;		// 復帰は送りを持たない
-				if (_codePoint == '\n')
-				{
-					_lines.emplace_back();
-					continue;
-				}
-				_lines.back().push_back(_codePoint);
-			}
-
-			return _lines;
-		}
-
-		// 1行ぶんの幅(px, フォント基準サイズ)を測る
-		float MeasureLine(
-			Engine::Resource::Font* a_pFont,
-			const std::vector<uint32_t>& a_line,
-			float a_charSpacingInFontUnit)
-		{
-			float _width = 0.0f;
-			uint32_t _prev = 0;
-
-			for (const uint32_t _codePoint : a_line)
-			{
-				const Engine::Resource::Glyph* _pGlyph = a_pFont->RequestGlyph(_codePoint);
-				if (_pGlyph == nullptr) continue;
-
-				if (_prev != 0) _width += a_pFont->GetKerning(_prev, _codePoint);
-				_width += _pGlyph->xAdvance + a_charSpacingInFontUnit;
-
-				_prev = _codePoint;
-			}
-
-			return _width;
-		}
-
-		//----------------------------------------------------------------------------------
 		// 文字を描く
+		//
+		// グリフの並べ方はエンジン側(DrawSubmitter::SubmitString)が持つ。
+		// ここでは親と合成した状態を、文字列の描画命令の形へ直して渡すだけ
 		//----------------------------------------------------------------------------------
 		void DrawText(
 			Engine::Graphics::GraphicsEngine* a_pGE,
-			Engine::Resource::ResourceManager* a_pResourceManager,
 			const Decoration& a_decoration,
 			const TextData& a_text,
 			const Resolved& a_resolved)
 		{
 			if (a_text.text.empty()) return;
 			if (!a_text.fontRef.IsValid()) return;
-			if (!a_pResourceManager->IsReady(a_text.fontRef)) return;
 
-			// グリフは要求された時点で焼くので、参照は書き込み可能で引く
-			Engine::Resource::Font* _pFont = a_pResourceManager->Ref(a_text.fontRef.GetRaw());
-			if (_pFont == nullptr || !_pFont->IsValid()) return;
-
-			const float _atlasSize = static_cast<float>(_pFont->GetAtlasSize());
-			if (_atlasSize <= 0.0f) return;
-
-			// 基準サイズ(64px)で焼いたものを、出したい大きさへ縮小する
-			const float _fontScale =
-				_pFont->GetScaleForSize(a_text.fontPixelSize) * a_resolved.uniformScale;
-			if (_fontScale <= 0.0f) return;
-
-			// 字間はピクセル指定なので、測るときはフォント基準サイズへ戻して足す
-			const float _charSpacingInFontUnit =
-				(_fontScale > 1e-6f) ? (a_text.charSpacing * a_resolved.uniformScale / _fontScale) : 0.0f;
-
-			const auto _lines = SplitLines(a_text.text);
-
-			const float _lineHeight = _pFont->GetLineHeight() * a_text.lineSpacing;
-			const float _ascent = _pFont->GetAscent();
-
-			// ブロック全体の大きさ : ピボットを当てる基準になる
-			float _blockWidth = 0.0f;
-			std::vector<float> _lineWidthVec;
-			_lineWidthVec.reserve(_lines.size());
-			for (const auto& _line : _lines)
+			Engine::Graphics::ETextAlign _textAlign = Engine::Graphics::ETextAlign::Left;
+			switch (a_text.textAlign)
 			{
-				const float _lineWidth = MeasureLine(_pFont, _line, _charSpacingInFontUnit);
-				_lineWidthVec.push_back(_lineWidth);
-				_blockWidth = std::max(_blockWidth, _lineWidth);
+			case ETextAlign::Center: _textAlign = Engine::Graphics::ETextAlign::Center; break;
+			case ETextAlign::Right:  _textAlign = Engine::Graphics::ETextAlign::Right;  break;
+			case ETextAlign::Left:
+			default: break;
 			}
-			const float _blockHeight = _lineHeight * static_cast<float>(_lines.size());
 
-			// ピボットはブロック全体に対して効かせる
-			const Math::Vector2 _blockTopLeft = {
-				-a_decoration.pivot.x * _blockWidth * _fontScale,
-				-a_decoration.pivot.y * _blockHeight * _fontScale
-			};
+			Engine::Graphics::FontSubmitDesc _desc = {};
+			_desc.fontHandle = a_text.fontRef.GetRaw();
+			_desc.text = a_text.text;
 
-			const Engine::Handle<Engine::Resource::Texture> _atlasHandle = _pFont->GetAtlasTextureHandle();
+			// 曲げたときの上下のずらしは、回す前に足しておく(他の矩形と同じ)
+			_desc.pixelPos = a_resolved.anchorPos + RotateDeg({ 0.0f, a_resolved.curveShiftY }, a_resolved.rotation);
 
-			for (size_t _lineIndex = 0; _lineIndex < _lines.size(); ++_lineIndex)
-			{
-				const auto& _line = _lines[_lineIndex];
+			_desc.fontPixelSize = a_text.fontPixelSize * a_resolved.uniformScale;
+			_desc.rotationDeg = a_resolved.rotation;
+			_desc.Zlayer = a_resolved.layer;
+			_desc.color = a_resolved.color;
+			_desc.pivot = a_decoration.pivot;
+			_desc.textAlign = _textAlign;
+			_desc.charSpacing = a_text.charSpacing * a_resolved.uniformScale;
+			_desc.lineSpacing = a_text.lineSpacing;
 
-				// 行揃え : ブロック幅に対して行を寄せる
-				float _lineStart = 0.0f;
-				switch (a_text.textAlign)
-				{
-				case ETextAlign::Center: _lineStart = (_blockWidth - _lineWidthVec[_lineIndex]) * 0.5f; break;
-				case ETextAlign::Right:  _lineStart = (_blockWidth - _lineWidthVec[_lineIndex]);        break;
-				case ETextAlign::Left:
-				default: break;
-				}
+			// 弧の頂点からアンカーまでのずれ(回転前)。縦は上下のずらしを入れる前で測る
+			_desc.curvature = a_resolved.curvature;
+			_desc.curveOffsetX = a_resolved.localOffset.x - a_resolved.curveOriginX;
+			_desc.curveOffsetY = a_resolved.localOffset.y;
 
-				// ベースラインは行の上端から ascent ぶん下
-				const float _baselineY = _lineHeight * static_cast<float>(_lineIndex) + _ascent;
+			_desc.pClipRect = a_resolved.pClipRect;
+			_desc.postEffectFlags = a_resolved.postEffectFlags;
+			_desc.effect = a_resolved.effect;
 
-				float _penX = _lineStart;
-				uint32_t _prev = 0;
-
-				for (const uint32_t _codePoint : _line)
-				{
-					const Engine::Resource::Glyph* _pGlyph = _pFont->RequestGlyph(_codePoint);
-					if (_pGlyph == nullptr) continue;
-
-					if (_prev != 0) _penX += _pFont->GetKerning(_prev, _codePoint);
-
-					if (!_pGlyph->IsEmpty())
-					{
-						// フォント基準サイズでの位置を出してから、まとめて縮小する
-						const Math::Vector2 _localTopLeft = {
-							_blockTopLeft.x + (_penX + _pGlyph->xOffset) * _fontScale,
-							_blockTopLeft.y + (_baselineY + _pGlyph->yOffset) * _fontScale
-						};
-						const Math::Vector2 _glyphSize = {
-							static_cast<float>(_pGlyph->width) * _fontScale,
-							static_cast<float>(_pGlyph->height) * _fontScale
-						};
-
-						const Math::Vector2 _uvOffset = {
-							static_cast<float>(_pGlyph->x) / _atlasSize,
-							static_cast<float>(_pGlyph->y) / _atlasSize
-						};
-						const Math::Vector2 _uvScale = {
-							static_cast<float>(_pGlyph->width) / _atlasSize,
-							static_cast<float>(_pGlyph->height) / _atlasSize
-						};
-
-						SubmitLocalRect(
-							a_pGE, _atlasHandle, a_resolved,
-							_localTopLeft, _glyphSize,
-							a_resolved.color, _uvOffset, _uvScale);
-					}
-
-					_penX += _pGlyph->xAdvance + _charSpacingInFontUnit;
-					_prev = _codePoint;
-				}
-			}
+			a_pGE->RefDrawSubmitter()->SubmitString(_desc);
 		}
 	}
 
@@ -437,7 +330,7 @@ namespace App::Object::Decoration
 		// 文字はグリフごとに矩形を組むので別経路
 		if (const TextData* _pText = a_decoration.GetText())
 		{
-			DrawText(a_pGraphicsEngine, a_pResourceManager, a_decoration, *_pText, _resolved);
+			DrawText(a_pGraphicsEngine, a_decoration, *_pText, _resolved);
 			return;
 		}
 

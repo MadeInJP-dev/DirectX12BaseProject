@@ -5,6 +5,7 @@
 #include "Engine/Graphics/Frame/DrawSubmitter/Descs/GPUSkiningSbumitDesc.h"
 #include "Engine/Graphics/Frame/DrawSubmitter/Descs/ModelSubmitDesc.h"
 #include "Engine/Graphics/Frame/DrawSubmitter/Descs/SpriteSubmitDesc.h"
+#include "Engine/Graphics/Frame/DrawSubmitter/Descs/FontSubmitDesc.h"
 #include "Engine/Graphics/Frame/DrawSubmitter/Descs/BoundarySubmitDesc.h"
 
 namespace Engine::ECS
@@ -114,6 +115,19 @@ namespace Engine::Graphics
 		/// </summary>
 		/// <param name="a_desc">描画の要求(必須項目は SpriteSubmitDesc を参照)</param>
 		void SubmitUI(const SpriteSubmitDesc& a_desc);
+
+		//--------------------------------------------------------------------------------------------
+		// 描画コマンド : 文字
+		//--------------------------------------------------------------------------------------------
+
+		/// <summary>
+		/// 2D文字列描画命令。座標系はピクセル(左上原点/Y下向き)。
+		/// 行に切ってグリフを並べ、1文字ずつフォントのアトラスを貼ったUIとして積む(SubmitUI と同じ経路)。
+		/// ピボット・行揃え・字間・カーニングはここで解決し、回転と湾曲は文字列全体を1枚として掛ける。
+		/// フォントが読み込み中ならそのフレームは描かない
+		/// </summary>
+		/// <param name="a_desc">描画の要求(必須項目は FontSubmitDesc を参照)</param>
+		void SubmitString(const FontSubmitDesc& a_desc);
 
 	private:
 

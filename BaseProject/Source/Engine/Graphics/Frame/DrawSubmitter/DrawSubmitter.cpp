@@ -13,6 +13,66 @@
 
 namespace Engine::Graphics
 {
+	namespace
+	{
+		// 文字列を行へ切る : 改行(\n)で区切り、復帰(\r)は捨てる
+		std::vector<std::vector<uint32_t>> SplitLines(std::string_view a_utf8Text)
+		{
+			std::vector<std::vector<uint32_t>> _lines = { {} };
+
+			for (const uint32_t _codePoint : Core::String::ToCodePoints(a_utf8Text))
+			{
+				if (_codePoint == '\r') continue;		// 復帰は送りを持たない
+				if (_codePoint == '\n')
+				{
+					_lines.emplace_back();
+					continue;
+				}
+				_lines.back().push_back(_codePoint);
+			}
+
+			return _lines;
+		}
+
+		// 1行ぶんの幅(px, フォント基準サイズ)を測る
+		float MeasureLine(
+			Resource::Font& a_font,
+			const std::vector<uint32_t>& a_line,
+			float a_charSpacingInFontUnit)
+		{
+			float _width = 0.0f;
+			uint32_t _prev = 0;
+
+			for (const uint32_t _codePoint : a_line)
+			{
+				const Resource::Glyph* _pGlyph = a_font.RequestGlyph(_codePoint);
+				if (_pGlyph == nullptr) continue;
+
+				if (_prev != 0) _width += a_font.GetKerning(_prev, _codePoint);
+				_width += _pGlyph->xAdvance + a_charSpacingInFontUnit;
+
+				_prev = _codePoint;
+			}
+
+			return _width;
+		}
+
+		// 度で回す : UIAnchor::IsPointInside と同じ向き(時計回り)
+		Math::Vector2 RotateDeg(const Math::Vector2& a_value, float a_degree)
+		{
+			if (a_degree == 0.0f) return a_value;
+
+			const float _rad = DirectX::XMConvertToRadians(a_degree);
+			const float _cos = std::cos(_rad);
+			const float _sin = std::sin(_rad);
+
+			return {
+				a_value.x * _cos - a_value.y * _sin,
+				a_value.x * _sin + a_value.y * _cos
+			};
+		}
+	}
+
 	void DrawSubmitter::Init(GraphicsEngine* a_pGraphicsEngine)
 	{
 		// 積み込みは1フレームに何万回も通るので、引く先はここで控えておく。
@@ -356,6 +416,136 @@ namespace Engine::Graphics
 
 		// サイズは呼び出し側の指定値をそのまま使う
 		PushUIData(_pTex->GetSRV().GetIndex(), _noiseTexIndex, a_desc);
+	}
+
+	//------------------------------------------------------------------------------------------
+	// 文字列を1文字ずつUIとして積む
+	//
+	// グリフの位置は pixelPos からのずれ(回転前)で組み、ずれを回してから積む。
+	// クアッド自体も同じ角度で回すので、文字列全体が1枚として回る。
+	// 湾曲も文字ごとに「弧の頂点からの中心のずれ」を渡すので、全部の文字が同じ1本の弧に乗る
+	//------------------------------------------------------------------------------------------
+	void DrawSubmitter::SubmitString(const FontSubmitDesc& a_desc)
+	{
+		if (a_desc.text.empty()) return;
+		if (a_desc.color.a <= 0.0f) return;
+
+		auto& _resourceManager = (*m_pResourceManager);
+
+		// 読み込みが終わっていないものは、そのフレームは描かない
+		if (!a_desc.fontHandle.IsValid()) return;
+		if (!_resourceManager.IsReady(a_desc.fontHandle)) return;
+
+		// グリフは要求された時点で焼くので、参照は書き込み可能で引く
+		Resource::Font* _pFont = _resourceManager.Ref(a_desc.fontHandle);
+		if (_pFont == nullptr || !_pFont->IsValid()) return;
+
+		const float _atlasSize = static_cast<float>(_pFont->GetAtlasSize());
+		if (_atlasSize <= 0.0f) return;
+
+		// 基準サイズ(64px)で焼いたものを、出したい大きさへ縮小する
+		const float _fontScale = _pFont->GetScaleForSize(a_desc.fontPixelSize);
+		if (_fontScale <= 1e-6f) return;
+
+		// 字間はピクセル指定なので、測るときはフォント基準サイズへ戻して足す
+		const float _charSpacingInFontUnit = a_desc.charSpacing / _fontScale;
+
+		const auto _lines = SplitLines(a_desc.text);
+
+		const float _lineHeight = _pFont->GetLineHeight() * a_desc.lineSpacing;
+		const float _ascent = _pFont->GetAscent();
+
+		// ブロック全体の大きさ : ピボットを当てる基準になる
+		float _blockWidth = 0.0f;
+		std::vector<float> _lineWidthVec;
+		_lineWidthVec.reserve(_lines.size());
+		for (const auto& _line : _lines)
+		{
+			const float _lineWidth = MeasureLine(*_pFont, _line, _charSpacingInFontUnit);
+			_lineWidthVec.push_back(_lineWidth);
+			_blockWidth = std::max(_blockWidth, _lineWidth);
+		}
+		const float _blockHeight = _lineHeight * static_cast<float>(_lines.size());
+
+		// ピボットはブロック全体に対して効かせる
+		const Math::Vector2 _blockTopLeft = {
+			-a_desc.pivot.x * _blockWidth * _fontScale,
+			-a_desc.pivot.y * _blockHeight * _fontScale
+		};
+
+		// 1文字ぶんの描画命令 : 文字ごとに変わらないものはここで入れておく
+		SpriteSubmitDesc _glyphDesc = {};
+		_glyphDesc.texHandle = _pFont->GetAtlasTextureHandle();
+		_glyphDesc.rotationDeg = a_desc.rotationDeg;
+		_glyphDesc.Zlayer = a_desc.Zlayer;
+		_glyphDesc.color = a_desc.color;
+		_glyphDesc.pivot = { 0.0f, 0.0f };		// ずれで位置を決めているのでピボットは左上固定
+		_glyphDesc.curvature = a_desc.curvature;
+		_glyphDesc.pClipRect = a_desc.pClipRect;
+		_glyphDesc.postEffectFlags = a_desc.postEffectFlags;
+		_glyphDesc.effect = a_desc.effect;
+
+		for (size_t _lineIndex = 0; _lineIndex < _lines.size(); ++_lineIndex)
+		{
+			const auto& _line = _lines[_lineIndex];
+
+			// 行揃え : ブロック幅に対して行を寄せる
+			float _lineStart = 0.0f;
+			switch (a_desc.textAlign)
+			{
+			case ETextAlign::Center: _lineStart = (_blockWidth - _lineWidthVec[_lineIndex]) * 0.5f; break;
+			case ETextAlign::Right:  _lineStart = (_blockWidth - _lineWidthVec[_lineIndex]);        break;
+			case ETextAlign::Left:
+			default: break;
+			}
+
+			// ベースラインは行の上端から ascent ぶん下
+			const float _baselineY = _lineHeight * static_cast<float>(_lineIndex) + _ascent;
+
+			float _penX = _lineStart;
+			uint32_t _prev = 0;
+
+			for (const uint32_t _codePoint : _line)
+			{
+				const Resource::Glyph* _pGlyph = _pFont->RequestGlyph(_codePoint);
+				if (_pGlyph == nullptr) continue;
+
+				if (_prev != 0) _penX += _pFont->GetKerning(_prev, _codePoint);
+
+				if (!_pGlyph->IsEmpty())
+				{
+					// フォント基準サイズでの位置を出してから、まとめて縮小する
+					const Math::Vector2 _localTopLeft = {
+						_blockTopLeft.x + (_penX + _pGlyph->xOffset) * _fontScale,
+						_blockTopLeft.y + (_baselineY + _pGlyph->yOffset) * _fontScale
+					};
+					const Math::Vector2 _glyphSize = {
+						static_cast<float>(_pGlyph->width) * _fontScale,
+						static_cast<float>(_pGlyph->height) * _fontScale
+					};
+
+					_glyphDesc.pixelPos = a_desc.pixelPos + RotateDeg(_localTopLeft, a_desc.rotationDeg);
+					_glyphDesc.pixelSize = _glyphSize;
+					_glyphDesc.uvOffset = {
+						static_cast<float>(_pGlyph->x) / _atlasSize,
+						static_cast<float>(_pGlyph->y) / _atlasSize
+					};
+					_glyphDesc.uvScale = {
+						static_cast<float>(_pGlyph->width) / _atlasSize,
+						static_cast<float>(_pGlyph->height) / _atlasSize
+					};
+
+					// この文字の中心が、弧の頂点からどれだけずれているか(回転前の px)
+					_glyphDesc.curveOffsetX = a_desc.curveOffsetX + _localTopLeft.x + _glyphSize.x * 0.5f;
+					_glyphDesc.curveOffsetY = a_desc.curveOffsetY + _localTopLeft.y + _glyphSize.y * 0.5f;
+
+					SubmitUI(_glyphDesc);
+				}
+
+				_penX += _pGlyph->xAdvance + _charSpacingInFontUnit;
+				_prev = _codePoint;
+			}
+		}
 	}
 
 	//------------------------------------------------------------------------------------------
