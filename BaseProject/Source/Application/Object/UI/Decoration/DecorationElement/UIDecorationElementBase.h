@@ -8,6 +8,8 @@
 
 #include "../UIDecorationDrawContext.h"
 
+namespace Engine::ECS { struct EngineServices; }
+
 namespace App::Object::Decoration
 {
 	class UIDecorationElementBase;
@@ -81,6 +83,13 @@ namespace App::Object::Decoration
 		/// </remarks>
 		void Archive(Engine::Persistence::Archive& a_ar);
 
+		/// <summary>
+		/// インスペクター(エディター用) : 共通部分・種類ごとの中身・反応・アニメーション
+		/// </summary>
+		/// <remarks>プリセットのつながりは持ち主(UIDecoration)が出す。付いていく部分はここで触れなくする</remarks>
+		/// <returns>値が変わったら true</returns>
+		bool DrawInspector(const Engine::ECS::EngineServices& a_services);
+
 		//----------------------------------------------------------------------------------
 		// アクセサ
 		//----------------------------------------------------------------------------------
@@ -128,6 +137,12 @@ namespace App::Object::Decoration
 
 		// 種類ごとの中身の保存。フィールドを足すときは必ず末尾へ
 		virtual void ArchiveBody(Engine::Persistence::Archive& a_ar) = 0;
+
+		// 種類ごとの中身のインスペクター : 値が変わったら true
+		virtual bool DrawBodyInspector(const Engine::ECS::EngineServices& a_services) = 0;
+
+		// 矩形の大きさ(pixelSize)を使うか : 文字は文字の大きさで決まるので使わない
+		virtual bool IsUsePixelSize() const { return true; }
 
 		// この描画で出すか(表示・群の絞り込み)
 		bool IsDrawn(const DrawContext& a_context) const;

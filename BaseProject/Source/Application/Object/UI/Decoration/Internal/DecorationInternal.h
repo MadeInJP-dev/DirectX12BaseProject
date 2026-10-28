@@ -103,6 +103,20 @@ namespace App::Object::Decoration::Internal
 		std::optional<UIProceduralAnimation>& a_opOscillation);
 
 	//======================================================================================
+	// インスペクター(実装は DecorationInspector.cpp)
+	//
+	// 見出しから中身までを出す。プリセットで触れなくするときは呼び出し側で DisabledScope を張る
+	//======================================================================================
+
+	// カーソルへの反応 : 値が変わったら true
+	bool DrawReactionInspector(std::optional<UIReaction>& a_opReaction);
+
+	// トゥイーンと揺れ : 値が変わったら true
+	bool DrawAnimationInspector(
+		std::optional<UIAnimation>& a_opTween,
+		std::optional<UIProceduralAnimation>& a_opOscillation);
+
+	//======================================================================================
 	// 描画(実装は DecorationDraw.cpp)
 	//======================================================================================
 

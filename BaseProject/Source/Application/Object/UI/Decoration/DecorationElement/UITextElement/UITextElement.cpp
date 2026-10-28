@@ -3,6 +3,9 @@
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 
+#include "Engine/ECS/System/SystemContext.h"	// EngineServices
+#include "Engine/EditorField/EditorField.h"
+
 #include "Application/Object/UI/Decoration/Internal/DecorationInternal.h"
 
 namespace App::Object::Decoration
@@ -57,5 +60,38 @@ namespace App::Object::Decoration
 		a_ar.Field("LineSpacing", m_lineSpacing);
 		a_ar.Field("CharSpacing", m_charSpacing);
 		a_ar.Field("TextAlign", m_textAlign);
+	}
+
+	//----------------------------------------------------------------------------------
+	// インスペクター
+	//----------------------------------------------------------------------------------
+	bool UITextElement::DrawBodyInspector(const Engine::ECS::EngineServices& a_services)
+	{
+		bool _isChanged = false;
+
+		Engine::EditorField::Header("Text");
+
+		{
+			Engine::EditorField::DisabledScope _disabled(m_preset.IsLocked(EPresetPart::CONTENT));
+			if (Engine::EditorField::MultilineField("Text", m_value)) _isChanged = true;
+		}
+
+		Engine::EditorField::DisabledScope _disabled(m_preset.IsLocked(EPresetPart::LOOK));
+
+		if (Engine::EditorField::AssetField(a_services, "Font", "Font", m_fontGUID))
+		{
+			RequestResources(a_services.pResourceManager);
+			_isChanged = true;
+		}
+
+		if (Engine::EditorField::Field("FontPixelSize", m_fontPixelSize, 0.5f, 1.0f, 512.0f)) _isChanged = true;
+		Engine::EditorField::Tooltip("フォントは64pxで焼いてあるので、それより大きくするとぼやける");
+
+		if (Engine::EditorField::Field("LineSpacing", m_lineSpacing, 0.01f, 0.1f, 4.0f)) _isChanged = true;
+		if (Engine::EditorField::Field("CharSpacing", m_charSpacing, 0.1f)) _isChanged = true;
+		if (Engine::EditorField::Field("TextAlign", m_textAlign)) _isChanged = true;
+		Engine::EditorField::Tooltip("ブロック全体の位置は Pivot、行同士の揃えが TextAlign");
+
+		return _isChanged;
 	}
 }

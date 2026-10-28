@@ -3,6 +3,9 @@
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
 
+#include "Engine/ECS/System/SystemContext.h"	// EngineServices
+#include "Engine/EditorField/EditorField.h"
+
 #include "Application/Object/UI/Decoration/Internal/DecorationInternal.h"
 
 namespace App::Object::Decoration
@@ -37,6 +40,62 @@ namespace App::Object::Decoration
 			a_ar.GUIDField(a_name + "TexGUID", _image.texGUID);
 			a_ar.Field(a_name + "UVOffset", _image.uvOffset);
 			a_ar.Field(a_name + "UVScale", _image.uvScale);
+		}
+
+		// 画像1枚ぶんのインスペクター : 付けるかどうか・テクスチャ・UV
+		//
+		// a_isLockContent / a_isLockLook はプリセットで触れなくする部分
+		// (テクスチャは中身、付ける・外す と UV は見た目)
+		bool DrawImageUI(
+			const char* a_label,
+			std::optional<UISpriteElement::Image>& a_opImage,
+			const Engine::ECS::EngineServices& a_services,
+			bool a_isLockContent,
+			bool a_isLockLook,
+			bool a_isShowUV)
+		{
+			bool _isChanged = false;
+			Engine::EditorField::IDScope _id(a_label);
+
+			{
+				Engine::EditorField::DisabledScope _disabled(a_isLockLook);
+				bool _hasImage = a_opImage.has_value();
+				if (Engine::EditorField::Field(a_label, _hasImage))
+				{
+					if (_hasImage) a_opImage.emplace();
+					else           a_opImage.reset();
+					_isChanged = true;
+				}
+			}
+			if (!a_opImage.has_value()) return _isChanged;
+
+			UISpriteElement::Image& _image = *a_opImage;
+			Engine::EditorField::IndentScope _indent;
+
+			{
+				Engine::EditorField::DisabledScope _disabled(a_isLockContent);
+				if (Engine::EditorField::AssetField(a_services, "Texture", "Texture", _image.texGUID))
+				{
+					if (a_services.pResourceManager)
+					{
+						_image.texRef = _image.texGUID.IsValid()
+							? a_services.pResourceManager->RequestLoad<Engine::Resource::Texture>(_image.texGUID)
+							: Engine::ResourceRef<Engine::Resource::Texture>();
+					}
+					_isChanged = true;
+				}
+			}
+			if (_image.texRef.IsValid()) Engine::EditorField::Image(a_services, _image.texRef.GetRaw(), 128, 128);
+
+			if (a_isShowUV)
+			{
+				Engine::EditorField::DisabledScope _disabled(a_isLockLook);
+				if (Engine::EditorField::Field("UVOffset", _image.uvOffset, 0.01f)) _isChanged = true;
+				if (Engine::EditorField::Field("UVScale", _image.uvScale, 0.01f)) _isChanged = true;
+				Engine::EditorField::Tooltip("1枚に並べた絵から1コマ切り出すときの倍率 (uv * UVScale + UVOffset)");
+			}
+
+			return _isChanged;
 		}
 	}
 
@@ -130,5 +189,55 @@ namespace App::Object::Decoration
 		ArchiveImage(a_ar, "Image", m_image);
 		ArchiveImage(a_ar, "NoiseImage", m_noiseImage);
 		ArchiveImage(a_ar, "MaskImage", m_maskImage);
+	}
+
+	//======================================================================================
+	// インスペクター
+	//======================================================================================
+	bool UISpriteElement::DrawBodyInspector(const Engine::ECS::EngineServices& a_services)
+	{
+		bool _isChanged = false;
+		const bool _isLockLook = m_preset.IsLocked(EPresetPart::LOOK);
+		const bool _isLockContent = m_preset.IsLocked(EPresetPart::CONTENT);
+
+		Engine::EditorField::Header("Sprite");
+
+		// ---- 画像 ----
+		if (DrawImageUI("Image", m_image, a_services, _isLockContent, _isLockLook, true)) _isChanged = true;
+		Engine::EditorField::Tooltip("切ると組み込みの白テクスチャを Color で染めて出す");
+
+		if (!m_image)
+		{
+			Engine::EditorField::DisabledScope _disabled(_isLockLook);
+			if (Engine::EditorField::Field("UVOffset", m_uvOffset, 0.01f)) _isChanged = true;
+			if (Engine::EditorField::Field("UVScale", m_uvScale, 0.01f)) _isChanged = true;
+		}
+
+		// ---- 枠 ----
+		{
+			Engine::EditorField::DisabledScope _disabled(_isLockLook);
+			Engine::EditorField::Header("Edge");
+
+			if (Engine::EditorField::Field("Fill", m_isFill)) _isChanged = true;
+			Engine::EditorField::Tooltip("切ると枠だけになる");
+
+			if (Engine::EditorField::Field("EdgePixel", m_edgePixel, 0.5f, 0.0f, 256.0f)) _isChanged = true;
+			if (m_edgePixel > 0.0f)
+			{
+				if (Engine::EditorField::Field("EdgeColor", m_edgeColor)) _isChanged = true;
+				if (Engine::EditorField::FlagsField("EdgeSide", m_edgeSide)) _isChanged = true;
+			}
+		}
+
+		// ---- 効果に使う画像 ----
+		Engine::EditorField::Header("Effect Image");
+
+		if (DrawImageUI("NoiseImage", m_noiseImage, a_services, _isLockLook, _isLockLook, false)) _isChanged = true;
+		Engine::EditorField::Tooltip("UIマテリアルの効果(ディゾルブなど)が引くノイズを差し替える");
+
+		if (DrawImageUI("MaskImage", m_maskImage, a_services, _isLockLook, _isLockLook, true)) _isChanged = true;
+		Engine::EditorField::Tooltip("描画側に受け口がまだ無いので、今は保存されるだけ");
+
+		return _isChanged;
 	}
 }

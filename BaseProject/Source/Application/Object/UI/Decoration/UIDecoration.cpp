@@ -31,6 +31,7 @@ namespace App::Object::Decoration
 		m_scale = a_other.m_scale;
 		m_materialGUID = a_other.m_materialGUID;
 		m_materialRef = a_other.m_materialRef;
+		m_editElementId = a_other.m_editElementId;
 		return *this;
 	}
 
@@ -54,6 +55,9 @@ namespace App::Object::Decoration
 		if (!m_isVisible) return;
 		if (m_upElements.empty()) return;
 		if (a_context.pGraphicsEngine == nullptr || a_context.pResourceManager == nullptr) return;
+
+		// 描くのは更新を回さない場面(エディターで止めている間など)もあるので、ここで写す
+		SyncPresets(a_context.pResourceManager);
 
 		// 飾り全体へ掛かる設定を足し込んでから配る
 		DrawContext _context = a_context;

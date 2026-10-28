@@ -30,7 +30,8 @@ namespace App::Object::Decoration
 		//------------------------------------------------------------------------------------
 		// 種類
 		//------------------------------------------------------------------------------------
-		EElementType GetType() const override { return EElementType::Sprite; }
+		static constexpr EElementType TYPE = EElementType::Sprite;
+		EElementType GetType() const override { return TYPE; }
 		const char* GetTypeName() const override { return "Sprite"; }
 		std::unique_ptr<UIDecorationElementBase> Clone() const override { return std::make_unique<UISpriteElement>(*this); }
 
@@ -71,6 +72,7 @@ namespace App::Object::Decoration
 	protected:
 
 		void ArchiveBody(Engine::Persistence::Archive& a_ar) override;
+		bool DrawBodyInspector(const Engine::ECS::EngineServices& a_services) override;
 
 	private:
 

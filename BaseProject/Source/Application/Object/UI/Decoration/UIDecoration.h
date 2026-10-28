@@ -2,8 +2,12 @@
 
 #include "DecorationElement/UIDecorationElementBase.h"
 
+namespace Engine::GameObject { struct ObjectGizmoContext; }
+
 namespace App::Object::Decoration
 {
+	struct Decoration;
+
 	//==========================================================================================
 	// UIのデコレーション
 	//
@@ -14,6 +18,10 @@ namespace App::Object::Decoration
 	//   ・毎フレーム Update(親の状態を入れて)と Draw(親のトランスフォーム・設定・差し替えを入れて)を呼ぶ
 	//   ・読み込み後とエディターでの差し替え後に RequestResources を呼ぶ
 	//   ・Archive を自分の保存の中で呼ぶ
+	//   ・エディターでは DrawInspector と DrawGizmo を呼ぶ
+	//
+	// プリセット(UIPreset)は旧 Decoration の形で保存されているので、
+	// 写すときと書き戻すときは旧 Decoration へ変換して、旧の仕組み(DecorationPreset.h)をそのまま通す。
 	//
 	// エレメントの番号(ElementID)はここが振る。名前は書き換えられるので、他から指すときは番号を使う
 	//==========================================================================================
@@ -54,6 +62,42 @@ namespace App::Object::Decoration
 		/// <remarks>エレメント1つごとに区切るので、エレメントへフィールドを足しても後ろの読み出しがずれない</remarks>
 		void Archive(Engine::Persistence::Archive& a_ar);
 
+		/// <summary>
+		/// プリセットが変わったエレメントへ写し直す
+		/// </summary>
+		/// <remarks>
+		/// Draw の頭でも呼ぶので、毎フレーム呼ばなくてもよい(変わっていなければ番号を見るだけ)。
+		/// 見た目ごと種類(矩形⇔文字)が変わったときは、同じ番号のまま作り直す
+		/// </remarks>
+		void SyncPresets(Engine::Resource::ResourceManager* a_pResourceManager);
+
+		//-----------------------------------------------------------------------
+		// エディター
+		//-----------------------------------------------------------------------
+
+		/// <summary>
+		/// インスペクター : 全体の設定・エレメントの一覧(追加・削除・並べ替え)・開いているエレメントの中身
+		/// </summary>
+		/// <returns>値が変わったら true</returns>
+		bool DrawInspector(const Engine::ECS::EngineServices& a_services);
+
+		/// <summary>
+		/// ギズモ : 開いているエレメントの位置をシーンビュー上のハンドルで動かす
+		/// </summary>
+		/// <param name="a_parentTr">親(UI)の画面での置き場所(Draw へ渡すものと同じ)</param>
+		/// <param name="a_screenW">ゲーム画面の幅(px)</param>
+		/// <param name="a_screenH">ゲーム画面の高さ(px)</param>
+		/// <returns>ハンドルを動かしていたら true</returns>
+		bool DrawGizmo(
+			const Engine::GameObject::ObjectGizmoContext& a_ctx,
+			const ParentTransform& a_parentTr,
+			float a_screenW,
+			float a_screenH);
+
+		// インスペクターで開いているエレメント(無ければ無効な番号)
+		ElementID GetEditElementId() const { return m_editElementId; }
+		void SetEditElementId(ElementID a_id) { m_editElementId = a_id; }
+
 		//-----------------------------------------------------------------------
 		// エレメントの操作
 		//-----------------------------------------------------------------------
@@ -85,9 +129,13 @@ namespace App::Object::Decoration
 		UIDecorationElementBase* FindElementById(ElementID a_id);
 		const UIDecorationElementBase* FindElementById(ElementID a_id) const;
 
-		// 型を指定して探す : 種類が違えば nullptr
+		// 型を指定して探す : 種類が違えば nullptr(RTTI を切っているので種類の値で見分ける)
 		template<class T>
-		T* FindElementAs(ElementID a_id) { return dynamic_cast<T*>(FindElementById(a_id)); }
+		T* FindElementAs(ElementID a_id)
+		{
+			UIDecorationElementBase* _pElement = FindElementById(a_id);
+			return (_pElement && _pElement->GetType() == T::TYPE) ? static_cast<T*>(_pElement) : nullptr;
+		}
 
 		// 番号で並びを引く : 見つからなければ -1
 		int FindElementIndex(ElementID a_id) const;
@@ -130,6 +178,28 @@ namespace App::Object::Decoration
 		// マテリアルの参照を引き直す
 		void RequestMaterial(Engine::Resource::ResourceManager* a_pResourceManager);
 
+		//-----------------------------------------------------------------------
+		// プリセット : 旧 Decoration との変換(実装は UIDecorationPreset.cpp)
+		//-----------------------------------------------------------------------
+
+		// エレメントを旧 Decoration の形にする(プリセットに入る部分とつながりだけ)
+		static Decoration ToDecoration(const UIDecorationElementBase& a_element);
+
+		// 旧 Decoration の値をエレメントへ戻す(種類が合わない中身は読まない)
+		static void ApplyDecoration(UIDecorationElementBase& a_element, const Decoration& a_decoration);
+
+		// 旧 Decoration の種類に合うエレメントの種類
+		static EElementType ToElementType(const Decoration& a_decoration);
+
+		// プリセットが写し直しを待っているか : 届いていて番号が進んでいれば true(読み込みを頼む前も true)
+		static bool IsPresetPending(const PresetLink& a_link, Engine::Resource::ResourceManager* a_pResourceManager);
+
+		// プリセットのつながりのインスペクター : つながりが変わったら true
+		static bool DrawElementPresetInspector(UIDecorationElementBase& a_element, const Engine::ECS::EngineServices& a_services);
+
+		// 付いていく部分をプリセットへ書き戻す
+		static void PushElementToPreset(const UIDecorationElementBase& a_element, Engine::Resource::ResourceManager* a_pResourceManager);
+
 	private:
 		//-----------------------------------------------------------------------
 		// デコレーション本体 : 配列の後ろが最前面になる
@@ -145,6 +215,11 @@ namespace App::Object::Decoration
 		// 飾り全体に掛ける演出
 		Core::GUID m_materialGUID = {};
 		Engine::ResourceRef<Engine::Resource::UIMaterial> m_materialRef = {};
+
+		//-----------------------------------------------------------------------
+		// エディター(保存しない)
+		//-----------------------------------------------------------------------
+		ElementID m_editElementId = {};		// インスペクターで開いているエレメント
 
 	};
 

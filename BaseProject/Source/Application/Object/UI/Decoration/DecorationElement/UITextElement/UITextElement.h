@@ -22,7 +22,8 @@ namespace App::Object::Decoration
 		//------------------------------------------------------------------------------------
 		// 種類
 		//------------------------------------------------------------------------------------
-		EElementType GetType() const override { return EElementType::Text; }
+		static constexpr EElementType TYPE = EElementType::Text;
+		EElementType GetType() const override { return TYPE; }
 		const char* GetTypeName() const override { return "Text"; }
 		std::unique_ptr<UIDecorationElementBase> Clone() const override { return std::make_unique<UITextElement>(*this); }
 
@@ -57,6 +58,8 @@ namespace App::Object::Decoration
 	protected:
 
 		void ArchiveBody(Engine::Persistence::Archive& a_ar) override;
+		bool DrawBodyInspector(const Engine::ECS::EngineServices& a_services) override;
+		bool IsUsePixelSize() const override { return false; }
 
 	private:
 
