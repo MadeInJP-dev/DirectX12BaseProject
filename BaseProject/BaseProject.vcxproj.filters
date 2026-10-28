@@ -712,11 +712,8 @@
     <Filter Include="Source\Application\Object\UI\Decoration\DecorationElement">
       <UniqueIdentifier>{878d6168-936c-4970-a80e-4943e20df931}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Application\Object\UI\Decoration\DecorationElement\UIImageElement">
+    <Filter Include="Source\Application\Object\UI\Decoration\DecorationElement\UISpriteElement">
       <UniqueIdentifier>{92dc8b89-6aca-48e7-8d74-e29a71197230}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Application\Object\UI\Decoration\DecorationElement\UIPolygonElement">
-      <UniqueIdentifier>{ce11d4aa-3d13-450e-a6ab-d5a09b707bef}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Application\Object\UI\Decoration\DecorationElement\UITextElement">
       <UniqueIdentifier>{bc213e29-093c-4529-9eb1-c13c15f717cf}</UniqueIdentifier>
@@ -1752,11 +1749,11 @@
     <ClCompile Include="Source\Application\Object\UI\Decoration\UIDecoration.cpp">
       <Filter>Source\Application\Object\UI\Decoration</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationElement\UIImageElement\UIImageElement.cpp">
-      <Filter>Source\Application\Object\UI\Decoration\DecorationElement\UIImageElement</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationElement\UISpriteElement\UISpriteElement.cpp">
+      <Filter>Source\Application\Object\UI\Decoration\DecorationElement\UISpriteElement</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationElement\UIPolygonElement\UIPolygonElement.cpp">
-      <Filter>Source\Application\Object\UI\Decoration\DecorationElement\UIPolygonElement</Filter>
+    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationElement\UIDecorationElementBase.cpp">
+      <Filter>Source\Application\Object\UI\Decoration\DecorationElement</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationElement\UITextElement\UITextElement.cpp">
       <Filter>Source\Application\Object\UI\Decoration\DecorationElement\UITextElement</Filter>
@@ -3647,11 +3644,14 @@
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIDecorationElementBase.h">
       <Filter>Source\Application\Object\UI\Decoration\DecorationElement</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIImageElement\UIImageElement.h">
-      <Filter>Source\Application\Object\UI\Decoration\DecorationElement\UIImageElement</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UISpriteElement\UISpriteElement.h">
+      <Filter>Source\Application\Object\UI\Decoration\DecorationElement\UISpriteElement</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIPolygonElement\UIPolygonElement.h">
-      <Filter>Source\Application\Object\UI\Decoration\DecorationElement\UIPolygonElement</Filter>
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationDirection.h">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationParent.h">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UITextElement\UITextElement.h">
       <Filter>Source\Application\Object\UI\Decoration\DecorationElement\UITextElement</Filter>

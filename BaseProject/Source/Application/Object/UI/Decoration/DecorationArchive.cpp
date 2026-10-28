@@ -109,6 +109,87 @@ namespace App::Object::Decoration
 		}
 	}
 
+	//======================================================================================
+	// アニメーションと反応 : 旧 Decoration と新しいエレメントで同じ並びにする
+	//======================================================================================
+	void Internal::ArchiveAnimations(
+		Engine::Persistence::Archive& a_ar,
+		std::optional<UIAnimation>& a_opTween,
+		std::optional<UIReaction>& a_opReaction,
+		std::optional<UIProceduralAnimation>& a_opOscillation)
+	{
+		//----------------------------------------------------------------------------------
+		// アニメーション
+		//
+		// optional は「持っているか」を先に書いてから中身を書く。
+		// 持っていない場合は中身を一切読み書きしないので、保存側と読込側で必ず対になる
+		//----------------------------------------------------------------------------------
+		bool _hasTween = a_opTween.has_value();
+		a_ar.Field("HasTween", _hasTween);
+		if (_hasTween)
+		{
+			if (!a_opTween.has_value()) a_opTween = UIAnimation();
+
+			UIAnimation& _anim = *a_opTween;
+			a_ar.Field("TweenDuration", _anim.durationTime);
+			a_ar.Field("TweenIsLoop", _anim.isLoop);
+			a_ar.Field("TweenIsPingPong", _anim.isPingPong);
+			a_ar.Field("TweenEase", _anim.ease);
+			a_ar.Field("TweenChannels", _anim.channels);
+
+			ArchiveAnimElement(a_ar, "TweenColor", _anim.color);
+			ArchiveAnimElement(a_ar, "TweenPosition", _anim.position);
+			ArchiveAnimElement(a_ar, "TweenScale", _anim.scale);
+			ArchiveAnimElement(a_ar, "TweenRotation", _anim.rotation);
+			ArchiveAnimElement(a_ar, "TweenUV", _anim.uv);
+		}
+		else
+		{
+			a_opTween.reset();
+		}
+
+		//----------------------------------------------------------------------------------
+		// カーソルへの反応
+		//----------------------------------------------------------------------------------
+		bool _hasReaction = a_opReaction.has_value();
+		a_ar.Field("HasReaction", _hasReaction);
+		if (_hasReaction)
+		{
+			if (!a_opReaction.has_value()) a_opReaction = UIReaction();
+
+			UIReaction& _reaction = *a_opReaction;
+			a_ar.Field("ReactionVisibleState", _reaction.visibleState);
+			a_ar.Field("ReactionBlendSpeed", _reaction.blendSpeed);
+
+			ArchiveStateStyle(a_ar, "ReactionHovered", _reaction.hovered);
+			ArchiveStateStyle(a_ar, "ReactionPressed", _reaction.pressed);
+			ArchiveStateStyle(a_ar, "ReactionDisabled", _reaction.disabled);
+		}
+		else
+		{
+			a_opReaction.reset();
+		}
+
+		bool _hasOscillation = a_opOscillation.has_value();
+		a_ar.Field("HasOscillation", _hasOscillation);
+		if (_hasOscillation)
+		{
+			if (!a_opOscillation.has_value()) a_opOscillation = UIProceduralAnimation();
+
+			UIProceduralAnimation& _anim = *a_opOscillation;
+			a_ar.Field("OscChannels", _anim.channels);
+
+			ArchiveOscillation(a_ar, "OscPosition", _anim.position);
+			ArchiveOscillation(a_ar, "OscScale", _anim.scale);
+			ArchiveOscillation(a_ar, "OscRotation", _anim.rotation);
+			ArchiveOscillation(a_ar, "OscColor", _anim.color);
+		}
+		else
+		{
+			a_opOscillation.reset();
+		}
+	}
+
 	void ArchiveDecoration(Engine::Persistence::Archive& a_ar, Decoration& a_decoration)
 	{
 		EDecorationType _type = a_decoration.GetType();
@@ -127,76 +208,7 @@ namespace App::Object::Decoration
 
 		ArchiveBody(a_ar, a_decoration, _type);
 
-		//----------------------------------------------------------------------------------
-		// アニメーション
-		//
-		// optional は「持っているか」を先に書いてから中身を書く。
-		// 持っていない場合は中身を一切読み書きしないので、保存側と読込側で必ず対になる
-		//----------------------------------------------------------------------------------
-		bool _hasTween = a_decoration.opTweenAnim.has_value();
-		a_ar.Field("HasTween", _hasTween);
-		if (_hasTween)
-		{
-			if (!a_decoration.opTweenAnim.has_value()) a_decoration.opTweenAnim = UIAnimation();
-
-			UIAnimation& _anim = *a_decoration.opTweenAnim;
-			a_ar.Field("TweenDuration", _anim.durationTime);
-			a_ar.Field("TweenIsLoop", _anim.isLoop);
-			a_ar.Field("TweenIsPingPong", _anim.isPingPong);
-			a_ar.Field("TweenEase", _anim.ease);
-			a_ar.Field("TweenChannels", _anim.channels);
-
-			ArchiveAnimElement(a_ar, "TweenColor", _anim.color);
-			ArchiveAnimElement(a_ar, "TweenPosition", _anim.position);
-			ArchiveAnimElement(a_ar, "TweenScale", _anim.scale);
-			ArchiveAnimElement(a_ar, "TweenRotation", _anim.rotation);
-			ArchiveAnimElement(a_ar, "TweenUV", _anim.uv);
-		}
-		else
-		{
-			a_decoration.opTweenAnim.reset();
-		}
-
-		//----------------------------------------------------------------------------------
-		// カーソルへの反応
-		//----------------------------------------------------------------------------------
-		bool _hasReaction = a_decoration.opReaction.has_value();
-		a_ar.Field("HasReaction", _hasReaction);
-		if (_hasReaction)
-		{
-			if (!a_decoration.opReaction.has_value()) a_decoration.opReaction = UIReaction();
-
-			UIReaction& _reaction = *a_decoration.opReaction;
-			a_ar.Field("ReactionVisibleState", _reaction.visibleState);
-			a_ar.Field("ReactionBlendSpeed", _reaction.blendSpeed);
-
-			ArchiveStateStyle(a_ar, "ReactionHovered", _reaction.hovered);
-			ArchiveStateStyle(a_ar, "ReactionPressed", _reaction.pressed);
-			ArchiveStateStyle(a_ar, "ReactionDisabled", _reaction.disabled);
-		}
-		else
-		{
-			a_decoration.opReaction.reset();
-		}
-
-		bool _hasOscillation = a_decoration.opOscillationAnim.has_value();
-		a_ar.Field("HasOscillation", _hasOscillation);
-		if (_hasOscillation)
-		{
-			if (!a_decoration.opOscillationAnim.has_value()) a_decoration.opOscillationAnim = UIProceduralAnimation();
-
-			UIProceduralAnimation& _anim = *a_decoration.opOscillationAnim;
-			a_ar.Field("OscChannels", _anim.channels);
-
-			ArchiveOscillation(a_ar, "OscPosition", _anim.position);
-			ArchiveOscillation(a_ar, "OscScale", _anim.scale);
-			ArchiveOscillation(a_ar, "OscRotation", _anim.rotation);
-			ArchiveOscillation(a_ar, "OscColor", _anim.color);
-		}
-		else
-		{
-			a_decoration.opOscillationAnim.reset();
-		}
+		Internal::ArchiveAnimations(a_ar, a_decoration.opTweenAnim, a_decoration.opReaction, a_decoration.opOscillationAnim);
 
 		// ---- ここから下は区切りを入れた後に足したもの : 追加は必ず末尾へ ----
 		// 区切りを持たない古い .ob* には無いので読まない(読むと後ろの飾りを食う)

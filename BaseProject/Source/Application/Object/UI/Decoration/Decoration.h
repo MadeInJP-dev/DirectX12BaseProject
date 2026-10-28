@@ -4,6 +4,7 @@
 #include "Application/Object/UI/Decoration/DecorationAnimation.h"
 #include "Application/Object/UI/Decoration/DecorationReaction.h"
 #include "Application/Object/UI/Decoration/DecorationPreset.h"
+#include "Application/Object/UI/Decoration/DecorationDirection.h"
 
 #include <variant>
 
@@ -40,21 +41,6 @@ namespace Engine::ECS { struct EngineServices; }
 
 namespace App::Object::Decoration
 {
-	//======================================================================================
-	// 方向 : 枠をどの辺に出すか
-	//======================================================================================
-	enum class EDirection : uint32_t
-	{
-		NONE	= 0,
-		UP		= 1 << 0,
-		DOWN	= 1 << 1,
-		LEFT	= 1 << 2,
-		RIGHT	= 1 << 3,
-
-		ALL		= UP | DOWN | LEFT | RIGHT,
-	};
-	ENUM_ATTR_BITFLAG(EDirection);
-
 	// 文字列の行揃え : ブロック全体の位置は pivot が決めるので、ここは行同士の揃え方
 	enum class ETextAlign : uint32_t
 	{

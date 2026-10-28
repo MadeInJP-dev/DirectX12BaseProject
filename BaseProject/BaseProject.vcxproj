@@ -779,12 +779,12 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationElement\UIImageElement\UIImageElement.cpp">
+    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationElement\UISpriteElement\UISpriteElement.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationElement\UIPolygonElement\UIPolygonElement.cpp">
+    <ClCompile Include="Source\Application\Object\UI\Decoration\DecorationElement\UIDecorationElementBase.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
@@ -2213,8 +2213,9 @@
     <ClInclude Include="Source\Application\Object\UI\Decoration\Internal\DecorationInternal.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\UIDecoration.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIDecorationElementBase.h" />
-    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIImageElement\UIImageElement.h" />
-    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIPolygonElement\UIPolygonElement.h" />
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UISpriteElement\UISpriteElement.h" />
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationDirection.h" />
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationParent.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UITextElement\UITextElement.h" />
     <ClInclude Include="Source\Application\Systems\Combat\ScoreSystem.h" />
     <ClInclude Include="Source\Application\Systems\Combat\DebugKillSystem.h" />

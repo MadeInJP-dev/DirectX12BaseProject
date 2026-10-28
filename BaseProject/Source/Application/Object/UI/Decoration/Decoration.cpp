@@ -247,17 +247,20 @@ namespace App::Object::Decoration
 		}
 	}
 
-	Internal::AnimResult Internal::MakeAnimResult(const Decoration& a_decoration)
+	Internal::AnimResult Internal::MakeAnimResult(
+		const std::optional<UIAnimation>& a_opTween,
+		const std::optional<UIProceduralAnimation>& a_opOscillation,
+		const std::optional<UIReaction>& a_opReaction)
 	{
 		AnimResult _anim = {};
-		if (a_decoration.opTweenAnim.has_value())      ApplyTween(*a_decoration.opTweenAnim, _anim);
-		if (a_decoration.opOscillationAnim.has_value()) ApplyOscillation(*a_decoration.opOscillationAnim, _anim);
+		if (a_opTween.has_value())       ApplyTween(*a_opTween, _anim);
+		if (a_opOscillation.has_value()) ApplyOscillation(*a_opOscillation, _anim);
 
 		// カーソルへの反応 : 目標へ寄せた結果(current)を掛ける。
 		// 寄せる処理そのものは AdvanceAnimation が行う
-		if (a_decoration.opReaction.has_value())
+		if (a_opReaction.has_value())
 		{
-			const UIReaction& _reaction = *a_decoration.opReaction;
+			const UIReaction& _reaction = *a_opReaction;
 
 			_anim.colorMul *= _reaction.current.color;
 			_anim.scaleMul *= _reaction.current.scale;
@@ -269,6 +272,11 @@ namespace App::Object::Decoration
 		}
 
 		return _anim;
+	}
+
+	Internal::AnimResult Internal::MakeAnimResult(const Decoration& a_decoration)
+	{
+		return MakeAnimResult(a_decoration.opTweenAnim, a_decoration.opOscillationAnim, a_decoration.opReaction);
 	}
 
 	//======================================================================================
@@ -340,15 +348,30 @@ namespace App::Object::Decoration
 
 	void AdvanceAnimation(Decoration& a_decoration, EUIState a_parentState, float a_deltaTime)
 	{
+		Internal::AdvanceAnimation(
+			a_decoration.opTweenAnim,
+			a_decoration.opOscillationAnim,
+			a_decoration.opReaction,
+			a_parentState,
+			a_deltaTime);
+	}
+
+	void Internal::AdvanceAnimation(
+		std::optional<UIAnimation>& a_opTween,
+		std::optional<UIProceduralAnimation>& a_opOscillation,
+		std::optional<UIReaction>& a_opReaction,
+		EUIState a_parentState,
+		float a_deltaTime)
+	{
 		// カーソルへの反応
-		if (a_decoration.opReaction.has_value())
+		if (a_opReaction.has_value())
 		{
-			AdvanceReaction(*a_decoration.opReaction, a_parentState, a_deltaTime);
+			AdvanceReaction(*a_opReaction, a_parentState, a_deltaTime);
 		}
 
-		if (a_decoration.opTweenAnim.has_value())
+		if (a_opTween.has_value())
 		{
-			UIAnimation& _anim = *a_decoration.opTweenAnim;
+			UIAnimation& _anim = *a_opTween;
 			_anim.currentTime += a_deltaTime;
 
 			if (_anim.durationTime > 1e-6f && _anim.currentTime >= _anim.durationTime)
@@ -360,9 +383,9 @@ namespace App::Object::Decoration
 			}
 		}
 
-		if (a_decoration.opOscillationAnim.has_value())
+		if (a_opOscillation.has_value())
 		{
-			UIProceduralAnimation& _anim = *a_decoration.opOscillationAnim;
+			UIProceduralAnimation& _anim = *a_opOscillation;
 			_anim.currentTime += a_deltaTime;
 
 			// 揺れは終わらないので、精度が落ちないところで巻き戻す
