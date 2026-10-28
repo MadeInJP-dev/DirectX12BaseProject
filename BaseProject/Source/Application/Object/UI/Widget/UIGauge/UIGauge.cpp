@@ -153,26 +153,28 @@ namespace App::Object
 	void UIGauge::ApplyFillPivot()
 	{
 		// 一度だけ合わせるので、コントローラー用の組の中身(同じ番号)にも合わせておく
-		ForEachDecorationSet([this](std::vector<Decoration::Decoration>& a_decorationVec)
+		if (m_fillDecorationId == 0) return;
+
+		ForEachDecorationSet([this](Decoration::UIDecoration& a_decoration)
 			{
-				for (Decoration::Decoration& _fill : a_decorationVec)
+				Decoration::UIDecorationElementBase* _pFill = a_decoration.FindElementById(Decoration::ElementID(m_fillDecorationId));
+				if (_pFill == nullptr) return;
+
+				// 動かさない場所を固定する。
+				// 横幅(縦のゲージなら高さ)に残量を掛けるだけなので、ピボットを置いた場所がそのまま
+				// 「減っても動かない点」になる。縮めない側のピボットは触らない
+				Math::Vector2 _pivot = _pFill->GetPivot();
+				switch (m_fillAnchor)
 				{
-					if (m_fillDecorationId == 0 || _fill.id != m_fillDecorationId) continue;
+				case EGaugeAnchor::Right:  _pivot.x = 1.0f; break;	// 右端を固定 : 左から減る
+				case EGaugeAnchor::Center: _pivot.x = 0.5f; break;	// 中央を固定 : 両側から減る
+				case EGaugeAnchor::Bottom: _pivot.y = 1.0f; break;	// 下端を固定 : 上から減る(下が +Y)
+				case EGaugeAnchor::Top:    _pivot.y = 0.0f; break;	// 上端を固定 : 下から減る
 
-					// 動かさない場所を固定する。
-					// 横幅(縦のゲージなら高さ)に残量を掛けるだけなので、ピボットを置いた場所がそのまま
-					// 「減っても動かない点」になる。縮めない側のピボットは触らない
-					switch (m_fillAnchor)
-					{
-					case EGaugeAnchor::Right:  _fill.pivot.x = 1.0f; break;	// 右端を固定 : 左から減る
-					case EGaugeAnchor::Center: _fill.pivot.x = 0.5f; break;	// 中央を固定 : 両側から減る
-					case EGaugeAnchor::Bottom: _fill.pivot.y = 1.0f; break;	// 下端を固定 : 上から減る(下が +Y)
-					case EGaugeAnchor::Top:    _fill.pivot.y = 0.0f; break;	// 上端を固定 : 下から減る
-
-					case EGaugeAnchor::Left:
-					default:                   _fill.pivot.x = 0.0f; break;	// 左端を固定 : 右から減る
-					}
+				case EGaugeAnchor::Left:
+				default:                   _pivot.x = 0.0f; break;	// 左端を固定 : 右から減る
 				}
+				_pFill->SetPivot(_pivot);
 			});
 	}
 
@@ -186,16 +188,13 @@ namespace App::Object
 	{
 		if (m_textFormat == EGaugeTextFormat::None) return;
 
-		Decoration::Decoration* _pDecoration = FindDecorationById(m_textDecorationId);
-		if (_pDecoration == nullptr) return;
-
-		Decoration::TextData* _pText = _pDecoration->RefText();
+		Decoration::UITextElement* _pText = FindDecorationAs<Decoration::UITextElement>(m_textDecorationId);
 		if (_pText == nullptr) return;
 
 		const std::string _text = MakeValueText();
-		if (_text == m_appliedText && _pText->text == _text) return;
+		if (_text == m_appliedText && _pText->GetValue() == _text) return;
 
-		_pText->text = _text;
+		_pText->SetValue(_text);
 		m_appliedText = _text;
 	}
 
@@ -293,7 +292,7 @@ namespace App::Object
 		_fillOverride.tint = CalcGaugeColor(_ratio);
 
 		// 添え字は出している組のもの(FindDecorationIndexById と DrawDecorationAt も同じ組を見る)
-		for (size_t _i = 0; _i < GetDecorations().size(); ++_i)
+		for (size_t _i = 0; _i < GetDecoration().GetElementCount(); ++_i)
 		{
 			if (static_cast<int>(_i) == _fillIndex)
 			{
@@ -318,15 +317,6 @@ namespace App::Object
 		// どちらに足しても互いの読み出しはずれない。足すときはこの区切りの末尾へ
 		Engine::Persistence::ArchiveSection _section(a_ar, "UIGauge");
 
-		// 名前は旧形式の名残。保存するときは今指している飾りの名前を書いておく
-		// (番号を読めない古いコードや、JSON を目で見たときに分かるように)
-		if (a_ar.IsSaving())
-		{
-			if (const auto* _pFill = FindDecorationById(m_fillDecorationId)) m_legacyFillDecorationName = _pFill->name;
-			if (const auto* _pText = FindDecorationById(m_textDecorationId)) m_legacyTextDecorationName = _pText->name;
-		}
-
-		a_ar.StringField("FillDecorationName", m_legacyFillDecorationName);
 		a_ar.Field("Anchor", m_fillAnchor);
 
 		//----------------------------------------------------------------------
@@ -354,7 +344,6 @@ namespace App::Object
 		//----------------------------------------------------------------------
 		// 数値
 		//----------------------------------------------------------------------
-		a_ar.StringField("TextDecorationName", m_legacyTextDecorationName);
 		a_ar.Field("TextFormat", m_textFormat);
 		a_ar.Field("Decimals", m_decimals);
 
@@ -376,17 +365,6 @@ namespace App::Object
 
 		if (a_ar.IsLoading())
 		{
-			// 番号を持たない古いデータは、名前から引き直す
-			// (飾りの番号は UIBase::Archive の中で振り終えている)
-			if (m_fillDecorationId == 0)
-			{
-				if (const auto* _pFill = FindDecoration(m_legacyFillDecorationName)) m_fillDecorationId = _pFill->id;
-			}
-			if (m_textDecorationId == 0)
-			{
-				if (const auto* _pText = FindDecoration(m_legacyTextDecorationName)) m_textDecorationId = _pText->id;
-			}
-
 			// 流し込み直させる
 			m_appliedText.clear();
 		}
@@ -499,18 +477,18 @@ namespace App::Object
 
 		if (m_textFormat != EGaugeTextFormat::None)
 		{
-			if (DrawDecorationPicker("TextDecoration", m_textDecorationId, Decoration::EDecorationType::Text))
+			if (DrawDecorationPicker("TextDecoration", m_textDecorationId, Decoration::EElementType::Text))
 			{
 				m_appliedText.clear();	// 選び直したらすぐ流し込む
 			}
 			Engine::EditorField::Tooltip("数値を流し込む Text 飾り。置き場所はその飾りの OffsetPos");
 
-			const Decoration::Decoration* _pText = FindDecorationById(m_textDecorationId);
+			const Decoration::UIDecorationElementBase* _pText = FindDecorationById(m_textDecorationId);
 			if (_pText == nullptr)
 			{
 				Engine::EditorField::ErrorText("数値の飾りが選ばれていません");
 			}
-			else if (_pText->GetType() != Decoration::EDecorationType::Text)
+			else if (_pText->GetType() != Decoration::EElementType::Text)
 			{
 				Engine::EditorField::WarningText("その飾りが Text ではありません");
 			}

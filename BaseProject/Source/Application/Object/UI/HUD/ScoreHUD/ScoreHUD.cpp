@@ -15,23 +15,22 @@ namespace App::Object
 	ScoreHUD::ScoreHUD() : UIBase(false)
 	{
 		// 新しく置いたときの弾み方 : 増えた瞬間に大きくなって戻る
-		MigrateLegacyTransition();
+		SetDefaultTransition();
 	}
 
 	//======================================================================================
-	// 旧形式からの引き継ぎ
+	// 新しく置いたときの弾み方
 	//--------------------------------------------------------------------------------------
-	// 以前は「拡大率・戻るまでの秒数」を自分で持ち、残り時間の割合で倍率を直線で戻していた。
-	// 同じ動きになるよう演出の合図へ移す(色は変えない)
+	// 0.2 秒で、1.3 倍から等倍へ戻る(合図の演出。色は変えない)
 	//======================================================================================
-	void ScoreHUD::MigrateLegacyTransition()
+	void ScoreHUD::SetDefaultTransition()
 	{
 		UITransitionClip& _pulse = m_transition.pulse;
-		_pulse.duration = m_legacyPunchTime;
+		_pulse.duration = 0.2f;
 		_pulse.ease = Decoration::EEase::Linear;
 		_pulse.startAlpha = 1.0f;
 		_pulse.endAlpha = 1.0f;
-		_pulse.startScale = m_legacyPunchScale;
+		_pulse.startScale = 1.3f;
 		_pulse.endScale = 1.0f;
 	}
 
@@ -132,15 +131,12 @@ namespace App::Object
 	//======================================================================================
 	void ScoreHUD::ApplyValueText(const std::string& a_text)
 	{
-		Decoration::Decoration* _pDecoration = FindDecorationById(m_textDecorationId);
-		if (_pDecoration == nullptr) return;
-
-		Decoration::TextData* _pText = _pDecoration->RefText();
+		Decoration::UITextElement* _pText = FindDecorationAs<Decoration::UITextElement>(m_textDecorationId);
 		if (_pText == nullptr) return;
 
-		if (a_text == m_appliedText && _pText->text == a_text) return;
+		if (a_text == m_appliedText && _pText->GetValue() == a_text) return;
 
-		_pText->text = a_text;
+		_pText->SetValue(a_text);
 		m_appliedText = a_text;
 	}
 
@@ -156,7 +152,7 @@ namespace App::Object
 	//======================================================================================
 	bool ScoreHUD::CalcCharWidths(
 		Engine::GameObject::ObjectContext& a_context,
-		const Decoration::TextData& a_text,
+		const Decoration::UITextElement& a_text,
 		std::vector<float>& a_outWidthVec) const
 	{
 		a_outWidthVec.clear();
@@ -164,21 +160,21 @@ namespace App::Object
 		if (!a_context.pServices || !a_context.pServices->pResourceManager) return false;
 		Engine::Resource::ResourceManager& _resourceManager = *a_context.pServices->pResourceManager;
 
-		if (!a_text.fontRef.IsValid()) return false;
-		if (!_resourceManager.IsReady(a_text.fontRef)) return false;
+		if (!a_text.GetFontRef().IsValid()) return false;
+		if (!_resourceManager.IsReady(a_text.GetFontRef())) return false;
 
 		// グリフは要求された時点で焼くので、参照は書き込み可能で引く(描く側と同じ)
-		Engine::Resource::Font* _pFont = _resourceManager.Ref(a_text.fontRef.GetRaw());
+		Engine::Resource::Font* _pFont = _resourceManager.Ref(a_text.GetFontRef().GetRaw());
 		if (_pFont == nullptr || !_pFont->IsValid()) return false;
 
-		const float _fontScale = _pFont->GetScaleForSize(a_text.fontPixelSize);
+		const float _fontScale = _pFont->GetScaleForSize(a_text.GetFontPixelSize());
 
 		// 1文字ぶんの幅(送り幅 + 字間)
 		auto _calcAdvance = [&](uint32_t a_codePoint) -> float
 		{
 			const Engine::Resource::Glyph* _pGlyph = _pFont->RequestGlyph(a_codePoint);
 			if (_pGlyph == nullptr) return 0.0f;
-			return _pGlyph->xAdvance * _fontScale + a_text.charSpacing;
+			return _pGlyph->xAdvance * _fontScale + a_text.GetCharSpacing();
 		};
 
 		// 数字のマス
@@ -192,8 +188,9 @@ namespace App::Object
 		}
 
 		// 流し込む文字列はこのクラスが組んだもの(数字と : . だけ)なので、1バイトを1文字として扱える
-		a_outWidthVec.reserve(a_text.text.size());
-		for (const char _c : a_text.text)
+		const std::string& _value = a_text.GetValue();
+		a_outWidthVec.reserve(_value.size());
+		for (const char _c : _value)
 		{
 			const bool _isDigit = (_c >= '0' && _c <= '9');
 			a_outWidthVec.push_back(_isDigit ? _digitWidth : _calcAdvance(static_cast<uint32_t>(static_cast<unsigned char>(_c))));
@@ -215,10 +212,18 @@ namespace App::Object
 	//======================================================================================
 	void ScoreHUD::DrawValueByChar(Engine::GameObject::ObjectContext& a_context, size_t a_index)
 	{
-		Decoration::Decoration& _decoration = RefDecorations()[a_index];
+		Decoration::UIDecoration& _decorationSet = RefDecoration();
+		if (a_index >= _decorationSet.GetElementCount()) return;
 
-		Decoration::TextData* _pText = _decoration.RefText();
-		if (_pText == nullptr || _pText->text.empty())
+		Decoration::UIDecorationElementBase& _decoration = _decorationSet.RefElement(a_index);
+		if (_decoration.GetType() != Decoration::EElementType::Text)
+		{
+			DrawDecorationAt(a_context, a_index);
+			return;
+		}
+
+		auto* _pText = static_cast<Decoration::UITextElement*>(&_decoration);
+		if (_pText->GetValue().empty())
 		{
 			DrawDecorationAt(a_context, a_index);
 			return;
@@ -232,29 +237,29 @@ namespace App::Object
 		for (const float _width : _widthVec) _totalWidth += _width;
 
 		// 元の値を退避
-		const std::string   _text   = _pText->text;
-		const Math::Vector2 _offset = _decoration.offsetPos;
-		const Math::Vector2 _pivot  = _decoration.pivot;
+		const std::string   _text   = _pText->GetValue();
+		const Math::Vector2 _offset = _decoration.GetOffsetPos();
+		const Math::Vector2 _pivot  = _decoration.GetPivot();
 
 		// 塊の左端。縦の Pivot は1文字でも行の高さで効くので、そのまま使う
 		float _x = _offset.x - _pivot.x * _totalWidth;
-		_decoration.pivot = { 0.5f, _pivot.y };
+		_decoration.SetPivot({ 0.5f, _pivot.y });
 
 		for (size_t _i = 0; _i < _text.size(); ++_i)
 		{
 			const float _width = _widthVec[_i];
 
-			_pText->text.assign(1, _text[_i]);
-			_decoration.offsetPos = { _x + _width * 0.5f, _offset.y };
+			_pText->SetValue(std::string(1, _text[_i]));
+			_decoration.SetOffsetPos({ _x + _width * 0.5f, _offset.y });
 			DrawDecorationAt(a_context, a_index);
 
 			_x += _width;
 		}
 
 		// 元へ戻す
-		_pText->text = _text;
-		_decoration.offsetPos = _offset;
-		_decoration.pivot = _pivot;
+		_pText->SetValue(_text);
+		_decoration.SetOffsetPos(_offset);
+		_decoration.SetPivot(_pivot);
 	}
 
 	void ScoreHUD::DrawDigit(
@@ -299,10 +304,10 @@ namespace App::Object
 		//--------------------------------------------------------------
 		if (m_drawMode == EScoreDrawMode::Text)
 		{
-			const size_t _count = GetDecorations().size();
+			const size_t _count = GetDecoration().GetElementCount();
 			for (size_t _i = 0; _i < _count; ++_i)
 			{
-				const bool _isValue = (m_textDecorationId != 0) && (GetDecorations()[_i].id == m_textDecorationId);
+				const bool _isValue = (m_textDecorationId != 0) && (GetDecoration().GetElement(_i).GetId().value == m_textDecorationId);
 				if (_isValue)
 				{
 					DrawValueByChar(a_context, _i);
@@ -361,8 +366,6 @@ namespace App::Object
 		a_ar.Field("DigitCount", m_digitCount);
 		a_ar.Field("AtlasCount", m_atlasCount);
 		a_ar.Field("DigitSpacing", m_digitSpacing);
-		a_ar.Field("PunchScale", m_legacyPunchScale);
-		a_ar.Field("PunchTime", m_legacyPunchTime);
 
 		// ---- ここから下は区切りを入れた後に足したもの : 追加は必ず末尾へ ----
 		// 区切りを持たない古い .ob* には無いので読まない
@@ -374,14 +377,8 @@ namespace App::Object
 			a_ar.Field("CharPitch", m_charPitch);
 		}
 
-		if (a_ar.IsLoading())
-		{
-			// 演出を持つ前のシーンは、自分で持っていた弾み方を移す
-			if (!m_isTransitionLoaded) MigrateLegacyTransition();
-
-			// 流し込み直させる
-			m_appliedText.clear();
-		}
+		// 流し込み直させる
+		if (a_ar.IsLoading()) m_appliedText.clear();
 	}
 
 	void ScoreHUD::DrawInspector(Engine::GameObject::ObjectContext& a_context)
@@ -411,18 +408,18 @@ namespace App::Object
 		{
 			Engine::EditorField::HelpText("Text の飾りを置いて下で選ぶこと。見出しや下敷きは別の飾りで並べる");
 
-			if (DrawDecorationPicker("TextDecoration", m_textDecorationId, Decoration::EDecorationType::Text))
+			if (DrawDecorationPicker("TextDecoration", m_textDecorationId, Decoration::EElementType::Text))
 			{
 				m_appliedText.clear();	// 選び直したらすぐ流し込む
 			}
 			Engine::EditorField::Tooltip("数字を流し込む Text 飾り。置き場所はその飾りの OffsetPos / Pivot");
 
-			const Decoration::Decoration* _pText = FindDecorationById(m_textDecorationId);
+			const Decoration::UIDecorationElementBase* _pText = FindDecorationById(m_textDecorationId);
 			if (_pText == nullptr)
 			{
 				Engine::EditorField::ErrorText("数字の飾りが選ばれていません");
 			}
-			else if (_pText->GetType() != Decoration::EDecorationType::Text)
+			else if (_pText->GetType() != Decoration::EElementType::Text)
 			{
 				Engine::EditorField::WarningText("その飾りが Text ではありません");
 			}

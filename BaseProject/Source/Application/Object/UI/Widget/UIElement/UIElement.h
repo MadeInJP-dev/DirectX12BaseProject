@@ -23,9 +23,6 @@ namespace App::Object
 	///
 	/// ・下(子)に置いた UI は、位置・回転・倍率・Z順・表示がこの UI に従う(UIBase の決まり)
 	///
-	/// ・以前の UIImage(遮る)と UIPanel(遮らない)をまとめたもの。
-	///   古いシーンはそれぞれの既定値で読み込まれる(RegisterLegacyNames)
-	///
 	/// 何を別の UI にし、何を飾りにするかは 環境/Docs/UIGuidelines.md
 	/// </remarks>
 	class UIElement final : public UIBase
@@ -34,12 +31,6 @@ namespace App::Object
 
 		// 既定はカーソルを遮らない
 		UIElement() : UIBase(false) {}
-
-		/// <summary>
-		/// 旧クラス名(UIImage / UIPanel)をこのクラスへ流す
-		/// </summary>
-		/// <remarks>RegisterType の直後に呼ぶ。旧クラスごとにカーソルを遮るかの既定値が違う</remarks>
-		static void RegisterLegacyNames(Engine::GameObject::ObjectMetaRegistry& a_registry);
 
 		//=======================================================================
 		// カーソルを遮るか

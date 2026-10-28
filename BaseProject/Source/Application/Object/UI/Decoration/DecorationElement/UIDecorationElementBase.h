@@ -5,6 +5,7 @@
 #include "Application/Object/UI/Decoration/DecorationReaction.h"
 #include "Application/Object/UI/Decoration/DecorationPreset.h"
 #include "Application/Object/UI/Decoration/DecorationDirection.h"
+#include "UIHitBody.h"
 
 #include "../UIDecorationDrawContext.h"
 
@@ -91,6 +92,24 @@ namespace App::Object::Decoration
 		bool DrawInspector(const Engine::ECS::EngineServices& a_services);
 
 		//----------------------------------------------------------------------------------
+		// 当たり判定
+		//----------------------------------------------------------------------------------
+
+		/// <summary>
+		/// ボディに当たっているか : ボディを持たない・出していないエレメントは当たらない
+		/// </summary>
+		/// <param name="a_pos">調べる位置(画面のピクセル座標)</param>
+		/// <param name="a_parentTr">親の画面での置き場所(倍率はデコレーション全体の倍率まで掛けたもの)</param>
+		/// <param name="a_parentOp">親の設定(親の矩形に当てるボディが大きさとピボットを読む)</param>
+		bool IsHit(const Math::Vector2& a_pos, const ParentTransform& a_parentTr, const ParentOption& a_parentOp) const;
+
+		/// <summary>
+		/// ボディの輪郭(画面のピクセル座標)を並べる : エディターの表示用。アニメーションは掛けない
+		/// </summary>
+		/// <returns>ボディを持っていなければ false</returns>
+		bool CalcHitOutline(const ParentTransform& a_parentTr, const ParentOption& a_parentOp, std::vector<Math::Vector2>& a_outPointVec) const;
+
+		//----------------------------------------------------------------------------------
 		// アクセサ
 		//----------------------------------------------------------------------------------
 
@@ -132,6 +151,10 @@ namespace App::Object::Decoration
 		const std::optional<UIReaction>& GetReaction() const { return m_opReaction; }
 		PresetLink& RefPreset() { return m_preset; }
 		const PresetLink& GetPreset() const { return m_preset; }
+
+		// 当たり判定のボディ : 付けるときは emplace、外すときは reset
+		std::optional<UIHitBody>& RefHitBody() { return m_opHitBody; }
+		const std::optional<UIHitBody>& GetHitBody() const { return m_opHitBody; }
 
 	protected:
 
@@ -197,6 +220,11 @@ namespace App::Object::Decoration
 		// プリセット : 指していれば、付いていく部分をプリセットから写す
 		//----------------------------------------------------------------------------------
 		PresetLink m_preset = {};
+
+		//----------------------------------------------------------------------------------
+		// 当たり判定 : 持っていれば、持ち主の UI がカーソルの位置を問い合わせる
+		//----------------------------------------------------------------------------------
+		std::optional<UIHitBody> m_opHitBody = std::nullopt;
 
 	private:
 

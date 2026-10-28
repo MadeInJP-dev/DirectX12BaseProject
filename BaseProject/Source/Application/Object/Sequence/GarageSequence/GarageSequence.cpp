@@ -501,18 +501,19 @@ namespace App::Object
 		auto* _pUI = Picker::Find<UIBase>(a_context.pObjectManager, a_uiGUID);
 		if (!_pUI) return;
 
-		Decoration::Decoration* _pDeco = _pUI->FindDecoration(a_decoName);
-		if (!_pDeco) return;
+		auto* _pSprite = _pUI->FindDecorationAs<Decoration::UISpriteElement>(a_decoName);
+		if (!_pSprite) return;
 
-		Decoration::ImageData* _pImage = _pDeco->RefImage();
-		if (!_pImage) return;
+		// 画像を付けていない矩形(板ポリ)には流し込まない
+		auto& _opImage = _pSprite->RefImage();
+		if (!_opImage) return;
 
 		// 絵が無ければ飾りごと隠す(白い板が出ないように)
-		_pDeco->isVisible = a_texGUID.IsValid();
-		if (_pImage->texGUID == a_texGUID && (!a_texGUID.IsValid() || _pImage->texRef.IsValid())) return;
+		_pSprite->SetVisible(a_texGUID.IsValid());
+		if (_opImage->texGUID == a_texGUID && (!a_texGUID.IsValid() || _opImage->texRef.IsValid())) return;
 
-		_pImage->texGUID = a_texGUID;
-		_pImage->texRef = (a_texGUID.IsValid() && a_context.pServices && a_context.pServices->pResourceManager)
+		_opImage->texGUID = a_texGUID;
+		_opImage->texRef = (a_texGUID.IsValid() && a_context.pServices && a_context.pServices->pResourceManager)
 			? a_context.pServices->pResourceManager->RequestLoad<Engine::Resource::Texture>(a_texGUID)
 			: Engine::ResourceRef<Engine::Resource::Texture>();
 	}
@@ -522,10 +523,7 @@ namespace App::Object
 		auto* _pUI = Picker::Find<UIBase>(a_context.pObjectManager, a_uiGUID);
 		if (!_pUI) return;
 
-		Decoration::Decoration* _pDeco = _pUI->FindDecoration(a_decoName);
-		if (!_pDeco) return;
-
-		if (Decoration::TextData* _pText = _pDeco->RefText()) _pText->text = a_text;
+		if (auto* _pText = _pUI->FindDecorationAs<Decoration::UITextElement>(a_decoName)) _pText->SetValue(a_text);
 	}
 
 	void GarageSequence::SetDecorationAlpha(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_uiGUID, const char* a_decoName, float a_alpha)
@@ -533,7 +531,12 @@ namespace App::Object
 		auto* _pUI = Picker::Find<UIBase>(a_context.pObjectManager, a_uiGUID);
 		if (!_pUI) return;
 
-		if (Decoration::Decoration* _pDeco = _pUI->FindDecoration(a_decoName)) _pDeco->color.a = a_alpha;
+		if (Decoration::UIDecorationElementBase* _pDeco = _pUI->FindDecoration(a_decoName))
+		{
+			Math::Color _color = _pDeco->GetColor();
+			_color.a = a_alpha;
+			_pDeco->SetColor(_color);
+		}
 	}
 
 	void GarageSequence::SetDecorationBar(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_uiGUID, const std::string& a_barName, const std::string& a_bgName, float a_ratio)
@@ -541,16 +544,16 @@ namespace App::Object
 		auto* _pUI = Picker::Find<UIBase>(a_context.pObjectManager, a_uiGUID);
 		if (!_pUI) return;
 
-		Decoration::Decoration* _pBar = _pUI->FindDecoration(a_barName);
-		const Decoration::Decoration* _pBg = _pUI->FindDecoration(a_bgName);
+		Decoration::UIDecorationElementBase* _pBar = _pUI->FindDecoration(a_barName);
+		const Decoration::UIDecorationElementBase* _pBg = _pUI->FindDecoration(a_bgName);
 		if (!_pBar || !_pBg) return;
 
 		// 枠の左端から、割合の長さだけ伸ばす(どちらのピボットでも左端が揃うように置く)
-		const float _width = _pBg->pixelSize.x * std::clamp(a_ratio, 0.0f, 1.0f);
-		const float _left = _pBg->offsetPos.x - _pBg->pixelSize.x * _pBg->pivot.x;
-		_pBar->pixelSize.x = _width;
-		_pBar->offsetPos.x = _left + _width * _pBar->pivot.x;
-		_pBar->isVisible = (_width > 0.5f);
+		const float _width = _pBg->GetPixelSize().x * std::clamp(a_ratio, 0.0f, 1.0f);
+		const float _left = _pBg->GetOffsetPos().x - _pBg->GetPixelSize().x * _pBg->GetPivot().x;
+		_pBar->SetPixelSize({ _width, _pBar->GetPixelSize().y });
+		_pBar->SetOffsetPos({ _left + _width * _pBar->GetPivot().x, _pBar->GetOffsetPos().y });
+		_pBar->SetVisible(_width > 0.5f);
 	}
 
 	//======================================================================================

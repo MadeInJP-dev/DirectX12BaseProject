@@ -40,13 +40,13 @@ namespace App::Object
 		// 作るのは飾りを1つも持っていないときだけなので、
 		// 保存された飾りを持つシーンでは何もしない
 		//--------------------------------------------------------------
-		if (m_decorationVec.empty())
+		if (m_decoration.GetElementCount() == 0)
 		{
-			Decoration::Decoration& _box = AddDecoration(Decoration::EDecorationType::Image);
-			_box.name = "TargetBox";
-			_box.group = GROUP_NORMAL;
-			_box.pixelSize = m_anchor.pixelSize;
-			_box.RefImage()->texGUID = a_context.pServices->pAssetDatabase->GetGUIDFromFilePath(TARGET_BOX_TEXTURE_PATH);
+			auto& _box = AddDecoration<Decoration::UISpriteElement>();
+			_box.SetName("TargetBox");
+			_box.SetGroup(GROUP_NORMAL);
+			_box.SetPixelSize(m_anchor.pixelSize);
+			_box.RefImage().emplace().texGUID = a_context.pServices->pAssetDatabase->GetGUIDFromFilePath(TARGET_BOX_TEXTURE_PATH);
 		}
 	}
 
@@ -64,9 +64,10 @@ namespace App::Object
 	//======================================================================================
 	bool TargetBoxHUD::HasDecorationGroup(uint32_t a_group) const
 	{
-		for (const Decoration::Decoration& _decoration : GetDecorations())
+		const Decoration::UIDecoration& _decoration = GetDecoration();
+		for (size_t _i = 0; _i < _decoration.GetElementCount(); ++_i)
 		{
-			if (_decoration.group == a_group) return true;
+			if (_decoration.GetElement(_i).GetGroup() == a_group) return true;
 		}
 		return false;
 	}
@@ -155,27 +156,8 @@ namespace App::Object
 		// どちらに足しても互いの読み出しはずれない。足すときはこの区切りの末尾へ
 		Engine::Persistence::ArchiveSection _section(a_ar, "TargetBoxHUD");
 
-		// 旧形式(ロック枠テクスチャ1枚)の名残。並びを変えないため読み書きは続ける
-		a_ar.GUIDField("LockTexGUID", m_legacyLockTexGUID);
 		a_ar.Field("LockSizeScale", m_lockSizeScale);
 		a_ar.Field("LockColor", m_lockColor);
-
-		if (!a_ar.IsLoading()) return;
-
-		//--------------------------------------------------------------
-		// 旧形式からの引き継ぎ
-		// ロック枠のテクスチャを持っていたシーンは、群 1 の飾りへ移し替える
-		//--------------------------------------------------------------
-		if (m_legacyLockTexGUID.IsValid() && !HasDecorationGroup(GROUP_LOCK))
-		{
-			Decoration::Decoration& _lockBox = AddDecoration(Decoration::EDecorationType::Image);
-			_lockBox.name = "LockBox";
-			_lockBox.group = GROUP_LOCK;
-			_lockBox.pixelSize = m_anchor.pixelSize;
-			_lockBox.RefImage()->texGUID = m_legacyLockTexGUID;
-
-			RequestDecorationResources(a_context);
-		}
 	}
 
 	void TargetBoxHUD::DrawInspector(Engine::GameObject::ObjectContext& a_context)

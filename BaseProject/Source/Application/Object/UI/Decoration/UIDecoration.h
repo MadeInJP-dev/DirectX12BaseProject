@@ -12,13 +12,14 @@ namespace App::Object::Decoration
 	// UIのデコレーション
 	//
 	// UI 1つに付く飾り(エレメント)の配列と、飾り全体へ掛かる設定(表示・倍率・マテリアル)をまとめたもの。
-	// 今は UIBase が直接持っている飾りの配列(std::vector<Decoration>)を、これ1つで置き換える。
+	// UIBase が1つ持ち、コントローラー用の組を持つ UI はもう1つを optional で持つ。
 	//
 	// 持ち主(UIBase)がやること :
 	//   ・毎フレーム Update(親の状態を入れて)と Draw(親のトランスフォーム・設定・差し替えを入れて)を呼ぶ
 	//   ・読み込み後とエディターでの差し替え後に RequestResources を呼ぶ
 	//   ・Archive を自分の保存の中で呼ぶ
 	//   ・エディターでは DrawInspector と DrawGizmo を呼ぶ
+	//   ・当たり判定は、判定を受ける UI(UIBase::IsHitTarget)が IsHit で問い合わせる
 	//
 	// プリセット(UIPreset)は旧 Decoration の形で保存されているので、
 	// 写すときと書き戻すときは旧 Decoration へ変換して、旧の仕組み(DecorationPreset.h)をそのまま通す。
@@ -53,6 +54,12 @@ namespace App::Object::Decoration
 		/// </remarks>
 		void Draw(const DrawContext& a_context);
 
+		/// <summary>
+		/// エレメントを1つだけ描く : 渡すものは Draw と同じ
+		/// </summary>
+		/// <remarks>エレメントごとに違う差し替えを掛けたいとき用(ゲージの中身だけ横に縮める等)</remarks>
+		void DrawElement(size_t a_index, const DrawContext& a_context);
+
 		// 保存されているGUIDから、マテリアルとエレメントのテクスチャ・フォントの参照を引き直す
 		void RequestResources(Engine::Resource::ResourceManager* a_pResourceManager);
 
@@ -70,6 +77,33 @@ namespace App::Object::Decoration
 		/// 見た目ごと種類(矩形⇔文字)が変わったときは、同じ番号のまま作り直す
 		/// </remarks>
 		void SyncPresets(Engine::Resource::ResourceManager* a_pResourceManager);
+
+		//-----------------------------------------------------------------------
+		// 当たり判定
+		//-----------------------------------------------------------------------
+
+		/// <summary>
+		/// どれかのエレメントのボディに当たっているか : 当たったかどうかだけを返す
+		/// </summary>
+		/// <remarks>
+		/// 判定を受けるか(UIBase::IsHitTarget)・切り抜きの外か は UI 側で見てから呼ぶこと。
+		/// デコレーション全体を隠しているときは当たらない
+		/// </remarks>
+		/// <param name="a_pos">調べる位置(画面のピクセル座標。マウスの位置など)</param>
+		/// <param name="a_parentTr">親(UI)の画面での置き場所(Draw へ渡すものと同じ)</param>
+		/// <param name="a_parentOp">親の設定(Draw へ渡すものと同じ)</param>
+		bool IsHit(const Math::Vector2& a_pos, const ParentTransform& a_parentTr, const ParentOption& a_parentOp) const;
+
+		// ボディを持つエレメントがあるか(判定を受ける UI なのに当たる場所が無い、を見つける用)
+		bool HasHitBody() const;
+
+		/// <summary>
+		/// 矩形のエレメントが占めている範囲(親のピボットからの相対, px, 親の倍率を掛ける前)
+		/// </summary>
+		/// <param name="a_isIncludeAnim">アニメーション・反応で変わった今の大きさも含めるか(素の大きさとの合併)</param>
+		/// <returns>大きさを持つ矩形のエレメントが1つも無ければ false</returns>
+		/// <remarks>文字は大きさをフォントから組み立てるので数えない</remarks>
+		bool CalcBounds(Math::Vector2& a_outCenter, Math::Vector2& a_outSize, bool a_isIncludeAnim = false) const;
 
 		//-----------------------------------------------------------------------
 		// エディター
@@ -91,8 +125,20 @@ namespace App::Object::Decoration
 		bool DrawGizmo(
 			const Engine::GameObject::ObjectGizmoContext& a_ctx,
 			const ParentTransform& a_parentTr,
+			const ParentOption& a_parentOp,
 			float a_screenW,
 			float a_screenH);
+
+		/// <summary>
+		/// エレメントを1つ選ぶコンボ(他の部品がエレメントを番号で指すとき用)
+		/// </summary>
+		/// <param name="a_inoutId">選んでいるエレメントの番号(0 で未選択)</param>
+		/// <param name="a_opFilterType">この種類だけを並べる(nullopt なら全部)</param>
+		/// <returns>選び直したら true</returns>
+		bool DrawElementPicker(
+			const char* a_label,
+			uint32_t& a_inoutId,
+			std::optional<EElementType> a_opFilterType = std::nullopt) const;
 
 		// インスペクターで開いているエレメント(無ければ無効な番号)
 		ElementID GetEditElementId() const { return m_editElementId; }
@@ -110,6 +156,18 @@ namespace App::Object::Decoration
 
 		// 種類を指定して足す(エディター・読み込み用)
 		UIDecorationElementBase& AddElement(EElementType a_type);
+
+		// 種類を指定して a_index 番目へ差し込む(後ろのものは1つずつずれる)
+		UIDecorationElementBase& InsertElement(size_t a_index, EElementType a_type);
+
+		// 写しを末尾へ足す : 番号だけはここで振り直す(他の UI から移すとき用)
+		UIDecorationElementBase& AddElementCopy(const UIDecorationElementBase& a_source);
+
+		/// <summary>
+		/// 旧 Decoration の配列から作り直す(今あるエレメントは捨てる)
+		/// </summary>
+		/// <remarks>番号は旧の番号をそのまま使う(他から番号で指されているため)。0 や重なりは振り直す</remarks>
+		void AssignFromDecorations(const std::vector<Decoration>& a_decorationVec);
 
 		// 消す : 見つからなければ false
 		bool RemoveElement(ElementID a_id);
@@ -161,10 +219,25 @@ namespace App::Object::Decoration
 		// 読み終わったマテリアル : 未指定・読み込み中なら nullptr
 		const Engine::Resource::UIMaterial* FindReadyMaterial(Engine::Resource::ResourceManager* a_pResourceManager) const;
 
+		/// <summary>
+		/// 新しく振る番号の下限 : これより大きい番号だけを振る(保存しない)
+		/// </summary>
+		/// <remarks>
+		/// 同じ UI の別の組(コントローラー用)と番号を共有するとき、相手の最大の番号を入れておく。
+		/// 片方の組にだけ足したエレメントが、もう片方の別のエレメントと同じ番号にならないように
+		/// </remarks>
+		void SetIdFloor(uint32_t a_floor) { m_idFloor = a_floor; }
+
+		// 今ある番号の最大(無ければ 0)
+		uint32_t GetMaxElementId() const;
+
 	private:
 
 		// 種類からエレメントを作る
 		static std::unique_ptr<UIDecorationElementBase> CreateElement(EElementType a_type);
+
+		// エレメントへ配る描画の値 : 全体の倍率・マテリアルを足し込む
+		DrawContext MakeElementContext(const DrawContext& a_context) const;
 
 		// 足したエレメントへ番号と名前の既定値を入れる
 		void SetupAddedElement(UIDecorationElementBase& a_element);
@@ -220,6 +293,9 @@ namespace App::Object::Decoration
 		// エディター(保存しない)
 		//-----------------------------------------------------------------------
 		ElementID m_editElementId = {};		// インスペクターで開いているエレメント
+
+		// 新しく振る番号の下限(SetIdFloor)。保存しない
+		uint32_t m_idFloor = 0;
 
 	};
 

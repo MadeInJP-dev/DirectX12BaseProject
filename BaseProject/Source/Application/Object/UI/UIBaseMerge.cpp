@@ -103,7 +103,7 @@ namespace App::Object
 			return false;
 		}
 
-		if (!(m_materialGUID == _pParent->m_materialGUID))
+		if (!(GetMaterialGUID() == _pParent->GetMaterialGUID()))
 		{
 			a_outReason = "親と違う UIマテリアルを付けている";
 			return false;
@@ -124,14 +124,21 @@ namespace App::Object
 		// 押せる親へ移すと、飾りの反応が親の状態(乗った・押した)で動き出してしまう
 		if (_pParent->HasInteraction())
 		{
-			for (const Decoration::Decoration& _decoration : m_decorationVec)
+			for (size_t _i = 0; _i < m_decoration.GetElementCount(); ++_i)
 			{
-				if (_decoration.opReaction)
+				if (m_decoration.GetElement(_i).GetReaction())
 				{
 					a_outReason = "反応(Reaction)を持つ飾りがあり、親が押せる UI";
 					return false;
 				}
 			}
+		}
+
+		// 当たり判定を受ける親へボディを移すと、親の当たる範囲が広がってしまう
+		if (_pParent->IsHitTarget() && m_decoration.HasHitBody())
+		{
+			a_outReason = "当たり判定のボディを持つ飾りがあり、親が当たり判定を受ける UI";
+			return false;
 		}
 
 		Math::Color _unused = {};
@@ -179,25 +186,34 @@ namespace App::Object
 		constexpr float SCALE_EPSILON = 1e-6f;
 		const float _parentScale = (std::fabs(_parentWorld.scale) > SCALE_EPSILON) ? _parentWorld.scale : 1.0f;
 
-		for (const Decoration::Decoration& _source : m_decorationVec)
+		for (size_t _i = 0; _i < m_decoration.GetElementCount(); ++_i)
 		{
-			// 番号は親の中で振り直す(親の飾りと重ならないように)
-			Decoration::Decoration& _decoration = _pParent->AddDecoration(_source.GetType());
-			const uint32_t _id = _decoration.id;
-			_decoration = _source;
-			_decoration.id = _id;
+			const Decoration::UIDecorationElementBase& _source = m_decoration.GetElement(_i);
 
-			const Math::Vector2 _screenPos = _selfWorld.ToScreenPos(_source.offsetPos);
-			_decoration.offsetPos = UIAnchor::RotateDeg(_screenPos - _parentWorld.pixelPos, -_parentWorld.rotation) / _parentScale;
-			_decoration.rotation = _source.rotation + _selfWorld.rotation - _parentWorld.rotation;
-			_decoration.scale = _source.scale * _selfWorld.scale / _parentScale;
-			_decoration.layerOffset = _source.layerOffset + _selfWorld.layer - _parentWorld.layer;
-			_decoration.color = Math::Color(
-				_source.color.r * _colorMul.r,
-				_source.color.g * _colorMul.g,
-				_source.color.b * _colorMul.b,
-				_source.color.a * _colorMul.a);
-			_decoration.isVisible = _source.isVisible && m_isVisible;
+			// 番号は親の中で振り直す(親の飾りと重ならないように)
+			Decoration::UIDecorationElementBase& _element = _pParent->m_decoration.AddElementCopy(_source);
+
+			// ずれ・倍率には飾り全体の倍率も掛かっているので、畳み込んでから親の値へ直す
+			const float _selfScale = _selfWorld.scale * m_decoration.GetScale();
+			const Math::Vector2 _screenPos = _selfWorld.pixelPos + UIAnchor::RotateDeg(_source.GetOffsetPos() * _selfScale * _source.GetScale(), _selfWorld.rotation);
+			// 画面での大きさが変わらないよう、親の倍率 × 親の飾り全体の倍率で割る
+			const float _parentDecorationScale = _pParent->m_decoration.GetScale();
+			const float _parentAllScale = (std::fabs(_parentScale * _parentDecorationScale) > SCALE_EPSILON) ? _parentScale * _parentDecorationScale : 1.0f;
+			const float _newScale = _source.GetScale() * _selfScale / _parentAllScale;
+			const Math::Vector2 _parentLocal = UIAnchor::RotateDeg(_screenPos - _parentWorld.pixelPos, -_parentWorld.rotation) / _parentAllScale;
+
+			_element.SetOffsetPos((std::fabs(_newScale) > SCALE_EPSILON) ? _parentLocal / _newScale : _parentLocal);
+			_element.SetRotation(_source.GetRotation() + _selfWorld.rotation - _parentWorld.rotation);
+			_element.SetScale(_newScale);
+			_element.SetLayerOffset(_source.GetLayerOffset() + _selfWorld.layer - _parentWorld.layer);
+
+			const Math::Color& _color = _source.GetColor();
+			_element.SetColor(Math::Color(
+				_color.r * _colorMul.r,
+				_color.g * _colorMul.g,
+				_color.b * _colorMul.b,
+				_color.a * _colorMul.a));
+			_element.SetVisible(_source.IsVisible() && m_isVisible);
 		}
 
 		// 足した飾りのテクスチャ・フォントを親の側で引き直す

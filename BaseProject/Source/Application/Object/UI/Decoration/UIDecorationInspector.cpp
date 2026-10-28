@@ -45,6 +45,7 @@ namespace App::Object::Decoration
 		//----------------------------------------------------------------------------------
 		Engine::EditorField::Header("Elements");
 		Engine::EditorField::HelpText("配列の順に描きます(下にあるものほど手前)");
+		Engine::EditorField::HelpText("当たり判定 : %s", HasHitBody() ? "ボディを持つエレメントあり" : "ボディ無し(どこにも当たらない)");
 
 		// ---- 追加 ----
 		if (Engine::EditorField::CreateButton("Add Sprite"))
@@ -163,11 +164,38 @@ namespace App::Object::Decoration
 	bool UIDecoration::DrawGizmo(
 		const Engine::GameObject::ObjectGizmoContext& a_ctx,
 		const ParentTransform& a_parentTr,
+		const ParentOption& a_parentOp,
 		float a_screenW,
 		float a_screenH)
 	{
 		if (a_ctx.viewportSize.x <= 0.0f || a_ctx.viewportSize.y <= 0.0f) return false;
 		if (a_screenW <= 0.0f || a_screenH <= 0.0f) return false;
+
+		// ボディの輪郭 : 見えている絵とずれていないかを確かめられるように、全部のボディを線で囲む。
+		// 開いているエレメントのものは明るく出す
+		{
+			ParentTransform _parentTr = a_parentTr;
+			_parentTr.scale *= m_scale;
+
+			std::vector<Math::Vector2> _pointVec;
+			for (const auto& _upElement : m_upElements)
+			{
+				if (!_upElement->CalcHitOutline(_parentTr, a_parentOp, _pointVec)) continue;
+
+				// ゲーム内ピクセル → シーンビュー上ピクセル
+				for (Math::Vector2& _point : _pointVec)
+				{
+					_point.x = a_ctx.viewportPos.x + (_point.x / a_screenW) * a_ctx.viewportSize.x;
+					_point.y = a_ctx.viewportPos.y + (_point.y / a_screenH) * a_ctx.viewportSize.y;
+				}
+
+				const bool _isEdit = (_upElement->GetId() == m_editElementId);
+				const Math::Color _color = _isEdit
+					? Math::Color(0.3f, 1.0f, 0.4f, 1.0f)
+					: Math::Color(0.2f, 0.7f, 0.3f, 0.6f);
+				Engine::EditorField::ScreenPolyline(_pointVec.data(), _pointVec.size(), _color, 1.5f, true);
+			}
+		}
 
 		UIDecorationElementBase* _pElement = FindElementById(m_editElementId);
 		if (_pElement == nullptr) return false;
@@ -200,5 +228,61 @@ namespace App::Object::Decoration
 			_pElement->SetOffsetPos(_local / _scale);
 		}
 		return true;
+	}
+
+	//======================================================================================
+	// エレメントを1つ選ぶコンボ
+	//======================================================================================
+	bool UIDecoration::DrawElementPicker(
+		const char* a_label,
+		uint32_t& a_inoutId,
+		std::optional<EElementType> a_opFilterType) const
+	{
+		// 見出し : 番号と名前。指しているエレメントが無くなっていたら分かるようにする
+		const auto _makeLabel = [](const UIDecorationElementBase& a_element)
+			{
+				return std::to_string(a_element.GetId().value) + " : " +
+					(a_element.GetName().empty() ? "(no name)" : a_element.GetName()) +
+					" [" + a_element.GetTypeName() + "]";
+			};
+
+		const UIDecorationElementBase* _pSelected = (a_inoutId != 0) ? FindElementById(ElementID(a_inoutId)) : nullptr;
+
+		std::string _preview = "(none)";
+		if (_pSelected)
+		{
+			_preview = _makeLabel(*_pSelected);
+		}
+		else if (a_inoutId != 0)
+		{
+			_preview = "(missing " + std::to_string(a_inoutId) + ")";
+		}
+
+		bool _isChanged = false;
+
+		Engine::EditorField::ComboScope _combo(a_label, _preview.c_str());
+		if (!_combo) return false;
+
+		if (Engine::EditorField::Selectable("(none)", a_inoutId == 0))
+		{
+			a_inoutId = 0;
+			_isChanged = true;
+		}
+
+		for (const auto& _upElement : m_upElements)
+		{
+			const UIDecorationElementBase& _element = *_upElement;
+			if (a_opFilterType && _element.GetType() != *a_opFilterType) continue;
+
+			const uint32_t _id = _element.GetId().value;
+			Engine::EditorField::IDScope _idScope(static_cast<int>(_id));
+			if (Engine::EditorField::Selectable(_makeLabel(_element).c_str(), _id == a_inoutId))
+			{
+				a_inoutId = _id;
+				_isChanged = true;
+			}
+		}
+
+		return _isChanged;
 	}
 }

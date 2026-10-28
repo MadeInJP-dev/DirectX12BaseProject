@@ -43,6 +43,7 @@ namespace App::Object::Decoration
 
 		// フォント : 差し替えたら RequestResources で参照を引き直す
 		const Core::GUID& GetFontGUID() const { return m_fontGUID; }
+		const Engine::ResourceRef<Engine::Resource::Font>& GetFontRef() const { return m_fontRef; }
 		void SetFontGUID(const Core::GUID& a_fontGUID) { m_fontGUID = a_fontGUID; }
 
 		// 文字の組み方

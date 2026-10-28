@@ -28,23 +28,22 @@ namespace App::Object
 		m_isHUD = true;
 
 		// 新しく置いたときの出し方 : 出た瞬間に少し大きく出て、薄くなりながら戻って消える
-		MigrateLegacyTransition();
+		SetDefaultTransition();
 	}
 
 	//======================================================================================
-	// 旧形式からの引き継ぎ
+	// 新しく置いたときの出し方
 	//--------------------------------------------------------------------------------------
-	// 以前は「出しておく時間・消えぎわに薄くするか・出た瞬間の拡大率」を自分で持ち、
-	// 残り時間の割合で倍率と色を直線で動かしていた。同じ動きになるよう演出の合図へ移す
+	// 2 秒で、1.35 倍から等倍へ戻りながら消える(合図の演出)
 	//======================================================================================
-	void WaveAnnounceHUD::MigrateLegacyTransition()
+	void WaveAnnounceHUD::SetDefaultTransition()
 	{
 		UITransitionClip& _pulse = m_transition.pulse;
-		_pulse.duration = m_legacyShowTime;
+		_pulse.duration = 2.0f;
 		_pulse.ease = Decoration::EEase::Linear;
 		_pulse.startAlpha = 1.0f;
-		_pulse.endAlpha = m_legacyIsFadeOut ? 0.0f : 1.0f;
-		_pulse.startScale = m_legacyPunchScale;
+		_pulse.endAlpha = 0.0f;
+		_pulse.startScale = 1.35f;
 		_pulse.endScale = 1.0f;
 
 		// 合図の間だけ描く
@@ -142,11 +141,14 @@ namespace App::Object
 	void WaveAnnounceHUD::ApplyLabel(const std::string& a_label)
 	{
 		// 一度だけ書くので、出していない組(コントローラー用)へも入れておく
-		ForEachDecorationSet([&a_label](std::vector<Decoration::Decoration>& a_decorationVec)
+		ForEachDecorationSet([&a_label](Decoration::UIDecoration& a_decoration)
 			{
-				for (Decoration::Decoration& _decoration : a_decorationVec)
+				for (size_t _i = 0; _i < a_decoration.GetElementCount(); ++_i)
 				{
-					if (Decoration::TextData* _pText = _decoration.RefText()) _pText->text = a_label;
+					Decoration::UIDecorationElementBase& _element = a_decoration.RefElement(_i);
+					if (_element.GetType() != Decoration::EElementType::Text) continue;
+
+					static_cast<Decoration::UITextElement&>(_element).SetValue(a_label);
 				}
 			});
 	}
@@ -205,22 +207,13 @@ namespace App::Object
 
 		a_ar.GUIDField("SoundGUID", m_soundGUID);
 		a_ar.Field("Volume", m_volume);
-		a_ar.Field("ShowTime", m_legacyShowTime);
-		a_ar.Field("IsFadeOut", m_legacyIsFadeOut);
-		a_ar.Field("PunchScale", m_legacyPunchScale);
 
 		a_ar.StringField("Prefix", m_prefix);
 		a_ar.Field("IsShowTotal", m_isShowTotal);
 		a_ar.StringField("Separator", m_separator);
 
-		if (a_ar.IsLoading())
-		{
-			// 演出を持つ前のシーンは、自分で持っていた出し方を移す
-			if (!m_isTransitionLoaded) MigrateLegacyTransition();
-
-			// 復元したGUIDでサウンドを取り直す
-			CreateSound(a_context);
-		}
+		// 復元したGUIDでサウンドを取り直す
+		if (a_ar.IsLoading()) CreateSound(a_context);
 	}
 
 	void WaveAnnounceHUD::DrawInspector(Engine::GameObject::ObjectContext& a_context)

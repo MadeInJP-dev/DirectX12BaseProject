@@ -4,6 +4,7 @@
 
 #include "DecorationElement/UISpriteElement/UISpriteElement.h"
 #include "DecorationElement/UITextElement/UITextElement.h"
+#include "Internal/DecorationInternal.h"
 
 namespace App::Object::Decoration
 {
@@ -32,6 +33,7 @@ namespace App::Object::Decoration
 		m_materialGUID = a_other.m_materialGUID;
 		m_materialRef = a_other.m_materialRef;
 		m_editElementId = a_other.m_editElementId;
+		m_idFloor = a_other.m_idFloor;
 		return *this;
 	}
 
@@ -59,22 +61,145 @@ namespace App::Object::Decoration
 		// 描くのは更新を回さない場面(エディターで止めている間など)もあるので、ここで写す
 		SyncPresets(a_context.pResourceManager);
 
-		// 飾り全体へ掛かる設定を足し込んでから配る
-		DrawContext _context = a_context;
-		_context.pParent = this;
-		_context.parentTr.scale *= m_scale;
-
-		// マテリアルは持ち主が渡していればそちらを優先する(移し替えの間は UIBase が持っているため)
-		if (_context.parentOp.pMaterial == nullptr)
-		{
-			_context.parentOp.pMaterial = FindReadyMaterial(a_context.pResourceManager);
-		}
+		const DrawContext _context = MakeElementContext(a_context);
 
 		// 配列の順に積む : 後ろにあるものほど手前に出る
 		for (auto& _upElement : m_upElements)
 		{
 			_upElement->Draw(_context);
 		}
+	}
+
+	void UIDecoration::DrawElement(size_t a_index, const DrawContext& a_context)
+	{
+		if (!m_isVisible) return;
+		if (a_index >= m_upElements.size()) return;
+		if (a_context.pGraphicsEngine == nullptr || a_context.pResourceManager == nullptr) return;
+
+		SyncPresets(a_context.pResourceManager);
+
+		// 写し直しで作り直されていることがあるので、添え字はここで引き直す
+		if (a_index >= m_upElements.size()) return;
+		m_upElements[a_index]->Draw(MakeElementContext(a_context));
+	}
+
+	DrawContext UIDecoration::MakeElementContext(const DrawContext& a_context) const
+	{
+		// 飾り全体へ掛かる設定を足し込んでから配る
+		DrawContext _context = a_context;
+		_context.pParent = this;
+		_context.parentTr.scale *= m_scale;
+
+		// マテリアルは持ち主が渡していればそちらを優先する
+		if (_context.parentOp.pMaterial == nullptr)
+		{
+			_context.parentOp.pMaterial = FindReadyMaterial(a_context.pResourceManager);
+		}
+		return _context;
+	}
+
+	//======================================================================================
+	// 当たり判定
+	//======================================================================================
+	bool UIDecoration::IsHit(const Math::Vector2& a_pos, const ParentTransform& a_parentTr, const ParentOption& a_parentOp) const
+	{
+		if (!m_isVisible) return false;
+
+		// 描くときと同じく、デコレーション全体の倍率を親の倍率へ掛けてから配る
+		ParentTransform _parentTr = a_parentTr;
+		_parentTr.scale *= m_scale;
+
+		for (const auto& _upElement : m_upElements)
+		{
+			if (_upElement->IsHit(a_pos, _parentTr, a_parentOp)) return true;
+		}
+		return false;
+	}
+
+	bool UIDecoration::HasHitBody() const
+	{
+		for (const auto& _upElement : m_upElements)
+		{
+			if (_upElement->GetHitBody().has_value()) return true;
+		}
+		return false;
+	}
+
+	//======================================================================================
+	// 矩形のエレメントが占めている範囲
+	//--------------------------------------------------------------------------------------
+	// a_isIncludeAnim を立てると、素の矩形に加えて
+	// 「アニメーション・反応を掛けた今の矩形」も範囲へ入れる(2つの合併)。
+	// 今の矩形だけに差し替えると、乗ると縮む反応で範囲が出入りしてちらつくため
+	//======================================================================================
+	bool UIDecoration::CalcBounds(Math::Vector2& a_outCenter, Math::Vector2& a_outSize, bool a_isIncludeAnim) const
+	{
+		bool _hasAny = false;
+		Math::Vector2 _min = {};
+		Math::Vector2 _max = {};
+
+		// 矩形1つぶんを範囲へ足す : 回転を掛けた4隅を取り、それを囲む矩形にする
+		const auto _addRect = [&](
+			const Math::Vector2& a_offset,
+			const Math::Vector2& a_size,
+			const Math::Vector2& a_pivot,
+			float a_rotation)
+			{
+				if (a_size.x <= 0.0f || a_size.y <= 0.0f) return;
+
+				const Math::Vector2 _topLeft = { -a_pivot.x * a_size.x, -a_pivot.y * a_size.y };
+				const Math::Vector2 _cornerArray[4] = {
+					_topLeft,
+					{ _topLeft.x + a_size.x, _topLeft.y },
+					{ _topLeft.x,            _topLeft.y + a_size.y },
+					{ _topLeft.x + a_size.x, _topLeft.y + a_size.y },
+				};
+
+				for (const Math::Vector2& _corner : _cornerArray)
+				{
+					const Math::Vector2 _point = a_offset + Internal::RotateDeg(_corner, a_rotation);
+					if (!_hasAny)
+					{
+						_min = _max = _point;
+						_hasAny = true;
+						continue;
+					}
+					_min = { std::min(_min.x, _point.x), std::min(_min.y, _point.y) };
+					_max = { std::max(_max.x, _point.x), std::max(_max.y, _point.y) };
+				}
+			};
+
+		for (const auto& _upElement : m_upElements)
+		{
+			const UIDecorationElementBase& _element = *_upElement;
+			if (!_element.IsVisible()) continue;
+			if (_element.GetType() == EElementType::Text) continue;
+
+			const float _scale = _element.GetScale() * m_scale;
+			const Math::Vector2 _size = _element.GetPixelSize() * _scale;
+			const Math::Vector2 _offset = _element.GetOffsetPos() * _scale;	// ずれにも自分の倍率が掛かる(描画と同じ)
+
+			// 素の矩形
+			_addRect(_offset, _size, _element.GetPivot(), _element.GetRotation());
+
+			if (!a_isIncludeAnim) continue;
+
+			// 今の矩形 : 描画と同じ合成結果を使う
+			const Internal::AnimResult _anim =
+				Internal::MakeAnimResult(_element.GetTweenAnim(), _element.GetOscillationAnim(), _element.GetReaction());
+
+			_addRect(
+				(_element.GetOffsetPos() + _anim.positionAdd) * _scale,
+				_size * _anim.scaleMul,
+				_element.GetPivot(),
+				_element.GetRotation() + _anim.rotationAdd);
+		}
+
+		if (!_hasAny) return false;
+
+		a_outCenter = (_min + _max) * 0.5f;
+		a_outSize = _max - _min;
+		return true;
 	}
 
 	//======================================================================================
@@ -149,6 +274,30 @@ namespace App::Object::Decoration
 		SetupAddedElement(_element);
 		m_upElements.push_back(std::move(_upElement));
 
+		return _element;
+	}
+
+	UIDecorationElementBase& UIDecoration::InsertElement(size_t a_index, EElementType a_type)
+	{
+		std::unique_ptr<UIDecorationElementBase> _upElement = CreateElement(a_type);
+		if (!_upElement) _upElement = std::make_unique<UISpriteElement>();
+
+		UIDecorationElementBase& _element = *_upElement;
+		SetupAddedElement(_element);
+
+		const size_t _index = std::min(a_index, m_upElements.size());
+		m_upElements.insert(m_upElements.begin() + _index, std::move(_upElement));
+		return _element;
+	}
+
+	UIDecorationElementBase& UIDecoration::AddElementCopy(const UIDecorationElementBase& a_source)
+	{
+		std::unique_ptr<UIDecorationElementBase> _upElement = a_source.Clone();
+
+		// 名前は写しのまま、番号だけこの組の中で振り直す
+		UIDecorationElementBase& _element = *_upElement;
+		_element.m_id = MakeNewElementId();
+		m_upElements.push_back(std::move(_upElement));
 		return _element;
 	}
 
@@ -270,14 +419,20 @@ namespace App::Object::Decoration
 	{
 		// 今ある番号の最大の次。消したエレメントの番号は使い回さない
 		// (消したことに気付かず指したままの側が、別のエレメントを掴んでしまわないように)。
-		// 1 から振る : 旧 Decoration は 0 を「未採番」に使っていたので、移し替えたときに紛れないように
+		// 1 から振る : 旧 Decoration は 0 を「未採番」に使っていたので、移し替えたときに紛れないように。
+		// 別の組と番号を共有しているなら、その最大(下限)より後ろから振る
+		return ElementID(std::max(GetMaxElementId(), m_idFloor) + 1);
+	}
+
+	uint32_t UIDecoration::GetMaxElementId() const
+	{
 		uint32_t _maxId = 0;
 		for (const auto& _upElement : m_upElements)
 		{
 			if (!_upElement || !_upElement->GetId().IsValid()) continue;
 			_maxId = std::max(_maxId, _upElement->GetId().value);
 		}
-		return ElementID(_maxId + 1);
+		return _maxId;
 	}
 
 	void UIDecoration::AssignElementIds()

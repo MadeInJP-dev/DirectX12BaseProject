@@ -35,6 +35,10 @@ namespace App::Object::Decoration
 		// これが弧の -1..1 になる。UIAnchor::pixelSize がそのまま入る
 		Math::Vector2 parentSize = {};
 
+		// 親自身の矩形のピボット(正規化[0,1])。UIAnchor::pivot がそのまま入る。
+		// 親の矩形に当てるボディ(UIHitBody::isUseParentRect)が使う
+		Math::Vector2 parentPivot = { 0.5f, 0.5f };
+
 		// 弧の頂点(反りの中心)。親の矩形を -1..1 とした座標。
 		//   x … 頂点を横のどこに置くか(0で中央)
 		//   y … 曲げたときに全体を上下へずらす量

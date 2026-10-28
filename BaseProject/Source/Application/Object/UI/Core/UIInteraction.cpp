@@ -299,7 +299,6 @@ namespace App::Object
 		// 名前で書き出す。アクション名で持っていた頃の古いシーンは
 		// 読めない名前になるので、そのときは既定(Select)のまま残る
 		Game::ActionField(a_ar, "ClickActionName", clickAction);
-		a_ar.Field("HitPadding", hitPadding);
 		a_ar.Field("IsInteractable", isInteractable);
 		a_ar.GUIDField("HoverSoundGUID", hoverSoundGUID);
 		a_ar.GUIDField("PressSoundGUID", pressSoundGUID);
@@ -359,12 +358,6 @@ namespace App::Object
 
 		Engine::EditorField::Field("ClickAction", clickAction);
 		Engine::EditorField::Tooltip("InputManager へ登録したアクション名");
-
-		Engine::EditorField::Field("HitPadding", hitPadding, 1.0f);
-		Engine::EditorField::Tooltip("判定の矩形へ足す余白(px)");
-
-		Engine::EditorField::Field("HitFollowAnim", isHitFollowAnim);
-		Engine::EditorField::Tooltip("飾りのアニメ・反応で大きくなったぶんも判定に入れる(PixelSize より優先)");
 	}
 
 	void UIInteraction::DrawSoundInspector(Engine::GameObject::ObjectContext& a_context)

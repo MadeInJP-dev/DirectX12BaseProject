@@ -105,7 +105,7 @@ namespace App::Object
 		// フォントがまだ読めていなければ false
 		bool CalcCharWidths(
 			Engine::GameObject::ObjectContext& a_context,
-			const Decoration::TextData& a_text,
+			const Decoration::UITextElement& a_text,
 			std::vector<float>& a_outWidthVec) const;
 
 		// 数字の飾りを1文字ずつマスへ並べて描く(a_index は飾りの並びの何番目か)
@@ -117,8 +117,8 @@ namespace App::Object
 			int a_digit,
 			int a_index);
 
-		// 演出を持つ前のデータ : 自分で持っていた弾み方を演出へ移す
-		void MigrateLegacyTransition();
+		// 新しく置いたときの弾み方を演出へ入れる
+		void SetDefaultTransition();
 
 	private:
 
@@ -129,12 +129,6 @@ namespace App::Object
 		int   m_digitCount   = 6;		// 表示する桁数(足りないぶんは 0 埋め)
 		int   m_atlasCount   = 10;		// テクスチャに並んでいるコマ数(0〜9 なら 10)
 		float m_digitSpacing = 0.0f;	// 桁と桁の間隔(px)。0 で隙間なく並ぶ
-
-		// ---- 旧形式の名残(保存される) ----
-		// 弾み方を演出(Transition の Pulse)へ移す前の値。保存の並びを保つために読み書きは続けるが、
-		// 使うのは演出を持たないデータを読んだときの移し替えだけ
-		float m_legacyPunchScale = 1.3f;	// 増えたフレームの拡大率
-		float m_legacyPunchTime  = 0.2f;	// 元の大きさへ戻るまでの秒数
 
 		// ---- 文字で出すとき(保存される。区切りを入れた後に足したもの) ----
 		EScoreDrawMode   m_drawMode   = EScoreDrawMode::Atlas;		// 出し方

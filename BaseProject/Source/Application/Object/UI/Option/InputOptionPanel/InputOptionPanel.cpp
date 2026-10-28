@@ -664,10 +664,7 @@ namespace App::Object
 		UIBase* _pRow = FindUI(a_context, a_element.rowUI.guid);
 		if (!_pRow) return;
 
-		Decoration::Decoration* _pDecoration = _pRow->FindDecorationById(a_element.keyTextId);
-		if (!_pDecoration) return;
-
-		Decoration::TextData* _pText = _pDecoration->RefText();
+		Decoration::UITextElement* _pText = _pRow->FindDecorationAs<Decoration::UITextElement>(a_element.keyTextId);
 		if (!_pText) return;
 
 		std::string _name = "...";
@@ -677,7 +674,7 @@ namespace App::Object
 				? std::string(Engine::Input::GamepadKey::GetName(a_element.currentPadKey))
 				: MakeKeyName(a_element.currentActionKey);
 		}
-		if (_pText->text != _name) _pText->text = _name;
+		if (_pText->GetValue() != _name) _pText->SetValue(_name);
 	}
 
 	void InputOptionPanel::CaptureKeyState()
@@ -873,7 +870,7 @@ namespace App::Object
 				// キー名を書き込む飾りは、行の UI の文字の飾りから選ぶ
 				if (UIBase* _pRow = FindUI(a_context, _element.rowUI.guid))
 				{
-					_pRow->DrawDecorationPicker("KeyText", _element.keyTextId, Decoration::EDecorationType::Text);
+					_pRow->DrawDecorationPicker("KeyText", _element.keyTextId, Decoration::EElementType::Text);
 					Engine::EditorField::Tooltip("今のキー名を書き込む文字の飾り");
 				}
 

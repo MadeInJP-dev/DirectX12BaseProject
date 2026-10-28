@@ -182,12 +182,11 @@ namespace App::Object
 		UIBase* _pUI = FindUI(a_context, a_guid);
 		if (!_pUI) return;
 
-		Decoration::Decoration* _pDecoration = _pUI->FindDecorationById(a_textId);
-		Decoration::TextData* _pText = _pDecoration ? _pDecoration->RefText() : nullptr;
+		Decoration::UITextElement* _pText = _pUI->FindDecorationAs<Decoration::UITextElement>(a_textId);
 		if (!_pText) return;
 
 		// 飾りの文字は保存される値だが、毎フレーム書き直すので残っても害はない
-		if (_pText->text != a_text) _pText->text = a_text;
+		if (_pText->GetValue() != a_text) _pText->SetValue(a_text);
 	}
 
 	//======================================================================================
@@ -244,7 +243,7 @@ namespace App::Object
 		// 名前を書き込む飾りは、選択欄の文字の飾りから選ぶ
 		if (UIBase* _pField = FindUI(a_context, a_dropdown.field.guid))
 		{
-			_pField->DrawDecorationPicker("ValueText", a_dropdown.valueTextId, Decoration::EDecorationType::Text);
+			_pField->DrawDecorationPicker("ValueText", a_dropdown.valueTextId, Decoration::EElementType::Text);
 			Engine::EditorField::Tooltip("今の選択の名前を書き込む文字の飾り");
 		}
 

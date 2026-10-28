@@ -50,15 +50,12 @@ namespace App::Object
 		m_anchor.pixelSize = { FRAME_WIDTH, FRAME_HEIGHT };
 		m_anchor.editSize = m_anchor.pixelSize;
 
-		Decoration::Decoration& _frame = AddDecoration(Decoration::EDecorationType::Polygon);
-		_frame.name = "Frame";
-		_frame.pixelSize = { FRAME_WIDTH, FRAME_HEIGHT };
-		_frame.color = Math::Color(0.05f, 0.05f, 0.08f, 0.85f);
-		if (Decoration::QuadStyle* _pQuad = _frame.RefQuad())
-		{
-			_pQuad->edgePixel = 4.0f;
-			_pQuad->edgeColor = Math::Color(0.9f, 0.15f, 0.2f, 1.0f);
-		}
+		auto& _frame = AddDecoration<Decoration::UISpriteElement>();
+		_frame.SetName("Frame");
+		_frame.SetPixelSize({ FRAME_WIDTH, FRAME_HEIGHT });
+		_frame.SetColor(Math::Color(0.05f, 0.05f, 0.08f, 0.85f));
+		_frame.SetEdgePixel(4.0f);
+		_frame.SetEdgeColor(Math::Color(0.9f, 0.15f, 0.2f, 1.0f));
 	}
 
 	//======================================================================================

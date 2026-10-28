@@ -54,8 +54,8 @@ namespace App::Object
 
 	private:
 
-		// 演出を持つ前のデータ : 自分で持っていた出し方を演出へ移す
-		void MigrateLegacyTransition();
+		// 新しく置いたときの出し方を演出へ入れる
+		void SetDefaultTransition();
 
 		// ウェーブが出たときの反応(文字の差し替え・合図の出し直し・発音)
 		void OnWaveSpawned(Engine::GameObject::ObjectContext& a_context, int a_waveIndex, int a_waveCount);
@@ -75,13 +75,6 @@ namespace App::Object
 		Core::GUID m_soundGUID = Core::DEFAULT_GUID;
 		Engine::Handle<Engine::Resource::SoundInstance> m_soundHandle = {};
 		float m_volume = 1.0f;
-
-		// ---- 旧形式の名残(保存される) ----
-		// 出し方を演出(Transition の Pulse)へ移す前の値。保存の並びを保つために読み書きは続けるが、
-		// 使うのは演出を持たないデータを読んだときの移し替えだけ
-		float m_legacyShowTime   = 2.0f;	// 1回で出しておく時間(秒)
-		bool  m_legacyIsFadeOut  = true;	// 消えぎわに薄くするか
-		float m_legacyPunchScale = 1.35f;	// 出た瞬間の拡大率
 
 		// 文字の組み立て。番号は1始まりで出す(データ上は0始まり)
 		std::string m_prefix      = "WAVE ";

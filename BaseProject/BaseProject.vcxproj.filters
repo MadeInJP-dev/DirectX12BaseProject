@@ -3650,6 +3650,9 @@
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIDecorationElementBase.h">
       <Filter>Source\Application\Object\UI\Decoration\DecorationElement</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIHitBody.h">
+      <Filter>Source\Application\Object\UI\Decoration\DecorationElement</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UISpriteElement\UISpriteElement.h">
       <Filter>Source\Application\Object\UI\Decoration\DecorationElement\UISpriteElement</Filter>
     </ClInclude>

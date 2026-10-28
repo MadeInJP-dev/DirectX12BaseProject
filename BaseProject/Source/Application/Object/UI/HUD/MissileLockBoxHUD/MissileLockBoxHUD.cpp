@@ -39,12 +39,12 @@ namespace App::Object
 
 		// 既定の枠を1つ用意する。作るのは飾りを1つも持っていないときだけなので、
 		// 保存された飾りを持つシーンでは何もしない
-		if (m_decorationVec.empty())
+		if (m_decoration.GetElementCount() == 0)
 		{
-			Decoration::Decoration& _box = AddDecoration(Decoration::EDecorationType::Image);
-			_box.name = "LockBox";
-			_box.pixelSize = m_anchor.pixelSize;
-			_box.RefImage()->texGUID = a_context.pServices->pAssetDatabase->GetGUIDFromFilePath(LOCK_BOX_TEXTURE_PATH);
+			auto& _box = AddDecoration<Decoration::UISpriteElement>();
+			_box.SetName("LockBox");
+			_box.SetPixelSize(m_anchor.pixelSize);
+			_box.RefImage().emplace().texGUID = a_context.pServices->pAssetDatabase->GetGUIDFromFilePath(LOCK_BOX_TEXTURE_PATH);
 		}
 	}
 

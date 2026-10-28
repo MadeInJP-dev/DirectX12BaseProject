@@ -82,8 +82,5 @@ namespace App::Object
 		// ロック中の相手のスクリーン座標(px)。isLocked が false のフレームは描かない
 		Math::Vector2 m_lockedScreenPos = {};
 		bool m_isLocked = false;
-
-		// 旧形式(ロック枠テクスチャ1枚)からの引き継ぎ用
-		Core::GUID m_legacyLockTexGUID = {};
 	};
 }

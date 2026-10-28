@@ -26,12 +26,12 @@ namespace App::Object
 
 		// 既定のレティクルを1つ用意する。作るのは飾りを1つも持っていないときだけなので、
 		// 保存された飾りを持つシーンでは何もしない
-		if (m_decorationVec.empty())
+		if (m_decoration.GetElementCount() == 0)
 		{
-			Decoration::Decoration& _reticle = AddDecoration(Decoration::EDecorationType::Image);
-			_reticle.name = "Reticle";
-			_reticle.pixelSize = m_anchor.pixelSize;
-			_reticle.RefImage()->texGUID = a_context.pServices->pAssetDatabase->GetGUIDFromFilePath(RETICLE_TEXTURE_PATH);
+			auto& _reticle = AddDecoration<Decoration::UISpriteElement>();
+			_reticle.SetName("Reticle");
+			_reticle.SetPixelSize(m_anchor.pixelSize);
+			_reticle.RefImage().emplace().texGUID = a_context.pServices->pAssetDatabase->GetGUIDFromFilePath(RETICLE_TEXTURE_PATH);
 		}
 	}
 

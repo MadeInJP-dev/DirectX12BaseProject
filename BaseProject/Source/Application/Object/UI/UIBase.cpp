@@ -138,14 +138,13 @@ namespace App::Object
 
 		// 飾りは今の状態を受け取って、そこへ寄っていく。
 		// 出していない組も進める(デバイスを持ち替えた瞬間に、止まっていた所から動き出さないように)
-		const Decoration::EUIState _state = GetUIState();
+		Decoration::UpdateContext _updateContext = {};
+		_updateContext.dt = a_context.dt;
+		_updateContext.parentState = GetUIState();
 
-		ForEachDecorationSet([&](std::vector<Decoration::Decoration>& a_decorationVec)
+		ForEachDecorationSet([&](Decoration::UIDecoration& a_decoration)
 			{
-				for (Decoration::Decoration& _decoration : a_decorationVec)
-				{
-					Decoration::AdvanceAnimation(_decoration, _state, a_context.dt);
-				}
+				a_decoration.Update(_updateContext);
 			});
 
 		// 出し入れと合図の演出も、飾りと同じく出していないフレームも進める
@@ -369,65 +368,16 @@ namespace App::Object
 	}
 
 	//======================================================================================
-	// 自分の判定矩形の内側か
+	// 自分の当たり判定の内側か
 	//--------------------------------------------------------------------------------------
-	// 判定そのものは UIAnchor::IsPointInside。ここは矩形を組み立てて渡すだけ。
-	//
-	// 使う矩形は3通り :
-	//   HitFollowAnim が立っている … 飾りの今の範囲(アニメーション・反応込み)から作る
-	//   PixelSize が入っている     … アンカーの矩形をそのまま使う(判定を絵とずらしたいとき用)
-	//   PixelSize が 0            … 飾りが占めている範囲(素の大きさ)から作る
-	//
-	// 飾りから作る道を用意してあるのは、見た目を飾り側へ移したことで
-	// アンカーの大きさを入れ忘れやすくなったため。
-	// 幅0の矩形はどこにも当たらないので、そのままだと
-	// 「置いて飾りを付けたのに、乗っても何も起きない」になる。
-	//
-	// HitFollowAnim は絵の大きさが動くもの用。アンカーの矩形は動かないので、
-	// 切ったままだと大きくなった絵のふちがどこにも当たらない
+	// UI が持つのは「判定を受けるか」だけ。当たったかどうかは飾りのボディが答える。
+	// 切り抜かれて見えていないところは押せない
+	// (スクロールで範囲の外へ出た項目が、範囲の外(見出しや別のボタンの上)で押されないようにする)
 	//======================================================================================
-	bool UIBase::CalcHitRect(HitRect& a_outRect) const
-	{
-		if (!m_opInteraction) return false;
-
-		const bool _isHitFollowAnim = m_opInteraction->isHitFollowAnim;
-
-		// 画面での置き場所(実行中だけのずらし・親の行列込み)
-		const UIAnchor _anchor = CalcWorldAnchor();
-
-		a_outRect.rotation = _anchor.rotation;
-		a_outRect.padding = m_opInteraction->hitPadding;
-
-		// アンカーに大きさが入っていても、今の絵へ追従させる指示があれば飾りを優先する
-		const bool _isUseDecorationBounds = _isHitFollowAnim || !_anchor.HasSize();
-
-		if (_isUseDecorationBounds)
-		{
-			Math::Vector2 _center = {};
-			Math::Vector2 _size = {};
-			if (CalcDecorationBounds(_center, _size, _isHitFollowAnim))
-			{
-				a_outRect.pixelPos = _anchor.ToScreenPos(_center);	// 範囲の中心を指す点。回転と倍率はアンカーのものが乗る
-				a_outRect.pixelSize = _size * _anchor.scale;
-				a_outRect.pivot = { 0.5f, 0.5f };						// 中心を出しているのでピボットは中央
-				return true;
-			}
-
-			// 測れる飾りが1つも無ければアンカーの矩形へ戻る(文字だけのUIなど)
-		}
-
-		if (!_anchor.HasSize()) return false;
-
-		a_outRect.pixelPos = _anchor.pixelPos;
-		a_outRect.pixelSize = _anchor.pixelSize;
-		a_outRect.pivot = _anchor.pivot;
-		return true;
-	}
-
 	bool UIBase::IsPointInsideSelf(const Math::Vector2& a_uiPos) const
 	{
-		// 切り抜かれて見えていないところは押せない。
-		// スクロールで範囲の外へ出た項目が、範囲の外(見出しや別のボタンの上)で押されないようにする
+		if (!m_isHitTarget) return false;
+
 		if (m_opClipRect)
 		{
 			const Engine::Graphics::UIClipRect& _clip = m_opClipRect.value();
@@ -435,16 +385,7 @@ namespace App::Object
 			if (a_uiPos.x > _clip.max.x || a_uiPos.y > _clip.max.y) return false;
 		}
 
-		HitRect _rect = {};
-		if (!CalcHitRect(_rect)) return false;
-
-		return UIAnchor::IsPointInside(
-			a_uiPos,
-			_rect.pixelPos,
-			_rect.pixelSize,
-			_rect.pivot,
-			_rect.rotation,
-			_rect.padding);
+		return GetDecoration().IsHit(a_uiPos, MakeParentTransform(), MakeParentOption());
 	}
 
 	//======================================================================================
@@ -454,10 +395,10 @@ namespace App::Object
 	{
 		if (!IsDrawnInHierarchy(a_context)) return false;
 
-		// 押せる UI は、押したときと同じ範囲で選ぶ(切り抜きもそこで見る)
-		if (m_opInteraction) return IsPointInsideSelf(a_uiPos);
+		// 判定を受ける UI は、押したときと同じ範囲で選ぶ(切り抜きもそこで見る)
+		if (m_isHitTarget && GetDecoration().HasHitBody()) return IsPointInsideSelf(a_uiPos);
 
-		// 押せない UI : 見えていないところでは選ばない
+		// 見えていないところでは選ばない
 		if (m_opClipRect)
 		{
 			const Engine::Graphics::UIClipRect& _clip = m_opClipRect.value();
@@ -482,101 +423,13 @@ namespace App::Object
 
 	//======================================================================================
 	// 飾りが占めている範囲
-	//--------------------------------------------------------------------------------------
-	// a_isIncludeAnim を立てると、素の矩形に加えて
-	// 「アニメーション・反応を掛けた今の矩形」も範囲へ入れる(2つの合併)。
-	//
-	// 今の矩形だけに差し替えないのは、乗ると縮む反応を付けたときに
-	// 「乗る→縮んで外れる→戻って乗る」が毎フレーム入れ替わってちらつくため。
-	// 合併にしておけば判定が素の大きさより痩せないので、広がる側だけが効く
 	//======================================================================================
 	bool UIBase::CalcDecorationBounds(
 		Math::Vector2& a_outCenter,
 		Math::Vector2& a_outSize,
 		bool a_isIncludeAnim) const
 	{
-		bool _hasAny = false;
-		float _minX = 0.0f, _minY = 0.0f, _maxX = 0.0f, _maxY = 0.0f;
-
-		// 矩形1つぶんを範囲へ足す : 回転を掛けた4隅を取り、それを囲む矩形にする
-		const auto _addRect = [&](
-			const Math::Vector2& a_offset,
-			const Math::Vector2& a_size,
-			const Math::Vector2& a_pivot,
-			float a_rotation)
-		{
-			if (a_size.x <= 0.0f || a_size.y <= 0.0f) return;
-
-			const Math::Vector2 _topLeft = {
-				-a_pivot.x * a_size.x,
-				-a_pivot.y * a_size.y
-			};
-			const Math::Vector2 _cornerArray[4] = {
-				_topLeft,
-				{ _topLeft.x + a_size.x, _topLeft.y },
-				{ _topLeft.x,            _topLeft.y + a_size.y },
-				{ _topLeft.x + a_size.x, _topLeft.y + a_size.y },
-			};
-
-			for (const Math::Vector2& _corner : _cornerArray)
-			{
-				const Math::Vector2 _point = a_offset + UIAnchor::RotateDeg(_corner, a_rotation);
-
-				if (!_hasAny)
-				{
-					_minX = _maxX = _point.x;
-					_minY = _maxY = _point.y;
-					_hasAny = true;
-					continue;
-				}
-
-				_minX = std::min(_minX, _point.x);
-				_minY = std::min(_minY, _point.y);
-				_maxX = std::max(_maxX, _point.x);
-				_maxY = std::max(_maxY, _point.y);
-			}
-		};
-
-		// 判定も見えている組に合わせる(コントローラー用は絵の大きさが違うことがある)
-		for (const Decoration::Decoration& _decoration : GetShownDecorationVec())
-		{
-			if (!_decoration.isVisible) continue;
-
-			// 文字は大きさをフォントから組み立てるので、ここでは測れない。
-			// 文字だけのUIに判定を持たせたいときは PixelSize を入れること
-			if (_decoration.GetType() == Decoration::EDecorationType::Text) continue;
-
-			const Math::Vector2 _size = _decoration.pixelSize * _decoration.scale;
-			if (_size.x <= 0.0f || _size.y <= 0.0f) continue;
-
-			// 素の矩形
-			_addRect(_decoration.offsetPos, _size, _decoration.pivot, _decoration.rotation);
-
-			if (!a_isIncludeAnim) continue;
-
-			//----------------------------------------------------------------------
-			// 今の矩形 : 描画と同じ合成結果を使う
-			//
-			// 反応で消している飾り(visibleRate が 0 に寄っているもの)も
-			// 大きさとしては数える。透明な枠のぶんまで判定が伸びるのが困るなら、
-			// その飾りの isVisible を切ること
-			//----------------------------------------------------------------------
-			const Decoration::DecorationTransform _now =
-				Decoration::CalcCurrentTransform(_decoration);
-
-			_addRect(
-				_decoration.offsetPos + _now.offsetAdd,
-				_size * _now.scaleMul,
-				_decoration.pivot,
-				_decoration.rotation + _now.rotationAdd);
-		}
-
-		if (!_hasAny) return false;
-
-		a_outCenter = { (_minX + _maxX) * 0.5f, (_minY + _maxY) * 0.5f };
-		a_outSize   = { _maxX - _minX, _maxY - _minY };
-
-		return true;
+		return GetDecoration().CalcBounds(a_outCenter, a_outSize, a_isIncludeAnim);
 	}
 
 	void UIBase::Draw(Engine::GameObject::ObjectContext& a_context)
@@ -588,111 +441,49 @@ namespace App::Object
 	//======================================================================================
 	// 飾りの操作
 	//======================================================================================
-	Decoration::Decoration& UIBase::AddDecoration(Decoration::EDecorationType a_type)
+	Decoration::UIDecorationElementBase* UIBase::FindDecorationById(uint32_t a_id)
 	{
-		return AddDecorationTo(m_decorationVec, a_type);
+		return (a_id != 0) ? RefDecoration().FindElementById(Decoration::ElementID(a_id)) : nullptr;
 	}
 
-	Decoration::Decoration& UIBase::AddDecorationTo(std::vector<Decoration::Decoration>& a_decorationVec, Decoration::EDecorationType a_type)
+	const Decoration::UIDecorationElementBase* UIBase::FindDecorationById(uint32_t a_id) const
 	{
-		// 番号は配列が伸びる前に決める(伸びた後だと、作りかけの 0 番を数えてしまう)
-		const uint32_t _id = MakeNewDecorationId();
-
-		Decoration::Decoration& _decoration = a_decorationVec.emplace_back();
-		_decoration.id = _id;
-		_decoration.SetType(a_type);
-
-		// 名前が全部同じだと一覧で見分けられないので、種類と番号を入れておく
-		const char* _typeName = "Decoration";
-		switch (a_type)
-		{
-		case Decoration::EDecorationType::Image:   _typeName = "Image";   break;
-		case Decoration::EDecorationType::Text:    _typeName = "Text";    break;
-		case Decoration::EDecorationType::Polygon:
-		default:                                   _typeName = "Polygon"; break;
-		}
-		_decoration.name = std::string(_typeName) + std::to_string(a_decorationVec.size());
-
-		return _decoration;
-	}
-
-	Decoration::Decoration* UIBase::FindDecoration(const std::string& a_name)
-	{
-		const int _index = FindDecorationIndex(a_name);
-		return (_index >= 0) ? &RefShownDecorationVec()[_index] : nullptr;
-	}
-
-	Decoration::Decoration* UIBase::FindDecorationById(uint32_t a_id)
-	{
-		const int _index = FindDecorationIndexById(a_id);
-		return (_index >= 0) ? &RefShownDecorationVec()[_index] : nullptr;
-	}
-
-	const Decoration::Decoration* UIBase::FindDecorationById(uint32_t a_id) const
-	{
-		const int _index = FindDecorationIndexById(a_id);
-		return (_index >= 0) ? &GetShownDecorationVec()[_index] : nullptr;
+		return (a_id != 0) ? GetDecoration().FindElementById(Decoration::ElementID(a_id)) : nullptr;
 	}
 
 	int UIBase::FindDecorationIndexById(uint32_t a_id) const
 	{
-		if (a_id == 0) return -1;
+		return (a_id != 0) ? GetDecoration().FindElementIndex(Decoration::ElementID(a_id)) : -1;
+	}
 
-		const std::vector<Decoration::Decoration>& _decorationVec = GetShownDecorationVec();
-		for (size_t _i = 0; _i < _decorationVec.size(); ++_i)
+	int UIBase::FindDecorationIndex(const std::string& a_name) const
+	{
+		const Decoration::UIDecoration& _decoration = GetDecoration();
+		for (size_t _i = 0; _i < _decoration.GetElementCount(); ++_i)
 		{
-			if (_decorationVec[_i].id == a_id) return static_cast<int>(_i);
+			if (_decoration.GetElement(_i).GetName() == a_name) return static_cast<int>(_i);
 		}
 		return -1;
 	}
 
-	uint32_t UIBase::MakeNewDecorationId() const
+	bool UIBase::DrawDecorationPicker(
+		const char* a_label,
+		uint32_t& a_inoutId,
+		std::optional<Decoration::EElementType> a_opFilterType) const
 	{
-		// 今ある番号の最大の次。消した飾りの番号は使い回さない
-		// (消したことに気付かず指したままの側が、別の飾りを掴んでしまわないように)。
-		// 組をまたいで数える : 片方の組にだけ足した飾りが、もう片方の別の飾りと同じ番号にならないように
-		uint32_t _maxId = 0;
-		for (const Decoration::Decoration& _decoration : m_decorationVec)
-		{
-			_maxId = std::max(_maxId, _decoration.id);
-		}
-		if (m_opGamepadDecorationVec)
-		{
-			for (const Decoration::Decoration& _decoration : *m_opGamepadDecorationVec)
-			{
-				_maxId = std::max(_maxId, _decoration.id);
-			}
-		}
-		return _maxId + 1;
+		return m_decoration.DrawElementPicker(a_label, a_inoutId, a_opFilterType);
 	}
 
-	// 番号の重なりは組の中だけで見る(コントローラー用は既定の組と同じ番号を持つのが正しい形)
-	void UIBase::AssignDecorationIds()
+	// 番号は組をまたいで共有する : 片方の組にだけ足したエレメントが、もう片方の別のエレメントと同じ番号にならないように
+	void UIBase::SyncDecorationIdFloors()
 	{
-		ForEachDecorationSet([this](std::vector<Decoration::Decoration>& a_decorationVec)
-			{
-				AssignDecorationIdsIn(a_decorationVec);
-			});
-	}
-
-	void UIBase::AssignDecorationIdsIn(std::vector<Decoration::Decoration>& a_decorationVec)
-	{
-		for (size_t _i = 0; _i < a_decorationVec.size(); ++_i)
+		if (!m_opGamepadDecoration)
 		{
-			Decoration::Decoration& _decoration = a_decorationVec[_i];
-
-			// 前にある飾りと同じ番号なら、後ろのほうを振り直す
-			bool _isDuplicated = false;
-			for (size_t _j = 0; _j < _i; ++_j)
-			{
-				if (a_decorationVec[_j].id == _decoration.id) { _isDuplicated = true; break; }
-			}
-
-			if (_decoration.id == 0 || _isDuplicated)
-			{
-				_decoration.id = MakeNewDecorationId();
-			}
+			m_decoration.SetIdFloor(0);
+			return;
 		}
+		m_decoration.SetIdFloor(m_opGamepadDecoration->GetMaxElementId());
+		m_opGamepadDecoration->SetIdFloor(m_decoration.GetMaxElementId());
 	}
 
 	//======================================================================================
@@ -702,10 +493,19 @@ namespace App::Object
 		Engine::GameObject::ObjectContext& a_context,
 		const Decoration::DrawOverride& a_override)
 	{
+		DrawDecorationAt(a_context, SIZE_MAX, a_override);
+	}
+
+	// a_index が SIZE_MAX なら全部描く
+	void UIBase::DrawDecorationAt(
+		Engine::GameObject::ObjectContext& a_context,
+		size_t a_index,
+		const Decoration::DrawOverride& a_override)
+	{
 		// 出さない指示はここでまとめて弾く。
 		// 継承先が Draw を自前で持っていても、切れば(パネルごと隠せば)必ず消えるようにするため
-		const std::vector<Decoration::Decoration>& _decorationVec = GetShownDecorationVec();
-		if (_decorationVec.empty()) return;
+		Decoration::UIDecoration& _decoration = RefDecoration();
+		if (_decoration.GetElementCount() == 0) return;
 		if (!IsDrawnInHierarchy(a_context)) return;
 		if (IsHiddenAsHUD(a_context)) return;
 		if (!a_context.pServices || !a_context.pServices->pMainEngine) return;
@@ -717,51 +517,16 @@ namespace App::Object
 		// 描くのは PreUpdate を回さない場面(エディターで止めている間など)もあるので、ここでも写す
 		SyncDecorationPresets(a_context);
 
-		const Decoration::ParentTransform _parentTr = MakeParentTransform();
-		Decoration::ParentOption _parentOp = MakeParentOption();
-		_parentOp.pMaterial = FindReadyMaterial(a_context.pServices->pResourceManager);
-		const Decoration::DrawOverride _override = ApplyTransition(a_override);
+		Decoration::DrawContext _drawContext = {};
+		_drawContext.pGraphicsEngine = _pGE;
+		_drawContext.pResourceManager = a_context.pServices->pResourceManager;
+		_drawContext.parentTr = MakeParentTransform();
+		_drawContext.parentOp = MakeParentOption();
+		_drawContext.drawOverride = ApplyTransition(a_override);
 
 		// 配列の順に積む : 後ろにあるものほど手前に出る
-		for (const Decoration::Decoration& _decoration : _decorationVec)
-		{
-			Decoration::DrawDecoration(
-				_pGE,
-				a_context.pServices->pResourceManager,
-				_decoration,
-				_parentTr,
-				_parentOp,
-				_override);
-		}
-	}
-
-	void UIBase::DrawDecorationAt(
-		Engine::GameObject::ObjectContext& a_context,
-		size_t a_index,
-		const Decoration::DrawOverride& a_override)
-	{
-		const std::vector<Decoration::Decoration>& _decorationVec = GetShownDecorationVec();
-		if (a_index >= _decorationVec.size()) return;
-		if (!IsDrawnInHierarchy(a_context)) return;
-		if (IsHiddenAsHUD(a_context)) return;
-		if (!a_context.pServices || !a_context.pServices->pMainEngine) return;
-		if (!a_context.pServices->pResourceManager) return;
-
-		auto* _pGE = a_context.pServices->pMainEngine->RefGraphicsEngine();
-		if (!_pGE) return;
-
-		SyncDecorationPresets(a_context);
-
-		Decoration::ParentOption _parentOp = MakeParentOption();
-		_parentOp.pMaterial = FindReadyMaterial(a_context.pServices->pResourceManager);
-
-		Decoration::DrawDecoration(
-			_pGE,
-			a_context.pServices->pResourceManager,
-			_decorationVec[a_index],
-			MakeParentTransform(),
-			_parentOp,
-			ApplyTransition(a_override));
+		if (a_index == SIZE_MAX) _decoration.Draw(_drawContext);
+		else                     _decoration.DrawElement(a_index, _drawContext);
 	}
 
 	//======================================================================================
@@ -788,30 +553,16 @@ namespace App::Object
 	//======================================================================================
 	// マテリアル
 	//--------------------------------------------------------------------------------------
-	// UI 単位で1つ持ち、飾り全部に同じ効果を掛ける(ParentOption::pMaterial)。
+	// 持ち主は飾り(UIDecoration)。UI 単位で1つ持ち、飾り全部に同じ効果を掛ける。
 	// 読み終わるまでは効果なしで描く(届くまで描かないと、出た瞬間に UI が見えない)
 	//======================================================================================
 	void UIBase::SetMaterialGUID(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_guid)
 	{
-		m_materialGUID = a_guid;
-		RequestMaterial(a_context);
-	}
-
-	void UIBase::RequestMaterial(Engine::GameObject::ObjectContext& a_context)
-	{
-		if (!a_context.pServices || !a_context.pServices->pResourceManager) return;
-
-		m_materialRef = m_materialGUID.IsValid()
-			? a_context.pServices->pResourceManager->RequestLoad<Engine::Resource::UIMaterial>(m_materialGUID)
-			: Engine::ResourceRef<Engine::Resource::UIMaterial>();
-	}
-
-	const Engine::Resource::UIMaterial* UIBase::FindReadyMaterial(Engine::Resource::ResourceManager* a_pResourceManager) const
-	{
-		if (!a_pResourceManager || !m_materialRef.IsValid()) return nullptr;
-		if (!a_pResourceManager->IsReady(m_materialRef)) return nullptr;
-
-		return a_pResourceManager->Get(m_materialRef);
+		auto* _pResourceManager = a_context.pServices ? a_context.pServices->pResourceManager : nullptr;
+		ForEachDecorationSet([&](Decoration::UIDecoration& a_decoration)
+			{
+				a_decoration.SetMaterialGUID(a_guid, _pResourceManager);
+			});
 	}
 
 	//======================================================================================
@@ -846,16 +597,6 @@ namespace App::Object
 		return _parentOp;
 	}
 
-	int UIBase::FindDecorationIndex(const std::string& a_name) const
-	{
-		const std::vector<Decoration::Decoration>& _decorationVec = GetShownDecorationVec();
-		for (size_t _i = 0; _i < _decorationVec.size(); ++_i)
-		{
-			if (_decorationVec[_i].name == a_name) return static_cast<int>(_i);
-		}
-		return -1;
-	}
-
 	//======================================================================================
 	// コントローラー用の飾りの出し分け
 	//--------------------------------------------------------------------------------------
@@ -864,14 +605,14 @@ namespace App::Object
 	// 実際にコントローラーを触っているかだけで決める(キーボードで項目を動かしても、
 	// 出す絵はキーボードのまま)。まだ何も触っていない(None)ならキーボードとみなす
 	//======================================================================================
-	std::vector<Decoration::Decoration>& UIBase::RefShownDecorationVec()
+	Decoration::UIDecoration& UIBase::RefDecoration()
 	{
-		return IsShowingGamepadDecorations() ? *m_opGamepadDecorationVec : m_decorationVec;
+		return IsShowingGamepadDecorations() ? *m_opGamepadDecoration : m_decoration;
 	}
 
-	const std::vector<Decoration::Decoration>& UIBase::GetShownDecorationVec() const
+	const Decoration::UIDecoration& UIBase::GetDecoration() const
 	{
-		return IsShowingGamepadDecorations() ? *m_opGamepadDecorationVec : m_decorationVec;
+		return IsShowingGamepadDecorations() ? *m_opGamepadDecoration : m_decoration;
 	}
 
 	void UIBase::UpdateShownDecorationSet(const Engine::GameObject::ObjectContext& a_context)
@@ -895,38 +636,31 @@ namespace App::Object
 	// 番号ごと写す : 同じ役の飾りが両方の組で同じ番号を持つように(上の説明を参照)
 	void UIBase::CreateGamepadDecorations()
 	{
-		if (m_opGamepadDecorationVec) return;
-		m_opGamepadDecorationVec = m_decorationVec;
+		if (m_opGamepadDecoration) return;
+		m_opGamepadDecoration = m_decoration;
+		m_opGamepadDecoration->SetEditElementId({});
 	}
 
 	void UIBase::RemoveGamepadDecorations()
 	{
-		m_opGamepadDecorationVec = std::nullopt;
+		m_opGamepadDecoration = std::nullopt;
 		m_isEditGamepadSet = false;
-		m_editDecorationIndex = -1;
 	}
 
 	//======================================================================================
 	// プリセット
 	//--------------------------------------------------------------------------------------
 	// 指しているプリセットの番号が変わった飾りだけ写し直す(変わっていなければ番号を見るだけ)。
-	// 写した飾りは見た目(テクスチャ・フォント)が変わっているかもしれないので引き直す
+	// 出していない組も写す(持ち替えたときに古い見た目が一瞬出ないように)
 	//======================================================================================
 	void UIBase::SyncDecorationPresets(Engine::GameObject::ObjectContext& a_context)
 	{
 		if (!a_context.pServices || !a_context.pServices->pResourceManager) return;
 		auto* _pResourceManager = a_context.pServices->pResourceManager;
 
-		// 出していない組も写す(持ち替えたときに古い見た目が一瞬出ないように)
-		ForEachDecorationSet([_pResourceManager](std::vector<Decoration::Decoration>& a_decorationVec)
+		ForEachDecorationSet([_pResourceManager](Decoration::UIDecoration& a_decoration)
 			{
-				for (Decoration::Decoration& _decoration : a_decorationVec)
-				{
-					if (Decoration::SyncPreset(_decoration, _pResourceManager))
-					{
-						Decoration::RequestResources(_decoration, _pResourceManager);
-					}
-				}
+				a_decoration.SyncPresets(_pResourceManager);
 			});
 	}
 
@@ -935,12 +669,9 @@ namespace App::Object
 		if (!a_context.pServices || !a_context.pServices->pResourceManager) return;
 		auto* _pResourceManager = a_context.pServices->pResourceManager;
 
-		ForEachDecorationSet([_pResourceManager](std::vector<Decoration::Decoration>& a_decorationVec)
+		ForEachDecorationSet([_pResourceManager](Decoration::UIDecoration& a_decoration)
 			{
-				for (Decoration::Decoration& _decoration : a_decorationVec)
-				{
-					Decoration::RequestResources(_decoration, _pResourceManager);
-				}
+				a_decoration.RequestResources(_pResourceManager);
 			});
 	}
 
@@ -1026,18 +757,14 @@ namespace App::Object
 	//======================================================================================
 	// シリアライズ
 	//--------------------------------------------------------------------------------------
-	// 前半はテクスチャを1枚だけ持っていた頃の並びをそのまま残してある。
-	// 順番を崩すと、区切りを持たない古い .ob* が読めなくなるため。
-	// 飾りの配列は末尾へ足し、配列を持たない古いシーンだけ TexGUID から作り直す
+	// 区切りの中は並び順で読むので、追加は必ず末尾へ。
+	// 区切りを入れる前に足したものは、区切りを持たない古い .ob* にも並びが残っている
 	//======================================================================================
 	void UIBase::Archive(Engine::Persistence::Archive& a_ar, Engine::GameObject::ObjectContext& a_context)
 	{
 		// UIBase のぶんを1つの区切りにまとめる。
 		// 派生のぶんは派生側で別の区切りに入れるので、ここへ足しても派生の読み出しはずれない
 		Engine::Persistence::ArchiveSection _section(a_ar, "UIBase");
-
-		// ---- 旧形式の名残(読み書きは続けるが、使うのは引き継ぎのときだけ) ----
-		a_ar.GUIDField("TexGUID", m_legacyTexGUID);
 
 		// ---- アンカー ----
 		a_ar.Field("Color", m_anchor.color);
@@ -1046,7 +773,6 @@ namespace App::Object
 		a_ar.Field("SizePixel", m_anchor.pixelSize);
 		a_ar.Field("m_rotation", m_anchor.rotation);
 		a_ar.Field("m_pivot", m_anchor.pivot);
-		a_ar.Field("m_uvOffset", m_legacyUvOffset);
 		a_ar.Field("m_layer", m_anchor.layer);
 		a_ar.Field("m_scale", m_anchor.scale);
 
@@ -1055,8 +781,7 @@ namespace App::Object
 		a_ar.Field("CurveRadius", m_anchor.curveRadius);
 		a_ar.Field("CurveAngle", m_anchor.curveAngle);
 
-		// 出し分けの状態。※ 追加は必ずここより上でなく区切りの末尾へ
-		//    (区切りの中は並び順で読むので、間に挟むと既存のデータがずれる)
+		// 出し分けの状態
 		a_ar.Field("IsVisible", m_isVisible);
 
 		// ---- カーソルへの反応 ----
@@ -1065,135 +790,72 @@ namespace App::Object
 		UIInteraction& _interaction = m_opInteraction ? *m_opInteraction : _unusedInteraction;
 		_interaction.ArchiveSettings(a_ar);
 
-		// ---- 飾り ----
-		const bool _hasDecorationArray = ArchiveDecorationVec(a_ar, "Decorations", m_decorationVec);
-
-		// ---- ここから下は後から足したもの : 追加は必ず末尾へ ----
-		a_ar.Field("HitFollowAnim", _interaction.isHitFollowAnim);
-
+		// ---- ここから下は区切りを入れた後に足したもの ----
 		// 区切りを持たない古い .ob* には無いので読まない(読まなければクラスの既定値のまま)
-		if (!a_ar.IsLegacyLayout()) a_ar.Field("IsHUD", m_isHUD);
-		if (!a_ar.IsLegacyLayout()) a_ar.Field("IsScanLine", m_anchor.isScanLine);
-
-		// 出し入れと合図の演出。自分の区切りを持つので、この後ろへ足しても読み出しはずれない
 		if (!a_ar.IsLegacyLayout())
 		{
-			const bool _isLoaded = m_transition.Archive(a_ar);
-			if (a_ar.IsLoading()) m_isTransitionLoaded = _isLoaded;
-		}
+			a_ar.Field("IsHUD", m_isHUD);
+			a_ar.Field("IsScanLine", m_anchor.isScanLine);
 
-		// 飾り全部に掛ける効果(UIマテリアル)
-		if (!a_ar.IsLegacyLayout()) a_ar.GUIDField("MaterialGUID", m_materialGUID);
+			// 出し入れと合図の演出。自分の区切りを持つので、この後ろへ足しても読み出しはずれない
+			m_transition.Archive(a_ar);
 
-		// 項目移動の前・次の UI。押せない UI も並びを保つために空の GUID を書き、読んだ値は捨てる
-		if (!a_ar.IsLegacyLayout())
-		{
+			// 項目移動の前・次・左・右の UI。押せない UI も並びを保つために空の GUID を書き、読んだ値は捨てる
 			a_ar.GUIDField("NavPrevGUID", _interaction.navPrevGUID);
 			a_ar.GUIDField("NavNextGUID", _interaction.navNextGUID);
-		}
-
-		// コントローラー用の飾り(任意)。持つかどうかの印を先に書き、持たない UI も
-		// 並びを保つために空の配列を書く(読んだ空の配列は、印が立っていなければ捨てる)
-		if (!a_ar.IsLegacyLayout())
-		{
-			bool _hasGamepadDecorations = m_opGamepadDecorationVec.has_value();
-			a_ar.Field("HasGamepadDecorations", _hasGamepadDecorations);
-
-			std::vector<Decoration::Decoration> _unusedDecorationVec = {};
-			std::vector<Decoration::Decoration>& _gamepadDecorationVec =
-				(a_ar.IsLoading() || !m_opGamepadDecorationVec) ? _unusedDecorationVec : *m_opGamepadDecorationVec;
-			ArchiveDecorationVec(a_ar, "GamepadDecorations", _gamepadDecorationVec);
-
-			if (a_ar.IsLoading())
-			{
-				m_opGamepadDecorationVec = _hasGamepadDecorations
-					? std::optional<std::vector<Decoration::Decoration>>(std::move(_unusedDecorationVec))
-					: std::nullopt;
-			}
-		}
-
-		// 項目移動の左・右の UI。前・次と同じく、押せない UI も空の GUID を書いて並びを保つ
-		if (!a_ar.IsLegacyLayout())
-		{
 			a_ar.GUIDField("NavLeftGUID", _interaction.navLeftGUID);
 			a_ar.GUIDField("NavRightGUID", _interaction.navRightGUID);
-		}
 
-		// 子の状態にも反応するか
-		if (!a_ar.IsLegacyLayout()) a_ar.Field("ReactToChildren", m_isReactToChildren);
+			// 子の状態にも反応するか
+			a_ar.Field("ReactToChildren", m_isReactToChildren);
+
+			// 当たり判定を受けるか
+			a_ar.Field("IsHitTarget", m_isHitTarget);
+
+			//------------------------------------------------------------------------------
+			// 飾り(UIDecoration)
+			//
+			// JSON では区切りが入れ子にならない(UIBase と同じ階層へ平らに書かれる)。
+			// 飾りの項目名(IsVisible・MaterialGUID・Elements)が UIBase や2つ目の組とぶつからないよう、
+			// 組ごとに入れ子(グループ)へ入れる。バイナリではグループは何もしないので区切りで囲む
+			//------------------------------------------------------------------------------
+			if (a_ar.BeginGroup("Decoration"))
+			{
+				{
+					Engine::Persistence::ArchiveSection _decorationSection(a_ar, "Decoration");
+					m_decoration.Archive(a_ar);
+				}
+				a_ar.EndGroup();
+			}
+
+			bool _hasGamepadDecoration = m_opGamepadDecoration.has_value();
+			a_ar.Field("HasGamepadDecoration", _hasGamepadDecoration);
+			if (_hasGamepadDecoration)
+			{
+				if (!m_opGamepadDecoration) m_opGamepadDecoration.emplace();
+
+				if (a_ar.BeginGroup("GamepadDecoration"))
+				{
+					{
+						Engine::Persistence::ArchiveSection _gamepadSection(a_ar, "GamepadDecoration");
+						m_opGamepadDecoration->Archive(a_ar);
+					}
+					a_ar.EndGroup();
+				}
+			}
+			else
+			{
+				m_opGamepadDecoration = std::nullopt;
+			}
+		}
 
 		m_anchor.editSize = m_anchor.pixelSize;
 
 		if (!a_ar.IsLoading()) return;
 
-		MigrateLegacyTexture(_hasDecorationArray);
-		AssignDecorationIds();
-
 		// 読み込み時は復元したGUIDでテクスチャ・フォント・マテリアルを引き直す。
 		// 実体が届くのを待つ必要はないので、要求だけ出して先へ進む
 		// (描画側は IsReady を見て、まだのフレームは描かない)
 		RequestDecorationResources(a_context);
-		RequestMaterial(a_context);
-	}
-
-	//======================================================================================
-	// 飾りの配列1つぶん
-	//--------------------------------------------------------------------------------------
-	// 既定の組とコントローラー用の組で同じ形にしてある
-	//======================================================================================
-	bool UIBase::ArchiveDecorationVec(Engine::Persistence::Archive& a_ar, const std::string& a_name, std::vector<Decoration::Decoration>& a_decorationVec)
-	{
-		size_t _decorationCount = a_decorationVec.size();
-		if (!a_ar.BeginArray(a_name, _decorationCount)) return false;
-
-		a_decorationVec.resize(_decorationCount);
-
-		for (size_t _i = 0; _i < _decorationCount; ++_i)
-		{
-			if (!a_ar.BeginObject(_i)) continue;
-
-			// 飾り1つごとに区切る。飾りへフィールドを足しても、
-			// 後ろの飾りと UIBase の残り(HitFollowAnim など)の読み出しがずれない
-			{
-				Engine::Persistence::ArchiveSection _decorationSection(a_ar, "Decoration");
-				Decoration::ArchiveDecoration(a_ar, a_decorationVec[_i]);
-			}
-
-			a_ar.EndObject();
-		}
-		a_ar.EndArray();
-		return true;
-	}
-
-	//======================================================================================
-	// 旧形式からの引き継ぎ
-	//--------------------------------------------------------------------------------------
-	// 飾りの配列を持たないシーンだけが対象。
-	// 既に画像の飾りを持っていれば、その画像へ保存されていたGUIDを移す
-	// (作り直すと、入れてあった大きさや色まで消えてしまうため)。
-	// 無ければここで1つ作る。継承先の PostDeserialize は
-	// この後に走るので、飾りが埋まっているのを見て何もしない
-	//======================================================================================
-	void UIBase::MigrateLegacyTexture(bool a_hasDecorationArray)
-	{
-		if (a_hasDecorationArray || !m_legacyTexGUID.IsValid()) return;
-
-		Decoration::ImageData* _pImage = nullptr;
-		for (Decoration::Decoration& _decoration : m_decorationVec)
-		{
-			_pImage = _decoration.RefImage();
-			if (_pImage) break;
-		}
-
-		if (_pImage == nullptr)
-		{
-			Decoration::Decoration& _decoration = AddDecoration(Decoration::EDecorationType::Image);
-			_decoration.pixelSize = m_anchor.pixelSize;
-			_decoration.pivot = m_anchor.pivot;
-			_pImage = _decoration.RefImage();
-		}
-
-		_pImage->texGUID = m_legacyTexGUID;
-		_pImage->quad.uvOffset = m_legacyUvOffset;
 	}
 }

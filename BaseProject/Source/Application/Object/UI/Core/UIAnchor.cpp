@@ -23,6 +23,7 @@ namespace App::Object
 		// 弧はUIにつき1本。飾りごとの大きさではなくアンカーの矩形を基準に張るので、
 		// 幅の違う枠と中身(ゲージの残量など)が同じ弧に乗る
 		_parent.parentSize = pixelSize;
+		_parent.parentPivot = pivot;
 
 		_parent.curveCenter = curveCenter;
 		_parent.curveRadius = curveRadius;

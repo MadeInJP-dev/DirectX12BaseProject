@@ -2223,6 +2223,7 @@
     <ClInclude Include="Source\Application\Object\UI\Decoration\Internal\DecorationInternal.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\UIDecoration.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIDecorationElementBase.h" />
+    <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIHitBody.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UISpriteElement\UISpriteElement.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationDirection.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationParent.h" />

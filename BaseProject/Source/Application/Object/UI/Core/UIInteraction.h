@@ -43,13 +43,6 @@ namespace App::Object
 		// 保存はアクション名なので、並べ替えても指す先は変わらない
 		Game::EGameAction clickAction = Game::EGameAction::Select;
 
-		// 当たり判定の余白(px)。見た目より広く/狭く取りたいとき用
-		Math::Vector2 hitPadding = { 0.0f, 0.0f };
-
-		// 判定を飾りの今の大きさへ追従させるか
-		// 立てている間はアンカーの pixelSize より飾りの範囲が優先される
-		bool isHitFollowAnim = false;
-
 		// 触れるかどうか。切ると Disabled 扱いになる
 		bool isInteractable = true;
 
@@ -147,13 +140,7 @@ namespace App::Object
 		// 借りている音のインスタンスを返す
 		void ReleaseSounds(Engine::GameObject::ObjectContext& a_context);
 
-		/// <summary>
-		/// 設定の保存(HitFollowAnim を除く)
-		/// </summary>
-		/// <remarks>
-		/// 並びは UIBase が抱えていた頃のまま。HitFollowAnim は後から足したもので、
-		/// 飾りの配列より後ろに置かれているため UIBase::Archive が書く
-		/// </remarks>
+		// 設定の保存(UIBase::Archive から、並びの途中で呼ばれる)
 		void ArchiveSettings(Engine::Persistence::Archive& a_ar);
 
 		// インスペクター : 判定の設定(エディター用)

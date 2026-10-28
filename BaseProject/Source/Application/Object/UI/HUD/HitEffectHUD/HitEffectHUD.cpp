@@ -23,23 +23,22 @@ namespace App::Object
 		m_isHUD = true;
 
 		// 新しく置いたときの出し方 : 当たった瞬間に少し大きく出て、薄くなりながら戻って消える
-		MigrateLegacyTransition();
+		SetDefaultTransition();
 	}
 
 	//======================================================================================
-	// 旧形式からの引き継ぎ
+	// 新しく置いたときの出し方
 	//--------------------------------------------------------------------------------------
-	// 以前は「出しておく時間・消えぎわに薄くするか・出た瞬間の拡大率」を自分で持ち、
-	// 残り時間の割合で倍率と色を直線で動かしていた。同じ動きになるよう演出の合図へ移す
+	// 0.15 秒で、1.25 倍から等倍へ戻りながら消える(合図の演出)
 	//======================================================================================
-	void HitEffectHUD::MigrateLegacyTransition()
+	void HitEffectHUD::SetDefaultTransition()
 	{
 		UITransitionClip& _pulse = m_transition.pulse;
-		_pulse.duration = m_legacyShowTime;
+		_pulse.duration = 0.15f;
 		_pulse.ease = Decoration::EEase::Linear;
 		_pulse.startAlpha = 1.0f;
-		_pulse.endAlpha = m_legacyIsFadeOut ? 0.0f : 1.0f;
-		_pulse.startScale = m_legacyPunchScale;
+		_pulse.endAlpha = 0.0f;
+		_pulse.startScale = 1.25f;
 		_pulse.endScale = 1.0f;
 
 		// 合図の間だけ描く
@@ -175,19 +174,10 @@ namespace App::Object
 
 		a_ar.GUIDField("SoundGUID", m_soundGUID);
 		a_ar.Field("Volume", m_volume);
-		a_ar.Field("ShowTime", m_legacyShowTime);
 		a_ar.Field("MinInterval", m_minInterval);
-		a_ar.Field("IsFadeOut", m_legacyIsFadeOut);
-		a_ar.Field("PunchScale", m_legacyPunchScale);
 
-		if (a_ar.IsLoading())
-		{
-			// 演出を持つ前のシーンは、自分で持っていた出し方を移す
-			if (!m_isTransitionLoaded) MigrateLegacyTransition();
-
-			// 復元したGUIDでサウンドを取り直す
-			CreateSound(a_context);
-		}
+		// 復元したGUIDでサウンドを取り直す
+		if (a_ar.IsLoading()) CreateSound(a_context);
 	}
 
 	void HitEffectHUD::DrawInspector(Engine::GameObject::ObjectContext& a_context)

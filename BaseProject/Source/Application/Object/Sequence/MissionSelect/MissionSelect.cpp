@@ -255,21 +255,14 @@ namespace App::Object
 		auto* _pUI = Picker::Find<UIBase>(m_pObjectManager, m_nameUIGUID);
 		if (!_pUI) return;
 
-		auto* _pDecoration = ResolveNameDecoration(*_pUI);
-		if (_pDecoration == nullptr)
-		{
-			ENGINE_WARNING("[MissionSelect] 名前を出す飾りが見つかりません : %u", m_nameDecorationId);
-			return;
-		}
-
-		Decoration::TextData* _pText = _pDecoration->RefText();
+		Decoration::UITextElement* _pText = ResolveNameDecoration(*_pUI);
 		if (_pText == nullptr)
 		{
-			ENGINE_WARNING("[MissionSelect] 名前を出す飾りが Text ではありません : %s", _pDecoration->name.c_str());
+			ENGINE_WARNING("[MissionSelect] 名前を出す Text の飾りが見つかりません : %u", m_nameDecorationId);
 			return;
 		}
 
-		_pText->text = FormatMissionName(a_mission);
+		_pText->SetValue(FormatMissionName(a_mission));
 	}
 
 	//======================================================================================
@@ -292,17 +285,9 @@ namespace App::Object
 		return _result;
 	}
 
-	Decoration::Decoration* MissionSelect::ResolveNameDecoration(UIBase& a_nameUI)
+	Decoration::UITextElement* MissionSelect::ResolveNameDecoration(UIBase& a_nameUI)
 	{
-		if (m_nameDecorationId == 0)
-		{
-			// 古いデータ : 名前から引いて番号を覚える(次からは番号で引く)
-			Decoration::Decoration* _pByName = a_nameUI.FindDecoration(m_legacyNameDecorationName);
-			if (_pByName) m_nameDecorationId = _pByName->id;
-			return _pByName;
-		}
-
-		return a_nameUI.FindDecorationById(m_nameDecorationId);
+		return a_nameUI.FindDecorationAs<Decoration::UITextElement>(m_nameDecorationId);
 	}
 
 	//======================================================================================
@@ -336,7 +321,7 @@ namespace App::Object
 	//======================================================================================
 	// シリアライズ
 	//======================================================================================
-	void MissionSelect::Archive(Engine::Persistence::Archive& a_ar, Engine::GameObject::ObjectContext& a_context)
+	void MissionSelect::Archive(Engine::Persistence::Archive& a_ar, Engine::GameObject::ObjectContext& /*a_context*/)
 	{
 		//----------------------------------------------------------------------
 		// ミッション
@@ -368,19 +353,6 @@ namespace App::Object
 		a_ar.GUIDField("YesButtonGUID", m_yesButtonGUID);
 		a_ar.GUIDField("NoButtonGUID", m_noButtonGUID);
 		a_ar.GUIDField("NameUIGUID", m_nameUIGUID);
-
-		// 名前は旧形式の名残。保存するときは今指している飾りの名前を書いておく
-		if (a_ar.IsSaving() && a_context.pObjectManager)
-		{
-			if (auto* _pNameUI = Picker::Find<UIBase>(a_context.pObjectManager, m_nameUIGUID))
-			{
-				if (const auto* _pDecoration = _pNameUI->FindDecorationById(m_nameDecorationId))
-				{
-					m_legacyNameDecorationName = _pDecoration->name;
-				}
-			}
-		}
-		a_ar.StringField("NameDecorationName", m_legacyNameDecorationName);
 
 		//----------------------------------------------------------------------
 		// 初期状態
@@ -505,7 +477,6 @@ namespace App::Object
 		{
 			// UI を選び直したら、前の UI の飾りの番号は意味を持たない
 			m_nameDecorationId = 0;
-			m_legacyNameDecorationName.clear();
 			ApplyVisible();
 		}
 
@@ -514,7 +485,7 @@ namespace App::Object
 		{
 			ResolveNameDecoration(*_pNameUI);
 
-			_pNameUI->DrawDecorationPicker("Name Decoration", m_nameDecorationId, Decoration::EDecorationType::Text);
+			_pNameUI->DrawDecorationPicker("Name Decoration", m_nameDecorationId, Decoration::EElementType::Text);
 			Engine::EditorField::Tooltip("上のUIが持つ Text 飾り。ここへミッション名を書き込む(番号で指すので、名前を変えても外れない)");
 
 			const auto* _pDecoration = _pNameUI->FindDecorationById(m_nameDecorationId);
@@ -522,7 +493,7 @@ namespace App::Object
 			{
 				Engine::EditorField::ErrorText("飾りが選ばれていません");
 			}
-			else if (_pDecoration->GetType() != Decoration::EDecorationType::Text)
+			else if (_pDecoration->GetType() != Decoration::EElementType::Text)
 			{
 				Engine::EditorField::WarningText("飾りが Text ではありません");
 			}

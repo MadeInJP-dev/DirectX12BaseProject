@@ -1,33 +1,9 @@
 ﻿#include "UIElement.h"
 
 #include "Engine/EditorField/EditorField.h"
-#include "Engine/GameObject/ObjectMetaRegistry/ObjectMetaRegistry.h"
 
 namespace App::Object
 {
-	//======================================================================================
-	// 旧クラス名の引き継ぎ
-	//--------------------------------------------------------------------------------------
-	// UIImage は押せる UI として作られていたので、カーソルを遮る(裏のボタンを塞ぐ)。
-	// UIPanel は押せない UI だったので遮らない。
-	// どちらも保存値(IsBlockCursor)を持たないので、ここで入れた値のまま読み込まれ、
-	// 次の保存から UIElement として書かれる
-	//======================================================================================
-	void UIElement::RegisterLegacyNames(Engine::GameObject::ObjectMetaRegistry& a_registry)
-	{
-		a_registry.MigrateName("UIImage", "UIElement",
-			[](Engine::GameObject::BaseObject& a_object)
-			{
-				if (UIElement* _pElement = Core::TypeInfo::Cast<UIElement>(&a_object)) _pElement->ApplyBlockCursor(true);
-			});
-
-		a_registry.MigrateName("UIPanel", "UIElement",
-			[](Engine::GameObject::BaseObject& a_object)
-			{
-				if (UIElement* _pElement = Core::TypeInfo::Cast<UIElement>(&a_object)) _pElement->ApplyBlockCursor(false);
-			});
-	}
-
 	//======================================================================================
 	// カーソルを遮るか
 	//--------------------------------------------------------------------------------------
@@ -39,6 +15,9 @@ namespace App::Object
 
 		if (!a_isBlock && m_opInteraction) m_opInteraction->ReleaseSounds(a_context);
 		ApplyBlockCursor(a_isBlock);
+
+		// 遮るなら当たり判定も受ける(当たる場所は飾りのボディで決める)
+		SetHitTarget(a_isBlock);
 	}
 
 	void UIElement::ApplyBlockCursor(bool a_isBlock)

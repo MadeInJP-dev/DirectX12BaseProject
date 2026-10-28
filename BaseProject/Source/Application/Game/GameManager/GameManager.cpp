@@ -138,7 +138,6 @@ namespace App::Game
 			_objRegistry.RegisterType<App::Object::MissileLockBoxHUD>("MissileLockBoxHUD");
 			_objRegistry.RegisterType<App::Object::UIButton>("UIButton");						// 押せるUI。押されて何をするかは SetOnClick で外から差し込む
 			_objRegistry.RegisterType<App::Object::UIElement>("UIElement");						// 振る舞いを持たない UI(背景・見出し・窓・入れ物)。見た目は飾りで決まる。カーソルを遮るかは1つずつの設定
-			App::Object::UIElement::RegisterLegacyNames(_objRegistry);							// 旧 UIImage(遮る)/ UIPanel(遮らない)を UIElement へ流す
 			_objRegistry.RegisterType<App::Object::TitleSequence>("TitleSequence");				// タイトル画面の進行役。ボタンへ「押されたらシーンを切り替える」を差し込む
 			_objRegistry.RegisterType<App::Object::AmbientDustObject>("AmbientDustObject");		// カメラに追従する空間のチリ。環境光・フォグ・空はシーン(SceneAmbient)の持ち物
 			_objRegistry.RegisterType<App::Object::ScoreHUD>("ScoreHUD");						// スコアの表示。数える側(ScoreSystem)とは分かれていて、ここは出すだけ

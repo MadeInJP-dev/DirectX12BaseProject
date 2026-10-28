@@ -1,8 +1,9 @@
 #pragma once
 
 #include "../../../Engine/GameObject/BaseObject/BaseObject.h"
-#include "Application/Object/UI/Decoration/Decoration.h"
-#include "Application/Object/UI/Decoration/DecorationDraw.h"
+#include "Application/Object/UI/Decoration/UIDecoration.h"
+#include "Application/Object/UI/Decoration/DecorationElement/UISpriteElement/UISpriteElement.h"
+#include "Application/Object/UI/Decoration/DecorationElement/UITextElement/UITextElement.h"
 #include "Application/Object/UI/Core/UIAnchor.h"
 #include "Application/Object/UI/Core/UIInteraction.h"
 #include "Application/Object/UI/Core/UITransition.h"
@@ -15,23 +16,20 @@ namespace App::Object
 	// UI 1つは次の3つを組み合わせたもの。それぞれの中身は別のファイルにある。
 	//
 	//   UIAnchor      … 画面のどこに、どの向き・どの大きさで置くか(位置・大きさ・回転・倍率・色・Z順・湾曲)
-	//   Decoration    … そこから相対で出す絵(板ポリ・画像・文字)。配列で何枚でも重ねられる
-	//                   コントローラー用の配列を別に持たせると、コントローラーを触っている間はそちらを出す
-	//   UIInteraction … カーソルへの反応(当たり判定の設定・押下・音・項目移動の前と次)。押せる UI だけが持つ
+	//   UIDecoration  … そこから相対で出す絵(矩形・文字のエレメント)。何枚でも重ねられ、UIマテリアルもここが持つ
+	//                   コントローラー用の UIDecoration を別に持たせると、コントローラーを触っている間はそちらを出す
+	//   UIInteraction … カーソルへの反応(押下・音・項目移動の前と次)。押せる UI だけが持つ
 	//   UITransition  … 出し入れと合図の演出(拡大して戻る・薄くなって消える など)。全部の飾りの上から掛かる
-	//   UIMaterial    … 飾り全部に掛ける効果(ディゾルブなど)。アセットを GUID で指す。無くてもよい
 	//
 	// テクスチャを1枚だけ持たせる作りをやめたのは、枠と文字とアイコンのように
 	// 複数の絵で1つのUIを組みたいときに、UIを人数ぶん並べるしかなくなるため。
 	// 飾りを配列にしておけば、位置・回転・倍率はアンカーに追従したまま重ねられる。
 	//
-	// ・**当たり判定は UI 1つにつき1つだけ**(矩形1枚)。
-	//   飾りを何枚重ねても、判定が飾りごとに増えることはない。飾りは判定の大きさを
-	//   決める材料になるだけ(アンカーの大きさが0のとき・HitFollowAnim のとき)で、
-	//   そのときも全部の飾りを囲む1枚の矩形にまとめる。
-	//   押せる場所を増やしたい・形を変えたいときは、判定を足すのではなく UI を増やすこと。
-	//   1つの UI に判定を複数持たせると、「どこを押したか」で振る舞いを変える処理が
-	//   UI の中に入り込み、取り合い(手前の1つだけが反応する)の単位も崩れるため。
+	// ・**当たり判定は UI 側が「受けるか」だけを持つ**(IsHitTarget)。
+	//   当たったかどうかは飾り(UIDecoration)のボディを持つエレメントが答え、UI はその結果だけを受け取る。
+	//   ボディをいくつ持たせても、UI 1つにつき「当たった / 当たらない」の1つにまとまる。
+	//   「どこを押したか」で振る舞いを変えたいときは、ボディを分けるのではなく UI を増やすこと。
+	//   1つの UI の中で押した場所を見分けると、取り合い(手前の1つだけが反応する)の単位が崩れるため。
 	//
 	// ・押せるかどうかはクラスで決まる(コンストラクタの引数)。
 	//   HUD のように押されることのない UI はカーソル反応を持たず、カーソルの取り合いにも出ない
@@ -207,6 +205,11 @@ namespace App::Object
 		bool IsReactToChildren() const { return m_isReactToChildren; }
 		void SetReactToChildren(bool a_isReact) { m_isReactToChildren = a_isReact; }
 
+		// 当たり判定を受けるか : 立てている UI だけが、飾り(UIDecoration)のボディへカーソルの位置を問い合わせる。
+		// 押せる UI(UIInteraction を持つもの)でも、これを切っていればカーソルは乗らない
+		bool IsHitTarget() const { return m_isHitTarget; }
+		void SetHitTarget(bool a_isHitTarget) { m_isHitTarget = a_isHitTarget; }
+
 		// 触れるかどうか。切ると乗っても押しても反応しない(Disabled 扱い)
 		bool IsInteractable() const { return m_opInteraction && m_opInteraction->isInteractable; }
 		void SetInteractable(bool a_isInteractable);
@@ -261,10 +264,10 @@ namespace App::Object
 		// マテリアル(飾り全部に掛ける効果)
 		//-----------------------------------------------------------------------
 
-		// 指しているUIマテリアル(空なら効果なし)
-		const Core::GUID& GetMaterialGUID() const { return m_materialGUID; }
+		// 指しているUIマテリアル(空なら効果なし)。持ち主は既定の組の UIDecoration
+		const Core::GUID& GetMaterialGUID() const { return m_decoration.GetMaterialGUID(); }
 
-		// UIマテリアルを差し替えて、読み込みを頼む(空の GUID で外す)
+		// UIマテリアルを差し替えて、読み込みを頼む(空の GUID で外す)。コントローラー用の組にも入れる
 		void SetMaterialGUID(Engine::GameObject::ObjectContext& a_context, const Core::GUID& a_guid);
 
 		//-----------------------------------------------------------------------
@@ -356,27 +359,42 @@ namespace App::Object
 		const Math::Vector2& GetRuntimeOffset() const { return m_runtimeOffset; }
 
 		//-----------------------------------------------------------------------
-		// 飾り
+		// 飾り(いま出している組 : 下の「コントローラー用の飾り」)
+		//
+		// 飾りは UIDecoration のエレメント。他から指すときは番号(ElementID の値, 0 で未選択)で持つ。
+		// 名前はエディターで書き換えられるので、名前で持っていると見出しを直しただけで参照が切れる
 		//-----------------------------------------------------------------------
 
 		/// <summary>
-		/// 飾りを1つ足して、その参照を返す
+		/// エレメントを1つ既定の組へ足して、その参照を返す(コードが作る既定の飾り用)
 		/// </summary>
-		/// <remarks>返る参照は次に足すまでの間だけ有効(配列が伸びると動く)</remarks>
-		Decoration::Decoration& AddDecoration(Decoration::EDecorationType a_type);
+		/// <remarks>番号はコントローラー用の組とも重ならないように振る</remarks>
+		template<class T>
+		T& AddDecoration()
+		{
+			SyncDecorationIdFloors();
+			return m_decoration.AddElement<T>();
+		}
 
 		// 名前で探す : 見つからなければ nullptr
-		Decoration::Decoration* FindDecoration(const std::string& a_name);
+		Decoration::UIDecorationElementBase* FindDecoration(const std::string& a_name) { return RefDecoration().FindElement(a_name); }
 
-		/// <summary>
-		/// 番号で探す : 見つからなければ nullptr(0 は常に nullptr)
-		/// </summary>
-		/// <remarks>
-		/// 他から飾りを指すときはこちらを使う。名前はエディターで書き換えられるので、
-		/// 名前で持っていると、見出しを直しただけで参照が切れる
-		/// </remarks>
-		Decoration::Decoration* FindDecorationById(uint32_t a_id);
-		const Decoration::Decoration* FindDecorationById(uint32_t a_id) const;
+		// 番号で探す : 見つからなければ nullptr(0 は常に nullptr)
+		Decoration::UIDecorationElementBase* FindDecorationById(uint32_t a_id);
+		const Decoration::UIDecorationElementBase* FindDecorationById(uint32_t a_id) const;
+
+		// 型を指定して探す : 見つからない・種類が違うなら nullptr
+		template<class T>
+		T* FindDecorationAs(uint32_t a_id)
+		{
+			return (a_id != 0) ? RefDecoration().FindElementAs<T>(Decoration::ElementID(a_id)) : nullptr;
+		}
+		template<class T>
+		T* FindDecorationAs(const std::string& a_name)
+		{
+			Decoration::UIDecorationElementBase* _pElement = FindDecoration(a_name);
+			return (_pElement && _pElement->GetType() == T::TYPE) ? static_cast<T*>(_pElement) : nullptr;
+		}
 
 		/// <summary>
 		/// 飾りを1つ選ぶコンボ(エディター用)
@@ -384,14 +402,15 @@ namespace App::Object
 		/// <param name="a_inoutId">選んでいる飾りの番号(0 で未選択)</param>
 		/// <param name="a_opFilterType">この種類の飾りだけを並べる(nullopt なら全部)</param>
 		/// <returns>選び直したら true</returns>
+		/// <remarks>並べるのは既定の組(番号は組をまたいで共有するので、コントローラー用の同じ役の飾りも同じ番号で指せる)</remarks>
 		bool DrawDecorationPicker(
 			const char* a_label,
 			uint32_t& a_inoutId,
-			std::optional<Decoration::EDecorationType> a_opFilterType = std::nullopt) const;
+			std::optional<Decoration::EElementType> a_opFilterType = std::nullopt) const;
 
-		// 中身の取得 : いま出している組(下の「コントローラー用の飾り」)
-		std::vector<Decoration::Decoration>& RefDecorations() { return RefShownDecorationVec(); }
-		const std::vector<Decoration::Decoration>& GetDecorations() const { return GetShownDecorationVec(); }
+		// いま出している組
+		Decoration::UIDecoration& RefDecoration();
+		const Decoration::UIDecoration& GetDecoration() const;
 
 		//-----------------------------------------------------------------------
 		// コントローラー用の飾り(任意)
@@ -401,10 +420,9 @@ namespace App::Object
 		// コントローラーの間だけそちらを出す(押すボタンの絵を Enter と A で出し分ける など)。
 		// 持たない UI は、どちらのデバイスでも既定の組を出す。
 		//
-		// 上の飾りの操作(探す・Ref/GetDecorations・DrawDecorationAt・判定の大きさ)は、
+		// 上の飾りの操作(探す・RefDecoration・DrawDecorationAt・当たり判定)は、
 		// いま出している組に掛かる。出す組を切り替えるのは PreUpdate だけなので、
 		// 1フレームの中で探した添え字が別の組を指すことはない。
-		// AddDecoration は既定の組へ足す(コードが作る既定の飾り用)。
 		//
 		// 飾りの番号は組をまたいで共有する : コントローラー用は既定の組の写しから作るので、
 		// 同じ役の飾りは同じ番号を持つ(ゲージの中身・値の文字などを番号で指したまま出し分けられる)。
@@ -412,20 +430,20 @@ namespace App::Object
 		//-----------------------------------------------------------------------
 
 		// コントローラー用の組を持つか
-		bool HasGamepadDecorations() const { return m_opGamepadDecorationVec.has_value(); }
+		bool HasGamepadDecorations() const { return m_opGamepadDecoration.has_value(); }
 
 		// いまコントローラー用の組を出しているか(持たなければ常に false)
-		bool IsShowingGamepadDecorations() const { return m_isShowGamepad && m_opGamepadDecorationVec.has_value(); }
+		bool IsShowingGamepadDecorations() const { return m_isShowGamepad && m_opGamepadDecoration.has_value(); }
 
 		/// <summary>
 		/// 持っている飾りの組を全部回す(既定と、あればコントローラー用)
 		/// </summary>
-		/// <param name="a_func">std::vector&lt;Decoration::Decoration&gt;&amp; を1つ受け取る関数</param>
+		/// <param name="a_func">Decoration::UIDecoration&amp; を1つ受け取る関数</param>
 		template<class Func>
 		void ForEachDecorationSet(Func&& a_func)
 		{
-			a_func(m_decorationVec);
-			if (m_opGamepadDecorationVec) a_func(*m_opGamepadDecorationVec);
+			a_func(m_decoration);
+			if (m_opGamepadDecoration) a_func(*m_opGamepadDecoration);
 		}
 
 	protected:
@@ -468,63 +486,35 @@ namespace App::Object
 			size_t a_index,
 			const Decoration::DrawOverride& a_override = {});
 
-		// 名前から飾りの配列の添え字を引く(見つからなければ -1)
+		// 名前から飾りの添え字を引く(見つからなければ -1)
 		int FindDecorationIndex(const std::string& a_name) const;
 
-		// 番号から飾りの配列の添え字を引く(見つからなければ -1)
+		// 番号から飾りの添え字を引く(見つからなければ -1)
 		int FindDecorationIndexById(uint32_t a_id) const;
 
-		// 保存されているGUIDから、飾りのテクスチャ・フォントを引き直す
+		// 保存されているGUIDから、飾りのテクスチャ・フォントとUIマテリアルを引き直す
 		void RequestDecorationResources(Engine::GameObject::ObjectContext& a_context);
 
 		// 指しているプリセットが変わった飾りへ写し直す(PreUpdate と描画の頭で呼ぶ)
 		void SyncDecorationPresets(Engine::GameObject::ObjectContext& a_context);
 
-		// 飾りの一覧をインスペクターへ出す(追加・削除・並べ替え)
+		// 飾りの一覧をインスペクターへ出す(組の切り替え・追加・削除・並べ替え)
 		void DrawDecorationListInspector(Engine::GameObject::ObjectContext& a_context);
 
-		//-----------------------------------------------------------------------
-		// 当たり判定の矩形
-		//-----------------------------------------------------------------------
-		struct HitRect
-		{
-			Math::Vector2 pixelPos = {};			// ピボットのスクリーン座標(px)
-			Math::Vector2 pixelSize = {};			// 大きさ(px)
-			Math::Vector2 pivot = { 0.5f, 0.5f };	// 正規化ピボット
-			float rotation = 0.0f;					// 回転(度)
-			Math::Vector2 padding = {};				// 足す余白(px)
-		};
-
-		/// <summary>
-		/// いま効いている当たり判定の矩形を組み立てる
-		/// </summary>
-		/// <returns>押せない UI、または大きさを持たない(どこにも当たらない)ときは false</returns>
-		/// <remarks>
-		/// 判定(IsPointInsideSelf)とエディターの枠の表示が同じものを使う。
-		/// 判定は UI 1つにつき必ずこの1枚だけ。配列や複数の矩形へ広げないこと
-		/// (押せる場所を増やすときは UI を増やす。クラス冒頭の説明を参照)
-		/// </remarks>
-		bool CalcHitRect(HitRect& a_outRect) const;
-
-		// UIのピクセル座標が自分の判定矩形の内側にあるか
+		// UIのピクセル座標が自分の当たり判定(飾りのボディ)の内側にあるか。
+		// 判定を受けない UI(IsHitTarget が切れている)・切り抜きの外では false
 		bool IsPointInsideSelf(const Math::Vector2& a_uiPos) const;
 
 		/// <summary>
-		/// 飾りが占めている範囲(アンカーからの相対, px)を求める
+		/// 矩形の飾りが占めている範囲(アンカーからの相対, px)を求める
 		/// </summary>
-		/// <param name="a_outCenter">範囲の中心(アンカーからのずれ)</param>
-		/// <param name="a_outSize">範囲の大きさ</param>
-		/// <param name="a_isIncludeAnim">アニメーション・反応で変わった今の大きさも含めるか</param>
+		/// <param name="a_isIncludeAnim">アニメーション・反応で変わった今の大きさも含めるか(素の大きさとの合併)</param>
 		/// <returns>大きさを持つ飾りが1つも無ければ false</returns>
-		/// <remarks>
-		/// 含める場合も素の矩形は必ず範囲へ入れる(素の矩形と今の矩形の合併を返す)。
-		/// 今の矩形だけにすると、乗ると縮む反応を付けたときに
-		/// 「乗る→縮んで外れる→戻って乗る」を繰り返してちらつくため
-		/// </remarks>
 		bool CalcDecorationBounds(
 			Math::Vector2& a_outCenter,
 			Math::Vector2& a_outSize,
 			bool a_isIncludeAnim = false) const;
+
 
 	protected:
 
@@ -544,60 +534,30 @@ namespace App::Object
 		// 押されている間、自分の飾りもその状態で反応する(行の中の部品を選ぶと行ごと光る、など)
 		bool m_isReactToChildren = false;
 
-		// 飾り(保存される) : 配列の順に描くので、後ろにあるものほど手前に出る
-		// キーボード・マウスのとき(コントローラー用を持たなければ常に)出す組
-		std::vector<Decoration::Decoration> m_decorationVec = {};
+		// 当たり判定を受けるか(保存される)。当たったかどうかは飾りのボディが答える(UIDecoration::IsHit)
+		bool m_isHitTarget = false;
+
+		// 飾り(保存される) : エレメントの順に描くので、後ろにあるものほど手前に出る。
+		// キーボード・マウスのとき(コントローラー用を持たなければ常に)出す組。UIマテリアルもここが持つ
+		Decoration::UIDecoration m_decoration = {};
 
 		// コントローラー用の飾り(保存される)。持つ UI だけ、コントローラーを触っている間こちらを出す
-		std::optional<std::vector<Decoration::Decoration>> m_opGamepadDecorationVec = std::nullopt;
+		std::optional<Decoration::UIDecoration> m_opGamepadDecoration = std::nullopt;
 
 		// 出し入れと合図の演出(保存される)。全部の飾りの上から掛かる
 		UITransition m_transition = {};
 
-		// 飾り全部に掛ける効果(保存されるのは GUID だけ)。空なら効果なし
-		Core::GUID m_materialGUID = {};
-		Engine::ResourceRef<Engine::Resource::UIMaterial> m_materialRef = {};
-
-		// 読み込みで演出の値が読めたか(保存しない)。
-		// 演出を持つ前のデータなら false。継承先が自分の古い値から演出へ移すかどうかの判断に使う
-		bool m_isTransitionLoaded = false;
-
 	private:
 
-		// 旧形式(テクスチャ1枚)から飾りへ移し替える(読み込みの最後から)
-		void MigrateLegacyTexture(bool a_hasDecorationArray);
+		// 組どうしで番号が重ならないよう、相手の最大の番号を下限として渡す
+		void SyncDecorationIdFloors();
 
 		// 子(孫も)の乗った・押したの状態(ReactToChildren 用)。何もされていなければ Normal
 		static Decoration::EUIState FindChildrenState(const Engine::GameObject::BaseObject* a_pObject);
 
-		/// <summary>
-		/// 番号を持たない・重なっている飾りへ番号を振る
-		/// </summary>
-		/// <remarks>
-		/// 番号を持つ前に保存された飾りは 0 で読まれるので、読み込みの後に通す。
-		/// 先に持っている番号は変えない(他から指されている番号が動かないように)
-		/// </remarks>
-		void AssignDecorationIds();
-
-		// 1つの組の中で、番号を持たない・重なっている飾りへ番号を振る
-		void AssignDecorationIdsIn(std::vector<Decoration::Decoration>& a_decorationVec);
-
-		// まだ使われていない番号(両方の組を通して)
-		uint32_t MakeNewDecorationId() const;
-
-		// 飾りを1つ、指した組へ足す(番号・名前を付けて)
-		Decoration::Decoration& AddDecorationTo(std::vector<Decoration::Decoration>& a_decorationVec, Decoration::EDecorationType a_type);
-
-		// 飾りの配列1つぶんの保存(要素ごとに区切る)。配列が無ければ(古いデータ) false
-		static bool ArchiveDecorationVec(Engine::Persistence::Archive& a_ar, const std::string& a_name, std::vector<Decoration::Decoration>& a_decorationVec);
-
 		//-----------------------------------------------------------------------
 		// コントローラー用の飾りの出し分け
 		//-----------------------------------------------------------------------
-
-		// いま出している組
-		std::vector<Decoration::Decoration>& RefShownDecorationVec();
-		const std::vector<Decoration::Decoration>& GetShownDecorationVec() const;
 
 		// 最後に触ったデバイスから出す組を決める(PreUpdate から。エディターの確かめ用の指定があればそちら)
 		void UpdateShownDecorationSet(const Engine::GameObject::ObjectContext& a_context);
@@ -607,7 +567,7 @@ namespace App::Object
 		void RemoveGamepadDecorations();
 
 		// インスペクターで編集している組
-		std::vector<Decoration::Decoration>& RefEditDecorationVec();
+		Decoration::UIDecoration& RefEditDecoration();
 
 		// インスペクター : どちらの組を編集するか・どちらを出して確かめるか
 		void DrawDecorationSetInspector(Engine::GameObject::ObjectContext& a_context);
@@ -620,12 +580,6 @@ namespace App::Object
 
 		// HUD として隠れているか : HUD で、プレイヤーが HUD を消しているとき true
 		bool IsHiddenAsHUD(const Engine::GameObject::ObjectContext& a_context) const;
-
-		// ギズモ : 当たり判定の範囲を枠で囲って出す(押せる UI だけ)
-		void DrawHitRectGizmo(const Engine::GameObject::ObjectGizmoContext& a_ctx, float a_screenW, float a_screenH) const;
-
-		// ギズモ : 開いている飾りの位置(OffsetPos)を動かすハンドル
-		void DrawDecorationGizmo(const Engine::GameObject::ObjectGizmoContext& a_ctx, float a_screenW, float a_screenH);
 
 		// インスペクター : カーソルへの反応(判定の範囲の表示を含む)
 		void DrawInteractionInspector(Engine::GameObject::ObjectContext& a_context);
@@ -651,29 +605,7 @@ namespace App::Object
 		// 描く前の差し替えに、演出の値を掛ける
 		Decoration::DrawOverride ApplyTransition(const Decoration::DrawOverride& a_override) const;
 
-		// 保存されている GUID からUIマテリアルを引き直す(実体の到着は待たない)
-		void RequestMaterial(Engine::GameObject::ObjectContext& a_context);
-
-		// 読み終わっているUIマテリアル(まだ・未指定なら nullptr)
-		const Engine::Resource::UIMaterial* FindReadyMaterial(Engine::Resource::ResourceManager* a_pResourceManager) const;
-
-		// インスペクター : UIマテリアル
-		void DrawMaterialInspector(Engine::GameObject::ObjectContext& a_context);
-
 	private:
-
-		//-----------------------------------------------------------------------
-		// 旧形式(テクスチャ1枚)からの引き継ぎ用
-		//
-		// 既存のシーンは UIBase が直接テクスチャを持っていた頃の値で保存されている。
-		// 並びを変えずにここへ読み込んでおき、飾りの配列を持たないシーンだけ
-		// 画像の飾り1つへ移し替える
-		//-----------------------------------------------------------------------
-		Core::GUID m_legacyTexGUID = {};
-		Math::Vector2 m_legacyUvOffset = {};
-
-		// エディターで開いている飾りの番号(-1 で未選択)。保存しない
-		int m_editDecorationIndex = -1;
 
 		// HUD をまとめて隠しているか(SetHUDSuppressed)。保存しない
 		inline static bool s_isHUDSuppressed = false;

@@ -181,6 +181,24 @@ namespace App::Object::Decoration
 		}
 	}
 
+	void UIDecoration::AssignFromDecorations(const std::vector<Decoration>& a_decorationVec)
+	{
+		m_upElements.clear();
+		m_upElements.reserve(a_decorationVec.size());
+
+		for (const Decoration& _decoration : a_decorationVec)
+		{
+			std::unique_ptr<UIDecorationElementBase> _upElement = CreateElement(ToElementType(_decoration));
+			if (!_upElement) continue;
+
+			// 番号は旧の番号のまま(0 は下の AssignElementIds が振る)
+			ApplyDecoration(*_upElement, _decoration);
+			m_upElements.push_back(std::move(_upElement));
+		}
+
+		AssignElementIds();
+	}
+
 	EElementType UIDecoration::ToElementType(const Decoration& a_decoration)
 	{
 		return (a_decoration.GetType() == EDecorationType::Text) ? EElementType::Text : EElementType::Sprite;

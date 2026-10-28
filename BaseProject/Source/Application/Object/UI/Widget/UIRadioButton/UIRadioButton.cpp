@@ -24,17 +24,20 @@ namespace App::Object
 	// 飾りの isVisible は保存される値だが、毎フレーム入れ直すので残っても害はない
 	void UIRadioButton::ApplySelectedVisible()
 	{
-		ForEachDecorationSet([&](std::vector<Decoration::Decoration>& a_decorationVec)
+		ForEachDecorationSet([&](Decoration::UIDecoration& a_decoration)
 			{
-				for (Decoration::Decoration& _decoration : a_decorationVec)
+				for (size_t _i = 0; _i < a_decoration.GetElementCount(); ++_i)
 				{
+					Decoration::UIDecorationElementBase& _element = a_decoration.RefElement(_i);
+					const uint32_t _id = _element.GetId().value;
+
 					const auto _contains = [&](const std::vector<uint32_t>& a_idVec)
 						{
-							return std::find(a_idVec.begin(), a_idVec.end(), _decoration.id) != a_idVec.end();
+							return std::find(a_idVec.begin(), a_idVec.end(), _id) != a_idVec.end();
 						};
 
-					if (_contains(m_selectedDecorationIdVec))			_decoration.isVisible = m_isSelected;
-					else if (_contains(m_unselectedDecorationIdVec))	_decoration.isVisible = !m_isSelected;
+					if (_contains(m_selectedDecorationIdVec))			_element.SetVisible(m_isSelected);
+					else if (_contains(m_unselectedDecorationIdVec))	_element.SetVisible(!m_isSelected);
 				}
 			});
 	}
