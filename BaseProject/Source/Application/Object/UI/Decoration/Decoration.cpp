@@ -331,31 +331,6 @@ namespace App::Object::Decoration
 		}
 	}
 
-	//======================================================================================
-	// いま効いているアニメーション・反応の量
-	//======================================================================================
-	DecorationTransform CalcCurrentTransform(const Decoration& a_decoration)
-	{
-		const Internal::AnimResult _anim = Internal::MakeAnimResult(a_decoration);
-
-		DecorationTransform _out = {};
-		_out.offsetAdd   = _anim.positionAdd;
-		_out.scaleMul    = _anim.scaleMul;
-		_out.rotationAdd = _anim.rotationAdd;
-
-		return _out;
-	}
-
-	void AdvanceAnimation(Decoration& a_decoration, EUIState a_parentState, float a_deltaTime)
-	{
-		Internal::AdvanceAnimation(
-			a_decoration.opTweenAnim,
-			a_decoration.opOscillationAnim,
-			a_decoration.opReaction,
-			a_parentState,
-			a_deltaTime);
-	}
-
 	void Internal::AdvanceAnimation(
 		std::optional<UIAnimation>& a_opTween,
 		std::optional<UIProceduralAnimation>& a_opOscillation,

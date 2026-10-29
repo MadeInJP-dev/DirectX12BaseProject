@@ -70,7 +70,7 @@ namespace App::Object::Decoration::Internal
 	/// アニメーションと反応を1つにまとめる
 	/// </summary>
 	/// <remarks>
-	/// 描画(DecorationDraw.cpp)と当たり判定(CalcCurrentTransform)の両方がここを通る。
+	/// 描画と当たり判定(UIDecorationElementBase)の両方がここを通る。
 	/// 別々に組み立てると、絵は大きくなっているのに判定は素のまま、というずれが起きる
 	/// </remarks>
 	AnimResult MakeAnimResult(

@@ -90,18 +90,6 @@ namespace App::Object
 			float a_rotationDeg,
 			const Math::Vector2& a_hitPadding = {});
 
-		/// <summary>
-		/// 矩形の4隅を求める(IsPointInside と同じ矩形)
-		/// </summary>
-		/// <param name="a_outCorners">左上・右上・右下・左下の順(回転前の見た目で)。そのまま線で結べる</param>
-		static void CalcRectCorners(
-			const Math::Vector2& a_pixelPos,
-			const Math::Vector2& a_pixelSize,
-			const Math::Vector2& a_pivot,
-			float a_rotationDeg,
-			const Math::Vector2& a_hitPadding,
-			Math::Vector2 (&a_outCorners)[4]);
-
 		// 度で回す : IsPointInside と同じ向き(時計回り)
 		static Math::Vector2 RotateDeg(const Math::Vector2& a_value, float a_degree);
 	};

@@ -188,36 +188,8 @@ namespace App::Object::Decoration
 	};
 
 	//======================================================================================
-	// 今の見た目の値(アニメーション・反応を掛けたあと)
-	//
-	// 当たり判定を絵に合わせるためのもの。描画側も同じものを組み立てて使っている。
-	// 色とUVは判定に関係しないので入れていない
-	//======================================================================================
-	struct DecorationTransform
-	{
-		Math::Vector2 offsetAdd = {};				// offsetPos へ足す量(px, 親の倍率が掛かる前)
-		Math::Vector2 scaleMul = { 1.0f, 1.0f };	// pixelSize へ掛ける倍率
-		float rotationAdd = 0.0f;					// rotation へ足す角度(度)
-	};
-
-	/// <summary>
-	/// いま効いているアニメーション・反応の量を取り出す
-	/// </summary>
-	/// <remarks>
-	/// 進行そのものは AdvanceAnimation が持つので、ここは覗くだけ。
-	/// トゥイーン・周期運動・カーソルへの反応の3つを掛け合わせた結果が返る
-	/// </remarks>
-	DecorationTransform CalcCurrentTransform(const Decoration& a_decoration);
-
-	//======================================================================================
 	// 操作
 	//======================================================================================
-
-	/// <summary>
-	/// アニメーションと反応を進める : 出していないフレームも進める(UIBase::Update から)
-	/// </summary>
-	/// <param name="a_parentState">親(UI)の今の状態。反応を付けていない飾りでは使わない</param>
-	void AdvanceAnimation(Decoration& a_decoration, EUIState a_parentState, float a_deltaTime);
 
 	/// <summary>
 	/// アーカイブ(1つぶん)

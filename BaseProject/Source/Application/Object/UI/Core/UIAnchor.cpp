@@ -107,47 +107,6 @@ namespace App::Object
 		return (std::fabs(_u) <= _half.x) && (std::fabs(_v) <= _half.y);
 	}
 
-	//======================================================================================
-	// 矩形の4隅
-	//--------------------------------------------------------------------------------------
-	// IsPointInside と同じ軸・同じ中心から組み立てる。判定と見た目の枠がずれないように、
-	// 式を変えるときは両方を揃えること
-	//======================================================================================
-	void UIAnchor::CalcRectCorners(
-		const Math::Vector2& a_pixelPos,
-		const Math::Vector2& a_pixelSize,
-		const Math::Vector2& a_pivot,
-		float a_rotationDeg,
-		const Math::Vector2& a_hitPadding,
-		Math::Vector2 (&a_outCorners)[4])
-	{
-		const Math::Vector2 _half = {
-			a_pixelSize.x * 0.5f + a_hitPadding.x,
-			a_pixelSize.y * 0.5f + a_hitPadding.y
-		};
-
-		const float _rad = DirectX::XMConvertToRadians(a_rotationDeg);
-		const float _cos = std::cos(_rad);
-		const float _sin = std::sin(_rad);
-
-		const Math::Vector2 _pivotOff = {
-			(0.5f - a_pivot.x) * a_pixelSize.x,
-			(0.5f - a_pivot.y) * a_pixelSize.y
-		};
-		const Math::Vector2 _center = {
-			a_pixelPos.x + (_pivotOff.x * _cos - _pivotOff.y * _sin),
-			a_pixelPos.y + (_pivotOff.x * _sin + _pivotOff.y * _cos)
-		};
-
-		// 判定の軸 : 画面の右(u)と、画面の上(v)。画面座標は下向きなので v の正は上側
-		const Math::Vector2 _u = { _cos, _sin };
-		const Math::Vector2 _v = { _sin, -_cos };
-
-		a_outCorners[0] = _center - _u * _half.x + _v * _half.y;	// 左上
-		a_outCorners[1] = _center + _u * _half.x + _v * _half.y;	// 右上
-		a_outCorners[2] = _center + _u * _half.x - _v * _half.y;	// 右下
-		a_outCorners[3] = _center - _u * _half.x - _v * _half.y;	// 左下
-	}
 
 	//======================================================================================
 	// インスペクター

@@ -5,10 +5,10 @@
         "IsFPSVisible": false
     },
     "Graphics": {
-        "Brightness": 150,
+        "Brightness": 100,
         "HasWindowMode": true,
         "IsBloomEnable": true,
-        "IsHUDVisible": true,
+        "IsHUDVisible": false,
         "ScreenShake": 100,
         "WindowMode": 2
     },
