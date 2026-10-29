@@ -128,8 +128,17 @@ namespace Engine::Graphics
 		// ZPreかつ不透明(Opaque)なら、PSのセットをスキップ
 		bool _isZPrePass = (m_passNameHash == Core::String::ToHash("ZPre"));
 		bool _isOpaque = !(a_key.permutationFlags & static_cast<uint32_t>(EShaderPermutationFlags::AlphaMasked));
+		const bool _isDitherFade = (a_key.permutationFlags & static_cast<uint32_t>(EShaderPermutationFlags::DitherFade)) != 0;
 
-		if (!(_isZPrePass && _isOpaque))
+		if (_isDitherFade && m_ditherFadePSHandle.IsValid())
+		{
+			// フェード中の物だけ、ディザーで画素を捨てるPSを張る(深度だけのパス用)。
+			// 読めていないうちに組むと、捨てずに深度を書く PSO がキーに残ってしまうので覚えずに帰る
+			auto* _pFadePS = _resourceManager.Get(m_ditherFadePSHandle);
+			if (!_pFadePS) return {};
+			_builder.SetPS(_pFadePS->GetByteCode());
+		}
+		else if (!(_isZPrePass && _isOpaque))
 		{
 			// どのPSで描くかはパス自身が持っている。
 			// 持っていないパス(深度だけ書くパス)はPSを張らずに組む
@@ -158,6 +167,10 @@ namespace Engine::Graphics
 	void ShadingPipelineBuilder::RegisterAmplificationShader(EShaderPermutationFlags a_flag, Handle<Resource::Shader> a_asHandle)
 	{
 		m_asMap[a_flag] = a_asHandle;
+	}
+	void ShadingPipelineBuilder::RegisterDitherFadePixelShader(Handle<Resource::Shader> a_psHandle)
+	{
+		m_ditherFadePSHandle = a_psHandle;
 	}
 	void ShadingPipelineBuilder::SetDepthConfig(bool a_enable, bool a_write, D3D12_COMPARISON_FUNC a_func)
 	{

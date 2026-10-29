@@ -3,7 +3,7 @@
 // DepthOnlyMS
 //
 // 深度だけを書くパス(ZPrePass / ShadowMapPass / GroundDepthPass)のメッシュシェーダー。
-// ピクセルシェーダーを持たないパスなので、頂点はクリップ座標だけを出す。
+// ピクセルシェーダーを持たないパスなので、頂点はクリップ座標(とインスタンス番号)だけを出す。
 //
 // UberMS は GBuffer 用に、法線・接線・UV・ワールド座標・モーションベクター用の
 // 今と前のクリップ座標まで 1 頂点あたり約 24 float を書き出す。深度だけのパスでは
@@ -17,10 +17,13 @@
 //==========================================================================================
 #include "MeshCommon.hlsli"
 
-// 深度だけのパスの頂点出力
+// 深度だけのパスの頂点出力。
+// instanceID はフェード中の物だけに張る DepthDitherFadePS がフェード係数を引くのに使う
+// (ピクセルシェーダーを持たない PSO では読まれずに捨てられる)
 struct DepthVertexOutput
 {
 	float4 pos : SV_Position;
+	uint instanceID : INSTANCE_ID;
 };
 
 uint3 UnpackPrimitive(uint a_primitive)
@@ -79,6 +82,7 @@ void MSMain(
 		float3 _worldPos;
 		DepthVertexOutput _vout;
 		_vout.pos = TransformMeshPosition(_localPos, _inst.worldMat, _worldPos);
+		_vout.instanceID = _instanceID;
 
 		outVerts[a_gtid] = _vout;
 	}

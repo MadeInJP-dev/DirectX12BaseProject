@@ -163,7 +163,8 @@ namespace Engine::Graphics
 			const Math::Vector3& a_emissiveAdd,
 			PSOKey a_psoKey,
 			uint32_t a_lodStart = 0,
-			uint32_t a_lodCount = 0);
+			uint32_t a_lodCount = 0,
+			float a_fade = 1.0f);
 
 		// キュー指定 : 1つの描画コマンドを、モデルを受け取る全パスへ登録する共通処理。
 		// (メッシュシェーダー用データ構築・PSO要求・描画アイテム登録をまとめて行う)
@@ -181,7 +182,8 @@ namespace Engine::Graphics
 			const Math::Vector3& a_emissiveAdd,
 			PSOKey a_psoKey,
 			uint32_t a_lodStart = 0,
-			uint32_t a_lodCount = 0);
+			uint32_t a_lodCount = 0,
+			float a_fade = 1.0f);
 
 		// LOD0 の a_cmdIndex 番目の描画コマンドに対応する LOD の段を、LOD の表へ積む。
 		// 段が無い・表に収まらなければ a_outCount は 0(LOD0 だけで描く)

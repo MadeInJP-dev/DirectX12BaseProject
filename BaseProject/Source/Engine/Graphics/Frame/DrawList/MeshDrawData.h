@@ -21,7 +21,7 @@ namespace Engine::Graphics
 		uint32_t meshletCount;				// メッシュレットカウント
 		uint32_t lodStart;					// LOD の表(MeshLodData)の先頭。lodCount が 0 なら使わない
 		uint32_t lodCount;					// LOD の段数(LOD0 を含まない)。0 なら LOD0 だけ
-		float pad;
+		float fade;							// フェード係数(1 = 見える / 0 = 見えない)。1 未満はディザーで画素を捨てる
 	};
 
 	//==========================================================================================

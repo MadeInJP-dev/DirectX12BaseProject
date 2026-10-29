@@ -26,7 +26,7 @@ struct MeshInstanceData
 
 	uint lodStart;			// LOD の表(MeshLodData)の先頭。lodCount が 0 なら使わない
 	uint lodCount;			// LOD の段数(LOD0 を含まない)。0 なら LOD0 だけ
-	float pad;
+	float fade;				// フェード係数(1 = 見える / 0 = 見えない)。1 未満はディザーで画素を捨てる(DitherFade.hlsli)
 };
 
 // LOD の1段(サブセット単位)。LOD0 はインスタンスデータそのものなので、並ぶのは LOD1 から。

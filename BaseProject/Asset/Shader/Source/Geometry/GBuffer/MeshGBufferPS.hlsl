@@ -1,5 +1,6 @@
 #include "../MeshShader/MeshCommon.hlsli"
 #include "../../../Common/Math/CalcNormal.hlsli"
+#include "../../../Common/Math/DitherFade.hlsli"
 
 
 // GBuffer用出力
@@ -25,6 +26,16 @@ PSOutput PSMain(VertexOutput a_input)
 	uint _instanceIdx = a_input.instanceID;
 	MeshInstanceData _inst = g_instanceData[_instanceIdx];
 	MeshMaterial _mat = g_materialData[_inst.materialOffset];
+
+    // -----------------------------------------------------------
+    // フェード(アルファディザー)
+    // -----------------------------------------------------------
+    // fade : 1 = 見える / 0 = 見えない。カメラに近い障害物や自機を透かす。
+    // ZPre(DepthDitherFadePS)と同じ関数で捨てるので、深度の EQUAL とずれない
+	if (IsDitherFadeDiscard(_inst.fade, a_input.pos.xy))
+	{
+		discard;
+	}
 
     // -----------------------------------------------------------
     // アルベド (BaseColor)

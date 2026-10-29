@@ -45,6 +45,7 @@ namespace App::System
 						_desc.colorScale = _modelComp.colorScale;
 						_desc.emissiveScale = _modelComp.emissiveScale;
 						_desc.bloomAdd = _modelComp.GetEmissiveAdd();
+						_desc.fade = _modelComp.fade;
 						_pGE->RefDrawSubmitter()->SubmitModel(_desc);
 					}
 				},

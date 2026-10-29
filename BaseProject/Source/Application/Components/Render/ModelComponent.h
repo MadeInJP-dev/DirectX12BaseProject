@@ -32,6 +32,17 @@ namespace App::Component
 		Math::Vector3 emissiveColor = { 1.0f,1.0f,1.0f };	// 発光色(0〜1)
 		float emissiveIntensity = 0.0f;							// 発光の強さ(上限なし / 0でオフ)
 
+		//--------------------------------------------------------------------------
+		// フェード係数(実行時の値。保存しない)
+		//
+		//   1.0 = 完全に見える / 0.0 = 見えない
+		//
+		// 1 未満のあいだ、GBuffer と ZPre がアルファディザー(4x4 の Bayer)で画素を捨てる。
+		// 半透明にはしないので、ライティングや影は不透明のときと同じ。
+		// 書くのは ModelFadeSystem(TPSカメラの手前の障害物・カメラに近い自機)。
+		//--------------------------------------------------------------------------
+		float fade = 1.0f;
+
 		// モデル参照用
 		Engine::Handle<Engine::Resource::Model> handle = {};	// ランタイム用
 		Core::GUID modelGUID = {};									// 記録用
@@ -133,5 +144,9 @@ struct Engine::ECS::ComponentTraits<App::Component::ModelComponent>
 		// 実際にシェーダーへ渡る値。しきい値を超えているかの目安になる
 		const Math::Vector3 _emissiveAdd = _comp.GetEmissiveAdd();
 		Engine::EditorField::HelpText("-> (%.2f, %.2f, %.2f)", _emissiveAdd.x, _emissiveAdd.y, _emissiveAdd.z);
+
+		// 実行時に ModelFadeSystem が書く値なので表示のみ
+		Engine::EditorField::Line();
+		Engine::EditorField::Value("Fade", "%.2f", _comp.fade);
 	}
 };

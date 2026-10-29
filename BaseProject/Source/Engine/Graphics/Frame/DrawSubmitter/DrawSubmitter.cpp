@@ -213,7 +213,7 @@ namespace Engine::Graphics
 				_mat, _prevMat,
 				IS_ANIMATION, 0 /*animatedVertexStart*/,
 				a_desc.colorScale, a_desc.emissiveScale, a_desc.bloomAdd, _psoKey,
-				_lodStart, _lodCount);
+				_lodStart, _lodCount, a_desc.fade);
 		}
 	}
 
@@ -304,7 +304,8 @@ namespace Engine::Graphics
 				_cmd, _pMesh, _pMaterial,
 				_mat, _prevMat,
 				_isAnimation, _animatedVertexStart,
-				a_desc.colorScale, a_desc.emissiveScale, a_desc.bloomAdd, _psoKey);
+				a_desc.colorScale, a_desc.emissiveScale, a_desc.bloomAdd, _psoKey,
+				0 /*lodStart*/, 0 /*lodCount*/, a_desc.fade);
 		}
 	}
 
@@ -714,7 +715,8 @@ namespace Engine::Graphics
 		const Math::Vector3& a_emissiveAdd,
 		PSOKey a_psoKey,
 		uint32_t a_lodStart,
-		uint32_t a_lodCount)
+		uint32_t a_lodCount,
+		float a_fade)
 	{
 		// マテリアルの透明モードで、どちらのキューへ流すかを決める。
 		// Mask はアルファで抜くだけで前後関係は不透明と同じ扱いなので Opaque
@@ -725,13 +727,29 @@ namespace Engine::Graphics
 			_queue, a_cmd, a_pMesh, a_pMaterial, 
 			a_mat, a_prevMat, a_isAnimation, a_animatedVertexStart, 
 			a_albedoScale, a_emissiveScale, a_emissiveAdd, a_psoKey,
-			a_lodStart, a_lodCount
+			a_lodStart, a_lodCount, a_fade
 		);
 	}
 
-	void DrawSubmitter::RegisterDrawCommandToPasses(const EGeometryQueue& a_eGeoQue, const Resource::ModelDrawCommand& a_cmd, const Resource::Mesh* a_pMesh, const Resource::Material* a_pMaterial, const Math::Matrix& a_mat, const Math::Matrix& a_prevMat, bool a_isAnimation, uint32_t a_animatedVertexStart, const Math::Color& a_albedoScale, const Math::Vector3& a_emissiveScale, const Math::Vector3& a_emissiveAdd, PSOKey a_psoKey, uint32_t a_lodStart, uint32_t a_lodCount)
+	void DrawSubmitter::RegisterDrawCommandToPasses(const EGeometryQueue& a_eGeoQue, const Resource::ModelDrawCommand& a_cmd, const Resource::Mesh* a_pMesh, const Resource::Material* a_pMaterial, const Math::Matrix& a_mat, const Math::Matrix& a_prevMat, bool a_isAnimation, uint32_t a_animatedVertexStart, const Math::Color& a_albedoScale, const Math::Vector3& a_emissiveScale, const Math::Vector3& a_emissiveAdd, PSOKey a_psoKey, uint32_t a_lodStart, uint32_t a_lodCount, float a_fade)
 	{
 		const EGeometryQueue _queue = a_eGeoQue;
+
+		//------------------------------------------------------------------------------------------
+		// フェード(カメラに近い障害物・自機など)
+		//
+		// 値はインスタンスデータに載せ、GBuffer のピクセルシェーダーがディザーで画素を捨てる。
+		// GBuffer は ZPre の深度と EQUAL で比べるので、ZPre でも同じ画素を捨てないと
+		// 捨てた画素に自分の深度が残り、後ろの物まで描かれなくなる。
+		// 深度だけのパスはふだんピクセルシェーダーを持たないので、フェード中だけ
+		// 別の PSO(DitherFade)にして、ディザー用のピクセルシェーダーを張らせる。
+		// 完全に見えているもの(1)は今までと同じ PSO のまま
+		//------------------------------------------------------------------------------------------
+		const float _fade = std::clamp(a_fade, 0.0f, 1.0f);
+		if (_fade < 1.0f)
+		{
+			a_psoKey.permutationFlags |= static_cast<uint32_t>(EShaderPermutationFlags::DitherFade);
+		}
 
 		const auto& _msData = a_pMesh->GetMeshShaderData();
 		const auto& _subsetMeshlet = _msData.subsetMeshlets[a_cmd.subIdx];
@@ -767,6 +785,7 @@ namespace Engine::Graphics
 				_meshInstanceData.isAnimated = a_isAnimation ? 1 : 0;
 				_meshInstanceData.lodStart = a_lodStart;
 				_meshInstanceData.lodCount = a_lodCount;
+				_meshInstanceData.fade = _fade;
 
 				_meshInstanceIndex = m_pDrawLists->AddInstanceData(_meshInstanceData);
 				return _meshInstanceIndex;

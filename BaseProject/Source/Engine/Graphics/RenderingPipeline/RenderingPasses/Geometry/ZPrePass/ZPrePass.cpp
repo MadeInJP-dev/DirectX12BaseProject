@@ -45,6 +45,12 @@ namespace Engine::Graphics::Pipeline
 		// 深度だけを書くのでピクセルシェーダーは持たない
 		m_defaultPSHandle = {};
 
+		// フェード中の物(カメラに近い障害物・自機)だけは、GBuffer と同じディザーで画素を捨てる。
+		// GBuffer は ZPre の深度と EQUAL で比べるので、こちらで捨てないと捨てた画素に深度が残り、
+		// 後ろの物が描かれずに穴が開く
+		const auto _guidFadePS = _assetDB.GetGUIDFromFilePath("Asset/Shader/Source/Geometry/MeshShader/DepthDitherFadePS.cso");
+		m_pipelineBuilder.RegisterDitherFadePixelShader(_resManager.LoadImmediate<Resource::Shader>(_guidFadePS));
+
 		m_rootSigHandle = _pPSOManager->Request("Asset/Shader/Source/Geometry/MeshShader/UberMS.cso");
 
 		// 深度テスト有効・書き込み有効

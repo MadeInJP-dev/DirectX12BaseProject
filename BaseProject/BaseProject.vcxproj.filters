@@ -1869,6 +1869,9 @@
     <ClCompile Include="Source\Application\Systems\Render\StaticObjectDrawSystem.cpp">
       <Filter>Source\Application\Systems\Render</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Render\ModelFadeSystem.cpp">
+      <Filter>Source\Application\Systems\Render</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Render\RegisterPrevWorldMatSystem.cpp">
       <Filter>Source\Application\Systems\Render</Filter>
     </ClCompile>
@@ -3281,6 +3284,9 @@
     <ClInclude Include="Source\Application\Components\Camera\CameraDeadZoneComponent.h">
       <Filter>Source\Application\Components\Camera</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Components\Camera\CameraCollisionComponent.h">
+      <Filter>Source\Application\Components\Camera</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Components\Camera\CameraFocusTargetComponent.h">
       <Filter>Source\Application\Components\Camera</Filter>
     </ClInclude>
@@ -3765,6 +3771,9 @@
       <Filter>Source\Application\Systems\Render</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Render\StaticObjectDrawSystem.h">
+      <Filter>Source\Application\Systems\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Render\ModelFadeSystem.h">
       <Filter>Source\Application\Systems\Render</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Render\RegisterPrevWorldMatSystem.h">
@@ -5610,6 +5619,9 @@
     <None Include="Asset\Shader\Common\Math\Hash.hlsli">
       <Filter>Asset\Shader\Common\Math</Filter>
     </None>
+    <None Include="Asset\Shader\Common\Math\DitherFade.hlsli">
+      <Filter>Asset\Shader\Common\Math</Filter>
+    </None>
     <None Include="Asset\Shader\Common\Math\Normal.hlsli">
       <Filter>Asset\Shader\Common\Math</Filter>
     </None>
@@ -5719,6 +5731,9 @@
       <Filter>Asset\Shader\Source\Geometry\MeshShader</Filter>
     </None>
     <None Include="Asset\Shader\Source\Geometry\MeshShader\DepthOnlyMS.hlsl">
+      <Filter>Asset\Shader\Source\Geometry\MeshShader</Filter>
+    </None>
+    <None Include="Asset\Shader\Source\Geometry\MeshShader\DepthDitherFadePS.hlsl">
       <Filter>Asset\Shader\Source\Geometry\MeshShader</Filter>
     </None>
     <None Include="Asset\Shader\Source\Geometry\MeshShader\UberMS.hlsl">

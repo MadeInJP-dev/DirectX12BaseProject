@@ -78,6 +78,7 @@
 #include "Application/Components/Combat/ExplodeOnHitComponent.h"
 #include "Application/Components/Camera/CameraFocusTargetComponent.h"
 #include "Application/Components/Camera/CameraDeadZoneComponent.h"
+#include "Application/Components/Camera/CameraCollisionComponent.h"
 #include "Application/Components/Animation/AdditivePoseComponent.h"
 #include "Application/Components/Combat/AimConfigComponent.h"
 #include "Application/Components/Combat/TargetEntityComponent.h"
@@ -136,6 +137,7 @@
 #include "Application/Systems/Camera/RadialBlurShakeSystem.h"
 #include "Application/Systems/Camera/SpeedLineSystem.h"
 #include "Application/Systems/Camera/AimTargetSystem.h"
+#include "Application/Systems/Render/ModelFadeSystem.h"
 #include "Application/Systems/Transform/CalcMatrixSystem.h"
 #include "Application/Systems/Transform/JointSwaySystem.h"
 #include "Application/Systems/Combat/LockOnTargetSystem.h"
@@ -455,6 +457,8 @@ namespace App::ECS
 		a_world.RegisterComponent<Component::GroundDustEmitterComponent>("GroundDustEmitterComponent");
 		// 出来事(生まれた・死んだ・攻撃を受けた)→ エフェクトの対応表。出すのは EffectEventSystem
 		a_world.RegisterComponent<Component::EffectEventsComponent>("EffectEventsComponent");
+		// TPSカメラの地形との判定(障害物の押し出し・地面へのめり込み)。付けなければ TPSSystem は既定値で判定する
+		a_world.RegisterComponent<Component::CameraCollisionComponent>("CameraCollisionComponent");
 
 		// システム登録
 		a_world.RegisterSystem<System::ModelFixupSystem>();
@@ -551,6 +555,9 @@ namespace App::ECS
 		a_world.RegisterSystem<System::MainCameraSystem>();
 		// カメラ姿勢が確定した後に狙点レイを撃つ(TPSSystem より後に登録すること)
 		a_world.RegisterSystem<System::AimTargetSystem>();
+		// モデルのフェード係数を TPSSystem の依頼(手前の障害物・カメラに近い自機)へ寄せる。
+		// 依頼(TPSCameraState)を読むので TPSSystem より後に登録すること
+		a_world.RegisterSystem<System::ModelFadeSystem>();
 		a_world.RegisterSystem<System::CalcMatrixSystem>();
 		// レティクル内の敵集めとロック。ワールド行列を読むので
 		// それを書く CalcMatrix / CommitHierarchyWorldMatrix より後ろに回る

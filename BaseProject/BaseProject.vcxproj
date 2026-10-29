@@ -934,6 +934,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Render\ModelFadeSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Render\RegisterPrevWorldMatSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -2165,6 +2170,7 @@
     <ClInclude Include="Source\Application\App.h" />
     <ClInclude Include="Source\Application\Components\Camera\CameraFocusTargetComponent.h" />
     <ClInclude Include="Source\Application\Components\Camera\CameraDeadZoneComponent.h" />
+    <ClInclude Include="Source\Application\Components\Camera\CameraCollisionComponent.h" />
     <ClInclude Include="Source\Application\Components\Boid\BoidSpownerComponent.h" />
     <ClInclude Include="Source\Application\Components\Boid\PlatoonLeaderComponent.h" />
     <ClInclude Include="Source\Application\Components\Boid\PlatoonSpinComponent.h" />
@@ -2334,6 +2340,7 @@
     <ClInclude Include="Source\Application\Systems\Render\RegisterRayWorldSystem.h" />
     <ClInclude Include="Source\Application\Systems\Render\SkinningRegisterSystem.h" />
     <ClInclude Include="Source\Application\Systems\Render\StaticObjectDrawSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Render\ModelFadeSystem.h" />
     <ClInclude Include="Source\Application\Systems\Render\RegisterPrevWorldMatSystem.h" />
     <ClInclude Include="Source\Application\Systems\Camera\CamSetShaderSystem.h" />
     <ClInclude Include="Source\Application\Systems\Camera\CameraPipelineSubmitSystem.h" />
@@ -2887,6 +2894,8 @@
     <None Include="Asset\Shader\Common\Lighting\FogResolution.hlsli" />
     <None Include="Asset\Shader\Common\Math\EnvBRDF.hlsli" />
     <None Include="Asset\Shader\Common\Math\Hash.hlsli" />
+    <None Include="Asset\Shader\Common\Math\DitherFade.hlsli" />
+    <None Include="Asset\Shader\Source\Geometry\MeshShader\DepthDitherFadePS.hlsl" />
     <None Include="Asset\Shader\Common\Math\Normal.hlsli" />
     <None Include="Asset\Shader\Common\Math\Transform.hlsli" />
     <None Include="Asset\Shader\Common\RootParameters\AmbientData.hlsli" />

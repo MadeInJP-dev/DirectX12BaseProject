@@ -8,13 +8,17 @@
 #include "Application/Components/Camera/CameraFocusTargetComponent.h"
 #include "Application/Components/Camera/CameraDeadZoneComponent.h"
 #include "Application/Components/Camera/CameraParamComponent.h"
+#include "Application/Components/Camera/CameraCollisionComponent.h"
 #include "Application/Components/Transform/LocalTransformComponent.h"
 #include "Application/Components/Movement/DesiredVelocityComponent.h"
 #include "Application/Components/Movement/ActualVelocityComponent.h"
+#include "Application/Components/Physics/Collider.h"
 
 
 
 #include "Application/Components/Movement/LookAngleComponent.h"
+
+#include "Engine/Physics/PhysicsWorld.h"
 
 namespace App::System
 {
@@ -66,6 +70,18 @@ namespace App::System
 	// 速さは「目標速度(DesiredVelocityComponent)」ではなく MovementParamsComponent の実速度を使う。
 	// 目標速度は入力やブーストで 1 フレームで飛ぶので、そのまま使うと画角と引きが
 	// 階段状に切り替わる。実速度なら加減速のカーブがそのままスピード感になる。
+	//
+	//------------------------------------------------------------------------------------------
+	// 地形との判定(CameraCollisionComponent)
+	//------------------------------------------------------------------------------------------
+	// 出来上がったカメラ位置だけを最後に動かす。ピボットや構図には戻さないので、
+	// デッドゾーンの追従が押し出しに引きずられることはない。
+	//
+	//   1) 障害物 … 自機(ピボットの高さ)からカメラへレイを撃ち、地形があれば手前へ寄せる
+	//   2) 地面   … カメラの上から真下へレイを撃ち、地表 + 余白より下へは行かせない
+	//
+	// どちらも「寄せる/押し上げる」は速く、「戻す」はゆっくり補間する。
+	// 設定を持たないカメラは既定値で判定する。
 	//==========================================================================================
 	namespace
 	{
@@ -76,6 +92,187 @@ namespace App::System
 		{
 			if (!(a_rate > 0.0f) || !(a_dt > 0.0f)) return 0.0f;
 			return 1.0f - std::exp(-a_rate * a_dt);
+		}
+
+		//--------------------------------------------------------------------------------------
+		// 地形との判定用の補間係数。rate が 0 以下なら補間せずにすぐ合わせる
+		// (DampFactor と違い「追従しない」にはしない。めり込んだまま止まるのを防ぐため)
+		//--------------------------------------------------------------------------------------
+		float DampFactorOrSnap(float a_rate, float a_dt)
+		{
+			if (!(a_rate > 0.0f)) return 1.0f;
+			return DampFactor(a_rate, a_dt);
+		}
+
+		// 自機 → カメラのレイに掛かった地形(フェードの対象)
+		struct CameraObstacleHits
+		{
+			std::array<Engine::ECS::Entity, Component::TPSCameraStateComponent::FADE_OBSTACLE_MAX> entities = {};
+			std::array<Math::Vector3, Component::TPSCameraStateComponent::FADE_OBSTACLE_MAX> positions = {};
+			uint32_t count = 0;
+		};
+
+		//--------------------------------------------------------------------------------------
+		// フェード係数を距離から決める。a_near 以下で 0(見えない)、a_far 以上で 1(見える)
+		//--------------------------------------------------------------------------------------
+		float FadeByDistance(float a_distance, float a_near, float a_far)
+		{
+			if (!(a_far > a_near)) return (a_distance > a_near) ? 1.0f : 0.0f;
+			return std::clamp((a_distance - a_near) / (a_far - a_near), 0.0f, 1.0f);
+		}
+
+		//--------------------------------------------------------------------------------------
+		// 自機からカメラへのレイで、間の地形の手前へカメラを寄せる。
+		// a_ioPos     : 寄せる前のカメラ位置 → 寄せた後の位置
+		// a_outHits   : レイに掛かった地形(手前から。フェード用)
+		//--------------------------------------------------------------------------------------
+		void ResolveCameraObstacle(
+			const Engine::Physics::PhysicsWorld& a_physicsWorld,
+			const Component::CameraCollisionComponent& a_collision,
+			Engine::ECS::Entity a_target,
+			const Math::Vector3& a_origin,
+			float a_dt,
+			Component::TPSCameraStateComponent& a_ioState,
+			Math::Vector3& a_ioPos,
+			CameraObstacleHits& a_outHits)
+		{
+			a_outHits.count = 0;
+
+			const Math::Vector3 _toCamera = a_ioPos - a_origin;
+			const float _fullDistance = _toCamera.Length();
+			if (!(_fullDistance > 1e-4f))
+			{
+				a_ioState.currentCollisionPull = 0.0f;
+				a_ioState.isObstacleHit = false;
+				return;
+			}
+			const Math::Vector3 _dir = _toCamera / _fullDistance;
+			const float _margin = std::max(a_collision.obstacleMargin, 0.0f);
+			const float _rayLength = _fullDistance + _margin;
+			const uint32_t _queryMask = static_cast<uint32_t>(Component::ECollisionLayer::StaticObject);
+
+			// ---- 目標の寄せ量 ----
+			// 余白のぶん先まで撃つ。カメラのすぐ後ろの壁でも、近面が壁を切らないように寄せる
+			Math::Ray _ray;
+			_ray.origin			= a_origin;
+			_ray.direction		= _dir;
+			_ray.maxDistance	= _rayLength;
+
+			// 地形(静的なもの)だけ。自機は外す
+			Engine::Physics::RayHit _hit = {};
+			a_ioState.isObstacleHit = a_physicsWorld.CastRay(_ray, _queryMask, a_target, _hit);
+
+			// ---- 間の地形を集める(フェード用) ----
+			// 寄せに使うのはいちばん手前の1つだけ。その先にも重なっている物があれば、
+			// 当たった物を外して同じ向きに撃ち直し、カメラ(+余白)までの間にある物を拾う。
+			// 三角形は表裏どちらにも当たるので、外さずに撃つと同じ物の裏面で止まってしまう
+			if (a_ioState.isObstacleHit)
+			{
+				Engine::Physics::RayHit _next = _hit;
+				float _traveled = 0.0f;
+				for (uint32_t _k = 0; _k < Component::TPSCameraStateComponent::FADE_OBSTACLE_MAX; ++_k)
+				{
+					// 同じ物を2回入れない(A → B → A の裏面など)
+					bool _isListed = false;
+					for (uint32_t _j = 0; _j < a_outHits.count; ++_j)
+					{
+						if (a_outHits.entities[_j] == _next.entity) { _isListed = true; break; }
+					}
+					if (!_isListed)
+					{
+						a_outHits.entities[a_outHits.count]	= _next.entity;
+						a_outHits.positions[a_outHits.count]	= _next.position;
+						++a_outHits.count;
+					}
+
+					_traveled += _next.distance + 0.01f;
+					const float _rest = _rayLength - _traveled;
+					if (!(_rest > 0.0f)) break;
+
+					Math::Ray _nextRay;
+					_nextRay.origin			= a_origin + _dir * _traveled;
+					_nextRay.direction		= _dir;
+					_nextRay.maxDistance	= _rest;
+					const Engine::ECS::Entity _ignore = _next.entity;
+					if (!a_physicsWorld.CastRay(_nextRay, _queryMask, _ignore, _next)) break;
+				}
+			}
+
+			const float _minDistance = std::clamp(a_collision.minDistance, 0.0f, _fullDistance);
+			float _goalPull = 0.0f;
+			if (a_ioState.isObstacleHit)
+			{
+				const float _allowed = std::clamp(_hit.distance - _margin, _minDistance, _fullDistance);
+				_goalPull = _fullDistance - _allowed;
+			}
+
+			// ---- 寄せ量の補間 ----
+			// 距離そのものではなく「どれだけ寄せているか」を補間する。
+			// 障害物が無いときは 0 へ戻っていくだけなので、速度の引きの伸び縮みは遅れずにそのまま出る
+			float& _pull = a_ioState.currentCollisionPull;
+			if (_pull < 0.0f)
+			{
+				_pull = _goalPull;	// 初回は合わせる(シーン開始直後に壁の中から寄ってこないように)
+			}
+			else
+			{
+				const float _rate = (_goalPull > _pull) ? a_collision.pullInRate : a_collision.releaseRate;
+				_pull += (_goalPull - _pull) * DampFactorOrSnap(_rate, a_dt);
+			}
+			_pull = std::clamp(_pull, 0.0f, _fullDistance - _minDistance);
+
+			a_ioPos = a_origin + _dir * (_fullDistance - _pull);
+		}
+
+		//--------------------------------------------------------------------------------------
+		// カメラの真下の地面を探し、地表 + 余白より下へ行かないよう押し上げる。
+		// a_pivotY : 自機のピボットの高さ。レイの始点をここより上げない
+		//--------------------------------------------------------------------------------------
+		void ResolveCameraGround(
+			const Engine::Physics::PhysicsWorld& a_physicsWorld,
+			const Component::CameraCollisionComponent& a_collision,
+			Engine::ECS::Entity a_target,
+			float a_pivotY,
+			float a_dt,
+			Component::TPSCameraStateComponent& a_ioState,
+			Math::Vector3& a_ioPos)
+		{
+			const float _clearance = std::max(a_collision.groundClearance, 0.0f);
+
+			// ---- レイの始点 ----
+			// カメラが既に地面の下へ入っていても地表を上から拾えるよう、少し上げてから撃つ。
+			// ただし自機のピボットの高さまで。橋や天井の下でカメラを上げすぎると、
+			// 天井の上面を地面と拾ってカメラを屋根の上へ押し上げてしまう。
+			// ピボットは自機の居る空間なので、そこまでなら地形の外と見てよい
+			const float _probeTop = std::max(a_ioPos.y, std::min(a_ioPos.y + std::max(a_collision.groundProbeUp, 0.0f), a_pivotY));
+			const float _probeUp  = _probeTop - a_ioPos.y;
+
+			Math::Ray _ray;
+			_ray.origin			= Math::Vector3(a_ioPos.x, _probeTop, a_ioPos.z);
+			_ray.direction		= Math::Vector3(0.0f, -1.0f, 0.0f);
+			_ray.maxDistance	= _probeUp + _clearance;
+
+			Engine::Physics::RayHit _hit = {};
+			a_ioState.isGroundHit = (_ray.maxDistance > 1e-4f) && a_physicsWorld.CastRay(
+				_ray, static_cast<uint32_t>(Component::ECollisionLayer::StaticObject), a_target, _hit);
+
+			// ---- 目標の押し上げ量 ----
+			float _goalLift = 0.0f;
+			if (a_ioState.isGroundHit)
+			{
+				_goalLift = std::max(_hit.position.y + _clearance - a_ioPos.y, 0.0f);
+			}
+
+			// ---- 押し上げ量の補間 ----
+			float& _lift = a_ioState.currentGroundLift;
+			const float _rate = (_goalLift > _lift) ? a_collision.groundPushRate : a_collision.groundReleaseRate;
+			_lift += (_goalLift - _lift) * DampFactorOrSnap(_rate, a_dt);
+
+			// 補間が追いつかない間も、余白の半分より下(地表の近く)へは入れない
+			_lift = std::max(_lift, _goalLift - _clearance * 0.5f);
+			_lift = std::max(_lift, 0.0f);
+
+			a_ioPos.y += _lift;
 		}
 	}
 
@@ -231,6 +428,8 @@ namespace App::System
 						_statComp.currentPullBack	= _goalPullBack;
 						_statComp.currentSpeed01	= _rawSpeed01;
 						_statComp.currentFovAdd		= _followParam.fovAddAtSpeed * _rawSpeed01;
+						_statComp.currentCollisionPull	= -1.0f;	// 地形の判定でその場の値へ合わせる
+						_statComp.currentGroundLift		= 0.0f;
 						_statComp.isInitialized		= true;
 					}
 
@@ -436,6 +635,73 @@ namespace App::System
 						+ _camForward * _lookAtLocal.z;
 
 					//============================================================
+					// 地形との判定
+					//------------------------------------------------------------
+					// 障害物で寄せてから、その位置で地面を見る(寄せた先が地面の下でも拾える)。
+					// レイの始点は自機のピボットの高さ。ここはデッドゾーンで遅れる
+					// currentPivot ではなく、自機そのものの位置(goalPivot)を使う。
+					// 遅れたピボットから撃つと、自機の前に壁が来たときに判定が外れる。
+					//============================================================
+					{
+						const Engine::ECS::Entity _self = a_pChunk->entityData[_i];
+						const Component::CameraCollisionComponent* _pCollision =
+							a_ctx.pWorld->HasComponent<Component::CameraCollisionComponent>(_self)
+							? a_ctx.pWorld->RefData<Component::CameraCollisionComponent>(_self)
+							: nullptr;
+						const Component::CameraCollisionComponent _collision =
+							_pCollision ? *_pCollision : Component::CameraCollisionComponent{};
+
+						const auto& _physicsWorld = a_ctx.pWorld->GetResource<Engine::Physics::PhysicsWorld>();
+
+						CameraObstacleHits _obstacleHits = {};
+						if (_collision.isObstacleEnabled)
+						{
+							ResolveCameraObstacle(_physicsWorld, _collision, _target, _goalPivot, a_ctx.dt, _statComp, _currentPos, _obstacleHits);
+						}
+						else
+						{
+							_statComp.currentCollisionPull	= -1.0f;
+							_statComp.isObstacleHit			= false;
+						}
+
+						if (_collision.isGroundEnabled)
+						{
+							ResolveCameraGround(_physicsWorld, _collision, _target, _goalPivot.y, a_ctx.dt, _statComp, _currentPos);
+						}
+						else
+						{
+							_statComp.currentGroundLift	= 0.0f;
+							_statComp.isGroundHit		= false;
+						}
+
+						//--------------------------------------------------------
+						// フェードの依頼
+						//--------------------------------------------------------
+						// 位置が決まったあとのカメラからの距離で決める。
+						// 実際に ModelComponent::fade を寄せるのは ModelFadeSystem(子孫にも当てる・補間する)。
+						//   障害物 : 当たった点とカメラの距離。押し出しが追いつく前の壁の中や、
+						//            寄せたあとカメラのすぐ後ろに来た壁の内側を見せない
+						//   自機   : ピボットとカメラの距離。寄せすぎて機体にめり込むのを見せない
+						_statComp.fadeTarget			= _target;
+						_statComp.playerFade			= 1.0f;
+						_statComp.fadeObstacleCount	= 0;
+						if (_collision.isFadeEnabled)
+						{
+							_statComp.playerFade = FadeByDistance(
+								(_currentPos - _goalPivot).Length(), _collision.playerFadeNear, _collision.playerFadeFar);
+
+							for (uint32_t _k = 0; _k < _obstacleHits.count; ++_k)
+							{
+								_statComp.fadeObstacles[_k]		= _obstacleHits.entities[_k];
+								_statComp.fadeObstacleValues[_k]	= FadeByDistance(
+									(_currentPos - _obstacleHits.positions[_k]).Length(),
+									_collision.obstacleFadeNear, _collision.obstacleFadeFar);
+							}
+							_statComp.fadeObstacleCount = _obstacleHits.count;
+						}
+					}
+
+					//============================================================
 					// 保存
 					//------------------------------------------------------------
 					// カメラの姿勢はオービット回転そのもの。
@@ -452,8 +718,10 @@ namespace App::System
 				}
 			}
 		)
-		// 絞り込みに使わない読み書き : 追従先の位置・視点角・構図・速さ、自分のデッドゾーン
-		.Reads<Component::LocalTransformComponent, Component::LookAngleComponent, Component::CameraFocusTargetComponent, Component::ActualVelocityComponent, Component::DesiredVelocityComponent>()
-		.Writes<Component::CameraDeadZoneComponent>();
+		// 絞り込みに使わない読み書き : 追従先の位置・視点角・構図・速さ、自分のデッドゾーンと地形の判定の設定
+		.Reads<Component::LocalTransformComponent, Component::LookAngleComponent, Component::CameraFocusTargetComponent, Component::ActualVelocityComponent, Component::DesiredVelocityComponent, Component::CameraCollisionComponent>()
+		.Writes<Component::CameraDeadZoneComponent>()
+		// 物理空間へレイを撃つ(障害物・地面)
+		.ReadsResource<Engine::Physics::PhysicsWorld>();
 	}
 }

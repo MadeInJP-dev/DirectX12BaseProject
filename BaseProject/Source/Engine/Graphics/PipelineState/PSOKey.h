@@ -12,6 +12,7 @@ namespace Engine::Graphics
 		DepthMasked			= 1 << 4,	// 深度テストありか
 		UseGPUInstancing	= 1 << 5,	// GPUインスタンシング使用するか
 		MeshShader			= 1 << 6,	// メッシュシェーダー
+		DitherFade			= 1 << 7,	// フェード中(インスタンスの fade が 1 未満)。深度だけのパスでもディザーで画素を捨てる
 
 	};
 

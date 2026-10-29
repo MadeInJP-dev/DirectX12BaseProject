@@ -54,6 +54,14 @@ namespace Engine::Graphics
 		void RegisterAmplificationShader(EShaderPermutationFlags a_flag, Handle<Resource::Shader> a_asHandle);
 
 		/// <summary>
+		/// フェード中(DitherFade)の描画で、パスのPSOの代わりに張るピクセルシェーダーを登録する。
+		/// 深度だけを書くパス(ZPre)が、フェード中の物だけディザーで画素を捨てるために使う。
+		/// 登録しないパスは DitherFade でも今までどおりパスのPSで組む
+		/// </summary>
+		/// <param name="a_psHandle">PSハンドル</param>
+		void RegisterDitherFadePixelShader(Handle<Resource::Shader> a_psHandle);
+
+		/// <summary>
 		/// パスの標準深度設定を受け取る
 		/// </summary>
 		/// <param name="a_enable">深度テストするかどうか</param>
@@ -93,6 +101,9 @@ namespace Engine::Graphics
 
 		// フラグに対応するASのマップ
 		std::unordered_map<EShaderPermutationFlags, Handle<Resource::Shader>> m_asMap;
+
+		// フェード中(DitherFade)に張るPS。無効ならパスのPSのまま
+		Handle<Resource::Shader> m_ditherFadePSHandle = {};
 
 		// パイプラインモード
 
