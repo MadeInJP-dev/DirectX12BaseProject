@@ -1,6 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="Resource">
+      <UniqueIdentifier>{45f13cbc-c71a-4e50-b94c-6eea2f9fd4b1}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\DevTool">
       <UniqueIdentifier>{b2813b74-4575-435e-a7ab-c43bfabe561d}</UniqueIdentifier>
     </Filter>
@@ -3653,6 +3656,9 @@
     <ClInclude Include="Source\Application\Object\UI\Decoration\UIDecoration.h">
       <Filter>Source\Application\Object\UI\Decoration</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Application\Object\UI\Decoration\UIDecorationDrawContext.h">
+      <Filter>Source\Application\Object\UI\Decoration</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Application\Object\UI\Decoration\DecorationElement\UIDecorationElementBase.h">
       <Filter>Source\Application\Object\UI\Decoration\DecorationElement</Filter>
     </ClInclude>
@@ -4373,7 +4379,7 @@
     <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerPanel.h">
       <Filter>Source\Editor\Panel\ProfilerPanel</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\ProfilerViewBase.h">
+    <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\IProfilerView.h">
       <Filter>Source\Editor\Panel\ProfilerPanel\ProfilerView</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Panel\ProfilerPanel\ProfilerView\OverviewProfilerView\OverviewProfilerView.h">
@@ -5781,5 +5787,20 @@
     <FxCompile Include="Asset\Shader\Source\PostProcess\Blend\BlendCS.hlsl">
       <Filter>Asset\Shader\Source\PostProcess\Blend</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Resource\resource.h">
+      <Filter>Resource</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource\SystemResource.rc">
+      <Filter>Resource</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Resource\Vector_Regine.ico">
+      <Filter>Resource</Filter>
+    </Image>
   </ItemGroup>
 </Project>
