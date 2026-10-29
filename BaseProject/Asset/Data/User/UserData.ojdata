@@ -8,7 +8,7 @@
         "Brightness": 100,
         "HasWindowMode": true,
         "IsBloomEnable": true,
-        "IsHUDVisible": false,
+        "IsHUDVisible": true,
         "ScreenShake": 100,
         "WindowMode": 2
     },

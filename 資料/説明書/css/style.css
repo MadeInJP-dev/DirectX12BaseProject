@@ -1,0 +1,439 @@
+:root {
+    --bg: #0b1119;
+    --panel: #111c28;
+    --panel-raised: #172635;
+    --line: #2a4354;
+    --line-bright: #45d8ed;
+    --accent: #45d8ed;
+    --accent-dim: #1b8da4;
+    --warning: #e5b76b;
+    --text: #e9f1f5;
+    --muted: #9aadb9;
+    --placeholder: #7e98a8;
+  }
+
+  @page { size: A4 landscape; margin: 0; }
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    color: var(--text);
+    background: #d8dee4;
+    font-family: "Yu Gothic UI", "Yu Gothic", "Meiryo", sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    position: relative;
+    width: 297mm;
+    height: 210mm;
+    margin: 12px auto;
+    padding: 11mm 13mm 10mm;
+    overflow: hidden;
+    background:
+      linear-gradient(rgba(69,216,237,.025) 1px, transparent 1px) 0 0 / 8mm 8mm,
+      linear-gradient(90deg, rgba(69,216,237,.025) 1px, transparent 1px) 0 0 / 8mm 8mm,
+      var(--bg);
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .page:last-child { page-break-after: auto; break-after: auto; }
+
+  .topline {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5mm;
+    padding-bottom: 3mm;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 8pt;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+
+  .topline .brand { color: var(--accent); font-weight: 700; }
+  .topline .status { display: flex; align-items: center; gap: 2mm; }
+  .status::before {
+    content: "";
+    width: 2mm;
+    height: 2mm;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 5px rgba(69,216,237,.7);
+  }
+
+  .page-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 8mm;
+    margin-bottom: 5mm;
+  }
+
+  .page-heading h1 {
+    margin: 0;
+    font-size: 27pt;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: .04em;
+  }
+
+  .page-heading .en {
+    display: block;
+    margin-bottom: 2mm;
+    color: var(--accent);
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: .2em;
+  }
+
+  .page-heading .index {
+    color: var(--accent);
+    font-size: 18pt;
+    font-weight: 300;
+    letter-spacing: .08em;
+  }
+
+  .content {
+    height: 151mm;
+    display: grid;
+    grid-template-columns: 31% 69%;
+    border: 1px solid var(--line);
+    background: rgba(17,28,40,.94);
+  }
+
+  .instructions {
+    display: flex;
+    flex-direction: column;
+    gap: 5mm;
+    min-width: 0;
+    padding: 6mm;
+    border-right: 1px solid var(--line);
+  }
+
+  .section-label {
+    margin: 0;
+    padding-bottom: 2mm;
+    color: var(--accent);
+    border-bottom: 1px solid var(--line-bright);
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: .16em;
+  }
+
+  .control-block { padding-top: 1mm; }
+  .control-name {
+    margin: 0 0 2.5mm;
+    font-size: 14pt;
+    font-weight: 700;
+  }
+
+  .keys {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2mm;
+    margin: 2mm 0 3mm;
+  }
+
+  .key {
+    min-width: 11mm;
+    padding: 1.8mm 2.5mm;
+    color: var(--text);
+    background: #0a141e;
+    border: 1px solid #426174;
+    border-bottom: 2px solid var(--accent-dim);
+    border-radius: 1mm;
+    font-size: 12pt;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .description {
+    margin: 0;
+    color: #d1dde4;
+    font-size: 10pt;
+    line-height: 1.8;
+  }
+
+  .note {
+    margin-top: auto;
+    padding: 3mm;
+    color: var(--muted);
+    background: #0b151f;
+    border-left: 2px solid var(--warning);
+    font-size: 8.5pt;
+    line-height: 1.65;
+  }
+
+  .visual {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: #0d1721;
+  }
+
+  .visual-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 12mm;
+    padding: 0 5mm;
+    color: var(--text);
+    background: var(--panel-raised);
+    border-bottom: 1px solid var(--line);
+    font-size: 10pt;
+    font-weight: 700;
+    letter-spacing: .08em;
+  }
+
+  .visual-title small {
+    color: var(--accent);
+    font-size: 7pt;
+    font-weight: 500;
+    letter-spacing: .16em;
+  }
+
+  .image-placeholder {
+    position: relative;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    margin: 5mm;
+    padding: 8mm;
+    overflow: hidden;
+    color: var(--placeholder);
+    text-align: center;
+    background:
+      linear-gradient(135deg, rgba(69,216,237,.035), transparent 45%),
+      #101d29;
+    border: 1px dashed #456174;
+    font-size: 11pt;
+    line-height: 1.8;
+  }
+
+  .image-placeholder::before,
+  .image-placeholder::after {
+    content: "";
+    position: absolute;
+    width: 12mm;
+    height: 12mm;
+    border-color: var(--accent);
+    opacity: .65;
+  }
+
+  .image-placeholder::before {
+    top: 3mm;
+    left: 3mm;
+    border-top: 1px solid;
+    border-left: 1px solid;
+  }
+
+  .image-placeholder::after {
+    right: 3mm;
+    bottom: 3mm;
+    border-right: 1px solid;
+    border-bottom: 1px solid;
+  }
+
+  .image-placeholder strong {
+    display: block;
+    margin-bottom: 3mm;
+    color: var(--text);
+    font-size: 15pt;
+    font-weight: 600;
+  }
+
+  .caption {
+    margin: 0 5mm 4mm;
+    color: var(--muted);
+    font-size: 8.5pt;
+    line-height: 1.55;
+  }
+
+  .page-number {
+    position: absolute;
+    right: 13mm;
+    bottom: 4mm;
+    color: #718896;
+    font-size: 8pt;
+    letter-spacing: .12em;
+  }
+
+  /* Cover */
+  .cover {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cover-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 18mm;
+    padding: 0 15mm;
+    color: var(--muted);
+    background: #080e15;
+    border-bottom: 1px solid var(--line);
+    font-size: 8pt;
+    letter-spacing: .18em;
+  }
+
+  .cover-top strong { color: var(--accent); }
+
+  .cover-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 38% 62%;
+    gap: 8mm;
+    min-height: 0;
+    padding: 13mm 15mm 10mm;
+  }
+
+  .cover-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .cover-kicker {
+    margin: 0 0 4mm;
+    color: var(--accent);
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: .22em;
+  }
+
+  .cover h1 {
+    margin: 0 0 4mm;
+    font-size: 34pt;
+    line-height: 1.12;
+    letter-spacing: .05em;
+    overflow-wrap: anywhere;
+  }
+
+  .cover-subtitle {
+    margin: 0 0 8mm;
+    color: #c0d0d9;
+    font-size: 14pt;
+    letter-spacing: .08em;
+  }
+
+  .cover-rule {
+    width: 25mm;
+    height: 1mm;
+    margin-bottom: 6mm;
+    background: var(--accent);
+  }
+
+  .cover-description {
+    margin: 0;
+    color: #c6d3dc;
+    font-size: 10.5pt;
+    line-height: 1.9;
+  }
+
+  .cover-art {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding: 8mm;
+    color: var(--placeholder);
+    text-align: center;
+    background: #101d29;
+    border: 1px dashed #456174;
+    font-size: 11pt;
+    line-height: 1.8;
+  }
+
+  .cover-art strong {
+    display: block;
+    margin-bottom: 3mm;
+    color: var(--text);
+    font-size: 15pt;
+  }
+
+  .cover-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 14mm;
+    padding: 0 15mm;
+    color: var(--muted);
+    background: #080e15;
+    border-top: 1px solid var(--line);
+    font-size: 8pt;
+    letter-spacing: .06em;
+  }
+
+  .feature-list {
+    margin: 0;
+    padding-left: 5mm;
+    color: #d1dde4;
+    font-size: 10pt;
+    line-height: 1.8;
+  }
+
+  .feature-list li { margin-bottom: 2mm; }
+  .feature-list b { color: var(--accent); font-weight: 700; }
+
+  /* 操作の並び(キーとパッドを1行ずつ) */
+  .control-row {
+    display: grid;
+    grid-template-columns: 17mm 1fr;
+    align-items: center;
+    gap: 2mm;
+    margin-bottom: 2mm;
+  }
+  .control-row .label { color: var(--text); font-size: 10pt; font-weight: 700; }
+  .control-row .keys { justify-content: flex-start; margin: 0; gap: 1.5mm; }
+  .control-row .key { min-width: 9mm; padding: 1mm 2mm; font-size: 9.5pt; }
+  .key.pad { border-bottom-color: var(--warning); color: #f1dcb4; }
+  .key-legend { margin: 0; color: var(--muted); font-size: 8pt; }
+  .key-legend .key { display: inline-block; min-width: 0; padding: 0 1.5mm; font-size: 8pt; }
+
+  /* 実際の画面 */
+  .visual { min-height: 0; overflow: hidden; }
+  .instructions { min-height: 0; overflow: hidden; }
+  .instructions.dense { gap: 3mm; }
+  .shot {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    margin: 5mm 5mm 3mm;
+    border: 1px solid #456174;
+    background: #000;
+    overflow: hidden;
+  }
+  .shot img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
+  .shot-pair {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: 3mm;
+    margin: 5mm 5mm 3mm;
+  }
+  .shot-pair .shot { margin: 0; }
+  .cover-art.has-image { align-self: center; aspect-ratio: 16 / 9; padding: 0; border-style: solid; overflow: hidden; }
+  .cover-art.has-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+  @media print {
+    html, body { background: var(--bg); }
+    .page {
+      margin: 0;
+      box-shadow: none;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  }
