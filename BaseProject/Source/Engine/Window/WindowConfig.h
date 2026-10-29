@@ -27,6 +27,9 @@ namespace Engine::Window
 		// 起動したときのウィンドウモード(プレイヤーが選んだものがあればそちら)
 		EWindowMode windowMode = EWindowMode::Windowed;
 
+		// アイコンパス
+		std::string iconPath = "";
+
 		// 設定画面・保存(ConfigRegistry から呼ばれる)
 		void DrawEdit(const ECS::EngineServices& a_services);
 		void Archive(Persistence::Archive& a_archive);

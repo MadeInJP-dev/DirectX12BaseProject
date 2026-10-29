@@ -15,6 +15,9 @@ DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
 #endif
 
+// ゲームアイコン設定
+#include "../../../Resource/resource.h"
+
 namespace Engine::Window
 {
 	namespace
@@ -181,16 +184,17 @@ namespace Engine::Window
 		WNDCLASSEX _wc = {};
 		_wc.cbSize = sizeof(WNDCLASSEX);									// 構造体サイズ
 		_wc.style = CS_OWNDC;												// 描画スタイル
-		_wc.lpfnWndProc = WndProc;									// ウィンドウ関数
-		_wc.hIcon = LoadIcon(m_hInst, IDI_APPLICATION);						// ウィンドウのアイコン（Alt+Tabなど）
-		// 標準カーソルは hInstance に nullptr を渡すこと(自前のモジュールを指すと取得できない)。
-		// 自前カーソルを切ったときはこれが出る
-		_wc.hCursor = LoadCursor(nullptr, IDC_ARROW);						// ウィンドウ内のデフォルトカーソル
+		_wc.lpfnWndProc = WndProc;											// ウィンドウ関数
+		_wc.hCursor = LoadCursor(nullptr, IDC_ARROW);						// ウィンドウ内のデフォルトカーソル 標準カーソルは hInstance に nullptr を渡すこと(自前のモジュールを指すと取得できない)。
 		_wc.hInstance = m_hInst;											// インスタンスハンドル
 		_wc.hbrBackground = nullptr;										// 初期の背景塗りつぶし色
 		_wc.lpszMenuName = nullptr;											// ウィンドウクラスのメニューリソースID
 		_wc.lpszClassName = a_desc.className.c_str();						// ウィンドウのクラス名（ユニーク性必須）
-		_wc.hIconSm = LoadIcon(m_hInst, IDI_APPLICATION);					// タスクバーとかのアイコン
+
+		// ゲームアイコン設定
+		_wc.hIcon = LoadIcon(m_hInst, MAKEINTRESOURCE(IDI_GAME_ICON));		// ウィンドウのアイコン（Alt+Tabなど）
+		_wc.hIconSm = LoadIcon(m_hInst,MAKEINTRESOURCE(IDI_GAME_ICON));		// タスクバーとかのアイコン
+
 		// ウィンドウクラスの登録（同じクラス名は使わないこと）
 		if (!RegisterClassEx(&_wc))
 		{

@@ -2101,6 +2101,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Resource\resource.h" />
     <ClInclude Include="Source\Application\Object\UI\Decoration\UIDecorationDrawContext.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\VariableMutate\NumericMutate.h" />
     <ClInclude Include="Source\Application\Object\UI\Widget\VariableMutate\ScrollBar\ScrollBar.h" />
@@ -3558,6 +3559,12 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <FileType>Document</FileType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource\SystemResource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Resource\Vector_Regine.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
