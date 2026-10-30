@@ -172,7 +172,8 @@ namespace Engine::Physics
 			uint32_t a_queryMask, ECS::Entity a_ignore, ECS::Entity a_ignore2, ShapeHit& a_outHit) const;
 
 		// 球の重なり。重なっている相手を全部 a_outHits へ足す(爆風の範囲ダメージ)。
-		// 1つの持ち主が複数のボディを持っていても1件にまとめる(いちばん深く重なったもの)。
+		// ボディごとに最初に見つかった重なりを使う(三角形の多いメッシュでも1枚で打ち切る。いちばん深い所とは限らない)。
+		// 1つの持ち主が複数のボディを持っていても1件にまとめる(そのうちいちばん深く重なったボディのもの)。
 		// a_outHits は空にしないで後ろへ足す。1件でも足したら true
 		bool OverlapSphereAll(const Math::Vector3& a_center, float a_radius,
 			uint32_t a_queryMask, ECS::Entity a_ignore, ECS::Entity a_ignore2, std::vector<ShapeHit>& a_outHits) const;

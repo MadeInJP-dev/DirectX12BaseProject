@@ -24,8 +24,51 @@
 // リソースマネージャー
 #include "../../Resource/Manager/ResourceManager/ResourceManager.h"
 
+// 先読みしたエフェクトのパーティクルの GPU プール
+#include "../../Resource/Data/EffectAsset/EffectAsset.h"
+#include "../../Resource/Data/Particles/ParticlesAsset.h"
+#include "../../Graphics/Particle/ParticleBufferManager.h"
+
 namespace Engine::Scene
 {
+	namespace
+	{
+		//----------------------------------------------------------------------------------
+		// 先読みで届いたエフェクト(とパーティクル)の GPU プールを、ここで作っておく
+		//
+		// プールはパーティクルの種類ごとにバッファを何本も作り、初期値を詰めて流すので、
+		// 1種類で数 ms かかる。作るのが「初めて使われた瞬間」(敵の出現で死亡エフェクトを
+		// 取ったときなど)だと、そのフレームが止まる。先読み一覧に載っているものは
+		// ロード画面の間に作っておき、ゲーム中は出来上がったプールを使うだけにする。
+		// 読めていないものは何もしない(使われるときに今まで通り作られる)
+		//----------------------------------------------------------------------------------
+		void WarmUpParticlePools(Resource::ResourceManager& a_resourceManager, const Core::GUID& a_guid)
+		{
+			auto* _pGraphicsEngine = MainEngine::Instance().RefGraphicsEngine();
+			auto* _pParticleManager = _pGraphicsEngine ? _pGraphicsEngine->RefParticleManager() : nullptr;
+			if (!_pParticleManager) return;
+
+			if (a_resourceManager.Has<Resource::EffectAsset>(a_guid))
+			{
+				const auto _effectHandle = a_resourceManager.GetCache<Resource::EffectAsset>(a_guid);
+				if (const auto* _pEffect = a_resourceManager.Get(_effectHandle))
+				{
+					for (const auto& _part : _pEffect->GetParticleParts())
+					{
+						if (!_part.IsValid()) continue;
+						_pParticleManager->CreateParticleDataAsync(_part.particleHandle);
+					}
+				}
+				return;
+			}
+
+			if (a_resourceManager.Has<Resource::ParticlesAsset>(a_guid))
+			{
+				_pParticleManager->CreateParticleDataAsync(a_resourceManager.GetCache<Resource::ParticlesAsset>(a_guid));
+			}
+		}
+	}
+
 	BaseScene::BaseScene()
 	{}
 
@@ -238,6 +281,8 @@ namespace Engine::Scene
 			if (!a_resourceManager.RequestLoadByGUID(_guid) ||
 				a_resourceManager.GetStateByGUID(_guid) != Resource::EResourceState::Loading)
 			{
+				// その場で読み切れたもの(前のシーンから残っていたものも含む)
+				WarmUpParticlePools(a_resourceManager, _guid);
 				++m_preLoadDoneCount;
 			}
 			else
@@ -259,6 +304,9 @@ namespace Engine::Scene
 			[this, &a_resourceManager](const Core::GUID& a_guid)
 			{
 				if (a_resourceManager.GetStateByGUID(a_guid) == Resource::EResourceState::Loading) return false;
+
+				// ジョブで読み終わったもの
+				WarmUpParticlePools(a_resourceManager, a_guid);
 				++m_preLoadDoneCount;
 				return true;
 			});

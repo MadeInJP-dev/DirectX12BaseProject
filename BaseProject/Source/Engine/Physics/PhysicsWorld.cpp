@@ -17,6 +17,8 @@
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
+#include <Jolt/Physics/Collision/BroadPhase/BroadPhaseQuery.h>
+#include <Jolt/Physics/Collision/TransformedShape.h>
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Core/JobSystem.h>
 
@@ -876,28 +878,43 @@ namespace Engine::Physics
 		JPH::CollideShapeSettings _settings;
 		_settings.mBackFaceMode = JPH::EBackFaceMode::CollideWithBackFaces;
 
-		// 重なっているもの全部(同じボディの三角形ごとにも返ってくる)
-		JPH::AllHitCollisionCollector<JPH::CollideShapeCollector> _collector;
 		const LayerMaskQueryFilter _layerFilter(a_queryMask);
 		const IgnoreOwnerBodyFilter _bodyFilter(a_ignore, false, a_ignore2);
 
-		m_upPhysicsSystem->GetNarrowPhaseQueryNoLock().CollideShape(
-			&_sphere, JPH::Vec3::sOne(), JPH::RMat44::sTranslation(Internal::ToJoltR(a_center)),
-			_settings, JPH::RVec3::sZero(), _collector, {}, _layerFilter, _bodyFilter);
-
-		if (!_collector.HadHit()) return false;
+		//------------------------------------------------------------------------------
+		// 球に AABB がかかるボディを先に集め、ボディごとに「最初に当たった1つ」で打ち切る。
+		//
+		// 球を一度に全部へ当てる(AllHit)と、判定メッシュの三角形ごとに当たりが返る。
+		// 機体(LightTacticalMech、約4万枚)のそばで爆発すると半径 3m で 2.6 万件になり、
+		// 集めるだけで 20ms 近くかかっていた。知りたいのは誰が入っているかだけなので、
+		// 三角形は1枚見つかれば十分
+		//------------------------------------------------------------------------------
+		JPH::AllHitCollisionCollector<JPH::CollideShapeBodyCollector> _bodyCollector;
+		m_upPhysicsSystem->GetBroadPhaseQuery().CollideSphere(
+			Internal::ToJolt(a_center), a_radius, _bodyCollector, {}, _layerFilter);
+		if (!_bodyCollector.HadHit()) return false;
 
 		// 持ち主ごとにいちばん深いものだけを残す。足し始めた位置より前は呼び出し側のもの
 		const size_t _begin = a_outHits.size();
 		std::vector<float> _depthVec;
 
+		const JPH::RMat44 _sphereTransform = JPH::RMat44::sTranslation(Internal::ToJoltR(a_center));
 		const JPH::BodyLockInterfaceNoLock& _lockInterface = m_upPhysicsSystem->GetBodyLockInterfaceNoLock();
-		for (const JPH::CollideShapeResult& _hit : _collector.mHits)
+		for (const JPH::BodyID& _bodyID : _bodyCollector.mHits)
 		{
-			JPH::BodyLockRead _lock(_lockInterface, _hit.mBodyID2);
+			JPH::BodyLockRead _lock(_lockInterface, _bodyID);
 			if (!_lock.Succeeded()) continue;
 
-			const ECS::Entity _owner = static_cast<ECS::Entity>(_lock.GetBody().GetUserData());
+			const JPH::Body& _body = _lock.GetBody();
+			if (!_bodyFilter.ShouldCollideLocked(_body)) continue;
+
+			JPH::AnyHitCollisionCollector<JPH::CollideShapeCollector> _collector;
+			_body.GetTransformedShape().CollideShape(
+				&_sphere, JPH::Vec3::sOne(), _sphereTransform, _settings, JPH::RVec3::sZero(), _collector);
+			if (!_collector.HadHit()) continue;
+
+			const JPH::CollideShapeResult& _hit = _collector.mHit;
+			const ECS::Entity _owner = static_cast<ECS::Entity>(_body.GetUserData());
 
 			const JPH::Vec3 _axis = _hit.mPenetrationAxis;
 			ShapeHit _shapeHit = {};
