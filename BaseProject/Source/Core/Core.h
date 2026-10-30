@@ -26,6 +26,7 @@
 
 // ---- デバッグ ----
 #include "Core/Debug/DebugLog.h"						// ログ出力
+#include "Core/Debug/Profile/Hitch/HitchReport.h"		// 遅いフレームの記録へ送る(ENGINE_HITCH_SCOPE)
 #include "Core/Debug/Profile/Time/TimeProfileScope.h"	// スコープ計測(ENGINE_PROFILE_SCOPE)
 
 // ---- 数学 ----

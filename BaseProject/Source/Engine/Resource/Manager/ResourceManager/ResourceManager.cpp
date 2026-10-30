@@ -45,6 +45,18 @@ namespace Engine::Resource
 	}
 
 	//======================================================================================
+	// 遅いフレームの記録に出す読み込みの名前
+	//======================================================================================
+	std::string ResourceManager::MakeHitchLoadLabel(const Core::GUID& a_guid) const
+	{
+		std::string _label(static_cast<size_t>(std::max(BuildDepth(), 0)) * 2, ' ');
+
+		const std::string _path = m_upAssetDatabase ? m_upAssetDatabase->GetFilePathFromGUID(a_guid) : std::string();
+		_label += _path.empty() ? a_guid.String() : _path;
+		return _label;
+	}
+
+	//======================================================================================
 	// 使われなくなったリソースを片付ける
 	//--------------------------------------------------------------------------------------
 	// 参照カウントが 0 のものだけを破棄する。数えているのは実際の持ち主

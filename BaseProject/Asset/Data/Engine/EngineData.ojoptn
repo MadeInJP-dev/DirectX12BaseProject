@@ -4,6 +4,7 @@
         "isD3DDebugLayer": false,
         "isDebugKeys": true,
         "isEditorEnabled": true,
+        "isHitchLog": true,
         "isLoadJsonData": true,
         "isRecordUsedAssets": true,
         "isWatchAssetFolder": true,

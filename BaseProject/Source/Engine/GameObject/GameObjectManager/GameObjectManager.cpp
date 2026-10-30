@@ -75,6 +75,8 @@ namespace Engine::GameObject
 
 		for (auto& _object : m_upObjectVec)
 		{
+			// 遅いフレームの記録 : 長くかかったオブジェクト(群れを一度に出す進行役など)を見分ける
+			ENGINE_HITCH_SCOPE("Object", 1.0, std::string("Update : ") + _object->GetDisplayName());
 			_object->Update(m_objContext);
 		}
 	}
@@ -85,6 +87,7 @@ namespace Engine::GameObject
 
 		for (auto& _object : m_upObjectVec)
 		{
+			ENGINE_HITCH_SCOPE("Object", 1.0, std::string("Draw : ") + _object->GetDisplayName());
 			_object->Draw(m_objContext);
 		}
 	}

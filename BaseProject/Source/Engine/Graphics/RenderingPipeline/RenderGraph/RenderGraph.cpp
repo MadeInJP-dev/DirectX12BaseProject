@@ -1307,8 +1307,7 @@ namespace Engine::Graphics::Pipeline
 			const char* _pShadingName = _pPass->GetShadingPassName();
 			const std::string& _psoKeyName = _pShadingName ? std::string(_pShadingName) : _pPass->GetName();
 
-			_pPass->RefPipelineBuilder().Init(
-				_rtvFormatVec, _dsvFormat, static_cast<UINT>(Core::String::ToHash(_psoKeyName)));
+			_pPass->RefPipelineBuilder().Init(_rtvFormatVec, _dsvFormat, _psoKeyName);
 
 			//------------------------------------------------------------------------------
 			// SRV / UAV の番号

@@ -112,7 +112,9 @@ namespace Engine::ECS
 		Thread::JobSystem* _pJobSystem = a_context.pServices ? a_context.pServices->pJobSystem : nullptr;
 		if (_pJobSystem && !_pJobSystem->IsRunning()) _pJobSystem = nullptr;
 
-		const bool _isMeasure = (a_pProfiler != nullptr);
+		// 測るのはプロファイラがあるときと、遅いフレームを記録しているとき
+		const bool _isHitchRecording = Core::Debug::IsHitchRecording();
+		const bool _isMeasure = (a_pProfiler != nullptr) || _isHitchRecording;
 
 		// このフェーズ用に作り直す : ジョブが要素のアドレスを持つため、以下で resize しない
 		m_jobScratch.assign(_taskCount,nullptr);
@@ -269,7 +271,15 @@ namespace Engine::ECS
 			for (uint32_t _i = 0; _i < _taskCount; ++_i)
 			{
 				const int64_t _ns = m_upTaskNsScratch[_i].load(std::memory_order_relaxed);
-				a_pProfiler->RecordTaskTime(_compiledVec[_i].pTask, static_cast<double>(_ns) / 1'000'000.0);
+				const double _ms = static_cast<double>(_ns) / 1'000'000.0;
+				if (a_pProfiler) a_pProfiler->RecordTaskTime(_compiledVec[_i].pTask, _ms);
+
+				// 遅いフレームの記録 : 短いものは送らない(毎フレーム全タスクぶん文字列を作らない)
+				constexpr double HITCH_MIN_MS = 0.3;
+				if (_isHitchRecording && _ms >= HITCH_MIN_MS)
+				{
+					Core::Debug::ReportHitch("System", _compiledVec[_i].pTask->name, _ms);
+				}
 			}
 		}
 

@@ -17,6 +17,7 @@ namespace Engine
 	namespace Time
 	{
 		class TimeManager;
+		class HitchMonitor;
 	}
 	namespace Graphics
 	{
@@ -239,6 +240,7 @@ namespace Engine
 		std::unique_ptr<Scene::SceneManager> m_upSceneManager = nullptr;
 		std::unique_ptr<Window::NativeWindow> m_upWindow = nullptr;						// ウィンドウクラス
 		std::unique_ptr<Time::TimeManager> m_upTimeManager = nullptr;					// 時間管理クラス
+		std::unique_ptr<Time::HitchMonitor> m_upHitchMonitor = nullptr;				// 60FPS を割ったフレームの記録
 		std::unique_ptr<Graphics::GraphicsEngine> m_upGraphicsEngine = nullptr;			// 描画周りの管理クラス(パーティクル・レイトレもこの中)
 		std::unique_ptr<Thread::JobSystem> m_upJobSystem = nullptr;						// ジョブシステム
 		std::unique_ptr<Physics::PhysicsEngine> m_upPhysicsEngine = nullptr;			// Jolt 全体(シーンごとの空間は PhysicsWorld)

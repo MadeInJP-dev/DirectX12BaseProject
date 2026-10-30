@@ -48,6 +48,7 @@ namespace Engine::Config
 		bool isDebugKeys = true;
 		bool isEditorEnabled = true;
 		bool isWatchAssetFolder = true;
+		bool isHitchLog = true;
 
 		//-------------------------------------------------------------------------------------------
 		// パス・システムリソース

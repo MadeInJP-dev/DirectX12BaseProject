@@ -340,6 +340,10 @@ namespace Engine::ECS
 
 	void World::ApplyReservedCreate()
 	{
+		// 遅いフレームの記録 : 一度にたくさん作ったフレームを見分ける
+		size_t _createdNum = 0;
+		ENGINE_HITCH_SCOPE("ECS", 0.3, "予約の生成を " + std::to_string(_createdNum) + " 体反映");
+
 		const auto _sigVec = m_commandBuffer.TakeCreate();
 		for (const auto& _sig : _sigVec)
 		{
@@ -348,7 +352,8 @@ namespace Engine::ECS
 		}
 
 		const auto _cmdVec = m_commandBuffer.TakeCreateWithData();
-		if (m_upProfiler) m_upProfiler->RecordCreated(_sigVec.size() + _cmdVec.size());
+		_createdNum = _sigVec.size() + _cmdVec.size();
+		if (m_upProfiler) m_upProfiler->RecordCreated(_createdNum);
 
 		for (const auto& _cmd : _cmdVec)
 		{
@@ -364,6 +369,9 @@ namespace Engine::ECS
 	{
 		const auto _entityVec = m_commandBuffer.TakeRemove();
 		if (m_upProfiler) m_upProfiler->RecordRemoved(_entityVec.size());
+
+		// 遅いフレームの記録 : 一度にたくさん消したフレーム(ウェーブの終わりなど)を見分ける
+		ENGINE_HITCH_SCOPE("ECS", 0.3, "予約の削除を " + std::to_string(_entityVec.size()) + " 体反映");
 
 		for (const auto& _entity : _entityVec)
 		{

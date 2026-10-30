@@ -221,7 +221,9 @@ namespace Engine::Graphics
 			return m_psoMap[_hash].Get();
 		}
 
-		// キャッシュになければ、ComPtrを作成
+		// キャッシュになければ、ComPtrを作成。
+		// 実行中に初めて要求されたときはその間フレームが止まるので、遅いフレームの記録に出す
+		ENGINE_HITCH_SCOPE("PSO", 0.1, a_desc.name.empty() ? std::string("(Graphics)") : a_desc.name);
 		ComPtr<ID3D12PipelineState> _pso;
 		auto _hr = m_pDevice->CreateGraphicsPipelineState(&a_desc.desc,IID_PPV_ARGS(&_pso));
 		if (FAILED(_hr))
@@ -262,7 +264,9 @@ namespace Engine::Graphics
 			return m_psoMap[_hash].Get();
 		}
 
-		// キャッシュになければ、ComPtrを作成
+		// キャッシュになければ、ComPtrを作成。
+		// 実行中に初めて要求されたときはその間フレームが止まるので、遅いフレームの記録に出す
+		ENGINE_HITCH_SCOPE("PSO", 0.1, a_desc.name.empty() ? std::string("(Compute)") : a_desc.name);
 		ComPtr<ID3D12PipelineState> _pso;
 		auto _hr = m_pDevice->CreateComputePipelineState(&a_desc.desc, IID_PPV_ARGS(&_pso));
 		if (FAILED(_hr))

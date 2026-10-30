@@ -4,6 +4,7 @@
 
 #include "Engine/Window/NativeWindow.h"
 #include "Engine/Time/TimeManager.h"
+#include "Engine/Time/HitchMonitor/HitchMonitor.h"
 #include "Resource/Manager/AssetDatabase/AssetDatabase.h"
 #include "Resource/Manager/ResourceManager/ResourceManager.h"
 
@@ -35,6 +36,7 @@
 #include "GameObject/ObjectMetaRegistry/ObjectMetaRegistry.h"
 
 #include "Scene/SceneManager/SceneManager.h"
+#include "Scene/BaseScene/BaseScene.h"
 
 
 // DXGIのデバッグ機能(ライブオブジェクト報告)はここだけで使う。
@@ -121,6 +123,11 @@ namespace Engine
 		m_upTimeManager = std::make_unique<Time::TimeManager>();
 		_configRegistry.Register("TimeConfig", "Engine::Time::TimeManager", Config::EConfigCategory::Window, m_upTimeManager->RefConfig());
 		m_upTimeManager->Init();
+
+		// 60FPS を割ったフレームの記録 : 受け口はワーカーが動き出す前に登録する
+		m_upHitchMonitor = std::make_unique<Time::HitchMonitor>();
+		m_upHitchMonitor->Init();
+		m_upHitchMonitor->SetEnabled(m_buildConfig.isHitchLog);
 
 		// 描画周りの器を先に作る。
 		// デバイス・コマンドキュー・ディスクリプタヒープ・バックバッファはどれもグラフィックスエンジンの持ち物で、
@@ -238,6 +245,9 @@ namespace Engine
 		// それらを解放する前に必ずワーカーを止めきること
 		m_upResourceManager->SetJobSystem(nullptr);
 		m_upJobSystem->Release();
+
+		// 遅いフレームの記録 : ワーカーが止まったので受け口を外せる
+		m_upHitchMonitor->Release();
 
 		// アプリケーション・上位層の解放
 
@@ -367,6 +377,7 @@ namespace Engine
 
 		// 起動設定のうち、すぐ効く項目へ設定画面の直しを写す
 		m_buildConfig.ApplyLiveValues(m_editBuildConfig);
+		m_upHitchMonitor->SetEnabled(m_buildConfig.isHitchLog);
 
 		return true;
 	}
@@ -379,7 +390,8 @@ namespace Engine
 
 	void MainEngine::EndFrame()
 	{
-		// フレーム終了
+		// フレーム終了 : ここまでが処理の時間(この後は FPS 制限の待ち)
+		m_upHitchMonitor->MarkWorkEnd();
 		m_upTimeManager->EndFrame(GetFPSRate());
 
 		// スレッドごとの稼働時間を1フレームぶん締める。
@@ -390,6 +402,14 @@ namespace Engine
 			{
 				_pThreadProfiler->EndFrame();
 			}
+		}
+
+		// 60FPS を割っていたら、このフレームに起きたことを書き出す。
+		// 読み込み中(ロード画面)に割るのは分かっているので数えるだけにする
+		{
+			Scene::BaseScene* _pScene = m_upSceneManager ? m_upSceneManager->RefCurrentTopScene() : nullptr;
+			const bool _isLoading = m_upSceneManager && (m_upSceneManager->IsLoading() || m_upSceneManager->IsLoadingScreenVisible());
+			m_upHitchMonitor->EndFrame(_pScene ? _pScene->GetFileName() : std::string(), _isLoading);
 		}
 	}
 

@@ -420,6 +420,12 @@ namespace Engine::Resource
 		}
 
 		/// <summary>
+		/// 遅いフレームの記録に出す名前 : ファイルパス(引けなければ GUID)。
+		/// ローダーの中から読まれたもの(モデルの中のメッシュなど)は深さのぶん字下げする
+		/// </summary>
+		std::string MakeHitchLoadLabel(const Core::GUID& a_guid) const;
+
+		/// <summary>
 		/// アセットデータベースの種別から型を引き、a_func(std::type_identity&lt;T&gt;) を呼ぶ
 		/// </summary>
 		/// <returns>このマネージャーが持つ種別だったら true</returns>
@@ -626,12 +632,16 @@ namespace Engine::Resource
 
 		if (_isOwner)
 		{
-			// 自分がビルド担当 : 呼び出しスレッドで読み切る
+			// 自分がビルド担当 : 呼び出しスレッドで読み切る。
+			// メインスレッドなら読み終わるまでフレームが止まるので、遅いフレームの記録に出す
+			ENGINE_HITCH_SCOPE("Load", 0.0, MakeHitchLoadLabel(a_guid));
 			BuildIntoSlot<T>(a_guid, _handle, a_pBuildContext);
 		}
 		else
 		{
-			// ほかの誰か(ジョブ含む)が読込中なら、実体ができるまで待つ
+			// ほかの誰か(ジョブ含む)が読込中なら、実体ができるまで待つ。
+			// 読込済みならすぐ抜けるので、待ったときだけ記録に出す
+			ENGINE_HITCH_SCOPE("LoadWait", 0.2, MakeHitchLoadLabel(a_guid));
 			WaitUntilLoaded<T>(_handle);
 		}
 

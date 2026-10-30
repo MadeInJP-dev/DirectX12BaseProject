@@ -20,7 +20,8 @@ namespace Engine::Graphics
 		/// </summary>
 		/// <param name="a_rtvFormat">レンダーターゲット配列</param>
 		/// <param name="a_dsvFormat">デプスステンシル</param>
-		void Init(const std::vector<DXGI_FORMAT>& a_rtvFormat, DXGI_FORMAT a_dsvFormat, UINT a_passNameHash);
+		/// <param name="a_passName">PSO の鍵にするパスの名前(ハッシュにして持つ。名前は遅いフレームの記録に出す)</param>
+		void Init(const std::vector<DXGI_FORMAT>& a_rtvFormat, DXGI_FORMAT a_dsvFormat, const std::string& a_passName);
 
 		/// <summary>
 		/// シェーディングパイプラインが見つかれば返し、なければ作成して返します
@@ -92,6 +93,7 @@ namespace Engine::Graphics
 		DXGI_FORMAT m_dsvFormat;
 
 		UINT m_passNameHash;
+		std::string m_passName = {};
 
 		// フラグに対応するVSのマップ
 		std::unordered_map<EShaderPermutationFlags, Handle<Resource::Shader>> m_vsMap;

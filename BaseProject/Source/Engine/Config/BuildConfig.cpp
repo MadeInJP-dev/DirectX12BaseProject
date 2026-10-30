@@ -16,7 +16,7 @@ namespace Engine::Config
 		// 項目を足すときはここに1行足し、使う側は MainEngine::GetBuildConfig() で引く。
 		// プリセットの値は { デバッグ, 開発, 提出 } の順
 		//==================================================================================
-		const std::array<BuildConfigItem, 6> ITEMS =
+		const std::array<BuildConfigItem, 7> ITEMS =
 		{{
 			{
 				"isD3DDebugLayer", "D3D のデバッグレイヤー",
@@ -48,6 +48,12 @@ namespace Engine::Config
 				"isWatchAssetFolder", "アセットフォルダを監視する",
 				"起動中に置いた・消したファイルを拾い、.assetmeta を作る。起動時のメタファイル作りは OFF でも行う",
 				EApplyTiming::NextLaunch, &BuildConfig::isWatchAssetFolder, { true, true, false }
+			},
+			{
+				"isHitchLog", "60FPS を割ったフレームを記録する",
+				"割ったフレームの中身(長かった段・システム・PSO の生成・同期読み込みなど)をログと HitchLog.txt に書く。"
+				"記録している間は計測のぶん少し重くなる",
+				EApplyTiming::Immediate, &BuildConfig::isHitchLog, { true, true, false }
 			},
 		}};
 	}

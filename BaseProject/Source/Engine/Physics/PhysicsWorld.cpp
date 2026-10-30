@@ -403,6 +403,8 @@ namespace Engine::Physics
 		// ボディが1つも無ければ何もしない(プレビューや、まだ登録が無いシーン)
 		if (m_upPhysicsSystem->GetNumBodies() == 0) return;
 
+		// 遅いフレームの記録 : 物理の1歩が長かったフレームを見分ける
+		ENGINE_HITCH_SCOPE("Physics", 1.0, "PhysicsSystem::Update(剛体 " + std::to_string(m_upPhysicsSystem->GetNumBodies()) + " 体)");
 		constexpr int COLLISION_STEPS = 1;
 		const JPH::EPhysicsUpdateError _error = m_upPhysicsSystem->Update(
 			a_dt,
@@ -424,6 +426,10 @@ namespace Engine::Physics
 		// まとめて入れる(1体ずつ入れるとブロードフェーズの木を毎回組み替える)
 		JPH::BodyInterface& _bodyInterface = m_upPhysicsSystem->GetBodyInterfaceNoLock();
 		const int _count = static_cast<int>(_pending.size());
+
+		// 遅いフレームの記録 : 一度にたくさん入れたフレーム(群れの出現など)を見分ける
+		ENGINE_HITCH_SCOPE("Physics", 0.2, "剛体を " + std::to_string(_count) + " 体追加");
+
 		const JPH::BodyInterface::AddState _state = _bodyInterface.AddBodiesPrepare(_pending.data(), _count);
 		_bodyInterface.AddBodiesFinalize(_pending.data(), _count, _state, JPH::EActivation::DontActivate);
 		_pending.clear();
@@ -436,6 +442,7 @@ namespace Engine::Physics
 		m_upDetail->isFirstFlush = false;
 		if (_isFirst || _count >= BATCH_THRESHOLD)
 		{
+			ENGINE_HITCH_SCOPE("Physics", 0.0, "OptimizeBroadPhase(合計 " + std::to_string(m_upPhysicsSystem->GetNumBodies()) + " 体)");
 			m_upPhysicsSystem->OptimizeBroadPhase();
 			ENGINE_LOG("[Physics] %d bodies added (total %u)", _count, m_upPhysicsSystem->GetNumBodies());
 		}
@@ -479,11 +486,18 @@ namespace Engine::Physics
 			auto _it = _cache.find(_key);
 			if (_it == _cache.end())
 			{
+				// 遅いフレームの記録 : そのシーンで初めて出たモデルの形状づくり。
+				// 判定メッシュの三角形が多いと、出現したフレームが止まる(判定用の COL ノードで軽くできる)
+				size_t _triangleCount = 0;
+				ENGINE_HITCH_SCOPE("Physics", 0.0, "形状を作成 : " + _pModel->GetName()
+					+ (a_desc.shape == EModelBodyShape::CollisionMesh ? "(判定メッシュ 三角形 " + std::to_string(_triangleCount) + ")" : "(箱)"));
+
 				JPH::RefConst<JPH::Shape> _modelShape;
 				if (a_desc.shape == EModelBodyShape::CollisionMesh)
 				{
 					JPH::TriangleList _triangles;
 					CollectModelTriangles(a_resourceManager, *_pModel, Math::Matrix::Identity(), _triangles);
+					_triangleCount = _triangles.size();
 					_modelShape = CreateMeshShape(_triangles, _modelId);
 				}
 				else

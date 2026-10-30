@@ -1988,6 +1988,7 @@
     <ClCompile Include="Source\Engine\Scene\SceneManager\SceneManager.cpp" />
     <ClCompile Include="Source\Engine\Time\DeltaTime\DeltaTime.cpp" />
     <ClCompile Include="Source\Engine\Time\FPSController\FPSController.cpp" />
+    <ClCompile Include="Source\Engine\Time\HitchMonitor\HitchMonitor.cpp" />
     <ClCompile Include="Source\Engine\Time\TimeManager.cpp" />
     <ClCompile Include="Source\Core\BinaryHelper\BinaryHelper.cpp">
       <PrecompiledHeaderFile>Core/CorePCH.h</PrecompiledHeaderFile>
@@ -2825,10 +2826,12 @@
     <ClInclude Include="Source\Engine\Scene\SceneManager\SceneManager.h" />
     <ClInclude Include="Source\Engine\Time\DeltaTime\DeltaTime.h" />
     <ClInclude Include="Source\Engine\Time\FPSController\FPSController.h" />
+    <ClInclude Include="Source\Engine\Time\HitchMonitor\HitchMonitor.h" />
     <ClInclude Include="Source\Engine\Time\TimeManager.h" />
     <ClInclude Include="Source\Core\BinaryHelper\BinaryHelper.h" />
     <ClInclude Include="Source\Core\Debug\DebugLog.h" />
     <ClInclude Include="Source\Core\Debug\Profile\Time\TimeProfileScope.h" />
+    <ClInclude Include="Source\Core\Debug\Profile\Hitch\HitchReport.h" />
     <ClInclude Include="Source\Core\GUID\GUID.h" />
     <ClInclude Include="Source\Core\JSONHelper\JSONForward.h" />
     <ClInclude Include="Source\Core\JSONHelper\JSONHelper.h" />

@@ -62,3 +62,5 @@ BaseProject/Asset/Shader/**/*.cso
 #Assetフォルダ自体は残す（空でも削除されないように）
 !BaseProject/Asset/.gitkeep
 
+# 60FPS を割ったフレームの記録(起動のたびに作り直す。HitchMonitor)
+BaseProject/HitchLog.txt

@@ -5,8 +5,36 @@
 
 namespace Engine::Graphics
 {
+	namespace
+	{
+		// 遅いフレームの記録に出す : どの組み合わせの PSO を作ったか
+		std::string ToPermutationText(uint32_t a_flags)
+		{
+			struct FlagName { EShaderPermutationFlags flag; const char* pName; };
+			constexpr FlagName FLAG_NAMES[] =
+			{
+				{ EShaderPermutationFlags::Static,				"Static" },
+				{ EShaderPermutationFlags::Skinned,				"Skinned" },
+				{ EShaderPermutationFlags::AlphaMasked,			"AlphaMasked" },
+				{ EShaderPermutationFlags::UseNormalMap,		"NormalMap" },
+				{ EShaderPermutationFlags::DepthMasked,			"DepthMasked" },
+				{ EShaderPermutationFlags::UseGPUInstancing,	"Instancing" },
+				{ EShaderPermutationFlags::MeshShader,			"MeshShader" },
+				{ EShaderPermutationFlags::DitherFade,			"DitherFade" },
+			};
 
-	void ShadingPipelineBuilder::Init(const std::vector<DXGI_FORMAT>& a_rtvFormat, DXGI_FORMAT a_dsvFormat, UINT a_passNameHash)
+			std::string _text = {};
+			for (const FlagName& _entry : FLAG_NAMES)
+			{
+				if (!(a_flags & static_cast<uint32_t>(_entry.flag))) continue;
+				if (!_text.empty()) _text += '|';
+				_text += _entry.pName;
+			}
+			return _text.empty() ? std::string("None") : _text;
+		}
+	}
+
+	void ShadingPipelineBuilder::Init(const std::vector<DXGI_FORMAT>& a_rtvFormat, DXGI_FORMAT a_dsvFormat, const std::string& a_passName)
 	{
 		m_rtvFormats = a_rtvFormat;
 		m_dsvFormat = a_dsvFormat;
@@ -14,7 +42,8 @@ namespace Engine::Graphics
 		{
 			m_dsvFormat = DXGI_FORMAT_D32_FLOAT;
 		}
-		m_passNameHash = a_passNameHash;
+		m_passNameHash = static_cast<UINT>(Core::String::ToHash(a_passName));
+		m_passName = a_passName;
 	}
 
 
@@ -34,6 +63,9 @@ namespace Engine::Graphics
 		{
 			return _it->second; // すでに完成していればそれを返す
 		}
+
+		// ここから先は初めての組み合わせ : 描画を積む途中で PSO を作るので、その間フレームが止まる
+		ENGINE_HITCH_SCOPE("PSO", 0.1, m_passName + " : " + ToPermutationText(a_key.permutationFlags));
 
 		auto& _resourceManager = a_resourceManager;
 

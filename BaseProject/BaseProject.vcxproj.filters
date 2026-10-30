@@ -199,6 +199,9 @@
     <Filter Include="Source\Core\Debug\Profile\Time">
       <UniqueIdentifier>{403c67bb-f097-4644-9f10-f722577b30ff}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Core\Debug\Profile\Hitch">
+      <UniqueIdentifier>{fe27a16c-38ac-4555-843b-84841f208905}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Core\EnumFlags">
       <UniqueIdentifier>{ec3a0b5f-323a-4e08-ae96-fa67e899534a}</UniqueIdentifier>
     </Filter>
@@ -1266,6 +1269,9 @@
     </Filter>
     <Filter Include="Source\Engine\Time\FPSController">
       <UniqueIdentifier>{eb7609a8-47f1-429c-95c3-9178a5e4f9bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Time\HitchMonitor">
+      <UniqueIdentifier>{c3060bab-d8a9-4a6b-bfc5-293d1a1b7b4a}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Utility">
       <UniqueIdentifier>{9508a125-c3b0-4adc-a45d-516c8aed527c}</UniqueIdentifier>
@@ -2702,6 +2708,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Time\FPSController\FPSController.cpp">
       <Filter>Source\Engine\Time\FPSController</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Time\HitchMonitor\HitchMonitor.cpp">
+      <Filter>Source\Engine\Time\HitchMonitor</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\BinaryHelper\BinaryHelper.cpp">
       <Filter>Source\Core\BinaryHelper</Filter>
@@ -4790,6 +4799,9 @@
     <ClInclude Include="Source\Engine\Time\FPSController\FPSController.h">
       <Filter>Source\Engine\Time\FPSController</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Time\HitchMonitor\HitchMonitor.h">
+      <Filter>Source\Engine\Time\HitchMonitor</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Core\EnumFlags\EnumFlags.h">
       <Filter>Source\Core\EnumFlags</Filter>
     </ClInclude>
@@ -4807,6 +4819,9 @@
     </ClInclude>
     <ClInclude Include="Source\Core\Debug\Profile\Time\TimeProfileScope.h">
       <Filter>Source\Core\Debug\Profile\Time</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Debug\Profile\Hitch\HitchReport.h">
+      <Filter>Source\Core\Debug\Profile\Hitch</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\File\FileUtility.h">
       <Filter>Source\Core\File</Filter>

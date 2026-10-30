@@ -48,6 +48,13 @@ namespace Core::Debug
 				};
 				g_profileCallback(_res);
 			}
+
+			// 遅いフレームの記録にも渡す(どの段が長かったかを出すため)。
+			// 名前はもう使わないので写さずに渡す
+			if (IsHitchRecording())
+			{
+				ReportHitch("Scope", std::move(m_name), _ms);
+			}
 		}
 
 

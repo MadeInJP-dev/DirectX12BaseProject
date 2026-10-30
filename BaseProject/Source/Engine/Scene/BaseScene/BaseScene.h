@@ -124,6 +124,9 @@ namespace Engine::Scene
 		void SetGUID(const Core::GUID& a_guid) { m_guid = a_guid; }
 		const Core::GUID& GetGUID() const { return m_guid; }
 
+		// シーンファイルの名前(BeginLoad で渡されたもの)
+		const std::string& GetFileName() const { return m_fileName; }
+
 		// 読み込みが済んで動いているか
 		bool IsReady() const { return (m_state == EState::Ready); }
 
