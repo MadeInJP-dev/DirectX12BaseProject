@@ -210,7 +210,7 @@
     },
     "Sound": {
         "BgmVol": 100,
-        "MainVol": 20,
+        "MainVol": 0,
         "SeVol": 100,
         "UiVol": 100
     }

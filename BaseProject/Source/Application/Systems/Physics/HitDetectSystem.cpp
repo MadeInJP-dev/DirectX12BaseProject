@@ -10,6 +10,7 @@
 #include "Application/Components/Physics/Collider.h"
 #include "Application/Components/Transform/LocalTransformComponent.h"
 #include "Application/Components/Weapon/Projectile/ProjectileComponent.h"
+#include "Application/Components/Combat/ExplosionDamageComponent.h"
 #include "Application/InstanceResource/HitEventResource.h"
 
 namespace App::System
@@ -142,7 +143,10 @@ namespace App::System
 					// ワールドのヒットイベントにも1件積む。
 					// CollisionEvent は1エンティティ1件しか持てず、消えた弾の分も残らないので、
 					// エフェクト生成やのけぞりなどの反応系はこちらを読む。
-					if (_pHitEvents && _hit.entity != Engine::ECS::Limits::INVALID_ENTITY)
+					// 爆風を持つ弾(ExplosionDamageComponent)は積まない。直撃の相手も爆風に入るので、
+					// ダメージも当たった演出も ExplosionDamageSystem の爆風のヒットに任せる
+					const bool _isExplosive = a_ctx.pWorld->HasComponent<Component::ExplosionDamageComponent>(_self);
+					if (_pHitEvents && !_isExplosive && _hit.entity != Engine::ECS::Limits::INVALID_ENTITY)
 					{
 						InstanceResource::HitEvent _event = {};
 						_event.attacker = _self;

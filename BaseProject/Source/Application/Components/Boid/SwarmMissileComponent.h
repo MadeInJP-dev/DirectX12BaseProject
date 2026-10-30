@@ -24,6 +24,8 @@ namespace App::Component
 		float speed = 0.0f;							// 今の速さ(m/秒)
 		float time = 0.0f;							// 切り離されてからの経過時間(秒)
 		bool isExploded = false;					// 自爆済みか(死亡状態へ入るのを待っている)
+		bool isAcquired = false;					// 一度でもプレイヤーを見失う角度の内側に捉えたか
+		bool isLost = false;						// プレイヤーを見失ったか(以降は直進して時間切れを待つ)
 	};
 }
 
@@ -39,5 +41,6 @@ struct Engine::ECS::ComponentTraits<App::Component::SwarmMissileComponent>
 		Engine::EditorField::Value("Speed", "%.1f m/s", _comp.speed);
 		Engine::EditorField::Value("Time", "%.2f s", _comp.time);
 		Engine::EditorField::Value("Exploded", "%s", _comp.isExploded ? "true" : "false");
+		Engine::EditorField::Value("Lost", "%s", _comp.isLost ? "true" : "false");
 	}
 };

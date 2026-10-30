@@ -120,8 +120,8 @@ namespace App::System
 				}
 			}
 		)
-		// 順序 : 死亡(DeathEventResource)を積む側同士の並び
-		.After("ExplodeOnHitSystem")
+		// 順序 : 死亡(DeathEventResource)を積む側同士の並び・爆風のヒットを積んだ後に読む
+		.After({ "ExplodeOnHitSystem", "ExplosionDamageSystem" })
 		// 絞り込みに使わない読み : 防御比率を RefData で読む
 		.Reads<Component::DefenseRatioComponent>()
 		.ReadsResource<InstanceResource::HitEventResource>()

@@ -9,6 +9,9 @@
 #include "Application/Components/Transform/WorldMatrixComponent.h"
 #include "Application/Components/Combat/AimResultComponent.h"
 #include "Application/Components/Render/ModelComponent.h"
+#include "Application/Components/Combat/TargetEntityComponent.h"
+#include "Application/Components/Combat/AimPointComponent.h"
+#include "Application/Components/Transform/HierarchyComponent.h"
 
 namespace App::System
 {
@@ -36,6 +39,49 @@ namespace App::System
 			}
 
 			return _localPos + a_muzzle.offset;
+		}
+	}
+
+	namespace
+	{
+		//======================================================================================
+		// 索敵で捉えている相手の狙ってほしい点を引く(敵が撃つとき)
+		//
+		// 敵は狙点(AimResultComponent)を持たないので、銃口の向きのまま撃つと
+		// 機体の向き(左右だけ回る)で水平に飛び、上下にいる相手へ向かない。
+		// 自分 → 親 と辿って TargetEntityComponent を探し、捉えている相手の
+		// AimPointComponent の点(無ければ原点)を返す。見失っている間は使わない。
+		//======================================================================================
+		bool FindTargetAimPos(Engine::ECS::World& a_world, Engine::ECS::Entity a_self, Math::Vector3& a_outPos)
+		{
+			// 親を辿る深さの上限。親子が循環していても止まるように付けておく
+			constexpr int MAX_DEPTH = 8;
+
+			Engine::ECS::Entity _entity = a_self;
+			for (int _d = 0; _d < MAX_DEPTH; ++_d)
+			{
+				if (_entity == Engine::ECS::Limits::INVALID_ENTITY) break;
+
+				if (const auto* _pTarget = a_world.RefData<Component::TargetEntityComponent>(_entity))
+				{
+					const Engine::ECS::Entity _targetEntity = _pTarget->targetEntity;
+					if (!_pTarget->isFind || _targetEntity == Engine::ECS::Limits::INVALID_ENTITY) return false;
+					if (!a_world.HasComponent<Component::WorldMatrixComponent>(_targetEntity)) return false;
+
+					const auto* _pTargetWorld = a_world.RefData<Component::WorldMatrixComponent>(_targetEntity);
+					if (!_pTargetWorld) return false;
+
+					a_outPos = Component::GetAimPointPos(a_world, _targetEntity, Math::Matrix(_pTargetWorld->worldMat));
+					return true;
+				}
+
+				// 親へ
+				const auto* _pHierarchy = a_world.RefData<Component::HierarchyComponent>(_entity);
+				if (!_pHierarchy) break;
+				_entity = _pHierarchy->parentID;
+			}
+
+			return false;
 		}
 	}
 
@@ -118,6 +164,20 @@ namespace App::System
 							}
 						}
 					}
+					else
+					{
+						// 狙点の無い撃ち手(敵)は、索敵で捉えている相手へ上下も含めて向ける
+						Math::Vector3 _targetPos;
+						if (FindTargetAimPos(*a_ctx.pWorld, _self, _targetPos))
+						{
+							Math::Vector3 _toTarget = _targetPos - _spawnPos;
+							if (_toTarget.LengthSquared() > 1e-6f)
+							{
+								_toTarget.Normalize();
+								_shootDir = _toTarget;
+							}
+						}
+					}
 
 					_fire.spawnPos       = _spawnPos;
 					_fire.shootDir       = _shootDir;
@@ -128,6 +188,8 @@ namespace App::System
 		// 順序 : 撃つと決まった武器(撃ち方のシステムが書く)だけを埋める
 		.After({ "AutoFireSystem", "BurstFireSystem", "SemiAutoFireSystem" })
 		// 絞り込みに使わない読み : 自分の狙点(AttachmentDispatchSystem が配る)とモデル
-		.Reads<Component::AimResultComponent, Component::ModelComponent>();
+		.Reads<Component::AimResultComponent, Component::ModelComponent>()
+		// 狙点の無い撃ち手 : 親を辿った索敵結果と、捉えている相手の位置・狙われる点
+		.Reads<Component::TargetEntityComponent, Component::HierarchyComponent, Component::AimPointComponent>();
 	}
 }

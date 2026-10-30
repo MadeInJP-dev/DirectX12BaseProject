@@ -14,10 +14,16 @@ namespace App::Component
 	// ・読むのは誘導(HomingSystem)と、撃つ瞬間の向きを決める MissileFireSystem / BossMissileSalvoSystem。
 	//   持っていない相手は今までどおり原点を狙う(GetAimPointPos)。
 	// ・撃つ側の targetOffsetY(MissileLockComponent)はこの点からさらに上へずらす量になる。
+	// ・持ち主の形で決まらない点(ボイドボスの小隊長 = 率いる群れの中の1体)は、
+	//   書き手のシステムが worldPos へ毎フレーム直接書く(isWorldPos)。書き手は PlatoonAimPointSystem。
 	//==========================================================================================
 	struct AimPointComponent
 	{
 		Math::Vector3 localPos = { 0.0f, 0.0f, 0.0f };	// 狙ってほしい点(持ち主のローカル空間)
+
+		// ランタイム(保存しない)。立っている間は localPos より優先する
+		Math::Vector3 worldPos = { 0.0f, 0.0f, 0.0f };	// 狙ってほしい点(ワールド)
+		bool isWorldPos = false;
 	};
 
 	//==========================================================================================
@@ -31,6 +37,7 @@ namespace App::Component
 		{
 			if (const AimPointComponent* _pAimPoint = a_world.RefData<AimPointComponent>(a_entity))
 			{
+				if (_pAimPoint->isWorldPos) return _pAimPoint->worldPos;
 				return Math::Vector3::Transform(_pAimPoint->localPos, a_worldMat);
 			}
 		}

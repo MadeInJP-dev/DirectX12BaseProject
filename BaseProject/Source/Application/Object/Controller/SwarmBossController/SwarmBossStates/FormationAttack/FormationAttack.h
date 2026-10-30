@@ -115,9 +115,10 @@ namespace App::Object
 		float m_missileLaunchOut     = 0.3f;
 		float m_missileLaunchForward = 1.0f;	// プレイヤーの方(面の表)の重み
 		float m_missileLaunchSpread  = 0.25f;
-		float m_missileSpeed         = 80.0f;
+		float m_missileSpeed         = 95.0f;
 		float m_missileAcceleration  = 80.0f;
-		float m_missileTurnSpeedDeg  = 90.0f;
+		float m_missileTurnSpeedDeg  = 70.0f;
+		float m_missileLoseAngleDeg  = 90.0f;	// 見失う角度
 		float m_missileLifeTime      = 6.0f;
 		float m_missileExplodeRadius = 3.0f;
 		float m_missileDamage        = 10.0f;

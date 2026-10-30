@@ -333,6 +333,7 @@ namespace App::Object
 		_res.speed         = m_missileSpeed;
 		_res.acceleration  = m_missileAcceleration;
 		_res.turnSpeedDeg  = m_missileTurnSpeedDeg;
+		_res.loseAngleDeg  = m_missileLoseAngleDeg;
 		_res.lifeTime      = m_missileLifeTime;
 		_res.explodeRadius = m_missileExplodeRadius;
 		_res.damage        = m_missileDamage;
@@ -402,6 +403,11 @@ namespace App::Object
 		a_ar.Field("CoilAttackMissileIntensity", m_missileIntensity);
 	}
 
+	void SwarmBossCoilAttackState::ArchiveAppended(Engine::Persistence::Archive& a_ar)
+	{
+		a_ar.Field("CoilAttackMissileLoseAngleDeg", m_missileLoseAngleDeg);
+	}
+
 	void SwarmBossCoilAttackState::DrawInspector()
 	{
 		Engine::EditorField::Field("輪の半径の倍率", m_radiusScale, 0.01f, 0.0f);
@@ -433,6 +439,8 @@ namespace App::Object
 		Engine::EditorField::Field("ミサイル : 加速度", m_missileAcceleration, 0.5f, 0.0f);
 		Engine::EditorField::Field("ミサイル : 曲がる速さ", m_missileTurnSpeedDeg, 1.0f, 0.0f);
 		Engine::EditorField::Tooltip("度/秒。小さいほど大回りになり、避けやすい");
+		Engine::EditorField::Field("ミサイル : 見失う角度", m_missileLoseAngleDeg, 1.0f, 0.0f, 180.0f);
+		Engine::EditorField::Tooltip("一度捉えたあと、プレイヤーがこの角度より外へ外れたら直進する(90 = 通り過ぎたら諦める / 0 = 見失わない)");
 		Engine::EditorField::Field("ミサイル : 自爆までの時間", m_missileLifeTime, 0.1f, 0.0f);
 		Engine::EditorField::Field("ミサイル : 自爆する距離", m_missileExplodeRadius, 0.1f, 0.0f);
 		Engine::EditorField::Field("ミサイル : ダメージ", m_missileDamage, 0.5f, 0.0f);

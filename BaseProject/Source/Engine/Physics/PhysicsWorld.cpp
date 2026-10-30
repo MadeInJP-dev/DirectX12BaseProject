@@ -849,6 +849,70 @@ namespace Engine::Physics
 		return true;
 	}
 
+	bool PhysicsWorld::OverlapSphereAll(const Math::Vector3& a_center, float a_radius,
+		uint32_t a_queryMask, ECS::Entity a_ignore, ECS::Entity a_ignore2, std::vector<ShapeHit>& a_outHits) const
+	{
+		if (!m_upPhysicsSystem) return false;
+		if (a_queryMask == 0) return false;
+		if (!(a_radius > 0.0f) || !IsFinite(a_center)) return false;
+
+		JPH::SphereShape _sphere(a_radius);
+		_sphere.SetEmbedded();
+
+		JPH::CollideShapeSettings _settings;
+		_settings.mBackFaceMode = JPH::EBackFaceMode::CollideWithBackFaces;
+
+		// 重なっているもの全部(同じボディの三角形ごとにも返ってくる)
+		JPH::AllHitCollisionCollector<JPH::CollideShapeCollector> _collector;
+		const LayerMaskQueryFilter _layerFilter(a_queryMask);
+		const IgnoreOwnerBodyFilter _bodyFilter(a_ignore, false, a_ignore2);
+
+		m_upPhysicsSystem->GetNarrowPhaseQueryNoLock().CollideShape(
+			&_sphere, JPH::Vec3::sOne(), JPH::RMat44::sTranslation(Internal::ToJoltR(a_center)),
+			_settings, JPH::RVec3::sZero(), _collector, {}, _layerFilter, _bodyFilter);
+
+		if (!_collector.HadHit()) return false;
+
+		// 持ち主ごとにいちばん深いものだけを残す。足し始めた位置より前は呼び出し側のもの
+		const size_t _begin = a_outHits.size();
+		std::vector<float> _depthVec;
+
+		const JPH::BodyLockInterfaceNoLock& _lockInterface = m_upPhysicsSystem->GetBodyLockInterfaceNoLock();
+		for (const JPH::CollideShapeResult& _hit : _collector.mHits)
+		{
+			JPH::BodyLockRead _lock(_lockInterface, _hit.mBodyID2);
+			if (!_lock.Succeeded()) continue;
+
+			const ECS::Entity _owner = static_cast<ECS::Entity>(_lock.GetBody().GetUserData());
+
+			const JPH::Vec3 _axis = _hit.mPenetrationAxis;
+			ShapeHit _shapeHit = {};
+			_shapeHit.entity = _owner;
+			_shapeHit.position = Internal::ToMath(JPH::Vec3(_hit.mContactPointOn2));
+			_shapeHit.normal = (_axis.LengthSq() > 1e-12f) ? Internal::ToMath(-_axis.Normalized()) : Math::Vector3{};
+			_shapeHit.fraction = 0.0f;
+
+			size_t _found = a_outHits.size();
+			for (size_t _h = _begin; _h < a_outHits.size(); ++_h)
+			{
+				if (a_outHits[_h].entity == _owner) { _found = _h; break; }
+			}
+
+			if (_found == a_outHits.size())
+			{
+				a_outHits.push_back(_shapeHit);
+				_depthVec.push_back(_hit.mPenetrationDepth);
+			}
+			else if (_hit.mPenetrationDepth > _depthVec[_found - _begin])
+			{
+				a_outHits[_found] = _shapeHit;
+				_depthVec[_found - _begin] = _hit.mPenetrationDepth;
+			}
+		}
+
+		return a_outHits.size() > _begin;
+	}
+
 	uint32_t PhysicsWorld::GetBodyCount() const
 	{
 		return m_upPhysicsSystem ? m_upPhysicsSystem->GetNumBodies() : 0u;

@@ -1209,6 +1209,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Combat\ExplosionDamageSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Combat\HealthSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -2069,6 +2074,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Boid\PlatoonAimPointSystem.cpp">
+      <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Application/AppPCH.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="Source\Application\Systems\Weapon\WeaponFireModeSystem.cpp">
       <PrecompiledHeaderFile>Application/AppPCH.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)AppPCH.pch</PrecompiledHeaderOutputFile>
@@ -2254,6 +2264,7 @@
     <ClInclude Include="Source\Application\Components\Physics\CapsuleCollider.h" />
     <ClInclude Include="Source\Application\Components\Physics\Collider.h" />
     <ClInclude Include="Source\Application\Components\Combat\ExplodeOnHitComponent.h" />
+    <ClInclude Include="Source\Application\Components\Combat\ExplosionDamageComponent.h" />
     <ClInclude Include="Source\Application\Components\Physics\RayCollider.h" />
     <ClInclude Include="Source\Application\Components\Physics\GroundStateComponent.h" />
     <ClInclude Include="Source\Application\Components\Physics\SphereCollider.h" />
@@ -2398,6 +2409,7 @@
     <ClInclude Include="Source\Application\Systems\Boss\BossMissileSalvoSystem.h" />
     <ClInclude Include="Source\Application\Components\Boid\BoidLeaderComponent.h" />
     <ClInclude Include="Source\Application\Systems\Combat\ExplodeOnHitSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Combat\ExplosionDamageSystem.h" />
     <ClInclude Include="Source\Application\Systems\Combat\HealthSystem.h" />
     <ClInclude Include="Source\Application\Systems\Core\LifeTimeSystem.h" />
     <ClInclude Include="Source\Application\Systems\Combat\DeathStateSystem.h" />
@@ -2858,6 +2870,7 @@
     <ClInclude Include="Source\Application\Systems\Boid\BoidSnapshotSystem.h" />
     <ClInclude Include="Source\Application\Systems\Boid\BoidSteeringSystem.h" />
     <ClInclude Include="Source\Application\Systems\Boid\PlatoonAxisSystem.h" />
+    <ClInclude Include="Source\Application\Systems\Boid\PlatoonAimPointSystem.h" />
     <ClInclude Include="Source\Application\Components\Movement\DesiredVelocityComponent.h" />
     <ClInclude Include="Source\Application\Components\Movement\MovementParamsComponent.h" />
     <ClInclude Include="Source\Application\Components\Movement\BoostParamsComponent.h" />

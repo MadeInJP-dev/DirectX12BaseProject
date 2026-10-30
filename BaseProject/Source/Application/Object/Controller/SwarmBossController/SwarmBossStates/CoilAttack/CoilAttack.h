@@ -35,6 +35,8 @@ namespace App::Object
 		void Exit(SwarmBossStateContext& a_context) override;
 
 		void Archive(Engine::Persistence::Archive& a_ar) override;
+		// 後から足した調整値(見失う角度)。バイナリの読み順を崩さないよう Archive とは分ける
+		void ArchiveAppended(Engine::Persistence::Archive& a_ar) override;
 		void DrawInspector() override;
 
 	private:
@@ -99,9 +101,10 @@ namespace App::Object
 		float m_missileLaunchUp      = 1.0f;
 		float m_missileLaunchOut     = 0.5f;
 		float m_missileLaunchSpread  = 0.3f;
-		float m_missileSpeed         = 80.0f;
+		float m_missileSpeed         = 95.0f;
 		float m_missileAcceleration  = 80.0f;
-		float m_missileTurnSpeedDeg  = 120.0f;
+		float m_missileTurnSpeedDeg  = 90.0f;
+		float m_missileLoseAngleDeg  = 90.0f;	// 見失う角度(後から足した値なので ArchiveAppended で保存)
 		float m_missileLifeTime      = 6.0f;
 		float m_missileExplodeRadius = 3.0f;
 		float m_missileDamage        = 10.0f;

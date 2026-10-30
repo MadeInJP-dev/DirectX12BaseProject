@@ -40,6 +40,9 @@ namespace App::System
 	//   WorldMatrix は前フレームの PostUpdate の値なので、生成直後は入っていない。
 	// ・追う先は相手の AimPointComponent の点(無ければ原点)。原点が足元の相手で
 	//   足元へ刺さらないように、狙われる側が胴体の中心あたりを持っている。
+	// ・loseAngleDeg が 0 より大きければ、相手を一度その角度の内側に捉えたあと、
+	//   外へ外れた時点で相手を捨てて直進する。通り過ぎた弾が回り込んで後ろから当たらないようにし、
+	//   ぎりぎりで横へ抜ける避け方が報われるようにするため。
 	//==============================================================================
 	void HomingSystem::Init(App::ECS::APPWorld& a_world)
 	{
@@ -113,12 +116,30 @@ namespace App::System
 
 					_toTarget /= _dist;
 
+					float _cos     = std::clamp(_curDir.Dot(_toTarget), -1.0f, 1.0f);
+					float _angle   = std::acos(_cos);
+
+					//------------------------------------------------------
+					// 見失う : 一度捉えたあとで相手が見失う角度の外へ外れたら諦める
+					//------------------------------------------------------
+					if (_homing.loseAngleDeg > 0.0f)
+					{
+						const float _loseAngle = DirectX::XMConvertToRadians(_homing.loseAngleDeg);
+						if (_angle <= _loseAngle)
+						{
+							_homing.isAcquired = true;
+						}
+						else if (_homing.isAcquired)
+						{
+							_homing.targetEntity = Engine::ECS::Limits::INVALID_ENTITY;
+							continue;
+						}
+					}
+
 					//------------------------------------------------------
 					// 今フレームで曲がれる角度まで進行方向を回す
 					//------------------------------------------------------
 					float _maxStep = _homing.turnSpeed * a_ctx.dt;	// ラジアン
-					float _cos     = std::clamp(_curDir.Dot(_toTarget), -1.0f, 1.0f);
-					float _angle   = std::acos(_cos);
 
 					Math::Vector3 _newDir = _toTarget;
 					if (_angle > _maxStep)

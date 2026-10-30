@@ -56,6 +56,7 @@
 #include "Application/Components/Boid/BoidMembershipComponent.h"
 #include "Application/Components/Camera/FollowTargetComponent.h"
 #include "Application/Components/Combat/DefenseRatioComponent.h"
+#include "Application/Components/Combat/AimPointComponent.h"
 #include "Application/Components/Boid/SwarmBurstComponent.h"
 #include "Application/Components/Movement/ActualVelocityComponent.h"
 #include "../../../InstanceResource/RadialBlurShakeResource.h"
@@ -1859,6 +1860,10 @@ namespace App::Object
 
 			// 円陣の命令の受け皿(書くのは UpdateFormation、読むのは PlatoonFollowSystem / SwarmLookSystem)
 			EnsureRootComponent<Component::PlatoonFormationComponent>(_world, _instanceVec);
+
+			// 狙われる点。プレイヤーのミサイルは小隊長をロックしてここを追う。
+			// 群れの中心に近いボイドへ合わせるのは PlatoonAimPointSystem(小隊長はボイドより先に居るため)
+			EnsureRootComponent<Component::AimPointComponent>(_world, _instanceVec);
 
 			// 地面との関係(飛んでいるかを見る。レイを打つのは SerchGroundSystem)
 			EnsureRootComponent<Component::SerchGroundComponent>(_world, _instanceVec);

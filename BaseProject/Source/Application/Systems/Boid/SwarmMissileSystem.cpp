@@ -40,6 +40,8 @@ namespace App::System
 	//   飛行(PreUpdate / ワーカー)
 	//     打ち上げ : 輪の外側・上へ launchTime 秒まっすぐ飛ぶ
 	//     誘導     : 1秒に turnSpeedDeg 度まで向きを回しながら、最高速まで加速する
+	//                一度プレイヤーを loseAngleDeg の内側に捉えたあと、外へ外れたら見失って直進する
+	//                (通り過ぎてから回り込んで後ろから当たらないように。時間切れで落ちる)
 	//     速度は目標速度(DesiredVelocity)へ書くだけで、座標を進めるのは MovementIntegrationSystem。
 	//     HomingSystem と同じ理由で PreUpdate 帯に置く。
 	//
@@ -287,6 +289,8 @@ namespace App::System
 				const Math::Vector3 _targetPos = (_player.playerSegmentA + _player.playerSegmentB) * 0.5f;
 
 				const float _maxTurn = DirectX::XMConvertToRadians(std::max(_res.turnSpeedDeg, 0.0f)) * a_ctx.dt;
+				const bool  _isLoseEnabled = (_res.loseAngleDeg > 0.0f);
+				const float _loseCos = std::cos(DirectX::XMConvertToRadians(_res.loseAngleDeg));
 
 				for (uint32_t _i = 0; _i < a_count; ++_i)
 				{
@@ -305,13 +309,24 @@ namespace App::System
 					// 打ち上げが済んだら、プレイヤーへ向きを回しながら最高速まで上げる
 					if (_missile.time >= _res.launchTime)
 					{
-						if (_isFoundPlayer)
+						if (_isFoundPlayer && !_missile.isLost)
 						{
 							Math::Vector3 _toTarget = _targetPos - a_trsArray[_i].pos;
 							if (_toTarget.LengthSquared() > 1e-6f)
 							{
 								_toTarget.Normalize();
-								_missile.dir = RotateToward(_missile.dir, _toTarget, _maxTurn);
+
+								// 見失う : 一度捉えたあとで見失う角度の外へ外れたら、以降は直進する
+								const float _cos = _missile.dir.Dot(_toTarget);
+								if (_isLoseEnabled && _cos >= _loseCos) _missile.isAcquired = true;
+								if (_isLoseEnabled && _missile.isAcquired && _cos < _loseCos)
+								{
+									_missile.isLost = true;
+								}
+								else
+								{
+									_missile.dir = RotateToward(_missile.dir, _toTarget, _maxTurn);
+								}
 							}
 						}
 

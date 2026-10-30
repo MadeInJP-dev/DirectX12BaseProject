@@ -76,6 +76,7 @@
 #include "Application/Components/Weapon/Shoulder/MissileFireComponent.h"
 #include "Engine/ECS/Component/CollisionEvent.h"
 #include "Application/Components/Combat/ExplodeOnHitComponent.h"
+#include "Application/Components/Combat/ExplosionDamageComponent.h"
 #include "Application/Components/Camera/CameraFocusTargetComponent.h"
 #include "Application/Components/Camera/CameraDeadZoneComponent.h"
 #include "Application/Components/Camera/CameraCollisionComponent.h"
@@ -185,6 +186,7 @@
 #include "Application/Systems/Physics/CollisionEventClearSystem.h"
 #include "Application/Systems/Physics/HitDetectSystem.h"
 #include "Application/Systems/Combat/ExplodeOnHitSystem.h"
+#include "Application/Systems/Combat/ExplosionDamageSystem.h"
 #include "Application/Systems/Core/LifeTimeSystem.h"
 #include "Application/Systems/Attachment/AttachmentDispatchSystem.h"
 #include "Application/Systems/Weapon/SelfWeaponTriggerSystem.h"
@@ -232,6 +234,7 @@
 #include "Application/Systems/Boid/BoidSnapshotSystem.h"
 #include "Application/Systems/Boid/BoidSteeringSystem.h"
 #include "Application/Systems/Boid/PlatoonAxisSystem.h"
+#include "Application/Systems/Boid/PlatoonAimPointSystem.h"
 #include "Application/Systems/Boid/FollowLeaderSystem.h"
 #include "Application/Systems/Boid/PlatoonFollowSystem.h"
 #include "Application/Systems/Boid/SwarmLookSystem.h"
@@ -363,6 +366,8 @@ namespace App::ECS
 		a_world.RegisterComponent<Component::WeaponMountComponent>("WeaponMountComponent");
 		a_world.RegisterComponent<Engine::ECS::CollisionEvent>("CollisionEvent");
 		a_world.RegisterComponent<Component::ExplodeOnHitComponent>("ExplodeOnHitComponent");
+		// 当たったときの範囲ダメージ(ミサイル)。直撃のダメージの代わり
+		a_world.RegisterComponent<Component::ExplosionDamageComponent>("ExplosionDamageComponent");
 		a_world.RegisterComponent<Component::CameraFocusTargetComponent>("CameraFocusTargetComponent");
 		// TPSカメラの追従範囲。枠から出たぶんだけカメラを平行移動させる
 		a_world.RegisterComponent<Component::CameraDeadZoneComponent>("CameraDeadZoneComponent");
@@ -612,6 +617,8 @@ namespace App::ECS
 		a_world.RegisterSystem<System::DeathEventClearSystem>();
 		a_world.RegisterSystem<System::HitDetectSystem>();
 		a_world.RegisterSystem<System::ExplodeOnHitSystem>();
+		// 爆風を持つ弾が当たったら、範囲に入った体力持ちへヒットを積む(HealthSystem が読む)
+		a_world.RegisterSystem<System::ExplosionDamageSystem>();
 		// 被弾で体力を削り、尽きたら死亡状態にする(体力持ちは ExplodeOnHit の対象外)
 		a_world.RegisterSystem<System::HealthSystem>();
 		// デバッグキーで倒すと予約されたものを死亡させる(Development まで。入口が無ければ何もしない)
@@ -631,6 +638,8 @@ namespace App::ECS
 		// 群れの操舵 : 全員の写しを作ってから、チャンクを分けて操舵する
 		a_world.RegisterSystem<System::BoidSnapshotSystem>();
 		a_world.RegisterSystem<System::BoidSteeringSystem>();
+		// 小隊長の狙われる点を群れの中心に近いボイドへ合わせる(プレイヤーのミサイルが追う)
+		a_world.RegisterSystem<System::PlatoonAimPointSystem>();
 		a_world.RegisterSystem<System::FollowLeaderSystem>();
 		// 群れのボスの向き(リーダー/小隊長は進行方向、ボイドは小隊長の向きへ)。
 		// 前方を使う PlatoonFollowSystem より前に置く
