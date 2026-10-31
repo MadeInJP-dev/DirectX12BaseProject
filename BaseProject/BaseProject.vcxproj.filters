@@ -1309,6 +1309,9 @@
     <Filter Include="Asset\Shader\Source\PostProcess\ScanLine">
       <UniqueIdentifier>{ec4e5c9b-9d23-4519-a6c3-2bca5e66fe77}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Asset\Shader\Source\PostProcess\DamageEffect">
+      <UniqueIdentifier>{af1d7435-c1c0-4c6d-86d7-e283578e2497}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Graphics\RenderingPipeline">
       <UniqueIdentifier>{d4933552-c71b-4be1-9083-2a1c348a797a}</UniqueIdentifier>
     </Filter>
@@ -1422,6 +1425,12 @@
     </Filter>
     <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine\ScanLinePass">
       <UniqueIdentifier>{39c8d58b-5b29-4fcd-b5bd-1a421d5fb5f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DamageEffect">
+      <UniqueIdentifier>{ae271efb-3da8-478e-8812-054bab14a44b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DamageEffect\DamageEffectPass">
+      <UniqueIdentifier>{effe8529-b83b-403f-a1ce-c037104da574}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\CoCPass">
       <UniqueIdentifier>{fc650a5f-cde1-4995-a392-adcfe14059fd}</UniqueIdentifier>
@@ -2077,6 +2086,9 @@
       <Filter>Source\Application\Systems\Transform</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Combat\HealthSystem.cpp">
+      <Filter>Source\Application\Systems\Combat</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Application\Systems\Combat\HitDamageEffectSystem.cpp">
       <Filter>Source\Application\Systems\Combat</Filter>
     </ClCompile>
     <ClCompile Include="Source\Application\Systems\Core\LifeTimeSystem.cpp">
@@ -2895,6 +2907,9 @@
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine\ScanLinePass\ScanLinePass.cpp">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine\ScanLinePass</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DamageEffect\DamageEffectPass\DamageEffectPass.cpp">
+      <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DamageEffect\DamageEffectPass</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\CoCPass\CoCPass.cpp">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\CoCPass</Filter>
     </ClCompile>
@@ -3239,6 +3254,9 @@
     <ClInclude Include="Source\Engine\Graphics\Frame\SceneView\SceneView.h">
       <Filter>Source\Engine\Graphics\Frame\SceneView</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\Frame\SceneView\DamageEffectData.h">
+      <Filter>Source\Engine\Graphics\Frame\SceneView</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\Device\RenderDevice.h">
       <Filter>Source\Engine\Graphics\Device</Filter>
     </ClInclude>
@@ -3366,6 +3384,9 @@
       <Filter>Source\Application\Components\Enemy</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Components\Combat\HealthComponent.h">
+      <Filter>Source\Application\Components\Combat</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Components\Combat\HitDamageEffectComponent.h">
       <Filter>Source\Application\Components\Combat</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Components\Combat\LockOnTargetComponent.h">
@@ -4008,6 +4029,9 @@
       <Filter>Source\Application\Systems\Transform</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Combat\HealthSystem.h">
+      <Filter>Source\Application\Systems\Combat</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application\Systems\Combat\HitDamageEffectSystem.h">
       <Filter>Source\Application\Systems\Combat</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application\Systems\Core\LifeTimeSystem.h">
@@ -5084,6 +5108,9 @@
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine\ScanLinePass\ScanLinePass.h">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\ScanLine\ScanLinePass</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DamageEffect\DamageEffectPass\DamageEffectPass.h">
+      <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DamageEffect\DamageEffectPass</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\CoCPass\CoCPass.h">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\DoF\CoCPass</Filter>
     </ClInclude>
@@ -5858,6 +5885,9 @@
     </FxCompile>
     <FxCompile Include="Asset\Shader\Source\PostProcess\ScanLine\ScanLineCS.hlsl">
       <Filter>Asset\Shader\Source\PostProcess\ScanLine</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\Source\PostProcess\DamageEffect\DamageEffectCS.hlsl">
+      <Filter>Asset\Shader\Source\PostProcess\DamageEffect</Filter>
     </FxCompile>
     <FxCompile Include="Asset\Shader\Source\PostProcess\Blend\BlendCS.hlsl">
       <Filter>Asset\Shader\Source\PostProcess\Blend</Filter>

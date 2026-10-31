@@ -221,6 +221,8 @@
 #include "Application/Components/Combat/HealthComponent.h"
 #include "Application/Systems/Combat/HealthFixupSystem.h"
 #include "Application/Systems/Combat/HealthSystem.h"
+#include "Application/Components/Combat/HitDamageEffectComponent.h"
+#include "Application/Systems/Combat/HitDamageEffectSystem.h"
 #include "Application/Systems/Combat/DebugKillSystem.h"
 #include "Application/Systems/Combat/DeathStateSystem.h"
 #include "Application/Components/Effect/EffectComponent.h"
@@ -393,6 +395,8 @@ namespace App::ECS
 		a_world.RegisterComponent<Component::AudioListenerComponent>("AudioListenerComponent");
 		a_world.RegisterComponent<Component::ChargeDashSoundComponent>("ChargeDashSoundComponent");
 		a_world.RegisterComponent<Component::HealthComponent>("HealthComponent");
+		// 被弾したときの画面効果(DamageEffectPass)の設定。動かして送るのは HitDamageEffectSystem
+		a_world.RegisterComponent<Component::HitDamageEffectComponent>("HitDamageEffectComponent");
 		a_world.RegisterComponent<Component::EffectComponent>("EffectComponent");
 		// パーティクル+メッシュをまとめた EffectAsset を再生する
 		a_world.RegisterComponent<Component::EffectAssetComponent>("EffectAssetComponent");
@@ -621,6 +625,8 @@ namespace App::ECS
 		a_world.RegisterSystem<System::ExplosionDamageSystem>();
 		// 被弾で体力を削り、尽きたら死亡状態にする(体力持ちは ExplodeOnHit の対象外)
 		a_world.RegisterSystem<System::HealthSystem>();
+		// 体力が減ったら画面と HUD を乱す(DamageEffectPass へ送る)。HealthSystem の後ろ
+		a_world.RegisterSystem<System::HitDamageEffectSystem>();
 		// デバッグキーで倒すと予約されたものを死亡させる(Development まで。入口が無ければ何もしない)
 		a_world.RegisterSystem<System::DebugKillSystem>();
 		// 死亡状態のあいだ入力/AIを止め、指定秒たったら解放予約する。

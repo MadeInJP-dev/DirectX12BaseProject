@@ -11,6 +11,7 @@
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Blur/RadialBlurPass/RadialBlurPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Distortion/FishEyePass/FishEyePass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/ScanLine/ScanLinePass/ScanLinePass.h"
+#include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/DamageEffect/DamageEffectPass/DamageEffectPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/DoF/CoCPass/CoCPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/DoF/DoFPass/DoFPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/GroundEffect/GroundFieldPass/GroundFieldPass.h"
@@ -120,6 +121,8 @@ namespace Engine::Graphics::Pipeline
 		a_registry.RegisterType<RadialBlurPass>("RadialBlurPass");
 		a_registry.RegisterType<FishEyePass>("FishEyePass");
 		a_registry.RegisterType<ScanLinePass>("ScanLinePass");
+		// 被弾したときだけ画面と HUD を乱す(普段は素通し)
+		a_registry.RegisterType<DamageEffectPass>("DamageEffectPass");
 		a_registry.RegisterType<CoCPass>("CoCPass");
 		a_registry.RegisterType<DoFPass>("DoFPass");
 		a_registry.RegisterType<GroundFieldPass>("GroundFieldPass");

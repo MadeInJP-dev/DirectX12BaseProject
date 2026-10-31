@@ -2,6 +2,7 @@
 #include "Engine/Graphics/Frame/SceneView/AmbientData.h"
 #include "Engine/Graphics/Frame/SceneView/CameraData.h"
 #include "Engine/Graphics/Frame/SceneView/CameraEffectData.h"
+#include "Engine/Graphics/Frame/SceneView/DamageEffectData.h"
 #include "Engine/Graphics/Frame/SceneView/GroundImpulse.h"
 #include "Engine/Graphics/Frame/SceneView/SceneFogData.h"
 #include "Engine/Graphics/Frame/SceneView/SkyData.h"
@@ -107,6 +108,16 @@ namespace Engine::Graphics
 		void SetFishEyeData(const FishEyeOptionCB& a_data);
 		const FishEyeOptionCB& GetFishEyeData() const;
 		bool IsFishEyeOverride() const { return m_isFishEyeOverride; }
+
+		//--------------------------------------------------------------------------------------------
+		// 被弾の画面効果(DamageEffectPass)
+		//
+		// ゲーム側(HitDamageEffectSystem)が毎フレーム入れ、EndFrame で消える。
+		// 入れなかったフレームは intensity が 0 のままなので、パスは何もしない。
+		// 入れる側が複数あると、掛かり具合の強い方が勝つ
+		//--------------------------------------------------------------------------------------------
+		void SetDamageEffectData(const DamageEffectData& a_data);
+		const DamageEffectData& GetDamageEffectData() const { return m_damageEffect; }
 
 		//--------------------------------------------------------------------------------------------
 		// グラウンドフィールドの衝撃
@@ -240,6 +251,9 @@ namespace Engine::Graphics
 		bool m_isDoFOverride = false;
 		bool m_isRadialBlurOverride = false;
 		bool m_isFishEyeOverride = false;
+
+		// 被弾の画面効果(ゲーム側から毎フレーム設定。EndFrame で消す)
+		DamageEffectData m_damageEffect = {};
 
 		// 今フレームのグラウンドフィールドの衝撃(EndFrame で空にする)
 		std::vector<GroundImpulse> m_groundImpulseVec = {};

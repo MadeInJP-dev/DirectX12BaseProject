@@ -51,6 +51,7 @@
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Blur/RadialBlurPass/RadialBlurPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/Distortion/FishEyePass/FishEyePass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/ScanLine/ScanLinePass/ScanLinePass.h"
+#include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/DamageEffect/DamageEffectPass/DamageEffectPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/DoF/CoCPass/CoCPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/DoF/DoFPass/DoFPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/PostEffect/GroundEffect/GroundFieldPass/GroundFieldPass.h"
@@ -852,6 +853,7 @@ namespace Editor::Inspector
 		a_registry.Register<RadialBlurPass, RadialBlurEditor>();
 		a_registry.Register<FishEyePass, FishEyeEditor>();
 		a_registry.Register<ScanLinePass, ScanLineEditor>();
+		a_registry.Register<DamageEffectPass, NoteOnlyEditor<DamageEffectPass>>(std::initializer_list<const char*>{ "被弾したときだけ掛かります(値はゲーム側の HitDamageEffectComponent の持ち物)", "Color にトーンマップ後の絵、UI に UI 系の最後の出力を繋ぎ、2つの出力を BlendPass へ繋いでください" });
 		a_registry.Register<CoCPass, DoFParamEditor<CoCPass>>("DoFPass と同じ値にすること");
 		a_registry.Register<DoFPass, DoFParamEditor<DoFPass>>("CoCPass と同じ値にすること");
 		a_registry.Register<SceneVolumetricFogPass, SceneVolumetricFogEditor>();

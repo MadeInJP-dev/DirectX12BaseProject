@@ -112,6 +112,8 @@ namespace Engine::Graphics
 		m_groundImpulseVec.clear();
 
 		m_cbFogPointLight = {};
+
+		m_damageEffect = {};
 	}
 
 	void SceneView::AddGroundImpulse(const GroundImpulse& a_impulse)
@@ -167,6 +169,12 @@ namespace Engine::Graphics
 		a_inoutCB.enable = 1;
 		a_inoutCB.backdropBlur = m_backdropBlur;
 		a_inoutCB.backdropRadius = m_backdropBlurRadius;
+	}
+	void SceneView::SetDamageEffectData(const DamageEffectData& a_data)
+	{
+		// 同じフレームに複数から入ったら、強く掛かっている方を残す
+		if (a_data.intensity < m_damageEffect.intensity) return;
+		m_damageEffect = a_data;
 	}
 	void SceneView::SetRadialBlurData(const RadialBlurOptionCB& a_data)
 	{
