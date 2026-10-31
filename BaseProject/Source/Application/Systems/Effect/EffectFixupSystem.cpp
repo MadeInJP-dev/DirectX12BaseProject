@@ -135,11 +135,23 @@ namespace App::System
 					if (_boosterComp.sparkEffectGUID == Core::DEFAULT_GUID)
 					{
 						_boosterComp.sparkHandle = {};
-						continue;
+					}
+					else
+					{
+						_pResourceManager->AcquireImmediate(_boosterComp.sparkHandle, _boosterComp.sparkEffectGUID);
+						App::Utility::WarmupEffectParticles(*a_ctx.pServices, _boosterComp.sparkHandle);
 					}
 
-					_pResourceManager->AcquireImmediate(_boosterComp.sparkHandle, _boosterComp.sparkEffectGUID);
-					App::Utility::WarmupEffectParticles(*a_ctx.pServices, _boosterComp.sparkHandle);
+					// 炎の噴き上がりもスパークと同じく、ハンドルを解決するだけ
+					if (_boosterComp.blazeEffectGUID == Core::DEFAULT_GUID)
+					{
+						_boosterComp.blazeHandle = {};
+					}
+					else
+					{
+						_pResourceManager->AcquireImmediate(_boosterComp.blazeHandle, _boosterComp.blazeEffectGUID);
+						App::Utility::WarmupEffectParticles(*a_ctx.pServices, _boosterComp.blazeHandle);
+					}
 				}
 			}
 		);

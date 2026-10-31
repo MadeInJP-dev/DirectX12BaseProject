@@ -258,6 +258,83 @@ namespace App::Utility
 	}
 
 	//==========================================================================================
+	// 付けたまま出す
+	//
+	// ReserveSpawnChildEffect との違いは、回転も継ぐ・置き場所を選べる・出し切ったら消える、の3つ。
+	// 拡縮を継がないのは、取り付け側の拡縮が粒の大きさと飛距離にまで掛かってしまうため。
+	//==========================================================================================
+	bool ReserveSpawnAttachedEffect(
+		Engine::ECS::World& a_world,
+		const Core::GUID& a_effectGUID,
+		Engine::ECS::Entity a_parent,
+		const Math::Vector3& a_localPos,
+		const Math::Vector3& a_localEmitDir,
+		float a_scale)
+	{
+		if (a_effectGUID == Core::DEFAULT_GUID) return false;
+		if (a_parent == Engine::ECS::Limits::INVALID_ENTITY || !a_world.IsAliveEntity(a_parent)) return false;
+
+		Engine::ECS::Signature _sig = {};
+		EffectDataMap _data = {};
+
+		// 向きは上書き欄へ入れる。エフェクトの行列(= 親の回転)の中で回されるので、親のローカルの向きのまま渡せばよい
+		if (!BuildEffectEntity(
+			a_world, a_effectGUID, a_localPos, Math::Quaternion::Identity(), true, a_localEmitDir, a_scale, _sig, _data))
+		{
+			return false;
+		}
+
+		// ---- 位置と回転だけ親に付いて行く ----
+		const auto _transTypeID = a_world.GetCompTypeID<Component::LocalTransformComponent>();
+		{
+			Component::LocalTransformComponent _localTrs = {};
+			std::memcpy(&_localTrs, _data[_transTypeID].data(), sizeof(_localTrs));
+			_localTrs.inheritance = Component::ETransformInheritance::Translation | Component::ETransformInheritance::Rotation;
+			std::memcpy(_data[_transTypeID].data(), &_localTrs, sizeof(_localTrs));
+		}
+
+		// 出た最初のフレームから噴射口に出るよう、ワールド行列も親の拡縮を外した行列で組んでおく
+		if (const auto* _pParentMat = a_world.RefData<Component::WorldMatrixComponent>(a_parent))
+		{
+			Math::Matrix _parentMat(_pParentMat->worldMat);
+			Math::Vector3 _parentScale;
+			Math::Quaternion _parentRot;
+			Math::Vector3 _parentPos;
+			if (!_parentMat.Decompose(_parentScale, _parentRot, _parentPos))
+			{
+				_parentRot = Math::Quaternion::Identity();
+				_parentPos = _parentMat.Translation();
+			}
+
+			const auto _matTypeID = a_world.GetCompTypeID<Component::WorldMatrixComponent>();
+
+			Component::WorldMatrixComponent _worldMat = {};
+			std::memcpy(&_worldMat, _data[_matTypeID].data(), sizeof(_worldMat));
+			_worldMat.worldMat =
+				Math::Matrix::CreateTranslation(a_localPos) *
+				Math::Matrix::CreateFromQuaternion(_parentRot) *
+				Math::Matrix::CreateTranslation(_parentPos);
+			std::memcpy(_data[_matTypeID].data(), &_worldMat, sizeof(_worldMat));
+		}
+
+		// ---- 親子 ----
+		Component::HierarchyComponent _hierarchy = {};
+		_hierarchy.parentID = a_parent;
+		_hierarchy.depth = 1;
+		if (const auto* _pParentHierarchy = a_world.RefData<Component::HierarchyComponent>(a_parent))
+		{
+			_hierarchy.depth = _pParentHierarchy->depth + 1;
+		}
+		if (!PushComponent(a_world, _sig, _data, _hierarchy)) return false;
+
+		// ---- 保存しない ----
+		PushComponent(a_world, _sig, _data, Engine::ECS::TransientTag{});
+
+		a_world.ReserveCreateEntityWithData(_sig, std::move(_data));
+		return true;
+	}
+
+	//==========================================================================================
 	// 即時生成
 	//
 	// 遅延生成だと ID が返らないので、出したあとも動かし続けたい相手はこちらで作る。

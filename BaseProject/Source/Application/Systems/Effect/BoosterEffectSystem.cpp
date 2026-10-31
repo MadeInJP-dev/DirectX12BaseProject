@@ -219,7 +219,10 @@ namespace App::System
 					// RefData は持っていないコンポーネントなら nullptr を返す
 					//--------------------------------------------------------------
 					if (!_justBoosted) continue;
-					if (_booster.sparkEffectGUID == Core::DEFAULT_GUID) continue;
+
+					const bool _hasSpark = (_booster.sparkEffectGUID != Core::DEFAULT_GUID);
+					const bool _hasBlaze = (_booster.blazeEffectGUID != Core::DEFAULT_GUID);
+					if (!_hasSpark && !_hasBlaze) continue;
 
 					const Engine::ECS::Entity _self = a_pChunk->entityData[_i];
 					if (!a_ctx.pWorld->HasComponent<Component::WorldMatrixComponent>(_self)) continue;
@@ -242,13 +245,43 @@ namespace App::System
 					}
 
 					// 反復中なので即時生成はされない。実体化は次の BeginFrame
-					App::Utility::ReserveSpawnEffectAt(
-						*a_ctx.pWorld,
-						_booster.sparkEffectGUID,
-						_sparkPos,
-						true,
-						_sparkDir,
-						_booster.sparkScale);
+					if (_hasSpark)
+					{
+						App::Utility::ReserveSpawnEffectAt(
+							*a_ctx.pWorld,
+							_booster.sparkEffectGUID,
+							_sparkPos,
+							true,
+							_sparkDir,
+							_booster.sparkScale);
+					}
+
+					//--------------------------------------------------------------
+					// 炎の噴き上がりは、ブースターに付けたまま出す
+					//
+					// 踏み込んだ瞬間は機体が一気に加速するので、その場に置くと
+					// 炎だけが後ろへ置き去りになり、機体を包んで見えない。
+					// 付けた側は親の拡縮を継がないので、噴射口の位置には親のスケールを掛けておく
+					//--------------------------------------------------------------
+					if (_hasBlaze)
+					{
+						Math::Vector3 _ownerScale;
+						Math::Quaternion _ownerRot;
+						Math::Vector3 _ownerPos;
+						Math::Matrix _ownerMat = _ownerWorld;
+						if (!_ownerMat.Decompose(_ownerScale, _ownerRot, _ownerPos))
+						{
+							_ownerScale = Math::Vector3(1.0f, 1.0f, 1.0f);
+						}
+
+						App::Utility::ReserveSpawnAttachedEffect(
+							*a_ctx.pWorld,
+							_booster.blazeEffectGUID,
+							_self,
+							_booster.posOffset * _ownerScale,
+							_hasDir ? _dir : Math::Vector3{},
+							_booster.blazeScale);
+					}
 				}
 			}
 		)

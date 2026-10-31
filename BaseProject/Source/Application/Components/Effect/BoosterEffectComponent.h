@@ -38,6 +38,7 @@ namespace App::Component
 	//     (1) はジェットそのものの大きさなのでここが倍率を持ち、
 	//     (2) は絵がまったく別物なので、ジェットのアセットとは分けて
 	//     sparkEffectGUID に別の EffectAsset を持たせる。
+	//     同じ瞬間に、機体を包むほどの炎(blazeEffectGUID)も重ねて出せる。
 	//     どちらを動かすかは BoosterEffectSystem が isBoosting を見て決める
 	//     (isBoosting を書くのは ThrusterEffectSystem)。
 	//
@@ -91,6 +92,14 @@ namespace App::Component
 		Engine::Handle<Engine::Resource::EffectAsset> sparkHandle = {};	// EffectFixupSystem が解決する
 		float sparkScale = 1.0f;	// スパークの大きさ倍率(アセットは共有なので個体差はここで付ける)
 
+		// ---- 踏み込んだ瞬間の炎の噴き上がり(設定値) ----
+		// スパークと同じ瞬間に、機体を包むほどの炎を噴射口から1回だけ出す。
+		// スパーク(弾ける光)とは絵も大きさも別物なので、アセットを分けて重ねる。
+		// 未設定なら何も出ない(スパークだけが出る)
+		Core::GUID blazeEffectGUID = Core::DEFAULT_GUID;
+		Engine::Handle<Engine::Resource::EffectAsset> blazeHandle = {};	// EffectFixupSystem が解決する
+		float blazeScale = 1.0f;	// 炎の大きさ倍率
+
 		// ---- ランタイム(保存しない) ----
 		float burstTimer = 0.0f;	// 戻るまでの残り時間
 		bool  wasPlaying = false;	// 点火の立ち上がりを見るための前フレームの状態
@@ -121,6 +130,7 @@ struct Engine::ECS::ComponentTraits<App::Component::BoosterEffectComponent>
 		auto& _resourceManager = *a_services.pResourceManager;
 
 		_resourceManager.ReleaseHandle(_comp.sparkHandle);
+		_resourceManager.ReleaseHandle(_comp.blazeHandle);
 	}
 
 	static void Archive(Engine::Persistence::Archive& a_ar, void* a_pData)
@@ -143,6 +153,13 @@ struct Engine::ECS::ComponentTraits<App::Component::BoosterEffectComponent>
 
 		a_ar.Field("sparkEffectGUID", _comp.sparkEffectGUID);
 		a_ar.Field("sparkScale", _comp.sparkScale);
+
+		// 後から足したもの : 古いバイナリには無いので読まない(既定の「未設定」のまま = 炎は出ない)
+		if (!a_ar.IsLegacyLayout())
+		{
+			a_ar.Field("blazeEffectGUID", _comp.blazeEffectGUID);
+			a_ar.Field("blazeScale", _comp.blazeScale);
+		}
 	}
 
 	static void Edit(CompEditContext& a_context)
@@ -199,6 +216,20 @@ struct Engine::ECS::ComponentTraits<App::Component::BoosterEffectComponent>
 		if (_comp.sparkEffectGUID == Core::DEFAULT_GUID)
 		{
 			Engine::EditorField::HelpText("(未設定 : ダッシュしても何も出ない)");
+		}
+
+		Engine::EditorField::Header("Boost Blaze");
+		Engine::EditorField::HelpText("スパークと同じ瞬間に、機体を包むほどの炎を1回だけ出す");
+		Engine::EditorField::AssetField<Engine::Resource::EffectAsset>(
+			*a_context.pWorld->RefEngineServices(),
+			"Blaze Effect",
+			"EffectAsset",
+			_comp.blazeEffectGUID,
+			_comp.blazeHandle);
+		Engine::EditorField::Field("BlazeScale", _comp.blazeScale, 0.01f, 0.0f);
+		if (_comp.blazeEffectGUID == Core::DEFAULT_GUID)
+		{
+			Engine::EditorField::HelpText("(未設定 : 炎は出ない)");
 		}
 
 		// ランタイムは表示のみ

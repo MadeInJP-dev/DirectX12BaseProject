@@ -92,6 +92,28 @@ namespace App::Utility
 		std::initializer_list<Engine::ECS::ComponentTypeID> a_extraTagIDs = {});
 
 	/// <summary>
+	/// 単発のエフェクトを、指定のエンティティに付けたまま再生する(遅延コマンドを積むだけ)
+	/// </summary>
+	/// <remarks>
+	/// 速く動く持ち主の上で弾けさせたいもの(ブーストの炎など)向け。
+	/// ReserveSpawnEffectAt で出すとその場に置き去りになり、持ち主だけが先へ行ってしまう。
+	/// ・位置と回転は親に付いて行く。拡縮は継がない(大きさは a_scale で付ける)。
+	///   a_localPos は親の拡縮を外した座標系での位置(親のスケールを掛けてから渡す)。
+	/// ・a_localEmitDir は親の回転の中での向き。0 ベクトルならアセットの向きのまま。
+	/// ・出し切ったら自分から消える(destroyOnFinish)。保存しない印(TransientTag)を付ける。
+	/// ・粒を持ち主と一緒に動かしたいときは、パーツのシミュレーション空間を Local にしておくこと。
+	/// </remarks>
+	/// <param name="a_parent">付いて行く相手。生きていなければ何もしない</param>
+	/// <returns>生成コマンドを積めたら true</returns>
+	bool ReserveSpawnAttachedEffect(
+		Engine::ECS::World& a_world,
+		const Core::GUID& a_effectGUID,
+		Engine::ECS::Entity a_parent,
+		const Math::Vector3& a_localPos,
+		const Math::Vector3& a_localEmitDir = {},
+		float a_scale = 1.0f);
+
+	/// <summary>
 	/// エフェクトアセットを指定座標で再生し、作ったエンティティを返す(即時生成)
 	/// </summary>
 	/// <remarks>
