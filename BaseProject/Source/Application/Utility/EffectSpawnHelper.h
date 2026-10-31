@@ -176,4 +176,16 @@ namespace App::Utility
 		const Engine::ECS::EngineServices& a_services,
 		Engine::Effect::EffectInstance& a_instance
 	);
+
+	/// <summary>
+	/// エフェクトが借りているトレイル(トレイルパーツの点の履歴)を手放す
+	/// </summary>
+	/// <remarks>
+	/// 手放した帯は残りの点が消えきるまで描かれ、その後プールへ返る(エンティティが消えても軌跡は急に消えない)。
+	/// EffectRuntimeComponent の Release から呼ぶ
+	/// </remarks>
+	void ReleaseEffectTrails(
+		const Engine::ECS::EngineServices& a_services,
+		Engine::Effect::EffectInstance& a_instance
+	);
 }

@@ -3,6 +3,7 @@
 #include "Engine/Graphics/DebugDraw/DebugDraw.h"
 #include "Engine/Graphics/Frame/DrawList/MeshDrawData.h"
 #include "Engine/Graphics/Frame/DrawList/UIData.h"
+#include "Engine/Graphics/Frame/DrawList/TrailData.h"
 
 namespace Engine::Resource
 {
@@ -188,6 +189,9 @@ namespace Engine::Graphics
 		);
 		void UpdateUIBuffer(const std::vector<UIData>& a_uiInstanceVec);
 
+		// トレイルの頂点を上げる(DrawLists::GetTrailVertexVec)。上げ切れなければそのフレームは描かない
+		void UpdateTrailBuffer(const std::vector<TrailVertex>& a_vertexVec);
+
 		// 描く順のインスタンス番号の表を上げる(DrawLists::GetDrawInstanceIndexVec)。
 		// 並びはソートで決まるので、DrawLists::SortItems() の後で呼ぶこと
 		void UpdateDrawInstanceIndexBuffer(const std::vector<uint32_t>& a_indexVec);
@@ -212,6 +216,11 @@ namespace Engine::Graphics
 		// 境界面 : 積まれた面を1枚ずつ、a_rootIndex の定数バッファへ詰めて描く。
 		// 板ポリは VS が SV_VertexID で組む(頂点バッファは張らない)。トポロジは呼ぶ側が設定すること
 		void DrawBoundary(UINT a_rootIndex);
+
+		// トレイル : 積まれた帯を遠い順に1本ずつ描く(三角形ストリップ)。
+		// a_vertexRootIndex に頂点の構造体バッファ、a_constRootIndex に1本ぶんのルート定数
+		// (頂点の先頭・絵の番号・加算か)を張る。PSO とルートシグネチャは呼ぶ側が張ること
+		void DrawTrails(UINT a_vertexRootIndex, UINT a_constRootIndex);
 
 		// 自分のパス番号で積まれたモデルを描く。
 		// 不透明は PSO・メッシュでまとめた並び、半透明は奥から手前の並び(別の配列)から引く
@@ -321,6 +330,10 @@ namespace Engine::Graphics
 
 		// UIデータ
 		D3D12::DynamicStructuredBuffer<UIData> m_uiInstanceBuffer;
+
+		// トレイルの頂点
+		D3D12::DynamicStructuredBuffer<TrailVertex> m_trailVertexBuffer;
+		bool m_isTrailUploaded = false;	// このフレームの頂点を上げ切れたか
 	};
 	template<typename T>
 	inline void RenderContext::GraphicsBindRootCBV(int a_descIndex, const T& a_data)

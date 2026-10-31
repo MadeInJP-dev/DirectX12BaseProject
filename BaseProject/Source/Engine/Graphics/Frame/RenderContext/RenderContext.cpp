@@ -29,6 +29,9 @@ namespace Engine::Graphics
 		// アイテムはインスタンスデータ(最大 100000)をパスの数だけ指すので、その数倍を見ておく
 		constexpr UINT DRAW_INSTANCE_INDEX_CAPACITY = 400000;
 
+		// トレイルの頂点の容量(要素数)
+		constexpr UINT TRAIL_VERTEX_CAPACITY = 65536;
+
 		//------------------------------------------------------------------------------------------
 		// メッシュシェーダーのルートパラメーター番号(MeshCommon.hlsli の MESHGLOBAL_ROOT_SIG と合わせる)
 		//------------------------------------------------------------------------------------------
@@ -89,6 +92,9 @@ namespace Engine::Graphics
 		// UIインスタンス
 		m_uiInstanceBuffer.Create(a_desc.pDevice, m_pHeapManager, 10000);
 
+		// トレイルの頂点(点ごとに2頂点)。128 点の帯なら 256 本ぶん
+		m_trailVertexBuffer.Create(a_desc.pDevice, m_pHeapManager, TRAIL_VERTEX_CAPACITY);
+
 		// 描画用の板ポリはフレームごとに変わらないので、
 		// コンテキストの数だけ作らずグラフィックスエンジンが1つずつ持っている
 		// (GraphicsEngine::RefQuadPolygon / RefCurvedQuadPolygon)
@@ -115,6 +121,7 @@ namespace Engine::Graphics
 		m_meshLodBuffer.Release();
 		m_drawInstanceIndexBuffer.Release();
 		m_uiInstanceBuffer.Release();
+		m_trailVertexBuffer.Release();
 	}
 
 	void RenderContext::Clear()
@@ -315,6 +322,24 @@ namespace Engine::Graphics
 		m_uiInstanceBuffer.AllocateAndWrite(a_uiInstanceVec);
 	}
 
+	void RenderContext::UpdateTrailBuffer(const std::vector<TrailVertex>& a_vertexVec)
+	{
+		// 張るのは先頭アドレス固定なので、UI と同じく毎フレーム先頭から書き直す
+		m_trailVertexBuffer.ResetForNewFrame();
+		m_isTrailUploaded = false;
+		if (a_vertexVec.empty()) return;
+
+		// 溢れたフレームは描かない(途中までの範囲で描くと、帯が別の帯の頂点を指す)
+		if (a_vertexVec.size() > m_trailVertexBuffer.GetElementNum())
+		{
+			ENGINE_WARNING("トレイルの頂点が容量を超えました : %zu", a_vertexVec.size());
+			return;
+		}
+
+		m_trailVertexBuffer.AllocateAndWrite(a_vertexVec);
+		m_isTrailUploaded = true;
+	}
+
 	void RenderContext::UpdateDrawInstanceIndexBuffer(const std::vector<uint32_t>& a_indexVec)
 	{
 		// 張るのは先頭アドレス固定なので、UI・ボーンと同じく毎フレーム先頭から書き直す
@@ -474,6 +499,24 @@ namespace Engine::Graphics
 		{
 			GraphicsBindRootCBV(static_cast<int>(a_rootIndex), _data);
 			m_pCmdList->DrawInstanced(QUAD_VERTEX_COUNT, 1, 0, 0);
+		}
+	}
+
+	void RenderContext::DrawTrails(UINT a_vertexRootIndex, UINT a_constRootIndex)
+	{
+		if (!m_pDrawLists || !m_isTrailUploaded) return;
+		const auto& _itemVec = m_pDrawLists->GetTrailDrawItemVec();
+		if (_itemVec.empty()) return;
+
+		m_pCmdList->SetGraphicsRootShaderResourceView(a_vertexRootIndex, m_trailVertexBuffer.GetGPUVirtualAddress());
+		m_pCmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+		for (const auto& _item : _itemVec)
+		{
+			// 頂点の先頭はルート定数で渡す(SV_VertexID に足して引く)
+			const UINT _constants[] = { _item.vertexStart, _item.textureIndex, _item.isAdditive };
+			m_pCmdList->SetGraphicsRoot32BitConstants(a_constRootIndex, static_cast<UINT>(std::size(_constants)), _constants, 0);
+			m_pCmdList->DrawInstanced(_item.vertexCount, 1, 0, 0);
 		}
 	}
 

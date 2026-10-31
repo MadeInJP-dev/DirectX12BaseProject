@@ -7,6 +7,7 @@
 #include "Engine/Graphics/Frame/DrawSubmitter/Descs/SpriteSubmitDesc.h"
 #include "Engine/Graphics/Frame/DrawSubmitter/Descs/FontSubmitDesc.h"
 #include "Engine/Graphics/Frame/DrawSubmitter/Descs/BoundarySubmitDesc.h"
+#include "Engine/Graphics/Frame/DrawList/TrailData.h"
 
 namespace Engine::ECS
 {
@@ -99,6 +100,21 @@ namespace Engine::Graphics
 		/// </summary>
 		/// <param name="a_desc">描画の要求(必須項目は BoundarySubmitDesc を参照)</param>
 		void SubmitBoundary(const BoundarySubmitDesc& a_desc);
+
+		/// <summary>
+		/// トレイルの帯を1本描く命令 : 即時実行ではなく、コマンドとしてためたのちに TransparentPass が描く。
+		/// 頂点はカメラへ向けて組み終えたもの(点ごとに左右2頂点の三角形ストリップ)。
+		/// 積むのは Effect::TrailNodePool で、エフェクトから直接は呼ばない
+		/// </summary>
+		/// <param name="a_vertices">帯の頂点</param>
+		/// <param name="a_texHandle">帯に貼る絵。無効なら色だけ</param>
+		/// <param name="a_isAdditive">加算で重ねるか</param>
+		/// <param name="a_sortPos">遠い順に並べるときに測る位置</param>
+		void SubmitTrail(
+			std::span<const TrailVertex> a_vertices,
+			const Handle<Resource::Texture>& a_texHandle,
+			bool a_isAdditive,
+			const Math::Vector3& a_sortPos);
 
 		//--------------------------------------------------------------------------------------------
 		// 描画コマンド : UI

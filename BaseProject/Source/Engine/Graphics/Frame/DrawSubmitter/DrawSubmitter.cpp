@@ -392,6 +392,27 @@ namespace Engine::Graphics
 		m_pDrawLists->AddBoundary(_data);
 	}
 
+	//------------------------------------------------------------------------------------------
+	// トレイルの帯を1本積む
+	//
+	// 境界面と同じく描くパスが1つ(TransparentPass)なので、パスごとのPSOもアイテムも作らない。
+	// 絵が読み込み中なら色だけで描く(帯ごと消すと、出始めの軌跡が欠ける)
+	//------------------------------------------------------------------------------------------
+	void DrawSubmitter::SubmitTrail(
+		std::span<const TrailVertex> a_vertices,
+		const Handle<Resource::Texture>& a_texHandle,
+		bool a_isAdditive,
+		const Math::Vector3& a_sortPos)
+	{
+		TrailDrawItem _item = {};
+		const int _texIndex = a_texHandle.IsValid() ? GetSRVIndexFromTextureHandle(a_texHandle) : -1;
+		_item.textureIndex = (_texIndex >= 0) ? static_cast<UINT>(_texIndex) : 0xFFFFFFFFu;
+		_item.isAdditive = a_isAdditive ? 1u : 0u;
+		_item.sortPos = a_sortPos;
+
+		m_pDrawLists->AddTrail(a_vertices, _item);
+	}
+
 	void DrawSubmitter::SubmitUI(const SpriteSubmitDesc& a_desc)
 	{
 		auto& _resourceManager = (*m_pResourceManager);

@@ -3,6 +3,7 @@
 #include "Engine/Graphics/GraphicsEngine.h"
 #include "Engine/Graphics/Frame/RenderContext/RenderContext.h"
 #include "Engine/Graphics/Frame/SceneView/AmbientData.h"
+#include "Engine/Graphics/D3D12/InputLayout.h"
 #include "Engine/Graphics/PipelineState/PipelineStateManager/PipelineStateManager.h"
 #include "Engine/Resource/Manager/AssetDatabase/AssetDatabase.h"
 #include "Engine/Resource/Manager/ResourceManager/ResourceManager.h"
@@ -27,6 +28,11 @@ namespace Engine::Graphics::Pipeline
 			float pad = 0.0f;
 		};
 		static_assert(sizeof(ForwardLightConstants) == sizeof(UINT) * 8, "MESHGLOBAL_ROOT_SIG の RootConstants(b2) と大きさを合わせること");
+
+		// トレイルのルートパラメーターの番号。
+		// ※ HLSL 側(Asset/Shader/Source/Geometry/Trail/Trail.hlsli の TRAIL_ROOT_SIG)と合わせること
+		constexpr UINT ROOT_TRAIL_VERTEX = 1;	// SRV(t0) 全トレイルの頂点
+		constexpr UINT ROOT_TRAIL_CONST = 2;	// RootConstants(b1) 帯1本ぶん
 	}
 
 	void TransparentPass::SetupSlots()
@@ -81,7 +87,7 @@ namespace Engine::Graphics::Pipeline
 		m_defaultPSHandle = _resManager.LoadImmediate<Resource::Shader>(_guidPS);
 
 		// ---- ルートシグネチャ ----
-		m_rootSigHandle = _pPSOManager->Request("Asset/Shader/Source/Geometry/MeshShader/UberMS.cso");
+		m_meshRootSigHandle = _pPSOManager->Request("Asset/Shader/Source/Geometry/MeshShader/UberMS.cso");
 
 		//----------------------------------------------------------------------------------
 		// 深度テスト
@@ -98,6 +104,52 @@ namespace Engine::Graphics::Pipeline
 
 		// 下地を α のぶん隠して色を置く
 		m_pipelineBuilder.SetAlphaBlend(true);
+
+		//----------------------------------------------------------------------------------
+		// トレイル : 頂点は CPU が組んだものを VS が SV_VertexID で引く
+		//
+		// 合成はプリマルチプライド(1 × 色 + (1 - α) × 下地)。
+		// PS が α を出せば半透明、0 を出せば加算になるので、1つの PSO で両方を描ける。
+		// 帯は裏からも見えるので裏も描く
+		//----------------------------------------------------------------------------------
+		SetupRasterShader(
+			a_context,
+			"Asset/Shader/Source/Geometry/Trail/TrailVS.cso",
+			"Asset/Shader/Source/Geometry/Trail/TrailPS.cso",
+			D3D12::Input::EMPTY_LAYOUT,
+			"TrailPSO",
+			[_isDepth](D3D12::GraphicsPipelineDesc& a_pso)
+			{
+				a_pso.BlendEnable(true);
+				a_pso.SrcBlend(D3D12_BLEND_ONE, 0);
+				a_pso.DestBlend(D3D12_BLEND_INV_SRC_ALPHA, 0);
+				a_pso.BlendOp(D3D12_BLEND_OP_ADD, 0);
+
+				a_pso.SrcBlendAlpha(D3D12_BLEND_ONE, 0);
+				a_pso.DestBlendAlpha(D3D12_BLEND_INV_SRC_ALPHA, 0);
+				a_pso.BlendOpAlpha(D3D12_BLEND_OP_ADD, 0);
+
+				a_pso.desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+				a_pso.CullMode(D3D12_CULL_MODE_NONE);
+
+				if (_isDepth)
+				{
+					a_pso.DepthEnable(true);
+					a_pso.DepthWriteMask(false);
+					a_pso.DepthFunc(D3D12_COMPARISON_FUNC_LESS_EQUAL);
+				}
+				else
+				{
+					a_pso.DepthEnable(false);
+					a_pso.StencilEnable(false);
+				}
+			},
+			EPassHeapMode::Bindless,
+			&m_trailPSOHandle);
+
+		// SetupRasterShader はルートシグネチャをパス共通の欄へ入れるので、トレイル用として控えておく
+		m_trailRootSigHandle = Pass::m_rootSigHandle;
 	}
 
 	void TransparentPass::Update(const PassContext& a_context)
@@ -108,7 +160,7 @@ namespace Engine::Graphics::Pipeline
 
 		// レンダーターゲットの切り替えはグラフが済ませてある
 		_pCtx->BindBindlessHeaps();
-		_pCtx->SetGraphicsRootSignature(m_rootSigHandle);
+		_pCtx->SetGraphicsRootSignature(m_meshRootSigHandle);
 
 		_pCtx->BindCamera();
 		_pCtx->BindMeshInstance();
@@ -134,6 +186,19 @@ namespace Engine::Graphics::Pipeline
 
 		// 自分のパス番号で積まれた半透明のアイテムを、奥から手前の順に描く
 		_pCtx->DrawTransparentQueueDispatchMesh(GetPassIndex());
+
+		//----------------------------------------------------------------------------------
+		// トレイル : 半透明のモデルの後に、帯を遠い順に描く
+		//
+		// ルートシグネチャが変わるとそれまでのバインドは消えるので、カメラから張り直す
+		//----------------------------------------------------------------------------------
+		if (m_trailPSOHandle.IsValid() && m_trailRootSigHandle.IsValid())
+		{
+			_pCtx->SetGraphicsRootSignature(m_trailRootSigHandle);
+			_pCtx->SetGraphicPSO(m_trailPSOHandle);
+			_pCtx->BindCamera();
+			_pCtx->DrawTrails(ROOT_TRAIL_VERTEX, ROOT_TRAIL_CONST);
+		}
 	}
 
 

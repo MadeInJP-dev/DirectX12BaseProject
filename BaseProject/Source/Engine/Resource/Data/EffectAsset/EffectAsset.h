@@ -13,6 +13,10 @@ namespace Engine::Resource
 	inline constexpr size_t EFFECT_MESH_MAX = 4;
 	inline constexpr size_t EFFECT_SOUND_MAX = 4;
 	inline constexpr size_t EFFECT_POINTLIGHT_MAX = 1;
+	inline constexpr size_t EFFECT_TRAIL_MAX = 2;
+
+	// トレイル1本が持てる点の上限(EffectTrailPart::maxPoints の上限)
+	inline constexpr int EFFECT_TRAIL_POINT_MAX = 128;
 
 	// 個体ごとのパラメータの数と、その結び付けの上限
 	inline constexpr size_t EFFECT_PARAM_MAX = 4;
@@ -327,6 +331,55 @@ namespace Engine::Resource
 	};
 
 	//==========================================================================================
+	// トレイルの色の重ね方 : 末尾に追加必須(値は保存される)
+	//==========================================================================================
+	enum class EEffectTrailBlend : uint32_t
+	{
+		AlphaBlend,	// 下地を α のぶん隠して色を置く(煙の筋・布)
+		Additive,	// 下地へ足す(光の軌跡・剣筋)
+	};
+
+	const char* ToString(EEffectTrailBlend a_blend);
+
+	//==========================================================================================
+	// トレイル : 動いた跡に残る帯(剣筋・ミサイルの光跡など)
+	//
+	// 出している間、置き場から見た posOffset の位置を毎フレーム点として残し、
+	// 点を順につないだ帯をカメラへ向けて描く(TransparentPass)。
+	// 点の履歴は実行中の値なので、ここではなく Effect::TrailNode が持つ。
+	// 止めても(出す時間帯を外れても)点は消えず、lifeTime をかけて尾から消えていく
+	//==========================================================================================
+	struct EffectTrailPart
+	{
+		// ---- どこから引くか : 置き場の行列基準のローカル位置 ----
+		Math::Vector3 posOffset = { 0.0f, 0.0f, 0.0f };
+
+		// ---- いつ引くか ----
+		EffectTiming timing = {};
+
+		// ---- 帯の長さ ----
+		float lifeTime = 0.3f;				// 1つの点が残る秒数。長いほど帯が長く残る
+		int   maxPoints = 32;				// 点の数の上限(2〜EFFECT_TRAIL_POINT_MAX)。超えたら古い点から捨てる
+		float minVertexDistance = 0.1f;		// 前の点からこの距離(m)動くまでは新しい点を足さない(先頭だけ動かす)
+
+		// ---- 見た目 ----
+		float width = 0.5f;											// 先頭の幅(m)。エフェクト全体の大きさ倍率も掛かる
+		float endWidth = 0.0f;										// 尾の幅(m)
+		Math::Color headColor = { 1.0f, 1.0f, 1.0f, 1.0f };		// 先頭の色(a は濃さ)
+		Math::Color tailColor = { 1.0f, 1.0f, 1.0f, 0.0f };		// 尾の色
+		float intensity = 1.0f;										// 色に掛ける強さ。1 を超えるとブルームで光る
+		EEffectTrailBlend blend = EEffectTrailBlend::AlphaBlend;
+
+		// 帯に貼る絵(U = 先頭 → 尾、V = 帯の端 → 端)。空なら色だけ
+		Core::GUID textureGUID = Core::DEFAULT_GUID;
+		Handle<Texture> textureHandle = {};		// ランタイム用(読み込み時に解決)
+
+		bool IsValid() const { return lifeTime > 0.0f && maxPoints >= 2; }
+
+		void Archive(Persistence::Archive& a_ar);
+	};
+
+	//==========================================================================================
 	// エフェクト
 	//
 	// メッシュ形状やパーティクル、鳴らす音をまとめて扱う。
@@ -366,6 +419,12 @@ namespace Engine::Resource
 		std::vector<EffectLightPart>& RefLightParts() { return m_lightParts; }
 		bool AddLightPart();
 		void RemoveLightPart(size_t a_index);
+
+		// トレイル
+		const std::vector<EffectTrailPart>& GetTrailParts() const { return m_trailParts; }
+		std::vector<EffectTrailPart>& RefTrailParts() { return m_trailParts; }
+		bool AddTrailPart();
+		void RemoveTrailPart(size_t a_index);
 
 		// 個体ごとのパラメータの結び付け
 		const std::vector<EffectParamBinding>& GetParamBindings() const { return m_paramBindings; }
@@ -428,5 +487,8 @@ namespace Engine::Resource
 
 		// ライト(上限は EFFECT_POINTLIGHT_MAX)
 		std::vector<EffectLightPart> m_lightParts;
+
+		// トレイル(上限は EFFECT_TRAIL_MAX)
+		std::vector<EffectTrailPart> m_trailParts;
 	};
 }

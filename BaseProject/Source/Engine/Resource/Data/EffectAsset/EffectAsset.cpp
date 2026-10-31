@@ -45,6 +45,41 @@ namespace Engine::Resource
 		a_ar.Field("Trigger", timing.trigger);
 	}
 
+	const char* ToString(EEffectTrailBlend a_blend)
+	{
+		switch (a_blend)
+		{
+		case EEffectTrailBlend::AlphaBlend:	return "AlphaBlend";
+		case EEffectTrailBlend::Additive:	return "Additive";
+		default:							return "Unknown";
+		}
+	}
+
+	//======================================================================================
+	// EffectTrailPart
+	//======================================================================================
+	void EffectTrailPart::Archive(Persistence::Archive& a_ar)
+	{
+		a_ar.Field("PosOffset", posOffset);
+
+		timing.Archive(a_ar);
+		a_ar.Field("Trigger", timing.trigger);
+
+		a_ar.Field("LifeTime", lifeTime);
+		a_ar.Field("MaxPoints", maxPoints);
+		a_ar.Field("MinVertexDistance", minVertexDistance);
+
+		a_ar.Field("Width", width);
+		a_ar.Field("EndWidth", endWidth);
+		a_ar.Field("HeadColor", headColor);
+		a_ar.Field("TailColor", tailColor);
+		a_ar.Field("Intensity", intensity);
+		a_ar.Field("Blend", blend);
+		a_ar.Field("TextureGUID", textureGUID);
+
+		// ※ 追加は末尾に。バイナリは順次読みなので途中に挿すと既存データが全部ずれる
+	}
+
 	//======================================================================================
 	// EffectParamBinding
 	//======================================================================================
@@ -227,6 +262,19 @@ namespace Engine::Resource
 	{
 		if (a_index >= m_lightParts.size()) return;
 		m_lightParts.erase(m_lightParts.begin() + a_index);
+	}
+
+	bool EffectAsset::AddTrailPart()
+	{
+		if (m_trailParts.size() >= EFFECT_TRAIL_MAX) return false;
+		m_trailParts.emplace_back();
+		return true;
+	}
+
+	void EffectAsset::RemoveTrailPart(size_t a_index)
+	{
+		if (a_index >= m_trailParts.size()) return;
+		m_trailParts.erase(m_trailParts.begin() + a_index);
 	}
 
 	bool EffectAsset::AddParamBinding()
@@ -428,6 +476,36 @@ namespace Engine::Resource
 				m_lightParts.resize(EFFECT_POINTLIGHT_MAX);
 			}
 		}
+
+		//------------------------------------------------------------------
+		// トレイル
+		//
+		// 後から足した並びなので、必ず末尾に置くこと(サウンドと同じ理由)
+		//------------------------------------------------------------------
+		size_t _trailCount = m_trailParts.size();
+		if (a_ar.BeginArray("TrailParts", _trailCount))
+		{
+			if (a_ar.IsLoading())
+			{
+				m_trailParts.assign(_trailCount, EffectTrailPart{});
+			}
+
+			for (size_t _i = 0; _i < _trailCount; ++_i)
+			{
+				if (a_ar.BeginObject(_i))
+				{
+					m_trailParts[_i].Archive(a_ar);
+					a_ar.EndObject();
+				}
+			}
+			a_ar.EndArray();
+
+			// 実体側(EffectInstance)のトレイルの席が固定長なので、超えたぶんは引けない
+			if (a_ar.IsLoading() && m_trailParts.size() > EFFECT_TRAIL_MAX)
+			{
+				m_trailParts.resize(EFFECT_TRAIL_MAX);
+			}
+		}
 	}
 
 	void EffectAsset::Save(const std::string& a_baseFilePath)
@@ -445,6 +523,7 @@ namespace Engine::Resource
 		for (const auto& _part : m_meshParts)     { if (_part.IsValid() && _part.timing.IsStopTrigger()) return true; }
 		for (const auto& _part : m_soundParts)    { if (_part.IsValid() && _part.timing.IsStopTrigger()) return true; }
 		for (const auto& _part : m_lightParts)    { if (_part.IsValid() && _part.timing.IsStopTrigger()) return true; }
+		for (const auto& _part : m_trailParts)    { if (_part.IsValid() && _part.timing.IsStopTrigger()) return true; }
 		return false;
 	}
 
@@ -484,6 +563,17 @@ namespace Engine::Resource
 				continue;
 			}
 			_part.soundHandle = _resourceManager.LoadImmediate<Sound>(_part.soundGUID);
+		}
+
+		// トレイルに貼る絵
+		for (auto& _part : m_trailParts)
+		{
+			if (_part.textureGUID == Core::DEFAULT_GUID)
+			{
+				_part.textureHandle = {};
+				continue;
+			}
+			_part.textureHandle = _resourceManager.LoadImmediate<Texture>(_part.textureGUID);
 		}
 	}
 

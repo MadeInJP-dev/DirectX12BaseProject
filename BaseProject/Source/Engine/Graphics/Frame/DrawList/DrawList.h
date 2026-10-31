@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Frame/DrawList/MeshDrawData.h"
 #include "Engine/Graphics/Frame/DrawList/UIData.h"
 #include "Engine/Graphics/Frame/DrawList/BoundaryData.h"
+#include "Engine/Graphics/Frame/DrawList/TrailData.h"
 #include "Engine/Graphics/Raytracing/DynamicRaytracingData.h"
 
 namespace Engine::Graphics
@@ -33,6 +34,7 @@ namespace Engine::Graphics
 		void AddItem(const LightWeightDrawItem& a_item);
 
 		// 半透明の配列を並べる : ソートキーへカメラからの距離を入れてから、遠い順に並べる。
+		// トレイルの描画情報も同じく遠い順に並べる。
 		// カメラが確定してから(エディターカメラの上書きも済んでから)、SortItems の前に呼ぶ。
 		// GetTransparentPassItems() はこの後でしか引けない
 		void SortTransparentItems(const Math::Vector3& a_cameraPos);
@@ -98,6 +100,14 @@ namespace Engine::Graphics
 		const std::vector<BoundaryDrawData>& GetBoundaryDataVec() const { return m_boundaryDrawDataVec; }
 
 		//--------------------------------------------------------------------------------------------
+		// トレイル : 1本ぶんの頂点(三角形ストリップ)をまとめて積む。描くのは TransparentPass。
+		// 並びは SortTransparentItems で、半透明のモデルと同じく遠い順になる
+		//--------------------------------------------------------------------------------------------
+		void AddTrail(std::span<const TrailVertex> a_vertices, const TrailDrawItem& a_item);
+		const std::vector<TrailVertex>& GetTrailVertexVec() const { return m_trailVertexVec; }
+		const std::vector<TrailDrawItem>& GetTrailDrawItemVec() const { return m_trailDrawItemVec; }
+
+		//--------------------------------------------------------------------------------------------
 		// GPUスキニング
 		//--------------------------------------------------------------------------------------------
 		void AddSkinning(const SkinningDispatchItem& a_item);
@@ -143,6 +153,10 @@ namespace Engine::Graphics
 
 		// 境界面の配列(面1枚ずつ)
 		std::vector<BoundaryDrawData> m_boundaryDrawDataVec = {};
+
+		// トレイルの頂点(全トレイルぶんを続けて入れる)と、1本ずつの描画情報
+		std::vector<TrailVertex> m_trailVertexVec = {};
+		std::vector<TrailDrawItem> m_trailDrawItemVec = {};
 
 		// GPUスキニング配列
 		std::vector<SkinningDispatchItem> m_skinningDispatchItemVec = {};

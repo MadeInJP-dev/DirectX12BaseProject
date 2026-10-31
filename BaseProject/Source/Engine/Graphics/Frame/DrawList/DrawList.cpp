@@ -59,6 +59,8 @@ namespace Engine::Graphics
 		ClearAndReserve(m_drawInstanceIndexVec, 10000);
 		ClearAndReserve(m_uiDrawItemVec, 10000);
 		ClearAndReserve(m_boundaryDrawDataVec, 64);
+		ClearAndReserve(m_trailVertexVec, 4096);
+		ClearAndReserve(m_trailDrawItemVec, 64);
 		ClearAndReserve(m_dynamicRayRequestVec, 1000);
 		ClearAndReserve(m_skinningDispatchItemVec, 1000);
 
@@ -124,6 +126,19 @@ namespace Engine::Graphics
 			[](const LightWeightDrawItem& a, const LightWeightDrawItem& b)
 			{
 				return a.sortKey.value < b.sortKey.value;
+			}
+		);
+
+		// トレイルも遠い順に。帯は長いので1点では測りきれないが、真ん中あたりで測る
+		for (auto& _item : m_trailDrawItemVec)
+		{
+			_item.sortDistSq = (_item.sortPos - a_cameraPos).LengthSquared();
+		}
+		std::stable_sort(
+			m_trailDrawItemVec.begin(), m_trailDrawItemVec.end(),
+			[](const TrailDrawItem& a, const TrailDrawItem& b)
+			{
+				return a.sortDistSq > b.sortDistSq;
 			}
 		);
 	}
@@ -217,6 +232,22 @@ namespace Engine::Graphics
 	void DrawLists::AddBoundary(const BoundaryDrawData& a_data)
 	{
 		m_boundaryDrawDataVec.push_back(a_data);
+	}
+
+	//==========================================================================================
+	// トレイル
+	//==========================================================================================
+	void DrawLists::AddTrail(std::span<const TrailVertex> a_vertices, const TrailDrawItem& a_item)
+	{
+		// 三角形ストリップなので、点2つ(頂点4つ)に満たない帯は面を作れない
+		if (a_vertices.size() < 4) return;
+
+		TrailDrawItem _item = a_item;
+		_item.vertexStart = static_cast<UINT>(m_trailVertexVec.size());
+		_item.vertexCount = static_cast<UINT>(a_vertices.size());
+
+		m_trailVertexVec.insert(m_trailVertexVec.end(), a_vertices.begin(), a_vertices.end());
+		m_trailDrawItemVec.push_back(_item);
 	}
 
 	void DrawLists::SortUIByLayer()

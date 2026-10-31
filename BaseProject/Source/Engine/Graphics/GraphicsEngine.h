@@ -33,6 +33,11 @@ namespace Engine
 		class ResourceManager;
 		class QuadPolygon;
 	}
+
+	namespace Effect
+	{
+		class TrailNodePool;
+	}
 }
 
 namespace Engine::Graphics
@@ -226,6 +231,12 @@ namespace Engine::Graphics
 		LightManager* RefLightManager();
 		const FrameLightData& GetFrameLightData() const;
 
+		// トレイルの点の履歴
+		//
+		// ライトと同じく実体はここのプールに置き、エフェクトはハンドルだけ持つ。
+		// 時間を進めて帯を組むのは Execute() の中(命令を集めきった後、パスを回す前)
+		Effect::TrailNodePool* RefTrailNodePool() { return m_upTrailNodePool.get(); }
+
 		// グラウンドフィールドの衝撃
 		//
 		// SceneView に積まれた衝撃を Execute() で今フレームぶんの構造体バッファへ詰め直したもの。
@@ -376,6 +387,9 @@ namespace Engine::Graphics
 
 		// ライト本体のプール
 		LightManager m_lightManager = {};
+
+		// トレイルの点の履歴のプール
+		std::unique_ptr<Effect::TrailNodePool> m_upTrailNodePool = nullptr;
 
 		// GPUへ渡すライト配列。
 		// UPLOADヒープへ直接書き込むので、GPUがまだ前フレームを読んでいる領域を

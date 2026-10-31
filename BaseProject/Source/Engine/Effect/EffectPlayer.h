@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "EffectInstance.h"
+#include "Engine/Effect/Trail/TrailNode.h"
 
 namespace Engine::Effect
 {
@@ -116,6 +117,21 @@ namespace Engine::Effect
 			const Math::Matrix& a_effectWorld,
 			float a_rangeScale,
 			Graphics::PointLight& a_outLight);
+
+		/// <summary>
+		/// トレイルパーツの今フレームの点と見た目を作る
+		/// </summary>
+		/// <param name=a_effectWorld>エフェクトの置き場の行列(上書きの位置・向き・大きさ込み)</param>
+		/// <param name=a_widthScale>幅に掛ける倍率(エフェクト全体の大きさ)</param>
+		/// <returns>今引いていないパーツなら false(トレイルを手放す)</returns>
+		static bool BuildTrailPoint(
+			const Resource::EffectAsset& a_asset,
+			size_t a_index,
+			const EffectInstance& a_inst,
+			const Math::Matrix& a_effectWorld,
+			float a_widthScale,
+			Math::Vector3& a_outPos,
+			TrailStyle& a_outStyle);
 
 	private:
 

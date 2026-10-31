@@ -603,4 +603,42 @@ namespace Engine::Effect
 
 		return true;
 	}
+
+	bool EffectPlayer::BuildTrailPoint(
+		const Resource::EffectAsset& a_asset,
+		size_t a_index,
+		const EffectInstance& a_inst,
+		const Math::Matrix& a_effectWorld,
+		float a_widthScale,
+		Math::Vector3& a_outPos,
+		TrailStyle& a_outStyle)
+	{
+		const auto& _trailParts = a_asset.GetTrailParts();
+
+		if (!a_inst.IsActive()) return false;
+		if (a_index >= _trailParts.size()) return false;
+
+		const Resource::EffectTrailPart& _part = _trailParts[a_index];
+		if (!_part.IsValid()) return false;
+
+		// 今の状態で動く番か(再生中は OnPlay、止めている最中は OnStop)と、その時間軸での経過時間
+		float _elapsed = 0.0f;
+		if (!IsPartTurn(_part.timing, a_inst, _elapsed)) return false;
+		if (!_part.timing.IsActiveAt(_elapsed)) return false;
+
+		a_outPos = Math::Vector3::Transform(_part.posOffset, a_effectWorld);
+
+		a_outStyle.lifeTime = _part.lifeTime;
+		a_outStyle.maxPoints = std::clamp(_part.maxPoints, 2, Resource::EFFECT_TRAIL_POINT_MAX);
+		a_outStyle.minVertexDistance = _part.minVertexDistance * a_widthScale;
+		a_outStyle.width = _part.width * a_widthScale;
+		a_outStyle.endWidth = _part.endWidth * a_widthScale;
+		a_outStyle.headColor = _part.headColor;
+		a_outStyle.tailColor = _part.tailColor;
+		a_outStyle.intensity = _part.intensity;
+		a_outStyle.isAdditive = (_part.blend == Resource::EEffectTrailBlend::Additive);
+		a_outStyle.textureHandle = _part.textureHandle;
+
+		return true;
+	}
 }

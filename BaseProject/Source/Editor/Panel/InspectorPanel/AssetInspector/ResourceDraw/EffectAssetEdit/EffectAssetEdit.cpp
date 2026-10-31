@@ -347,6 +347,69 @@ namespace Editor::Inspector
 
 			return _isChanged;
 		}
+
+		//-----------------------------------------------------------------------------------------
+		// トレイル1件
+		//-----------------------------------------------------------------------------------------
+		bool TrailPartEdit(const ECS::EngineServices& a_services, EditorContext* a_pEditContext, Resource::EffectTrailPart& a_part)
+		{
+			bool _isChanged = false;
+
+			Engine::EditorField::Header("Place");
+			Engine::EditorField::Field("PosOffset", a_part.posOffset, 0.05f);
+			Engine::EditorField::Tooltip("エフェクトの置き場(上書きの位置・向き・大きさ込み)を基準にした、軌跡を引く点");
+
+			Engine::EditorField::Header("Timing");
+			TimingEdit(a_part.timing);
+			Engine::EditorField::HelpText("引く時間帯を外れても、残った帯は LifeTime をかけて尾から消える");
+
+			Engine::EditorField::Header("Length");
+			Engine::EditorField::Field("LifeTime (s)", a_part.lifeTime, 0.01f, 0.0f);
+			Engine::EditorField::Tooltip("1つの点が残る秒数。長いほど帯が長く残る。0 でこのパーツは出ない");
+			Engine::EditorField::Field("MaxPoints", a_part.maxPoints, 1.0f, 2, Resource::EFFECT_TRAIL_POINT_MAX);
+			Engine::EditorField::Tooltip("点の数の上限。超えたら古い点から捨てる");
+			Engine::EditorField::Field("MinVertexDistance (m)", a_part.minVertexDistance, 0.01f, 0.0f);
+			Engine::EditorField::Tooltip("前の点からこの距離動くまでは新しい点を足さない(先頭だけ動かす)。エフェクトの大きさ倍率も掛かる");
+
+			Engine::EditorField::Header("Look");
+			Engine::EditorField::Field("Width (m)", a_part.width, 0.01f, 0.0f);
+			Engine::EditorField::Field("EndWidth (m)", a_part.endWidth, 0.01f, 0.0f);
+			Engine::EditorField::Tooltip("先頭の幅から尾の幅へ、点の年齢で変わる。エフェクトの大きさ倍率も掛かる");
+			Engine::EditorField::ColorField("HeadColor", a_part.headColor);
+			Engine::EditorField::ColorField("TailColor", a_part.tailColor);
+			Engine::EditorField::Tooltip("a は濃さ。尾の a を 0 にすると、ふわっと消える");
+			Engine::EditorField::Field("Intensity", a_part.intensity, 0.05f, 0.0f);
+			Engine::EditorField::Tooltip("色に掛ける強さ。ブルームのしきい値(既定1.0)を超えると光る");
+			Engine::EditorField::Field("Blend", a_part.blend);
+			Engine::EditorField::HelpText(a_part.blend == Resource::EEffectTrailBlend::Additive
+				? "下地へ足す(光の軌跡・剣筋)"
+				: "下地を濃さのぶん隠して色を置く(煙の筋)");
+
+			// ---- 帯に貼る絵 ----
+			if (EditorField::AssetField(a_services, "Texture", "Texture", a_part.textureGUID))
+			{
+				_isChanged = true;
+			}
+			if (a_part.textureGUID == Core::DEFAULT_GUID)
+			{
+				Engine::EditorField::HelpText("(empty : 色だけで描く)");
+			}
+			else
+			{
+				DrawAssetLink(a_pEditContext, "", a_part.textureGUID);
+				Engine::EditorField::SameLine();
+				if (EditorField::DeleteButton("Clear"))
+				{
+					a_part.textureGUID = Core::DEFAULT_GUID;
+					_isChanged = true;
+				}
+			}
+			Engine::EditorField::HelpText("U = 先頭 → 尾、V = 帯の端 → 端");
+
+			Engine::EditorField::HelpText("描くのは半透明パス(TransparentPass)。パイプラインに置かれていないと出ない");
+
+			return _isChanged;
+		}
 	}
 
 	//-----------------------------------------------------------------------------------------
@@ -570,6 +633,52 @@ namespace Editor::Inspector
 		if (_removeLightIndex >= 0)
 		{
 			a_pEffect->RemoveLightPart(static_cast<size_t>(_removeLightIndex));
+		}
+
+		//------------------------------------------------------------------
+		// トレイルパーツ
+		//
+		// 動いた跡に残る帯(剣筋・ミサイルの光跡など)。点の履歴は実行中に TrailNode が持つ
+		//------------------------------------------------------------------
+		auto& _trailParts = a_pEffect->RefTrailParts();
+
+		Engine::EditorField::Header("Trail Parts");
+		Engine::EditorField::Text("%d / %d", static_cast<int>(_trailParts.size()), static_cast<int>(Resource::EFFECT_TRAIL_MAX));
+
+		// 上限まで来たら足せない(実体側のトレイルの席が固定長のため)
+		ImGui::BeginDisabled(_trailParts.size() >= Resource::EFFECT_TRAIL_MAX);
+		if (EditorField::CreateButton("Add Trail Part"))
+		{
+			a_pEffect->AddTrailPart();
+		}
+		ImGui::EndDisabled();
+
+		int _removeTrailIndex = -1;
+
+		for (size_t _i = 0; _i < _trailParts.size(); ++_i)
+		{
+			// 上のパーツと番号が被らないように、IDの土台をずらしておく
+			ImGui::PushID(static_cast<int>(_i + 2000));
+
+			const std::string _label = "Trail " + std::to_string(_i);
+			if (ImGui::TreeNodeEx(_label.c_str(), ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_Framed))
+			{
+				if (EditorField::DeleteButton("Remove Part"))
+				{
+					_removeTrailIndex = static_cast<int>(_i);
+				}
+
+				if (TrailPartEdit(a_services, a_pEditContext, _trailParts[_i])) _isChanged = true;
+
+				ImGui::TreePop();
+			}
+
+			ImGui::PopID();
+		}
+
+		if (_removeTrailIndex >= 0)
+		{
+			a_pEffect->RemoveTrailPart(static_cast<size_t>(_removeTrailIndex));
 		}
 
 		//------------------------------------------------------------------

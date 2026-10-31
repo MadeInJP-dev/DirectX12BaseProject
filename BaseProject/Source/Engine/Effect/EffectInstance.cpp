@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioManager.h"
 #include "Engine/Graphics/LightManager/LightManager.h"
+#include "Engine/Effect/Trail/TrailNodePool.h"
 
 namespace Engine::Effect
 {
@@ -50,6 +51,15 @@ namespace Engine::Effect
 			if (!_handle.IsValid()) continue;
 			a_lightManager.RemoveLight(_handle);
 			_handle = {};
+		}
+	}
+
+	void EffectInstance::ReleaseTrails(TrailNodePool& a_trailNodePool)
+	{
+		for (auto& _handle : trailHandles)
+		{
+			if (!_handle.IsValid()) continue;
+			a_trailNodePool.Detach(_handle);
 		}
 	}
 }

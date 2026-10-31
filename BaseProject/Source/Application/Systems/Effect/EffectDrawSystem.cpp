@@ -6,6 +6,7 @@
 #include "Engine/Graphics/Particle/ParticleBufferManager.h"
 #include "Engine/Graphics/LightManager/LightManager.h"
 #include "Engine/Effect/EffectPlayer.h"
+#include "Engine/Effect/Trail/TrailNodePool.h"
 #include "Engine/Graphics/Particle/GPU/EmitterSlotPool/EmitterSlotPool.h"
 
 #include "Application/Components/Effect/EffectRuntimeComponent.h"
@@ -22,6 +23,8 @@ namespace App::System
 	//
 	//   パーティクル : パーツごとの pendingEmit 個を GPU へ emit 要求する
 	//   メッシュ     : パーツごとの行列と色を組んで描画命令に積む
+	//   トレイル     : パーツごとの今の位置を、借りている点の履歴(TrailNode)へ渡す。
+	//                  帯を組んで描くのは GraphicsEngine と TransparentPass
 	//
 	// どちらも発生源はエフェクトが付いているエンティティのワールド行列。
 	// パーツ側は「そこからどうずらすか」しか持たないので、
@@ -103,6 +106,12 @@ namespace App::System
 						if (_pGE && _pGE->RefLightManager())
 						{
 							_runtime.instance.ReleaseLights(*_pGE->RefLightManager());
+						}
+
+						// トレイルも手放す。残りの点は寿命で消えるまで描かれる
+						if (_pGE && _pGE->RefTrailNodePool())
+						{
+							_runtime.instance.ReleaseTrails(*_pGE->RefTrailNodePool());
 						}
 						continue;
 					}
@@ -404,6 +413,45 @@ namespace App::System
 							if (auto* _pLight = _pLightManager->RefLight(_lightHandle))
 							{
 								*_pLight = _light;
+							}
+						}
+					}
+
+					//----------------------------------------------------------
+					// トレイル
+					//
+					// 引いている間だけ点の履歴(TrailNode)を借りて、毎フレーム今の位置を渡す。
+					// 引く時間帯から外れたら手放す : 点はプールに残って尾から消えていき、
+					// 次に引き始めたときは新しい帯になる(前の帯と繋がらない)
+					//----------------------------------------------------------
+					if (_pGE && _pGE->RefTrailNodePool())
+					{
+						auto* _pTrailPool = _pGE->RefTrailNodePool();
+
+						for (size_t _t = 0; _t < Engine::Resource::EFFECT_TRAIL_MAX; ++_t)
+						{
+							auto& _trailHandle = _runtime.instance.trailHandles[_t];
+
+							Math::Vector3 _trailPos;
+							Engine::Effect::TrailStyle _style = {};
+							const bool _isShow = Engine::Effect::EffectPlayer::BuildTrailPoint(
+								*_pEffect, _t, _runtime.instance, _effectWorld, _effectScale, _trailPos, _style);
+
+							if (!_isShow)
+							{
+								if (_trailHandle.IsValid()) _pTrailPool->Detach(_trailHandle);
+								continue;
+							}
+
+							if (!_trailHandle.IsValid())
+							{
+								_trailHandle = _pTrailPool->Acquire();
+							}
+
+							if (auto* _pNode = _pTrailPool->Ref(_trailHandle))
+							{
+								_pNode->SetStyle(_style);
+								_pNode->AddPoint(_trailPos);
 							}
 						}
 					}

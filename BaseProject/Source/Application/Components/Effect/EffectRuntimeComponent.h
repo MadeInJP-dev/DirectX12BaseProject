@@ -65,6 +65,9 @@ struct Engine::ECS::ComponentTraits<App::Component::EffectRuntimeComponent>
 		// 出している途中のライトパーツが借りているポイントライトも返す
 		App::Utility::ReleaseEffectLights(a_services, _comp.instance);
 
+		// 引いている途中のトレイルも手放す(残りの点は消えきるまで描かれる)
+		App::Utility::ReleaseEffectTrails(a_services, _comp.instance);
+
 		a_services.pResourceManager->ReleaseHandle(_comp.effectHandle);
 	}
 
@@ -82,6 +85,7 @@ struct Engine::ECS::ComponentTraits<App::Component::EffectRuntimeComponent>
 
 		Engine::EditorField::Value("Particle Parts", "%d", static_cast<int>(_pEffect->GetParticleParts().size()));
 		Engine::EditorField::Value("Mesh Parts", "%d", static_cast<int>(_pEffect->GetMeshParts().size()));
+		Engine::EditorField::Value("Trail Parts", "%d", static_cast<int>(_pEffect->GetTrailParts().size()));
 		Engine::EditorField::Value("Elapsed", "%.2f", _comp.instance.elapsed);
 	}
 };

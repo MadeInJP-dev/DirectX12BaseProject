@@ -32,6 +32,7 @@
 #include "Engine/Graphics/FrameCompute/SkinningCompute/SkinningCompute.h"
 #include "Engine/Graphics/FrameCompute/UpdateBLASPass/UpdateBLASPass.h"
 #include "Engine/Graphics/FrameCompute/ParticleSimulation/ParticleSimulation.h"
+#include "Engine/Effect/Trail/TrailNodePool.h"
 
 
 namespace Engine::Graphics
@@ -239,6 +240,9 @@ namespace Engine::Graphics
 		// バッファは上限ぶんを固定確保する(FrameLightData::Create の中)。
 		// ライトが増えるたびに作り直すと、GPUが読んでいる最中のリソースを解放することになる
 		m_lightManager.Init();
+
+		// トレイルの点の履歴(CPU 側だけ。頂点はレンダーコンテキストが毎フレーム上げる)
+		m_upTrailNodePool = std::make_unique<Effect::TrailNodePool>();
 		for (auto& _frameLight : m_frameLightDataArr)
 		{
 			_frameLight.Create(_pDevice, m_upDescriptorHeapManager.get());
@@ -352,6 +356,12 @@ namespace Engine::Graphics
 			_frameLight.Release();
 		}
 		m_lightManager.Release();
+
+		if (m_upTrailNodePool)
+		{
+			m_upTrailNodePool->Release();
+			m_upTrailNodePool.reset();
+		}
 
 		// グラウンドフィールドの衝撃解放
 		for (auto& _impulseBuffer : m_groundImpulseBufferArr)
@@ -529,10 +539,28 @@ namespace Engine::Graphics
 		// 半透明パス(TransparentPass)はその並びを先頭から描くだけにする。
 		// パスが読むのは共有のカメラなので、どのカメラのパスもこの位置を基準に並ぶ
 		//------------------------------------------------------------------
+		const auto& _cameraData = m_upSceneView->GetCPUCameraData();
+		const Math::Vector3 _cameraPos(_cameraData.pos.x, _cameraData.pos.y, _cameraData.pos.z);
+
+		//------------------------------------------------------------------
+		// トレイル : 点を古くして、カメラへ向けた帯を組んで積む
+		//
+		// エフェクトはこのフレームの点を積み終えている。帯の向きはカメラで決まるので、
+		// カメラが確定したここで組む。重ねたシーンの後ろ(止めているゲーム)では
+		// 粒子と同じく時間を止める
+		//------------------------------------------------------------------
+		if (m_upTrailNodePool && m_upDrawSubmitter)
+		{
+			ENGINE_PROFILE_SCOPE("TrailBuild");
+			const bool _isFrozen = m_upParticleManager && m_upParticleManager->IsTimeFrozen();
+			const float _dt = _isFrozen ? 0.0f : MainEngine::Instance().GetDeltaTime();
+			m_upTrailNodePool->Update(_dt);
+			m_upTrailNodePool->Submit(_cameraPos, *m_upDrawSubmitter);
+		}
+
 		{
 			ENGINE_PROFILE_SCOPE("TransparentSort");
-			const auto& _cameraPos = m_upSceneView->GetCPUCameraData().pos;
-			m_drawLists.SortTransparentItems(Math::Vector3(_cameraPos.x, _cameraPos.y, _cameraPos.z));
+			m_drawLists.SortTransparentItems(_cameraPos);
 		}
 
 		// 不透明の描画アイテムをソート : パスはこの並びからパス番号で自分のぶんを引く。
@@ -542,6 +570,9 @@ namespace Engine::Graphics
 		// 描く順のインスタンス番号の表を上げる : 並びはソートで決まるので、必ずこの後。
 		// 各パスはこの表を「土台 + SV_GroupID.y」で引いて、同じメッシュをまとめて描く
 		m_upRenderContextVec[m_currentFrameIndex]->UpdateDrawInstanceIndexBuffer(m_drawLists.GetDrawInstanceIndexVec());
+
+		// トレイルの頂点を上げる。並べ替えるのは描画情報だけなので、頂点はいつ上げてもよい
+		m_upRenderContextVec[m_currentFrameIndex]->UpdateTrailBuffer(m_drawLists.GetTrailVertexVec());
 
 		//------------------------------------------------------------------
 		// カメラに依存しない毎フレームの計算

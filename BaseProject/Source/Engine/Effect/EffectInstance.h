@@ -15,6 +15,9 @@ namespace Engine::Graphics
 
 namespace Engine::Effect
 {
+	class TrailNode;
+	class TrailNodePool;
+
 	//==========================================================================================
 	// EffectInstance
 	//
@@ -73,6 +76,15 @@ namespace Engine::Effect
 		//------------------------------------------------------------------
 		Handle<Graphics::PointLight> lightHandles[Resource::EFFECT_POINTLIGHT_MAX] = {};
 
+		//------------------------------------------------------------------
+		// トレイルパーツごとの、借りている点の履歴(TrailNode)
+		//
+		// 出している間だけ借りる(EffectDrawSystem)。出す時間帯から外れたら手放す。
+		// 手放しても点はプールに残り、寿命で消えきってから返る(帯が急に消えない)。
+		// エンティティが消えるときは EffectRuntimeComponent の Release が手放す
+		//------------------------------------------------------------------
+		Handle<TrailNode> trailHandles[Resource::EFFECT_TRAIL_MAX] = {};
+
 		// 頭から再生し直す
 		void Reset()
 		{
@@ -106,5 +118,8 @@ namespace Engine::Effect
 
 		// 借りているポイントライトをすべて返す
 		void ReleaseLights(Engine::Graphics::LightManager& a_lightManager);
+
+		// 借りているトレイルをすべて手放す(残りの点は消えきるまで描かれる)
+		void ReleaseTrails(TrailNodePool& a_trailNodePool);
 	};
 }

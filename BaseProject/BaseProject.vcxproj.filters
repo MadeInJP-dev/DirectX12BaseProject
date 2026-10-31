@@ -235,6 +235,9 @@
     <Filter Include="Source\Engine\Effect">
       <UniqueIdentifier>{f82f1e36-8fef-4103-81ac-ecee75d75760}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Effect\Trail">
+      <UniqueIdentifier>{9c5b8079-e0ba-4073-a023-ea69e406933f}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Asset\Shader\Source\PostProcess\Fog">
       <UniqueIdentifier>{7514c5d3-608f-4164-8a71-5d4120cdc77b}</UniqueIdentifier>
     </Filter>
@@ -504,6 +507,9 @@
     </Filter>
     <Filter Include="Asset\Shader\Source\Geometry\Transparent">
       <UniqueIdentifier>{47fc2ec0-b395-4602-a308-5ff27b6f4dec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Asset\Shader\Source\Geometry\Trail">
+      <UniqueIdentifier>{e11af366-084d-4133-b997-fc54e2c9c279}</UniqueIdentifier>
     </Filter>
     <Filter Include="Asset\Shader\Source\Geometry\Boundary">
       <UniqueIdentifier>{d36f5981-a27e-4bf1-8fc5-183b9a2b9a7a}</UniqueIdentifier>
@@ -1604,6 +1610,12 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Effect\EffectPlayer.cpp">
       <Filter>Source\Engine\Effect</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Effect\Trail\TrailNode.cpp">
+      <Filter>Source\Engine\Effect\Trail</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Effect\Trail\TrailNodePool.cpp">
+      <Filter>Source\Engine\Effect\Trail</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\CameraPipelineManager\CameraPipelineManager.cpp">
       <Filter>Source\Engine\Graphics\RenderingPipeline\CameraPipelineManager</Filter>
@@ -3196,6 +3208,12 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Effect\EffectPlayer.h">
       <Filter>Source\Engine\Effect</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Effect\Trail\TrailNode.h">
+      <Filter>Source\Engine\Effect\Trail</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Effect\Trail\TrailNodePool.h">
+      <Filter>Source\Engine\Effect\Trail</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\CameraPipelineManager\CameraPipelineManager.h">
       <Filter>Source\Engine\Graphics\RenderingPipeline\CameraPipelineManager</Filter>
@@ -5468,6 +5486,9 @@
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\BoundaryData.h">
       <Filter>Source\Engine\Graphics\Frame\DrawList</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\TrailData.h">
+      <Filter>Source\Engine\Graphics\Frame\DrawList</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\Frame\DrawList\MeshDrawData.h">
       <Filter>Source\Engine\Graphics\Frame\DrawList</Filter>
     </ClInclude>
@@ -5774,6 +5795,15 @@
     </None>
     <None Include="Asset\Shader\Source\Geometry\Transparent\MeshTransparentPS.hlsl">
       <Filter>Asset\Shader\Source\Geometry\Transparent</Filter>
+    </None>
+    <None Include="Asset\Shader\Source\Geometry\Trail\Trail.hlsli">
+      <Filter>Asset\Shader\Source\Geometry\Trail</Filter>
+    </None>
+    <None Include="Asset\Shader\Source\Geometry\Trail\TrailVS.hlsl">
+      <Filter>Asset\Shader\Source\Geometry\Trail</Filter>
+    </None>
+    <None Include="Asset\Shader\Source\Geometry\Trail\TrailPS.hlsl">
+      <Filter>Asset\Shader\Source\Geometry\Trail</Filter>
     </None>
     <None Include="Asset\Shader\Source\Geometry\MeshShader\MeshCommon.hlsli">
       <Filter>Asset\Shader\Source\Geometry\MeshShader</Filter>

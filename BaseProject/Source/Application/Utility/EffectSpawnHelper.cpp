@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Particle/ParticleBufferManager.h"
 #include "Engine/Graphics/Particle/GPU/EmitterSlotPool/EmitterSlotPool.h"
 #include "Engine/Graphics/LightManager/LightManager.h"
+#include "Engine/Effect/Trail/TrailNodePool.h"
 #include "../../Engine/Effect/EffectInstance.h"
 
 
@@ -460,5 +461,16 @@ namespace App::Utility
 		if (!_pGE || !_pGE->RefLightManager()) return;
 
 		a_instance.ReleaseLights(*_pGE->RefLightManager());
+	}
+
+	void ReleaseEffectTrails(
+		const Engine::ECS::EngineServices& a_services,
+		Engine::Effect::EffectInstance& a_instance)
+	{
+		// ライトと同じく、終了処理の順によってはこちらが先に消えている
+		auto* _pGE = a_services.pMainEngine ? a_services.pMainEngine->RefGraphicsEngine() : nullptr;
+		if (!_pGE || !_pGE->RefTrailNodePool()) return;
+
+		a_instance.ReleaseTrails(*_pGE->RefTrailNodePool());
 	}
 }
