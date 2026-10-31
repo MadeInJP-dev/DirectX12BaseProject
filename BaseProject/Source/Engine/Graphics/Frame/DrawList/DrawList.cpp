@@ -13,12 +13,49 @@ namespace Engine::Graphics
 			a_vec.clear();
 			a_vec.reserve(a_reserveCount);
 		}
+
+		// ソート済みの配列から、指定したパス番号のアイテムが並ぶ範囲を探す。
+		// パス番号は不透明・半透明のどちらの並びでも RenderSortKey の最上位8bit(56〜63)にある
+		std::span<const LightWeightDrawItem> FindPassRange(
+			const std::vector<LightWeightDrawItem>& a_sortedVec, uint8_t a_passIndex, size_t& a_outFirst)
+		{
+			// 探したいパスのキーの最小値と最大値を求める
+			constexpr uint32_t PASS_INDEX_SHIFT = 56;
+			const uint64_t _minKey = static_cast<uint64_t>(a_passIndex) << PASS_INDEX_SHIFT;
+			const uint64_t _maxKey = _minKey | ((1ull << PASS_INDEX_SHIFT) - 1ull); // 下位56ビットをすべて1にする
+
+			// ソート済み配列から開始位置を見つける
+			auto _itStart = std::lower_bound(
+				a_sortedVec.begin(),
+				a_sortedVec.end(),
+				_minKey,
+				[](const LightWeightDrawItem& a_item, uint64_t a_value)
+				{
+					return a_item.sortKey.value < a_value;
+				}
+			);
+
+			// ソート済み配列から終了位置を見つける
+			auto _itEnd = std::upper_bound(
+				_itStart,		// 開始位置から探す
+				a_sortedVec.end(),
+				_maxKey,
+				[](uint64_t a_value, const LightWeightDrawItem& a_item)
+				{
+					return a_value < a_item.sortKey.value;
+				}
+			);
+
+			a_outFirst = static_cast<size_t>(std::distance(a_sortedVec.begin(), _itStart));
+			return std::span<const LightWeightDrawItem>(_itStart, _itEnd);
+		}
 	}
 
 	void DrawLists::Clear()
 	{
 		// 描画命令
 		ClearAndReserve(m_lightWeightDrawItemVec, 10000);
+		ClearAndReserve(m_transparentDrawItemVec, 1000);
 		ClearAndReserve(m_drawInstanceIndexVec, 10000);
 		ClearAndReserve(m_uiDrawItemVec, 10000);
 		ClearAndReserve(m_boundaryDrawDataVec, 64);
@@ -44,15 +81,25 @@ namespace Engine::Graphics
 	//==========================================================================================
 	void DrawLists::AddItem(const LightWeightDrawItem& a_item)
 	{
+		if (a_item.isTransparent)
+		{
+			m_transparentDrawItemVec.push_back(a_item);
+			return;
+		}
 		m_lightWeightDrawItemVec.push_back(a_item);
 	}
 
-	void DrawLists::ResolveTransparentSortKeys(const Math::Vector3& a_cameraPos)
+	//==========================================================================================
+	// 半透明の配列を並べる
+	//
+	// 呼ぶのは GraphicsEngine::Execute の中、描画要求を積み終えてカメラが確定した後で、
+	// パスを回すより前(GPUスキニングなどのフレームに1回の処理と同じ位置)。
+	// 半透明パスはこの並びを先頭から順に描くだけなので、奥から手前の順をここで決めきる
+	//==========================================================================================
+	void DrawLists::SortTransparentItems(const Math::Vector3& a_cameraPos)
 	{
-		for (auto& _item : m_lightWeightDrawItemVec)
+		for (auto& _item : m_transparentDrawItemVec)
 		{
-			if (!_item.isTransparent) continue;
-
 			//--------------------------------------------------------------------------------------
 			// 距離の2乗を、そのまま並べ替えに使える整数へ直す
 			//
@@ -69,6 +116,16 @@ namespace Engine::Graphics
 
 			_item.sortKey.transparentBits.farFirstDepth = _farFirst;
 		}
+
+		// 同じ深さのものは積んだ順を崩さない(1つのモデルのサブセットは原点が同じなので、
+		// 並びが毎フレーム入れ替わると重なりがちらつく)
+		std::stable_sort(
+			m_transparentDrawItemVec.begin(), m_transparentDrawItemVec.end(),
+			[](const LightWeightDrawItem& a, const LightWeightDrawItem& b)
+			{
+				return a.sortKey.value < b.sortKey.value;
+			}
+		);
 	}
 
 	void DrawLists::SortItems()
@@ -81,10 +138,15 @@ namespace Engine::Graphics
 			}
 		);
 
-		// 描く順のインスタンス番号の表を、並べ終えた順で作り直す
+		// 描く順のインスタンス番号の表を、並べ終えた順で作り直す。
+		// 不透明の後ろへ半透明を続ける(半透明の土台は不透明の数だけずれる : GetTransparentPassItems)
 		m_drawInstanceIndexVec.clear();
-		m_drawInstanceIndexVec.reserve(m_lightWeightDrawItemVec.size());
+		m_drawInstanceIndexVec.reserve(m_lightWeightDrawItemVec.size() + m_transparentDrawItemVec.size());
 		for (const auto& _item : m_lightWeightDrawItemVec)
+		{
+			m_drawInstanceIndexVec.push_back(_item.meshInstanceIndex);
+		}
+		for (const auto& _item : m_transparentDrawItemVec)
 		{
 			m_drawInstanceIndexVec.push_back(_item.meshInstanceIndex);
 		}
@@ -92,40 +154,27 @@ namespace Engine::Graphics
 
 	std::span<const LightWeightDrawItem> DrawLists::GetPassItems(uint8_t a_passIndex, UINT* a_pOutFirstIndex) const
 	{
-		// 探したいパスのキーの最小値と最大値を求める。
-		// パス番号は RenderSortKey の最上位8bit(56〜63)に置いてある
-		constexpr uint32_t PASS_INDEX_SHIFT = 56;
-		uint64_t _minKey = static_cast<uint64_t>(a_passIndex) << PASS_INDEX_SHIFT;
-		uint64_t _maxKey = _minKey | ((1ull << PASS_INDEX_SHIFT) - 1ull); // 下位56ビットをすべて1にする
-
-		// ソート済み配列から開始位置を見つける
-		auto _itStart = std::lower_bound(
-			m_lightWeightDrawItemVec.begin(),
-			m_lightWeightDrawItemVec.end(),
-			_minKey,
-			[](const LightWeightDrawItem& a_item, uint64_t a_value)
-			{
-				return a_item.sortKey.value < a_value;
-			}
-		);
-
-		// ソート済み配列から終了位置を見つける
-		auto _itEnd = std::upper_bound(
-			_itStart,		// 開始位置から探す
-			m_lightWeightDrawItemVec.end(),
-			_maxKey,
-			[](uint64_t a_value, const LightWeightDrawItem& a_item)
-			{
-				return a_value < a_item.sortKey.value;
-			}
-		);
+		size_t _first = 0;
+		auto _range = FindPassRange(m_lightWeightDrawItemVec, a_passIndex, _first);
 
 		if (a_pOutFirstIndex)
 		{
-			*a_pOutFirstIndex = static_cast<UINT>(std::distance(m_lightWeightDrawItemVec.begin(), _itStart));
+			*a_pOutFirstIndex = static_cast<UINT>(_first);
 		}
+		return _range;
+	}
 
-		return std::span<const LightWeightDrawItem>(_itStart, _itEnd);
+	std::span<const LightWeightDrawItem> DrawLists::GetTransparentPassItems(uint8_t a_passIndex, UINT* a_pOutFirstIndex) const
+	{
+		size_t _first = 0;
+		auto _range = FindPassRange(m_transparentDrawItemVec, a_passIndex, _first);
+
+		// 表の中では不透明の並びの後ろにいる
+		if (a_pOutFirstIndex)
+		{
+			*a_pOutFirstIndex = static_cast<UINT>(m_lightWeightDrawItemVec.size() + _first);
+		}
+		return _range;
 	}
 
 	//==========================================================================================

@@ -502,6 +502,9 @@
     <Filter Include="Asset\Shader\Source\Geometry\GBuffer">
       <UniqueIdentifier>{d49743f0-585d-5974-91f9-3ec1bb09dad8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Asset\Shader\Source\Geometry\Transparent">
+      <UniqueIdentifier>{47fc2ec0-b395-4602-a308-5ff27b6f4dec}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Asset\Shader\Source\Geometry\Boundary">
       <UniqueIdentifier>{d36f5981-a27e-4bf1-8fc5-183b9a2b9a7a}</UniqueIdentifier>
     </Filter>
@@ -1350,6 +1353,9 @@
     </Filter>
     <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\BoundaryPass">
       <UniqueIdentifier>{b7b17e37-37c2-4e80-be83-b9325acba6cf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\TransparentPass">
+      <UniqueIdentifier>{c957669b-0980-4074-bce9-06dd9321426b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowTemporalAccumulationPass">
       <UniqueIdentifier>{fbcf48ba-0a17-4f66-86b2-b77853d6cc8b}</UniqueIdentifier>
@@ -2825,6 +2831,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\BoundaryPass\BoundaryPass.cpp">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\BoundaryPass</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\TransparentPass\TransparentPass.cpp">
+      <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\TransparentPass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowTemporalAccumulationPass\ShadowTemporalAccumulationPass.cpp">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowTemporalAccumulationPass</Filter>
@@ -5006,6 +5015,9 @@
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\BoundaryPass\BoundaryPass.h">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\BoundaryPass</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\TransparentPass\TransparentPass.h">
+      <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\Geometry\TransparentPass</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowTemporalAccumulationPass\ShadowTemporalAccumulationPass.h">
       <Filter>Source\Engine\Graphics\RenderingPipeline\RenderingPasses\PostEffect\Denoise\Shadow\ShadowTemporalAccumulationPass</Filter>
     </ClInclude>
@@ -5759,6 +5771,9 @@
     </None>
     <None Include="Asset\Shader\Source\Geometry\GBuffer\MeshGBufferPS.hlsl">
       <Filter>Asset\Shader\Source\Geometry\GBuffer</Filter>
+    </None>
+    <None Include="Asset\Shader\Source\Geometry\Transparent\MeshTransparentPS.hlsl">
+      <Filter>Asset\Shader\Source\Geometry\Transparent</Filter>
     </None>
     <None Include="Asset\Shader\Source\Geometry\MeshShader\MeshCommon.hlsli">
       <Filter>Asset\Shader\Source\Geometry\MeshShader</Filter>

@@ -25,24 +25,33 @@ namespace Engine::Graphics
 
 		//--------------------------------------------------------------------------------------------
 		// モデルの描画アイテム
+		//
+		// 半透明(isTransparent)のアイテムは不透明とは別の配列へ積む。
+		// 不透明は PSO・メッシュでまとめて並べ、半透明はカメラから遠い順に並べるので、
+		// 並べ方も並べる時期(カメラの確定後)も違う
 		//--------------------------------------------------------------------------------------------
 		void AddItem(const LightWeightDrawItem& a_item);
 
-		// 半透明アイテムのソートキーへ、カメラからの距離を入れる。
-		// カメラが確定してから(エディターカメラの上書きも済んでから)、SortItems の前に呼ぶ
-		void ResolveTransparentSortKeys(const Math::Vector3& a_cameraPos);
+		// 半透明の配列を並べる : ソートキーへカメラからの距離を入れてから、遠い順に並べる。
+		// カメラが確定してから(エディターカメラの上書きも済んでから)、SortItems の前に呼ぶ。
+		// GetTransparentPassItems() はこの後でしか引けない
+		void SortTransparentItems(const Math::Vector3& a_cameraPos);
 
-		// ソートキー順に並べる。GetPassItems() はこの後でしか引けない。
-		// 並べたあとで、描く順のインスタンス番号の表(GetDrawInstanceIndexVec)も作り直す
+		// 不透明の配列をソートキー順に並べる。GetPassItems() はこの後でしか引けない。
+		// 並べたあとで、描く順のインスタンス番号の表(GetDrawInstanceIndexVec)も作り直す。
+		// 表には半透明の並びも入れるので、SortTransparentItems の後で呼ぶこと
 		void SortItems();
 
 		// 指定したパス番号のアイテムだけを返す(ソート済みであること)。
-		// a_pOutFirstIndex には、返した範囲の先頭がソート済み配列全体の何番目かを入れる
-		// (描く順のインスタンス番号の表を引くときの土台になる)
+		// a_pOutFirstIndex には、返した範囲の先頭が描く順のインスタンス番号の表の何番目かを入れる
+		// (表を引くときの土台になる)
 		std::span<const LightWeightDrawItem> GetPassItems(uint8_t a_passIndex, UINT* a_pOutFirstIndex = nullptr) const;
 
-		// 積まれた描画アイテムの数(全パスぶん)
-		size_t GetItemCount() const { return m_lightWeightDrawItemVec.size(); }
+		// 半透明版。返す範囲は奥から手前の順に並んでいる
+		std::span<const LightWeightDrawItem> GetTransparentPassItems(uint8_t a_passIndex, UINT* a_pOutFirstIndex = nullptr) const;
+
+		// 積まれた描画アイテムの数(全パスぶん。不透明と半透明の合計)
+		size_t GetItemCount() const { return m_lightWeightDrawItemVec.size() + m_transparentDrawItemVec.size(); }
 
 		//--------------------------------------------------------------------------------------------
 		// 描く順のインスタンス番号の表(インスタンシング用)
@@ -53,7 +62,7 @@ namespace Engine::Graphics
 		//
 		// インスタンスデータ自体はパスをまたいで共有していて、パスごとに並び順(PSO)が違うため、
 		// データの側を並べ替えても全部のパスで連続にはできない。そこで表を1枚挟んでいる。
-		// 全パスのアイテムが1本のソート済み配列に入っているので、表もフレームに1本で足りる
+		// 不透明の並びの後ろへ半透明の並びを続けて、表はフレームに1本にしてある
 		//--------------------------------------------------------------------------------------------
 		const std::vector<uint32_t>& GetDrawInstanceIndexVec() const { return m_drawInstanceIndexVec; }
 
@@ -111,8 +120,11 @@ namespace Engine::Graphics
 
 	private:
 
-		// ソートキー持ち描画コマンドリスト
+		// ソートキー持ち描画コマンドリスト(不透明)
 		std::vector<LightWeightDrawItem> m_lightWeightDrawItemVec = {};
+
+		// 半透明の描画コマンドリスト。SortTransparentItems で遠い順に並ぶ
+		std::vector<LightWeightDrawItem> m_transparentDrawItemVec = {};
 
 		// ソート済みアイテムの並び順で引くインスタンス番号の表
 		std::vector<uint32_t> m_drawInstanceIndexVec = {};

@@ -23,6 +23,7 @@ namespace Engine::Graphics
 	class PipelineStateManager;
 	class DrawLists;
 	class BackBuffer;
+	struct LightWeightDrawItem;
 
 	// レンダーコンテキスト作成時に必要な情報
 	struct RenderContextDesc
@@ -212,7 +213,10 @@ namespace Engine::Graphics
 		// 板ポリは VS が SV_VertexID で組む(頂点バッファは張らない)。トポロジは呼ぶ側が設定すること
 		void DrawBoundary(UINT a_rootIndex);
 
+		// 自分のパス番号で積まれたモデルを描く。
+		// 不透明は PSO・メッシュでまとめた並び、半透明は奥から手前の並び(別の配列)から引く
 		void DrawQueueDispatchMesh(uint8_t a_passIndex);
+		void DrawTransparentQueueDispatchMesh(uint8_t a_passIndex);
 
 		//--------------------------------------------------------------------------------------------
 		// 描画パス構築
@@ -277,6 +281,10 @@ namespace Engine::Graphics
 
 		// 板ポリの頂点・インデックスバッファを張る(直接描画と間接描画で共通)
 		void BindPolygonBuffers(Resource::QuadPolygon* a_pPolygon);
+
+		// 並んだ描画アイテムをメッシュシェーダーで描く(不透明・半透明で共通)。
+		// a_firstIndex : a_itemVec の先頭が、描く順のインスタンス番号の表の何番目か
+		void DispatchMeshItems(std::span<const LightWeightDrawItem> a_itemVec, UINT a_firstIndex);
 
 	private:
 		//--------------------------------------------------------------------------------------------

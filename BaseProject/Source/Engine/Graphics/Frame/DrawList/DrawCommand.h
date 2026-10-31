@@ -42,13 +42,13 @@ namespace Engine::Graphics
 		// 半透明用の並び
 		//
 		// 半透明は奥から手前へ描かないと重なりが崩れるので、PSOでまとめるより深さを優先する。
-		// パス番号は不透明と同じ最上位8bitに置く(パスごとの範囲検索 GetPassItems がそのまま使える)。
+		// パス番号は不透明と同じ最上位8bitに置く(パスごとの範囲検索 GetTransparentPassItems が同じ形で引ける)。
 		// farFirstDepth は「遠いほど小さい」値なので、昇順に並べると奥から描かれる
 		//------------------------------------------------------------------------------------------
 		struct {
 			uint64_t psoID : 16;			// 同じ深さならPSOでまとめる
 			uint64_t reserved : 8;			// 未使用
-			uint64_t farFirstDepth : 32;	// カメラからの距離(遠いほど小さい)。DrawLists::ResolveTransparentSortKeys が入れる
+			uint64_t farFirstDepth : 32;	// カメラからの距離(遠いほど小さい)。DrawLists::SortTransparentItems が入れる
 			uint64_t passIndex : 8;			// パスインデックス
 		} transparentBits;
 	};

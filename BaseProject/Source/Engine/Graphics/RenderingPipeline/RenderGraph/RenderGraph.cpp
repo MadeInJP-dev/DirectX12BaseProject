@@ -1291,6 +1291,15 @@ namespace Engine::Graphics::Pipeline
 				{
 					if (_in.accessType != EAccessType::DepthRead) continue;
 
+					// 深度を読むだけのパスも、モデルを描くなら PSO に深度のフォーマットが要る
+					// (半透明パス : 深度テストだけして書かない)。
+					// 入れないと PSO は深度なしで焼かれ、張った DSV と食い違って描画が落とされる
+					if (_parity == 0 && _dsvFormat == DXGI_FORMAT_UNKNOWN)
+					{
+						const VirtualResource* _pVirtual = GetVirtualResource(_in.resourceID);
+						if (_pVirtual) _dsvFormat = _pVirtual->GetFormat();
+					}
+
 					D3D12::GPUResource* _pResource = _refResource(_in, _parity);
 					if (!_pResource) continue;
 

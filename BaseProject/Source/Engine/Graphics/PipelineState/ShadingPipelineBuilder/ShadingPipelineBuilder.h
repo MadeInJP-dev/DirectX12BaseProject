@@ -79,6 +79,13 @@ namespace Engine::Graphics
 		void SetCullMode(D3D12_CULL_MODE a_mode);
 
 		/// <summary>
+		/// 1枚目のレンダーターゲットへ半透明合成(色 × α + 下地 × (1 - α))で重ねるか。
+		/// 既定は合成なし(上書き)。半透明のモデルを描くパスだけが触る
+		/// </summary>
+		/// <param name="a_isEnable">合成するかどうか</param>
+		void SetAlphaBlend(bool a_isEnable);
+
+		/// <summary>
 		/// メッシュシェーダーが登録されているかのチェック
 		/// </summary>
 		/// <returns></returns>
@@ -116,5 +123,8 @@ namespace Engine::Graphics
 
 		// カリング設定 : 既定はビルダーの標準と同じ背面カリング
 		D3D12_CULL_MODE m_cullMode = D3D12_CULL_MODE_BACK;
+
+		// 半透明合成 : 既定は上書き
+		bool m_isAlphaBlend = false;
 	};
 }

@@ -23,6 +23,8 @@
 //   10 : SRV(t8)            前フレームのスキニング済み頂点(モーションベクター用)
 //   11 : SRV(t9)            描く順のインスタンス番号の表(インスタンシング用)
 //   12 : SRV(t10)           LOD の表
+//   13 : RootConstants(b2)  前方ライティング(ライト配列の番号・数・環境光)。
+//                           半透明パス(MeshTransparentPS)だけが張り、他のパスは読まない
 //
 // ※ 追加は必ず末尾へ。C++側は添字でバインドしているので
 //    (RenderContext::BindMeshInstance / BindMeshlet、DrawQueueDispathMesh の 9 番など)、
@@ -43,6 +45,7 @@
     "SRV(t8)," \
     "SRV(t9)," \
     "SRV(t10)," \
+    "RootConstants(num32BitConstants=8, b2)," \
     "StaticSampler(s0, " \
     "    filter = FILTER_MIN_MAG_MIP_LINEAR, " \
     "    addressU = TEXTURE_ADDRESS_WRAP, " \

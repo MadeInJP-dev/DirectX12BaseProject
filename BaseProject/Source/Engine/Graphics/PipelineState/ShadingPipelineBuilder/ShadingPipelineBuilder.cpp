@@ -78,6 +78,19 @@ namespace Engine::Graphics
 
 		_builder.CullMode(m_cullMode);
 
+		// 半透明合成 : α のぶん下地を隠して色を置く。
+		// 出力の α は下地を隠した割合として積む(後段は α を読まないが、BoundaryPass と揃える)
+		if (m_isAlphaBlend)
+		{
+			_builder.BlendEnable(true);
+			_builder.SrcBlend(D3D12_BLEND_SRC_ALPHA);
+			_builder.DestBlend(D3D12_BLEND_INV_SRC_ALPHA);
+			_builder.BlendOp(D3D12_BLEND_OP_ADD);
+			_builder.SrcBlendAlpha(D3D12_BLEND_ONE);
+			_builder.DestBlendAlpha(D3D12_BLEND_INV_SRC_ALPHA);
+			_builder.BlendOpAlpha(D3D12_BLEND_OP_ADD);
+		}
+
 		for (auto& _rtvFormat : m_rtvFormats) {
 			_builder.AddRenderTargetFormat(_rtvFormat);
 		}
@@ -213,6 +226,10 @@ namespace Engine::Graphics
 	void ShadingPipelineBuilder::SetCullMode(D3D12_CULL_MODE a_mode)
 	{
 		m_cullMode = a_mode;
+	}
+	void ShadingPipelineBuilder::SetAlphaBlend(bool a_isEnable)
+	{
+		m_isAlphaBlend = a_isEnable;
 	}
 	bool ShadingPipelineBuilder::HasMeshShader() const
 	{

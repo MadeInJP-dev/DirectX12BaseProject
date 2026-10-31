@@ -479,6 +479,26 @@ namespace Engine::Graphics
 
 	void RenderContext::DrawQueueDispatchMesh(uint8_t a_passIndex)
 	{
+		if (!m_pDrawLists) return;
+
+		// _firstIndex : この範囲の先頭が、描く順のインスタンス番号の表の何番目か
+		UINT _firstIndex = 0;
+		auto _itemVec = m_pDrawLists->GetPassItems(a_passIndex, &_firstIndex);
+		DispatchMeshItems(_itemVec, _firstIndex);
+	}
+
+	void RenderContext::DrawTransparentQueueDispatchMesh(uint8_t a_passIndex)
+	{
+		if (!m_pDrawLists) return;
+
+		// 並びは GraphicsEngine::Execute の中(DrawLists::SortTransparentItems)で奥から手前に決まっている
+		UINT _firstIndex = 0;
+		auto _itemVec = m_pDrawLists->GetTransparentPassItems(a_passIndex, &_firstIndex);
+		DispatchMeshItems(_itemVec, _firstIndex);
+	}
+
+	void RenderContext::DispatchMeshItems(std::span<const LightWeightDrawItem> a_itemVec, UINT a_firstIndex)
+	{
 		// 直前に張ったPSOの番号。
 		// 番号は16bitのどの値も実在しうるので、それより広い型の値で始める。
 		// 番号と同じ幅の「無効値」で始めると、先頭のアイテムがたまたま
@@ -486,12 +506,10 @@ namespace Engine::Graphics
 		// PSOを張らないまま描いてしまう
 		uint32_t _lastPSO = 0xFFFFFFFFu;
 
-		// 指定タイプの命令キューを取得
-		if (!m_pDrawLists || !m_pPipelineStateManager) return;
+		if (!m_pPipelineStateManager) return;
 
-		// _firstIndex : この範囲の先頭が、ソート済み配列全体(= 描く順のインスタンス番号の表)の何番目か
-		UINT _firstIndex = 0;
-		auto _itemVec = m_pDrawLists->GetPassItems(a_passIndex, &_firstIndex);
+		const auto& _itemVec = a_itemVec;
+		const UINT _firstIndex = a_firstIndex;
 		if (_itemVec.empty()) return;
 
 		// 表に上げ切れなかったアイテムは、増幅シェーダーが引く先が無いので描かない

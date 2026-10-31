@@ -46,6 +46,7 @@
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/Utility/MonitorPass/MonitorPass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/Geometry/ParticlePass/ParticlePass.h"
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/Geometry/BoundaryPass/BoundaryPass.h"
+#include "Engine/Graphics/RenderingPipeline/RenderingPasses/Geometry/TransparentPass/TransparentPass.h"
 
 // ---- レイトレ ----
 #include "Engine/Graphics/RenderingPipeline/RenderingPasses/Lighting/Shadow/RaytracingShadowPass/RaytracingShadowPass.h"
@@ -162,6 +163,9 @@ namespace Engine::Graphics::Pipeline
 
 		// 行ける範囲の境界面(プレイヤーが近づくと見えてくる半透明の壁)
 		a_registry.RegisterType<BoundaryPass>("BoundaryPass");
+
+		// 半透明のモデル(ライティングの後・ポストプロセスの前で、奥から手前の順に重ねる)
+		a_registry.RegisterType<TransparentPass>("TransparentPass");
 
 		// ---- レイトレ ----
 		a_registry.RegisterType<RaytracingShadowPass>("RaytracingShadowPass");

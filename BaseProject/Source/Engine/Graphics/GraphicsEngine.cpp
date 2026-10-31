@@ -521,12 +521,22 @@ namespace Engine::Graphics
 		// シャドウマップを使わないフレームはカスケード数 0 になり、描くパスも読むパスも何もしない
 		m_lightManager.BuildShadowCascades(m_upSceneView->GetCPUCameraData());
 
-		// 半透明の並びを決める : カメラ(上書き込み)が確定したここで、カメラからの距離を入れる。
+		//------------------------------------------------------------------
+		// 半透明の配列を並べる
+		//
+		// 描画要求は積み終わっていて、カメラ(エディターカメラの上書き込み)もここで確定している。
+		// パスを回す前のこの位置で、カメラから遠い順に一度だけ並べておき、
+		// 半透明パス(TransparentPass)はその並びを先頭から描くだけにする。
 		// パスが読むのは共有のカメラなので、どのカメラのパスもこの位置を基準に並ぶ
-		const auto& _cameraPos = m_upSceneView->GetCPUCameraData().pos;
-		m_drawLists.ResolveTransparentSortKeys(Math::Vector3(_cameraPos.x, _cameraPos.y, _cameraPos.z));
+		//------------------------------------------------------------------
+		{
+			ENGINE_PROFILE_SCOPE("TransparentSort");
+			const auto& _cameraPos = m_upSceneView->GetCPUCameraData().pos;
+			m_drawLists.SortTransparentItems(Math::Vector3(_cameraPos.x, _cameraPos.y, _cameraPos.z));
+		}
 
-		// 描画アイテムをソート : パスはこの並びからパス番号で自分のぶんを引く
+		// 不透明の描画アイテムをソート : パスはこの並びからパス番号で自分のぶんを引く。
+		// 描く順のインスタンス番号の表に半透明の並びも続けるので、半透明を並べた後で呼ぶ
 		m_drawLists.SortItems();
 
 		// 描く順のインスタンス番号の表を上げる : 並びはソートで決まるので、必ずこの後。
