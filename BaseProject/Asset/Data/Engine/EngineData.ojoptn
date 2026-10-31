@@ -4,7 +4,7 @@
         "isD3DDebugLayer": false,
         "isDebugKeys": true,
         "isEditorEnabled": true,
-        "isHitchLog": true,
+        "isHitchLog": false,
         "isLoadJsonData": true,
         "isRecordUsedAssets": true,
         "isWatchAssetFolder": true,
@@ -46,7 +46,7 @@
         "fpsRate": 60
     },
     "WindowConfig": {
-        "isTitleFPS": true,
+        "isTitleFPS": false,
         "windowHeight": 1080,
         "windowMode": 2,
         "windowTitle": "VECTOR REIGN",
